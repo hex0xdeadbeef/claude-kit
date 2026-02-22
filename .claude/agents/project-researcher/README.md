@@ -1,6 +1,14 @@
-# Project Researcher Agent
+# Project Researcher Agent v3.0
 
 Автономный агент для глубокого исследования проектов и генерации `.claude/` конфигурации.
+
+## Что нового в v3.0
+
+- **AST-based analysis** — структурный анализ кода через ast-grep вместо grep-эвристик
+- **Dependency graph** — построение графа зависимостей с метриками fan-in/fan-out
+- **Structured state** — typed state contract между фазами вместо markdown-передачи
+- **DISCOVER phase** — нативная поддержка монореп и multi-module проектов
+- **Progressive context loading** — фазы загружаются по одной, стейт сохраняется
 
 ## Использование
 
@@ -22,30 +30,39 @@ Task tool:
 
 ```
 project-researcher/
-├── AGENT.md                 # Orchestrator (точка входа)
+├── AGENT.md                    # Orchestrator (точка входа)
 ├── phases/
-│   ├── 1-validate.md       # VALIDATE + AUDIT + GIT ANALYSIS
-│   ├── 2-detect.md         # DETECT (tech stack)
-│   ├── 3-analyze.md        # ANALYZE (architecture)
-│   ├── 4-map.md            # MAP + DATABASE
-│   ├── 5-generate.md       # GENERATE (artifacts)
-│   ├── 6-report.md         # REPORT
-│   ├── 7-critique.md       # CRITIQUE (self-review) [NEW v2.0]
-│   └── 8-verify.md         # VERIFY (external validation) [NEW v2.0]
+│   ├── 1-validate.md          # VALIDATE + AUDIT + GIT ANALYSIS
+│   ├── 1.5-discover.md        # DISCOVER (monorepo/module detection) [NEW v3.0]
+│   ├── 2-detect.md            # DETECT (tech stack, AST-first)
+│   ├── 3-analyze.md           # ANALYZE (architecture, AST-enhanced)
+│   ├── 4-map.md               # MAP + DEPENDENCY GRAPH + DATABASE
+│   ├── 5-generate.md          # GENERATE (artifacts)
+│   ├── 6-report.md            # REPORT
+│   ├── 7-critique.md          # CRITIQUE (self-review)
+│   └── 8-verify.md            # VERIFY (external validation)
 ├── templates/
-│   └── project-knowledge.md # Шаблон PROJECT-KNOWLEDGE.md
+│   └── project-knowledge.md   # Шаблон PROJECT-KNOWLEDGE.md
 ├── reference/
-│   ├── language-patterns.md # Паттерны детекции языков
-│   └── scoring.md          # Система confidence scoring
-├── examples/                # Sample outputs [NEW v2.0]
-│   └── (to be added)
-└── README.md               # Этот файл
+│   ├── language-patterns.md   # Паттерны детекции языков
+│   └── scoring.md             # Система confidence scoring
+├── deps/
+│   ├── ast-analysis.md        # AST-grep patterns [NEW v3.0]
+│   ├── state-contract.md      # Inter-phase state schema [NEW v3.0]
+│   ├── edge-cases.md          # Known limitations
+│   ├── step-quality.md        # Per-phase quality checks
+│   └── reflexion.md           # Self-improvement pattern
+├── examples/
+│   ├── README.md
+│   ├── confidence-scoring.md
+│   └── sample-report.md
+└── README.md                  # Этот файл
 ```
 
 ## Workflow
 
 ```
-VALIDATE → DETECT → ANALYZE → MAP → [DATABASE] → CRITIQUE → GENERATE → VERIFY → REPORT
+VALIDATE → DISCOVER → DETECT → ANALYZE → MAP → [DATABASE] → CRITIQUE → GENERATE → VERIFY → REPORT
 ```
 
 ### Phase 1: VALIDATE
@@ -53,19 +70,28 @@ VALIDATE → DETECT → ANALYZE → MAP → [DATABASE] → CRITIQUE → GENERATE
 - Определение режима (CREATE/AUGMENT/UPDATE)
 - Git analysis для UPDATE режима
 
+### Phase 1.5: DISCOVER (NEW v3.0)
+- Обнаружение монореп и multi-module проектов
+- Классификация модулей (service/library/app/tool)
+- Определение inter-module зависимостей
+- Выбор стратегии анализа (single/per-module/per-module-with-shared-context)
+
 ### Phase 2: DETECT
 - Определение языка программирования
-- Детекция фреймворков
+- Детекция фреймворков (manifest → AST → grep fallback)
 - Анализ build tools и тестовой инфраструктуры
+- Проверка доступности ast-grep
 
 ### Phase 3: ANALYZE
-- Определение архитектурного паттерна
+- Определение архитектурного паттерна (с AST evidence)
 - Анализ слоёв и зависимостей
-- Обнаружение конвенций
+- Обнаружение конвенций (errors, logging, testing)
+- Детекция dependency violations через import analysis
 
 ### Phase 4: MAP
 - Построение карты entry points
-- Анализ core domain
+- Анализ core domain (entities, interfaces, implementations)
+- **Dependency graph** с метриками fan-in/fan-out
 - External integrations
 
 ### Phase 5: DATABASE (опционально)
@@ -85,11 +111,11 @@ VALIDATE → DETECT → ANALYZE → MAP → [DATABASE] → CRITIQUE → GENERATE
 
 ### Phase 8: VERIFY (blocking gate)
 - External validation (YAML, references, size)
+- State contract validation
 - Quality checks
-- Gate: EXTERNAL_VALIDATION_GATE
 
 ### Phase 9: REPORT
-- Итоговый отчёт
+- Итоговый отчёт с dependency topology
 - Рекомендации
 - Confidence scoring
 
@@ -103,18 +129,22 @@ VALIDATE → DETECT → ANALYZE → MAP → [DATABASE] → CRITIQUE → GENERATE
 | Rust | actix-web, axum, rocket |
 | Java | spring-boot, quarkus, micronaut |
 
-## MCP интеграция
+## Ключевые deps
 
-- **Memory**: Сохранение архитектурных решений
-- **PostgreSQL**: Анализ схемы БД
-- **Sequential Thinking**: Сложные архитектурные решения
+| Файл | Назначение |
+|------|-----------|
+| `deps/ast-analysis.md` | AST-grep паттерны для каждого языка |
+| `deps/state-contract.md` | Typed state schema между фазами |
+| `deps/edge-cases.md` | Ограничения и edge cases |
+| `deps/step-quality.md` | Per-phase quality checks |
+| `deps/reflexion.md` | Self-improvement pattern |
 
 ## Артефакты
 
 | Артефакт | Назначение |
 |----------|------------|
 | `.claude/CLAUDE.md` | Главный файл (≤200 строк) |
-| `.claude/PROJECT-KNOWLEDGE.md` | Полное исследование |
+| `.claude/PROJECT-KNOWLEDGE.md` | Полное исследование + dependency topology |
 | `.claude/memory.json` | MCP persistent context |
 | `.claude/skills/` | Навыки по паттернам |
 | `.claude/rules/` | Path-triggered правила |
