@@ -1,0 +1,54 @@
+{
+  "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/main/config-schema.json",
+  "model": "sonnet",
+  "thinking": { "type": "adaptive" },
+  "enabledMcpjsonServers": ["memory", "sequential-thinking", "context7"],
+  "permissions": {
+    "allow": [
+      "Bash(make:*)",
+      "Bash(go:*)",
+      "Bash(git:*)",
+      "Bash(bd:*)"
+    ],
+    "deny": []
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write",
+        "command": ".claude/agents/meta-agent/scripts/check-artifact-size.sh",
+        "description": "SIZE_GATE: Block writes exceeding artifact size thresholds"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit",
+        "command": ".claude/agents/meta-agent/scripts/yaml-lint.sh",
+        "description": "YAML_LINT: Validate YAML structure after edits"
+      },
+      {
+        "matcher": "Write",
+        "command": ".claude/agents/meta-agent/scripts/check-references.sh",
+        "description": "REF_CHECK: Validate all file references after writes"
+      }
+    ],
+    "Stop": [
+      {
+        "command": ".claude/agents/meta-agent/scripts/verify-phase-completion.sh",
+        "description": "PHASE_CHECK: Ensure all meta-agent phases completed"
+      }
+    ],
+    "PostFileEdit": [
+      {
+        "glob": "**/*.go",
+        "command": "gofmt -w ${FILE}"
+      }
+    ],
+    "PostFileWrite": [
+      {
+        "glob": "**/*.go",
+        "command": "gofmt -w ${FILE}"
+      }
+    ]
+  }
+}

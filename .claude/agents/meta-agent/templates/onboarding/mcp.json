@@ -1,0 +1,30 @@
+{
+  "mcpServers": {
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "env": {
+        "MEMORY_FILE_PATH": "/Users/${USERNAME}/.claude/memory.json"
+      }
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"],
+      "env": {
+        "NO_PROXY": "*",
+        "no_proxy": "*",
+        "HTTP_PROXY": "",
+        "HTTPS_PROXY": "",
+        "http_proxy": "",
+        "https_proxy": ""
+      }
+    },
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-postgres"],
+      "env": {
+        "DATABASE_URL": "postgresql://${DB_USER}:${DB_PASSWORD}@localhost:5432/${DB_NAME}"
+      }
+    }
+  }
+}
