@@ -1,7 +1,7 @@
 # Project Knowledge: claude-go-kit
 
-**Last Updated:** 2026-02-23T00:00:00Z
-**Version:** v1.0 (git: 3f8bee9)
+**Last Updated:** 2026-02-23T12:00:00Z
+**Version:** v1.1 (git: 3f8bee9)
 **Researcher:** project-researcher agent v3.0
 **Analysis Method:** grep-based (ast-grep not available; config-only kit — no source code)
 
@@ -32,7 +32,7 @@ GitHub: https://github.com/hex0xdeadbeef/claude-kit (branch: `sync/initial`)
 | `.claude/scripts/` | Shell | scripts | sync-to-github.sh |
 | `.claude/agents/meta-agent/scripts/` | Shell | hooks | YAML lint, size gate, reference checker, phase verifier |
 
-**File distribution:** 80 `.md` (88%), 6 `.sh` (7%), 1 `.json` (1%), 4 other
+**File distribution:** 81 `.md` (87%), 6 `.sh` (6%), 3 `.json` (3%), other (4%)
 
 ---
 
@@ -75,15 +75,15 @@ The kit organizes Claude Code configuration into four distinct layers:
 
 ```
 User input (/slash-command)
-      │
-      ▼
-.claude/commands/*.md   ──Read──▶   .claude/agents/{name}/AGENT.md
-      │                                      │
-      ▼                                      ▼
+      |
+      v
+.claude/commands/*.md   --Read-->   .claude/agents/{name}/AGENT.md
+      |                                      |
+      v                                      v
 deps/shared-*.md                .claude/agents/{name}/deps/*.md
 (workflow-phases, mcp,           .claude/agents/{name}/phases/*.md
- autonomy, beads, error)                  │
-                                          ▼
+ autonomy, beads, error)                  |
+                                          v
                                MCP servers (memory, context7,
                                 sequential-thinking, postgres)
 ```
@@ -101,6 +101,7 @@ deps/shared-*.md                .claude/agents/{name}/deps/*.md
 | Commands as thin wrappers over agents | Agents accessible via Task tool; commands give user-facing slash syntax | 2026-02-23 | HIGH |
 | Hooks as deterministic validation gates | Prevents artifact size violations and broken references at write-time | 2026-01-18 | HIGH |
 | `sync/initial` branch (not `main`) | Main branch protected on GitHub | 2026-02-23 | MEDIUM |
+| No `.claude/CLAUDE.md` — root CLAUDE.md only | Kit uses root CLAUDE.md as project index; .claude/CLAUDE.md removed to avoid duplication | 2026-02-23 | HIGH |
 
 ---
 
@@ -116,7 +117,7 @@ deps/shared-*.md                .claude/agents/{name}/deps/*.md
 | Total templates | 5 |
 | Total scripts | 6 |
 | Shared deps (cross-command) | 5 |
-| Max depth (command→agent→deps) | 3 levels |
+| Max depth (command->agent->deps) | 3 levels |
 | Circular dependencies | none |
 | Isolated artifacts | db-explorer (minimal, no phase structure) |
 
@@ -174,7 +175,7 @@ None detected.
 |-----------|---------|----------|---------|-----------|
 | Claude Code | CLI current | AI assistant | Runtime for all artifacts | directory |
 | meta-agent | v9.0 | artifact-management | CRUD for commands/agents/skills/rules | README.md |
-| project-researcher | v3.0.0 | codebase-analysis | Project research → PROJECT-KNOWLEDGE.md | AGENT.md |
+| project-researcher | v3.0.0 | codebase-analysis | Project research -> PROJECT-KNOWLEDGE.md | AGENT.md |
 | db-explorer | v1.0 | database | PostgreSQL schema exploration via MCP | deps/queries.md |
 
 ### MCP Servers
@@ -183,7 +184,7 @@ None detected.
 |--------|---------|----------|---------|
 | memory | `@modelcontextprotocol/server-memory` | YES | Cross-session agent memory |
 | context7 | `@upstash/context7-mcp` | YES | Library docs lookup |
-| sequential-thinking | — | YES | Structured multi-step reasoning |
+| sequential-thinking | -- | YES | Structured multi-step reasoning |
 | postgres | `@anthropic/mcp-postgres` | NO | db-explorer agent only |
 
 ---
@@ -194,22 +195,22 @@ None detected.
 
 | Agent | Location | Version | Phases | Deps Count |
 |-------|----------|---------|--------|------------|
-| meta-agent | `.claude/agents/meta-agent/README.md` | v9.0 | 9 (INIT→EXPLORE→ANALYZE→PLAN→CONSTITUTE→DRAFT→APPLY→VERIFY→CLOSE) | 25 |
-| project-researcher | `.claude/agents/project-researcher/AGENT.md` | v3.0.0 | 10 (VALIDATE→DISCOVER→DETECT→ANALYZE→MAP→DATABASE→CRITIQUE→GENERATE→VERIFY→REPORT) | 5 deps + 9 phases |
+| meta-agent | `.claude/agents/meta-agent/README.md` | v9.0 | 9 (INIT->EXPLORE->ANALYZE->PLAN->CONSTITUTE->DRAFT->APPLY->VERIFY->CLOSE) | 25 |
+| project-researcher | `.claude/agents/project-researcher/AGENT.md` | v3.0.0 | 10 (VALIDATE->DISCOVER->DETECT->ANALYZE->MAP->DATABASE->CRITIQUE->GENERATE->VERIFY->REPORT) | 5 deps + 9 phases |
 | db-explorer | `.claude/agents/db-explorer/deps/queries.md` | v1.0 | 2 (CONNECT, EXPLORE) | 1 |
 
 ### Commands (Entry Points)
 
 | Command | Location | Version | Model | Purpose |
 |---------|----------|---------|-------|---------|
-| /workflow | `.claude/commands/workflow.md` | 2.1.0 | opus | Full dev cycle: task-analysis → planner → plan-review → coder → code-review |
-| /planner | `.claude/commands/planner.md` | 2.1.0 | opus | Research codebase → detailed implementation plan |
+| /workflow | `.claude/commands/workflow.md` | 2.1.0 | opus | Full dev cycle: task-analysis -> planner -> plan-review -> coder -> code-review |
+| /planner | `.claude/commands/planner.md` | 2.1.0 | opus | Research codebase -> detailed implementation plan |
 | /coder | `.claude/commands/coder.md` | 1.3.0 | opus | Implement code strictly per approved plan |
 | /plan-review | `.claude/commands/plan-review.md` | 3.2.0 | sonnet | Validate plan before coding |
 | /code-review | `.claude/commands/code-review.md` | 1.3.0 | sonnet | Code review before merge |
-| /meta-agent | `.claude/commands/meta-agent.md` | — | — | Artifact lifecycle (onboard, create, enhance, audit, delete) |
-| /project-researcher | `.claude/commands/project-researcher.md` | — | — | Thin wrapper → project-researcher agent |
-| /db-explorer | `.claude/commands/db-explorer.md` | — | sonnet | PostgreSQL schema exploration |
+| /meta-agent | `.claude/commands/meta-agent.md` | -- | -- | Artifact lifecycle (onboard, create, enhance, audit, delete) |
+| /project-researcher | `.claude/commands/project-researcher.md` | -- | -- | Thin wrapper -> project-researcher agent |
+| /db-explorer | `.claude/commands/db-explorer.md` | -- | sonnet | PostgreSQL schema exploration |
 | /review-checklist | `.claude/commands/review-checklist.md` | 1.2.0 | sonnet | Architecture/security/quality checklist reference |
 
 ### Templates
@@ -236,14 +237,14 @@ None detected.
 
 ```
 // File naming
-kebab-case.md           → code-review.md, plan-review.md, db-explorer.md
+kebab-case.md           -> code-review.md, plan-review.md, db-explorer.md
                           NOT snake_case, NOT camelCase
 
 // Agent directories
-kebab-case/             → meta-agent/, project-researcher/, db-explorer/
+kebab-case/             -> meta-agent/, project-researcher/, db-explorer/
 
 // YAML frontmatter keys
-camelCase or kebab      → description, allowed-tools, model, version, updated
+camelCase or kebab      -> description, allowed-tools, model, version, updated
 ```
 
 ### Code Structure Patterns (Artifact Structure)
@@ -279,14 +280,14 @@ Instructions...
 
 ```
 # Rule: split heavy content into deps/ files, load on demand
-# Agent main file:  ≤511 lines (project-researcher actual)
-# Command files:    ≤600 lines target
+# Agent main file:  <=511 lines (project-researcher actual)
+# Command files:    <=600 lines target
 # deps/ files:      no hard limit (loaded per phase only)
 
 # Size limits enforced by hooks:
-#   CLAUDE.md:       ≤200 lines
-#   commands:        ≤600 lines
-#   agents (main):   ≤600 lines
+#   CLAUDE.md:       <=200 lines
+#   commands:        <=600 lines
+#   agents (main):   <=600 lines
 ```
 
 ### Error Handling Conventions (Shell Scripts)
@@ -301,7 +302,7 @@ exit 0  # Allows tool use
 
 # Agent FATAL errors
 "FATAL: Directory not found: <path>"
-"FATAL: State validation failed — missing: <fields>"
+"FATAL: State validation failed -- missing: <fields>"
 ```
 
 ### Logging Conventions
@@ -309,10 +310,10 @@ exit 0  # Allows tool use
 ```bash
 # Shell: colored output
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
-echo -e "${GREEN}✓ Done${NC}"
+echo -e "${GREEN} Done${NC}"
 
 # Agent progress format
-"[PHASE N/10] NAME — DONE"
+"[PHASE N/10] NAME -- DONE"
 "State: key=value, key2=value2"
 ```
 
@@ -329,8 +330,8 @@ echo -e "${GREEN}✓ Done${NC}"
 | /coder | commands/coder.md | opus | Implementation | deps/coder/*.md |
 | /plan-review | commands/plan-review.md | sonnet | Plan validation | deps/plan-review/*.md |
 | /code-review | commands/code-review.md | sonnet | Code review | deps/code-review/*.md |
-| /meta-agent | commands/meta-agent.md | — | Artifact management | agents/meta-agent/ |
-| /project-researcher | commands/project-researcher.md | — | Project research | agents/project-researcher/ |
+| /meta-agent | commands/meta-agent.md | -- | Artifact management | agents/meta-agent/ |
+| /project-researcher | commands/project-researcher.md | -- | Project research | agents/project-researcher/ |
 | /db-explorer | commands/db-explorer.md | sonnet | DB exploration | agents/db-explorer/ |
 | /review-checklist | commands/review-checklist.md | sonnet | Checklist reference | none |
 
@@ -389,11 +390,12 @@ echo -e "${GREEN}✓ Done${NC}"
 |------|----------|-----------|--------|--------|
 | 2026-01-18 | Added deps/ progressive loading | Context budget management | -60% active context per phase | Active |
 | 2026-01-20 | YAML-first format | Machine-parseable, consistent | All artifacts parseable by meta-agent | Active |
-| 2026-02-23 | project-researcher → v3.0 | AST analysis, DISCOVER phase, dependency graph | Better monorepo support, higher confidence | Active |
-| 2026-02-23 | meta-agent → v9.0 | Constitutional AI, ADAS, phase contracts | More reliable artifact generation | Active |
+| 2026-02-23 | project-researcher v3.0 | AST analysis, DISCOVER phase, dependency graph | Better monorepo support, higher confidence | Active |
+| 2026-02-23 | meta-agent v9.0 | Constitutional AI, ADAS, phase contracts | More reliable artifact generation | Active |
 | 2026-02-23 | `sync/initial` branch | `main` branch protected on GitHub | Sync works without bypassing protection | Active |
 | 2026-02-23 | `git add -f .claude/` in sync script | Global `~/.gitignore` excludes `.claude/` | Sync script uses force-add | Active |
 | 2026-02-23 | `CLAUDE.md` in global gitignore | Prevents accidental commit to non-kit repos | Must force-add when committing kit itself | Active |
+| 2026-02-23 | Removed `.claude/CLAUDE.md` | Root CLAUDE.md serves as project index; `.claude/CLAUDE.md` was redundant duplication | Single source of truth for project instructions | Active |
 
 ---
 
@@ -411,7 +413,19 @@ echo -e "${GREEN}✓ Done${NC}"
 
 ## Change History
 
-### v1.0 — 2026-02-23
+### v1.1 -- 2026-02-23
+
+**UPDATE mode re-analysis:**
+- Corrected file distribution: 81 md, 6 sh, 3 json (was 80 md, 6 sh, 1 json)
+- Added architectural decision: removal of `.claude/CLAUDE.md` (root CLAUDE.md is single source)
+- Added decision log entry: `.claude/CLAUDE.md` removal rationale
+- Analysis mode corrected from AUGMENT to UPDATE
+- Confidence calibration verified: all findings within evidence thresholds
+- No new technical debt identified
+
+**Sections updated:** File distribution, Architectural Decisions, Decision Log, Change History, Metadata
+
+### v1.0 -- 2026-02-23
 
 **Initial generation (AUGMENT mode):**
 - `.claude/settings.json` with hooks configuration created
@@ -427,9 +441,9 @@ echo -e "${GREEN}✓ Done${NC}"
 
 ## Metadata
 
-- **Analysis Mode:** AUGMENT
+- **Analysis Mode:** UPDATE
 - **Analysis Method:** grep-based
-- **AST Available:** no (config-only kit — no source code files)
+- **AST Available:** no (config-only kit -- no source code files)
 - **Confidence Score:** HIGH (0.92)
 - **Low Confidence Areas:** db-explorer structure (minimal files)
 - **Recommended Reviews:** sync-to-github.sh divergence handling, settings.json hook paths
