@@ -1,5 +1,6 @@
 ---
 description: "Meta-agent for Claude Code artifacts (commands, skills, rules, agents)"
+model: opus
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, mcp__memory__read_graph, mcp__memory__add_observations
 ---
 
