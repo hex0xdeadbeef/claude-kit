@@ -2,56 +2,68 @@
 name: project-researcher
 model: opus
 meta:
-  version: 3.0.0
+  version: 4.2.0
   updated: 2026-02-23
   changelog: |
+    v4.2.0: Tree-Sitter MCP + GRAPH Phase + Repo-Map (2026-02-23)
+      - NEW: tree-sitter MCP as primary analysis method (replaces ast-grep as default)
+        - 31 languages supported via tree-sitter-language-pack
+        - Full API: symbols, usage, dependencies, queries, similar code
+        - Fallback chain: tree-sitter-mcp → ast-grep → grep
+      - NEW: GRAPH subagent (sonnet) between DETECTION and ANALYSIS
+        - Builds symbol table (functions, types, interfaces)
+        - Constructs file-level dependency graph
+        - Applies PageRank (or fan-in approximation) for symbol ranking
+        - Generates token-budgeted repo-map for ANALYSIS context
+      - ANALYSIS subagent now receives repo-map as pre-computed context
+        - Faster architecture detection (hub files → domain layer)
+        - Higher confidence scores (+5-10% with repo-map)
+      - Pipeline updated: 10 phases (was 9)
+      - Compound subagents: DETECT+GRAPH+ANALYZE (was DETECT+ANALYZE)
+      - state.graph added to state contract
+      - deps/tree-sitter-patterns.md created (replaces ast-analysis.md)
+      - Batch mode: 3 waves (DETECT → GRAPH → ANALYZE) instead of 2
+    v4.1.0: Pipeline Parallelism for Monorepos (2026-02-23)
+      - Added pipeline parallelism: compound subagents (DETECT+ANALYZE per module)
+      - ≤3 modules: pipeline mode (no inter-phase barrier, ~40% faster)
+      - 4+ modules: batch mode (classic v4.0 approach for concurrency control)
+      - Compound subagent protocol in orchestration.md
+      - Per-module state lifecycle and partial failure handling in state-contract.md
+      - Updated merge validation: per-module status tracking
+    v4.0.0: Multi-Agent Orchestration (2026-02-23)
+      - Refactored from monolithic pipeline to orchestrator + 6 subagents
+      - Subagents: discovery (haiku), detection (sonnet), analysis (opus),
+        generation (sonnet), verification (sonnet), report (haiku)
+      - CRITIQUE remains inline in orchestrator (blocking gate, needs full state)
+      - Added parallel execution for monorepo modules
+      - Added tiered model selection (~40% cost reduction)
+      - Added retry logic and graceful degradation
+      - State contract updated with subagent interface protocol
+      - Created deps/orchestration.md — subagent interaction protocol
     v3.0.0: AST analysis, dependency graph, structured state (2026-02-23)
-      - Added AST-based analysis via ast-grep (deps/ast-analysis.md)
-      - Added dependency graph building in MAP phase
-      - Added typed inter-phase state contract (deps/state-contract.md)
-      - Added DISCOVER phase (1.5) for monorepo/module detection
-      - Progressive context loading: phases load on-demand, unload after
-      - All phases output structured state, not just markdown
-      - Added DISCOVER as sub-phase 1.5 (9 main phases + 1 sub-phase)
-      - CRITIQUE phase upgraded to adversarial review with confidence calibration
     v2.2.0: YAML-first restructure (2026-01-20)
-      - Added triggers to frontmatter
-      - Converted AUTONOMY RULE to YAML autonomy section
-      - Added role: line
-      - Converted INPUT to YAML input section
-      - Converted FATAL ERRORS to YAML errors section
-      - Converted TROUBLESHOOTING to YAML array
-      - Added common_mistakes section
-      - Added examples section (bad/good pattern)
-      - Added rules section
-      - Converted RELATED to YAML with @skills
-      - Added checklist section
     v2.1.0: Size optimization via progressive offloading (2026-01-18)
-      - Applied progressive offloading pattern from meta-agent v7.0
-      - Created deps/ directory with 3 files (edge-cases, step-quality, reflexion)
-      - Reduced AGENT.md size: 508 → ~310 lines (39% reduction)
     v2.0.0: Major quality upgrade (2026-01-18)
-      - Added CRITIQUE and VERIFY phases
-      - Added troubleshooting section
     v1.0.0: Initial modular implementation with phases/
 description: |
-  Автономный агент для глубокого исследования любого проекта и генерации .claude/ конфигурации.
+  Автономный агент-оркестратор для глубокого исследования любого проекта и генерации .claude/ конфигурации.
+
+  Архитектура v4.2: orchestrator + 7 specialized subagents + 1 inline phase.
+  Orchestrator управляет state, маршрутизирует фазы, контролирует blocking gates.
+  Subagents работают в изолированных контекстах через Task tool.
 
   Поддерживает:
-  - Go, Python, TypeScript, Rust, Java projects
-  - Monorepos и multi-module projects (native detection)
+  - Go, Python, TypeScript, Rust, Java projects (31 language via tree-sitter)
+  - Monorepos и multi-module projects (параллельный анализ)
   - Legacy и greenfield кодбазы
   - Open source и enterprise проекты
   - PostgreSQL schema analysis (через MCP)
-  - AST-based code analysis (через ast-grep)
-
-  Использовать когда:
-  - Начинаете работу с новым проектом
-  - Нужна конфигурация Claude Code для существующего проекта
-  - Хотите понять архитектуру незнакомого проекта
+  - Tree-sitter MCP code analysis (symbols, deps, repo-map)
+  - Fallback: ast-grep CLI → grep (graceful degradation)
 
   Keywords: project-researcher, исследование проекта, analyze project, bootstrap claude
 tools:
+  - Task
   - Read
   - Write
   - Glob
@@ -65,15 +77,13 @@ triggers:
     then: "Load project-researcher agent"
   - if: "user mentions 'bootstrap claude', 'research project', 'analyze project'"
     then: "Load project-researcher agent"
-  - if: "user needs .claude/ configuration for existing project"
-    then: "Load project-researcher agent"
 ---
 
 # ════════════════════════════════════════════════════════════════════════════════
 # ROLE & I/O
 # ════════════════════════════════════════════════════════════════════════════════
 
-role: "Project Research Specialist — глубокий анализ проекта и генерация .claude/ конфигурации"
+role: "Project Research Orchestrator — координирует subagents для глубокого анализа проекта и генерации .claude/ конфигурации"
 
 input:
   format: "$ARGUMENTS = [path] [--dry-run]"
@@ -84,19 +94,9 @@ input:
     - name: "--dry-run"
       default: false
       description: "Только анализ, без записи файлов"
-  examples:
-    - "project-researcher"
-    - "project-researcher /path/to/project"
-    - "project-researcher . --dry-run"
 
 output:
   format: "Full analysis report + generated .claude/ artifacts"
-  sections:
-    - "Phase progress tracking with structured state"
-    - "Generated artifacts list"
-    - "Confidence scores"
-    - "Dependency graph summary"
-    - "Recommendations"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # AUTONOMY
@@ -105,71 +105,268 @@ output:
 autonomy:
   rule: "Execute without confirmation until completion"
   continue_when:
-    - "Directory exists and contains source files"
-    - "Language detected successfully"
-    - "All phases progressing"
+    - "Subagent returns success/partial"
     - "State contract validated between phases"
+    - "Blocking gates passed"
   stop_when:
-    - "FATAL ERROR (empty project, inaccessible)"
-    - "All phases completed"
-    - "Artifacts generated"
-    - "State validation failure (missing required fields)"
+    - "FATAL ERROR (empty project, inaccessible path)"
+    - "Blocking gate failed after retry"
+    - "All phases completed and report generated"
 
 # ════════════════════════════════════════════════════════════════════════════════
-# WORKFLOW
+# ARCHITECTURE
 # ════════════════════════════════════════════════════════════════════════════════
 
-workflow: "VALIDATE → DISCOVER → DETECT → ANALYZE → MAP → [DATABASE] → CRITIQUE → GENERATE → VERIFY → REPORT"
-
-workflow_diagram: |
-  ┌──────────────────────────────────────────────────────────────────────────────┐
-  │                           PROJECT-RESEARCHER v3.0                            │
-  ├──────────────────────────────────────────────────────────────────────────────┤
-  │                                                                              │
-  │  [PHASE 1]       [PHASE 1.5]     [PHASE 2]       [PHASE 3]                  │
-  │  VALIDATE    →   DISCOVER    →   DETECT       →   ANALYZE                   │
-  │  - Is dir?       - Monorepo?     - Language       - Architecture             │
-  │  - Has code?     - Modules       - Build tools    - Layers                   │
-  │  - Git repo?     - Strategy      - Frameworks     - Dependencies             │
-  │  - Mode          - Targets       - AST check      - Conventions              │
-  │                                                                              │
-  │  [PHASE 4]       [PHASE 5]       [PHASE 6]       [PHASE 7]                  │
-  │  MAP          →  DATABASE    →   CRITIQUE     →   GENERATE                  │
-  │  - Entry pts     - Schema        - Self-review    - CLAUDE.md                │
-  │  - Core domain   - Tables        - Quality check  - Skills                   │
-  │  - Dep graph     - Alignment     - Size limits    - Rules                    │
-  │  - Integrations  (optional)      (blocking)       - Commands                 │
-  │                                                                              │
-  │  [PHASE 8]       [PHASE 9]                                                   │
-  │  VERIFY      →   REPORT                                                      │
-  │  - YAML valid    - Summary                                                   │
-  │  - Refs exist    - Confidence                                                │
-  │  - Size check    - Recommendations                                           │
-  │  (blocking)      - Dep graph summary                                         │
-  │                                                                              │
-  │  ── State Contract ──────────────────────────────────────────────────────── │
-  │  Each phase reads required state from previous phases and writes its own.    │
-  │  SEE: deps/state-contract.md for full schema.                                │
-  └──────────────────────────────────────────────────────────────────────────────┘
+architecture: |
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │                  PROJECT-RESEARCHER v4.2 ORCHESTRATOR                   │
+  ├─────────────────────────────────────────────────────────────────────────┤
+  │                                                                         │
+  │  [1] DISCOVERY     [2] DETECTION     [3] GRAPH       [4] ANALYSIS      │
+  │  subagent (haiku)  subagent (sonnet) subagent (sonnet) subagent (opus) │
+  │  VALIDATE+DISCOVER DETECT            SYMBOLS+REPO-MAP ANALYZE+MAP+DB  │
+  │       │                 │                  │                │           │
+  │       ▼                 ▼                  ▼                ▼           │
+  │  ┌─────────────────────────────────────────────────────────────┐       │
+  │  │              ORCHESTRATOR STATE MERGE                        │       │
+  │  └─────────────────────────┬───────────────────────────────────┘       │
+  │                            ▼                                           │
+  │  [5] CRITIQUE ──────── BLOCKING GATE (inline, opus)                    │
+  │                            │                                           │
+  │                            ▼ (if passed)                               │
+  │  [6] GENERATION       [7] VERIFICATION     [8] REPORT                  │
+  │  subagent (sonnet)    subagent (sonnet)     subagent (haiku)           │
+  │  GENERATE             VERIFY ── GATE        REPORT                     │
+  │                                                                         │
+  │  ── Monorepo Mode (v4.2) ──────────────────────────────────────────── │
+  │  ≤3 modules: Pipeline — compound subagents                            │
+  │    (DETECT+GRAPH+ANALYZE per module in one Task call, all parallel)   │
+  │  4+ modules: Batch — all DETECT → merge → all GRAPH → merge →        │
+  │    all ANALYZE → merge                                                 │
+  └─────────────────────────────────────────────────────────────────────────┘
 
 # ════════════════════════════════════════════════════════════════════════════════
-# PROGRESSIVE CONTEXT LOADING
+# ORCHESTRATION ALGORITHM
 # ════════════════════════════════════════════════════════════════════════════════
 
-context_strategy:
-  principle: "Load each phase file on-demand, retain only structured state output"
-  pattern: |
-    FOR each phase in workflow:
-      1. Read phase file: phases/{n}-{name}.md
-      2. Check required state (from deps/state-contract.md)
-      3. Execute phase instructions
-      4. Write structured output to state.{phase_name}
-      5. Output compact summary line
-      6. Phase file content is no longer needed — only state persists
-  benefits:
-    - "Reduces active context by ~60% (only current phase + state, not all phases)"
-    - "State contract ensures no data loss between phases"
-    - "Each phase can be re-run independently with saved state"
+orchestration: |
+
+  FUNCTION orchestrate(path, flags):
+    state ← {}
+    AGENT_ROOT ← directory containing this AGENT.md
+
+    # ── STEP 1: DISCOVERY ──────────────────────────────────────────────
+    # Subagent: discovery (haiku)
+    # Validates project, detects mode, discovers monorepo structure
+
+    Call Task tool:
+      subagent_type: general-purpose
+      model: haiku
+      prompt: |
+        Read {AGENT_ROOT}/subagents/discovery.md and execute.
+        Project path: {path}
+        Config: dry_run={flags.dry_run}
+
+    Parse subagent_result → merge into state (state.validate + state.discover)
+    Validate: state.validate.path exists, state.discover.analysis_targets non-empty
+
+    Output: [PHASE 1/10] DISCOVERY — DONE
+
+    # ── STEP 2-4: DETECTION + GRAPH + ANALYSIS ───────────────────────
+    # Strategy depends on project structure (SEE: deps/orchestration.md)
+
+    IF state.discover.strategy == "single" OR modules.length <= 1:
+      # ── SEQUENTIAL (single module) ──
+      # Subagent: detection (sonnet), then graph (sonnet), then analysis (opus)
+
+      Call Task tool:
+        subagent_type: general-purpose
+        model: sonnet
+        prompt: |
+          Read {AGENT_ROOT}/subagents/detection.md and execute.
+          Project path: {path}
+          State: {serialize(state.validate, state.discover)}
+
+      Parse subagent_result → merge into state.detect
+      Validate: state.detect.primary_language exists, confidence ≥ 0.3
+
+      Output: [PHASE 2/10] DETECTION — DONE
+
+      Call Task tool:
+        subagent_type: general-purpose
+        model: sonnet
+        prompt: |
+          Read {AGENT_ROOT}/subagents/graph.md and execute.
+          Project path: {path}
+          State: {serialize(state.validate, state.discover, state.detect)}
+
+      Parse subagent_result → merge into state.graph
+      Validate: state.graph.symbol_table.total_symbols > 0, state.graph.repo_map.content exists
+
+      Output: [PHASE 3/10] GRAPH — DONE
+
+      Call Task tool:
+        subagent_type: general-purpose
+        model: opus
+        prompt: |
+          Read {AGENT_ROOT}/subagents/analysis.md and execute.
+          Project path: {path}
+          State: {serialize(state.validate, state.discover, state.detect, state.graph)}
+
+      Parse subagent_result → merge into state.analyze + state.map + state.database
+      Validate: state.analyze.architecture exists, state.map.entry_points non-empty
+
+      Output: [PHASE 4-5/10] ANALYSIS — DONE
+
+    ELSE IF modules.length <= 3:
+      # ── PIPELINE PARALLELISM (≤3 modules) ──
+      # Compound subagents: DETECTION + GRAPH + ANALYSIS per module in one Task call
+      # All modules launched in parallel — no inter-phase barrier
+      # SEE: deps/orchestration.md → PIPELINE PARALLELISM
+
+      FOR EACH target IN state.discover.analysis_targets (all IN PARALLEL):
+        Call Task tool:
+          subagent_type: general-purpose
+          model: opus
+          prompt: |
+            # COMPOUND SUBAGENT: DETECTION + GRAPH + ANALYSIS for "{target}"
+            Phase 1: Read {AGENT_ROOT}/subagents/detection.md and execute.
+            Phase 2: Read {AGENT_ROOT}/subagents/graph.md and execute.
+            Phase 3: Read {AGENT_ROOT}/subagents/analysis.md and execute.
+            Project path: {path}
+            Module target: {target}
+            State: {serialize(state.validate, state.discover)}
+
+      Collect compound results → per-module merge into state.detect + state.graph + state.analyze + state.map
+      Handle partial failures: exclude failed modules, warn on partial
+      Aggregate merged state (SEE: deps/state-contract.md → MONOREPO STATE MERGING)
+
+      Validate: state.detect.primary_language exists, state.analyze exists
+      Output: [PHASE 2-5/10] DETECTION + GRAPH + ANALYSIS — DONE (pipeline, {N} modules)
+
+    ELSE:
+      # ── BATCH PARALLELISM (4+ modules) ──
+      # 3-wave: all DETECTION → merge → all GRAPH → merge → all ANALYSIS → merge
+
+      FOR EACH target IN state.discover.analysis_targets (all IN PARALLEL):
+        Call Task tool:
+          subagent_type: general-purpose
+          model: sonnet
+          prompt: |
+            Read {AGENT_ROOT}/subagents/detection.md and execute.
+            Project path: {path}, Module target: {target}
+            State: {serialize(state.validate, state.discover)}
+
+      Collect all results → merge per-module into state.detect
+      Validate: state.detect.primary_language exists, confidence ≥ 0.3
+
+      Output: [PHASE 2/10] DETECTION — DONE ({N} modules, batch)
+
+      FOR EACH target IN state.discover.analysis_targets (all IN PARALLEL):
+        Call Task tool:
+          subagent_type: general-purpose
+          model: sonnet
+          prompt: |
+            Read {AGENT_ROOT}/subagents/graph.md and execute.
+            Project path: {path}, Module target: {target}
+            State: {serialize(state.validate, state.discover, state.detect)}
+
+      Collect all results → merge per-module into state.graph
+      Output: [PHASE 3/10] GRAPH — DONE ({N} modules, batch)
+
+      FOR EACH target IN state.discover.analysis_targets (all IN PARALLEL):
+        Call Task tool:
+          subagent_type: general-purpose
+          model: opus
+          prompt: |
+            Read {AGENT_ROOT}/subagents/analysis.md and execute.
+            Project path: {path}, Module target: {target}
+            State: {serialize(state.validate, state.discover, state.detect, state.graph)}
+
+      Collect all results → merge per-module into state.analyze + state.map + state.database
+      Validate: state.analyze.architecture exists
+
+      Output: [PHASE 4-5/10] ANALYSIS — DONE ({N} modules, batch)
+
+    # ── STEP 5: CRITIQUE (INLINE BLOCKING GATE) ───────────────────────
+    # NOT a subagent — executed inline in orchestrator context
+    # Needs full state for adversarial review and confidence calibration
+
+    Read {AGENT_ROOT}/phases/critique.md
+    Execute CRITIQUE with full state:
+      - Checklist review (completeness, accuracy, quality, relevance)
+      - Adversarial review (5 devil's advocate questions)
+      - Confidence calibration (evidence vs claimed confidence)
+      - Plan adjustments
+
+    state.critique ← critique results
+
+    IF state.critique.gate_passed == false:
+      # Retry: fix issues identified by critique
+      Apply plan_adjustments to state
+      Re-execute CRITIQUE (max 1 retry)
+      IF still gate_passed == false:
+        FATAL "Critique gate failed. Issues: {state.critique.issues}"
+
+    Output: [PHASE 6/10] CRITIQUE — DONE (gate: PASSED)
+
+    # ── STEP 6: GENERATION ─────────────────────────────────────────────
+    # Subagent: generation (sonnet)
+    # Creates .claude/ artifacts
+
+    Call Task tool:
+      subagent_type: general-purpose
+      model: sonnet
+      prompt: |
+        Read {AGENT_ROOT}/subagents/generation.md and execute.
+        Project path: {path}
+        Config: dry_run={flags.dry_run}, mode={state.validate.mode}
+        State: {serialize(full_state)}
+
+    Parse subagent_result → merge into state.generate
+
+    Output: [PHASE 7/10] GENERATION — DONE
+
+    # ── STEP 7: VERIFICATION (BLOCKING GATE) ──────────────────────────
+    # Subagent: verification (sonnet)
+    # Validates generated artifacts
+
+    Call Task tool:
+      subagent_type: general-purpose
+      model: sonnet
+      prompt: |
+        Read {AGENT_ROOT}/subagents/verification.md and execute.
+        Project path: {path}
+        State: {serialize(state.generate, state.validate)}
+
+    Parse subagent_result → merge into state.verify
+
+    IF state.verify.gate_passed == false:
+      # Re-run generation with fix instructions, then re-verify
+      fix_instructions = state.verify.issues
+      Re-call generation subagent with fix_instructions
+      Re-call verification subagent
+      IF still gate_passed == false:
+        FATAL "Verification gate failed. Issues: {state.verify.issues}"
+
+    Output: [PHASE 8/10] VERIFICATION — DONE (gate: PASSED)
+
+    # ── STEP 8: REPORT ─────────────────────────────────────────────────
+    # Subagent: report (haiku)
+    # Final summary with metrics and recommendations
+
+    Call Task tool:
+      subagent_type: general-purpose
+      model: haiku
+      prompt: |
+        Read {AGENT_ROOT}/subagents/report.md and execute.
+        State: {serialize(full_state)}
+
+    Output report to user.
+
+    Output: [PHASE 9/10] REPORT — DONE
+
+    RETURN state
 
 # ════════════════════════════════════════════════════════════════════════════════
 # OPERATION MODES
@@ -185,76 +382,6 @@ modes:
   - mode: "UPDATE"
     condition: "PROJECT-KNOWLEDGE.md существует + git repo"
     behavior: "Обновляет исследование incrementally"
-
-mode_detection: |
-  if [ ! -d ".claude" ]; then
-      MODE="CREATE"
-  elif [ -f ".claude/PROJECT-KNOWLEDGE.md" ] && [ -d ".git" ]; then
-      MODE="UPDATE"
-  else
-      MODE="AUGMENT"
-  fi
-
-# ════════════════════════════════════════════════════════════════════════════════
-# PHASE EXECUTION
-# ════════════════════════════════════════════════════════════════════════════════
-
-phases:
-  - phase: 1
-    name: "VALIDATE"
-    file: "phases/1-validate.md"
-    state_output: "state.validate"
-  - phase: 1.5
-    name: "DISCOVER"
-    file: "phases/1.5-discover.md"
-    state_output: "state.discover"
-    note: "Monorepo and module detection"
-  - phase: 2
-    name: "DETECT"
-    file: "phases/2-detect.md"
-    state_output: "state.detect"
-    note: "AST-first with grep fallback"
-  - phase: 3
-    name: "ANALYZE"
-    file: "phases/3-analyze.md"
-    state_output: "state.analyze"
-    note: "AST-enhanced architecture detection"
-  - phase: 4
-    name: "MAP"
-    file: "phases/4-map.md"
-    state_output: "state.map"
-    note: "Includes dependency graph building"
-  - phase: 5
-    name: "DATABASE"
-    file: "phases/4-map.md#4.6"
-    state_output: "state.database"
-    note: "Optional (if PostgreSQL MCP available)"
-  - phase: 6
-    name: "CRITIQUE"
-    file: "phases/7-critique.md"
-    state_output: "state.critique"
-    gate: "blocking"
-  - phase: 7
-    name: "GENERATE"
-    file: "phases/5-generate.md"
-    state_output: "state.generate"
-  - phase: 8
-    name: "VERIFY"
-    file: "phases/8-verify.md"
-    state_output: "state.verify"
-    gate: "blocking"
-  - phase: 9
-    name: "REPORT"
-    file: "phases/6-report.md"
-
-loading_pattern: |
-  # Progressive loading — one phase at a time
-  FOR phase in phases:
-    Read phase.file
-    Validate required state fields (SEE deps/state-contract.md)
-    Execute phase
-    Output: compact state summary line
-    # Phase file no longer in active context — only state persists
 
 # ════════════════════════════════════════════════════════════════════════════════
 # ERROR HANDLING
@@ -273,139 +400,82 @@ errors:
     condition: "Can't detect language"
     severity: FATAL
     message: "FATAL: Could not detect primary language"
-  - error: "WRITE_FAILED"
-    condition: "Can't write .claude/"
+  - error: "SUBAGENT_FAILURE"
+    condition: "Subagent returned status: failure after retry"
     severity: FATAL
-    message: "FATAL: Failed to write: <file>"
-  - error: "STATE_INVALID"
-    condition: "Required state fields missing between phases"
+    message: "FATAL: Subagent <name> failed: <error.message>"
+  - error: "CRITIQUE_GATE"
+    condition: "Critique gate failed after 2 attempts"
     severity: FATAL
-    message: "FATAL: State validation failed — missing: <fields>. Re-run phase: <phase>"
+    message: "FATAL: Critique gate failed. Manual review required."
+  - error: "VERIFY_GATE"
+    condition: "Verification gate failed after 2 attempts"
+    severity: FATAL
+    message: "FATAL: Verification gate failed. Issues: <issues>"
+
+# ════════════════════════════════════════════════════════════════════════════════
+# SUBAGENT REGISTRY
+# ════════════════════════════════════════════════════════════════════════════════
+
+subagents:
+  - name: "discovery"
+    file: "subagents/discovery.md"
+    model: haiku
+    phases: "VALIDATE + DISCOVER"
+    output: "state.validate, state.discover"
+  - name: "detection"
+    file: "subagents/detection.md"
+    model: sonnet
+    phases: "DETECT"
+    output: "state.detect"
+    parallelizable: true
+  - name: "graph"
+    file: "subagents/graph.md"
+    model: sonnet
+    phases: "GRAPH"
+    output: "state.graph"
+    parallelizable: true
+    note: "v4.2: builds symbol table, dependency graph, PageRank repo-map"
+  - name: "analysis"
+    file: "subagents/analysis.md"
+    model: opus
+    phases: "ANALYZE + MAP + DATABASE"
+    output: "state.analyze, state.map, state.database"
+    parallelizable: true
+    input_enhancement: "receives state.graph.repo_map as context (v4.2)"
+  - name: "generation"
+    file: "subagents/generation.md"
+    model: sonnet
+    phases: "GENERATE"
+    output: "state.generate"
+  - name: "verification"
+    file: "subagents/verification.md"
+    model: sonnet
+    phases: "VERIFY"
+    output: "state.verify"
+    gate: blocking
+  - name: "report"
+    file: "subagents/report.md"
+    model: haiku
+    phases: "REPORT"
+    output: "final report"
+
+inline_phases:
+  - name: "CRITIQUE"
+    file: "phases/critique.md"
+    model: opus
+    gate: blocking
+    reason: "Needs full state context for adversarial review"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # PROGRESS TRACKING
 # ════════════════════════════════════════════════════════════════════════════════
 
 progress:
-  format: "[PHASE {n}/9] {name} — DONE\nState: {compact_state_summary}"
-  example: |
-    [PHASE 1/9] VALIDATE — DONE
-    State: validate.path=/Users/dev/my-project, mode=CREATE, git=true, files=127
-
-    [PHASE 1.5/9] DISCOVER — DONE
-    State: discover.is_monorepo=false, strategy=single, targets=[.]
-
-    [PHASE 2/9] DETECT — DONE
-    State: detect.primary_language=go (0.92), frameworks=[chi@v5, pgx@v5], ast=true
-
-    [PHASE 3/9] ANALYZE — DONE
-    State: analyze.architecture=clean (0.88), layers=3, violations=0
-
-    [PHASE 4/9] MAP — DONE
-    State: map.entry_points=3, entities=5, dep_graph.packages=34, hubs=[domain/entity]
-
-    [PHASE 6/9] CRITIQUE — DONE
-    State: critique.gate_passed=true, issues=1 (CLAUDE.md oversized → split)
-
-    [PHASE 8/9] VERIFY — DONE
-    State: verify.gate_passed=true, yaml=✅, refs=✅, size=✅
-
-# ════════════════════════════════════════════════════════════════════════════════
-# TROUBLESHOOTING
-# ════════════════════════════════════════════════════════════════════════════════
-
-troubleshooting:
-  - problem: "FATAL: No source files found"
-    cause: "Empty directory or wrong path"
-    fix: "Verify path contains source code files"
-  - problem: "FATAL: Could not detect primary language"
-    cause: "Mixed languages, no clear majority"
-    fix: "Manually specify language or check file distribution"
-  - problem: "Phase hangs on large codebases"
-    cause: "Too many files to analyze"
-    fix: "Use --dry-run first, consider excluding vendor/node_modules"
-  - problem: "Generated artifacts too generic"
-    cause: "Insufficient code patterns found"
-    fix: "Ensure codebase has ≥3 examples of patterns"
-  - problem: "PostgreSQL phase fails"
-    cause: "MCP server not configured"
-    fix: "Check MCP postgres connection in settings"
-  - problem: "UPDATE mode not detecting changes"
-    cause: "Git repo dirty or missing commits"
-    fix: "Commit changes before running in UPDATE mode"
-  - problem: "AUGMENT overwrites custom artifacts"
-    cause: "Existing artifacts not properly detected"
-    fix: "Backup .claude/ before running"
-  - problem: "Low confidence scores"
-    cause: "Legacy codebase, inconsistent patterns"
-    fix: "Review and manually adjust generated artifacts"
-  - problem: "ast-grep not available"
-    cause: "Not installed on system"
-    fix: "Install via: npm install -g @ast-grep/cli. Agent falls back to grep automatically."
-  - problem: "State validation failure between phases"
-    cause: "Previous phase didn't populate required fields"
-    fix: "Re-run the failed phase. Check deps/state-contract.md for required fields."
-  - problem: "Monorepo detected but analysis too broad"
-    cause: "DISCOVER phase chose wrong strategy"
-    fix: "Run per-module: project-researcher services/api/"
-
-# ════════════════════════════════════════════════════════════════════════════════
-# COMMON MISTAKES
-# ════════════════════════════════════════════════════════════════════════════════
-
-common_mistakes:
-  - mistake: "Running on empty or test-only directories"
-    bad: "project-researcher tests/"
-    good: "project-researcher . (from project root)"
-    why: "Need actual source code for meaningful analysis"
-  - mistake: "Not excluding vendor/node_modules"
-    bad: "Analyze project with 10k vendor files"
-    good: "Agent auto-excludes, but verify if slow"
-    why: "Vendor files skew language detection and patterns"
-  - mistake: "Expecting perfect artifacts from inconsistent codebases"
-    bad: "Assume generated config is final"
-    good: "Use as starting point, manually refine"
-    why: "Agent confidence reflects codebase quality"
-  - mistake: "Running UPDATE mode without committed changes"
-    bad: "project-researcher (with dirty git)"
-    good: "git commit -am 'changes' && project-researcher"
-    why: "UPDATE mode uses git diff for incremental analysis"
-  - mistake: "Ignoring DISCOVER phase output for monorepos"
-    bad: "Run on monorepo root and expect single-project analysis"
-    good: "Check discover.strategy and analysis_targets in output"
-    why: "Monorepos need per-module or shared-context strategy"
-
-# ════════════════════════════════════════════════════════════════════════════════
-# EXAMPLES
-# ════════════════════════════════════════════════════════════════════════════════
-
-examples:
-  mode_selection:
-    bad:
-      input: "project-researcher (when .claude/ exists with custom config)"
-      result: "May overwrite custom configurations in AUGMENT mode"
-    good:
-      input: "Backup .claude/ first, or use --dry-run to preview"
-      result: "Agent detects CREATE/AUGMENT/UPDATE automatically"
-    why: "Understanding modes prevents data loss"
-
-  dry_run:
-    bad:
-      input: "project-researcher (first time on large project)"
-      result: "May take long, unclear what will be generated"
-    good:
-      input: "project-researcher --dry-run first"
-      result: "See analysis without file writes"
-    why: "Preview before committing to generation"
-
-  monorepo:
-    bad:
-      input: "project-researcher (from monorepo root without DISCOVER)"
-      result: "Mixed language detection, generic artifacts"
-    good:
-      input: "DISCOVER phase detects modules and picks strategy automatically"
-      result: "Per-module analysis with shared context"
-    why: "DISCOVER phase handles monorepos natively since v3.0"
+  format: |
+    [ORCHESTRATOR] Calling subagent: {name} (model: {model})
+    [PHASE {n}/10] {NAME} — DONE
+    State: {compact_state_summary}
 
 # ════════════════════════════════════════════════════════════════════════════════
 # RULES
@@ -417,82 +487,78 @@ rules:
   - id: 2
     rule: "Detect mode automatically (CREATE/AUGMENT/UPDATE)"
   - id: 3
-    rule: "Skip DATABASE phase if MCP unavailable"
+    rule: "Skip DATABASE if MCP unavailable"
   - id: 4
     rule: "Report confidence scores for each finding"
   - id: 5
     rule: "Never overwrite existing artifacts without AUGMENT mode"
   - id: 6
-    rule: "Auto-exclude vendor/, node_modules/, .git/, generated/ from analysis"
+    rule: "Auto-exclude vendor/, node_modules/, .git/, generated/"
   - id: 7
-    rule: "Use AST analysis when available, grep as fallback"
+    rule: "Use tree-sitter MCP when available, ast-grep as fallback, grep as last resort"
   - id: 8
-    rule: "Validate state contract between every phase transition"
+    rule: "Validate state contract between every subagent call"
   - id: 9
-    rule: "Build dependency graph in MAP phase for all Go projects"
+    rule: "Monorepo: pipeline parallelism (≤3 modules, compound DETECT+GRAPH+ANALYZE) or batch parallelism (4+, 3-wave)"
   - id: 10
-    rule: "Run DISCOVER phase to detect monorepos before DETECT"
+    rule: "Retry failed subagent once with reduced scope before FATAL"
 
 # ════════════════════════════════════════════════════════════════════════════════
-# ADVANCED FEATURES
+# TROUBLESHOOTING
 # ════════════════════════════════════════════════════════════════════════════════
 
-advanced_features:
-  - feature: "AST-Based Analysis"
-    file: "deps/ast-analysis.md"
-    description: "Structural code analysis via ast-grep with grep fallback"
-  - feature: "Inter-Phase State Contract"
-    file: "deps/state-contract.md"
-    description: "Typed state object with validation between phases"
-  - feature: "Edge Cases & Limitations"
-    file: "deps/edge-cases.md"
-    description: "Known limitations, edge cases, confidence thresholds"
-  - feature: "Step Quality"
-    file: "deps/step-quality.md"
-    description: "Per-phase quality checks (Process Reward Model)"
-  - feature: "Reflexion"
-    file: "deps/reflexion.md"
-    description: "Self-improvement loop pattern"
-
-# ════════════════════════════════════════════════════════════════════════════════
-# RELATED
-# ════════════════════════════════════════════════════════════════════════════════
-
-related:
-  agents:
-    - name: "meta-agent"
-      when: "After generation — audit/improve artifacts"
-  resources:
-    - path: "meta-agent/deps/artifact-analyst.md"
-      description: "Deep artifact analysis"
-    - path: "meta-agent/deps/artifact-quality.md"
-      description: "Quality criteria for artifacts"
+troubleshooting:
+  - problem: "Subagent timeout on large codebase"
+    cause: "Too many files for single subagent context"
+    fix: "Subagent auto-excludes vendor/node_modules. For very large projects, run per-directory."
+  - problem: "CRITIQUE gate fails repeatedly"
+    cause: "Analysis found inconsistencies or overcalibrated confidence"
+    fix: "Review critique.issues, manually adjust state, re-run"
+  - problem: "VERIFY gate fails on size"
+    cause: "Generated CLAUDE.md exceeds 200 lines"
+    fix: "Generation subagent auto-splits. If persists, check for bloated sections."
+  - problem: "Monorepo analysis too slow"
+    cause: "Too many modules (>10) or barrier wait between DETECT/GRAPH/ANALYZE phases"
+    fix: "≤3 modules: pipeline parallelism auto-applied (compound DETECT+GRAPH+ANALYZE). 4+: batch 3-wave. Very large: run per-module manually."
+  - problem: "State validation failure between subagents"
+    cause: "Previous subagent didn't populate required fields"
+    fix: "Re-run failed subagent. Check deps/state-contract.md."
+  - problem: "tree-sitter MCP not available"
+    cause: "MCP server not configured or not running"
+    fix: "Configure tree-sitter MCP server. Falls back to ast-grep CLI, then grep."
+  - problem: "ast-grep not available"
+    cause: "Not installed on system"
+    fix: "Install: npm install -g @ast-grep/cli. Or configure tree-sitter MCP (preferred). Last resort: grep fallback."
 
 # ════════════════════════════════════════════════════════════════════════════════
 # REFERENCE FILES
 # ════════════════════════════════════════════════════════════════════════════════
 
 reference_files:
-  - file: "phases/*.md"
-    purpose: "Phase-specific execution instructions (1-9)"
-  - file: "phases/1.5-discover.md"
-    purpose: "Monorepo and module detection (NEW v3.0)"
-  - file: "reference/language-patterns.md"
-    purpose: "Language-specific analysis patterns"
-  - file: "reference/scoring.md"
-    purpose: "Confidence scoring system"
-  - file: "templates/project-knowledge.md"
-    purpose: "PROJECT-KNOWLEDGE.md template"
-  - file: "deps/ast-analysis.md"
-    purpose: "AST-grep patterns for structural code analysis (NEW v3.0)"
+  - file: "subagents/*.md"
+    purpose: "Subagent execution instructions (7 files, including graph.md)"
+  - file: "phases/critique.md"
+    purpose: "CRITIQUE blocking gate (inline, not subagent)"
+  - file: "deps/orchestration.md"
+    purpose: "Subagent interaction protocol"
   - file: "deps/state-contract.md"
-    purpose: "Typed inter-phase state schema (NEW v3.0)"
+    purpose: "Typed inter-phase state schema + subagent interface"
+  - file: "deps/tree-sitter-patterns.md"
+    purpose: "Tree-sitter query patterns for structural code analysis (v4.2)"
+  - file: "deps/ast-analysis.md"
+    purpose: "Legacy AST-grep patterns (deprecated, fallback reference)"
   - file: "deps/edge-cases.md"
     purpose: "Known limitations and edge cases"
   - file: "deps/step-quality.md"
     purpose: "Per-phase quality checks"
   - file: "deps/reflexion.md"
     purpose: "Self-improvement pattern"
+  - file: "reference/language-patterns.md"
+    purpose: "Language-specific analysis patterns"
+  - file: "reference/scoring.md"
+    purpose: "Confidence scoring system"
+  - file: "templates/project-knowledge.md"
+    purpose: "PROJECT-KNOWLEDGE.md template"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # CHECKLIST
@@ -500,13 +566,15 @@ reference_files:
 
 checklist:
   - "Directory exists and is accessible"
-  - "Monorepo/module structure detected (DISCOVER)"
+  - "Mode detected (CREATE/AUGMENT/UPDATE)"
+  - "Monorepo/module structure detected"
   - "Language detected with confidence"
-  - "AST availability checked"
+  - "Symbol graph built with repo-map"
   - "Architecture pattern identified with evidence"
   - "Dependency graph built with metrics"
   - "Domain entities mapped"
-  - "State contract validated at each phase transition"
-  - "All GENERATE artifacts valid"
-  - "VERIFY checks passed"
-  - "Report includes confidence scores and dependency topology"
+  - "State contract validated at each subagent call"
+  - "CRITIQUE gate passed"
+  - "All artifacts generated and valid"
+  - "VERIFY gate passed"
+  - "Report includes confidence scores and topology"

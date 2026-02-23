@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/main/config-schema.json",
   "model": "sonnet",
   "thinking": { "type": "adaptive" },
-  "enabledMcpjsonServers": ["memory", "sequential-thinking", "context7"],
+  "enabledMcpjsonServers": ["memory", "sequential-thinking", "context7", "tree_sitter"],
   "permissions": {
     "allow": [
       "Bash(make:*)",

@@ -219,7 +219,7 @@ FOR each finding in [architecture, conventions, patterns]:
 ## 7.8 OUTPUT FORMAT
 
 ```
-[PHASE 6/9] CRITIQUE — DONE
+[PHASE 6/10] CRITIQUE — DONE
 State: critique.gate_passed=true, issues=2, calibration_adjustments=1
 
 ### Checklist Summary

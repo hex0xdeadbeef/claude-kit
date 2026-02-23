@@ -1,23 +1,25 @@
 # Inter-Phase State Contract
 
-**Purpose:** Typed state object, передаваемый между фазами. Каждая фаза читает input из предыдущих секций и записывает свою секцию.
+**Purpose:** Typed state object, передаваемый между фазами и subagents. Orchestrator хранит глобальный state, subagents получают только required fields и возвращают свою секцию.
 
 **Principle:** Формальный контракт данных устраняет хрупкую передачу через markdown и позволяет программную валидацию.
 
-**Load when:** Начало каждой фазы — для проверки required fields от предыдущих фаз.
+**Load when:** Orchestrator — при инициализации. Subagents — получают relevant subset в промпте.
+
+**SEE:** `deps/orchestration.md` для протокола subagent вызовов.
 
 ---
 
 ## STATE SCHEMA
 
-Стейт — виртуальный YAML-объект, который агент поддерживает в памяти на протяжении всего выполнения. Каждая фаза обязана:
-1. Проверить наличие required fields из предыдущих фаз
-2. Заполнить свою секцию полностью
-3. Вывести compact summary (не весь стейт)
+Стейт — виртуальный YAML-объект. Orchestrator поддерживает полный state в памяти. Каждый subagent:
+1. Получает от orchestrator required fields из предыдущих фаз
+2. Заполняет свою секцию полностью
+3. Возвращает `subagent_result` с `state_updates` (только своя секция)
 
 ---
 
-### Phase 1: VALIDATE → `state.validate`
+### DISCOVERY Subagent → `state.validate` + `state.discover`
 
 ```yaml
 validate:
@@ -38,12 +40,6 @@ validate:
     update_scope: string[]
 ```
 
-**FATAL if:** `path` не существует, `source_file_count == 0`
-
----
-
-### Phase 1.5: DISCOVER → `state.discover`
-
 ```yaml
 discover:
   is_monorepo: bool         # REQUIRED
@@ -55,14 +51,17 @@ discover:
       depends_on: string[]  # пути к другим модулям (internal deps)
   strategy: "single" | "per-module" | "per-module-with-shared-context"
   root_module: string       # путь к "главному" модулю (если определён)
-  analysis_targets: string[] # REQUIRED — список путей для анализа в следующих фазах
+  analysis_targets: string[] # REQUIRED — список путей для анализа
 ```
 
+**FATAL if:** `path` не существует, `source_file_count == 0`
 **Логика:** Если `is_monorepo == false`, то `analysis_targets = [state.validate.path]`.
 
 ---
 
-### Phase 2: DETECT → `state.detect`
+### DETECTION Subagent → `state.detect`
+
+**Receives:** `state.validate.path`, `state.validate.mode`, `state.validate.source_file_count`, `state.discover.analysis_targets`, `state.discover.is_monorepo`
 
 ```yaml
 detect:
@@ -87,14 +86,93 @@ detect:
     mock_count: int
     test_file_count: int
   linters: string[]          # ["golangci-lint", "prettier"]
-  ast_available: bool        # REQUIRED — доступен ли ast-grep
+  analysis_method: string     # REQUIRED — "tree-sitter-mcp" | "ast-grep" | "grep"
 ```
 
 **FATAL if:** `primary_language` не определён, `primary_confidence < 0.3`
 
 ---
 
-### Phase 3: ANALYZE → `state.analyze`
+### GRAPH Subagent → `state.graph` (v4.2)
+
+**Receives:** `state.validate.path`, `state.detect.analysis_method`, `state.detect.primary_language`, `state.discover.analysis_targets`
+
+```yaml
+graph:
+  analysis_method: string          # REQUIRED — "tree-sitter-mcp" | "ast-grep" | "grep"
+  method_confidence: float         # REQUIRED — 1.0 | 0.85 | 0.65
+
+  symbol_table:
+    total_symbols: int             # REQUIRED — total extracted symbols
+    total_files: int               # REQUIRED — files with symbols
+    by_kind:                       # REQUIRED
+      function: int
+      method: int
+      struct: int
+      interface: int
+      class: int
+      type: int
+      trait: int
+      enum: int
+    exported_count: int            # REQUIRED — public/exported symbols
+    test_symbols_excluded: int     # filtered test symbols
+    generated_excluded: int        # filtered generated code
+
+  dependency_graph:
+    total_nodes: int               # REQUIRED — files in graph
+    total_edges: int               # REQUIRED — dependency edges
+    internal_edges: int            # intra-project edges
+    external_packages: int         # unique external packages
+    avg_fan_in: float
+    avg_fan_out: float
+    max_fan_in:
+      file: string
+      count: int
+    max_fan_out:
+      file: string
+      count: int
+    hub_files:                     # REQUIRED — top 5 by fan-in
+      - file: string
+        fan_in: int
+        fan_out: int
+        primary_symbols: string[]
+    isolated_files: string[]
+    circular_deps:
+      - cycle: string[]
+        severity: "high" | "medium"
+
+  pagerank:
+    algorithm: "pagerank" | "fan-in-approximation"  # REQUIRED
+    top_files:                     # REQUIRED — top 20 files by rank
+      - file: string
+        rank: float                # 0.0-1.0 normalized
+        symbols: int
+        primary_kind: string
+    convergence: bool
+    iterations: int
+
+  repo_map:
+    content: string                # REQUIRED — formatted repo-map text
+    token_count: int               # REQUIRED — estimated tokens
+    token_budget: int              # allocated budget
+    files_included: int            # files in repo-map
+    files_total: int               # total project files
+    coverage: float                # files_included / files_total
+    sections:
+      hub: int
+      important: int
+      other: int
+      truncated: int
+```
+
+**FATAL if:** `symbol_table.total_symbols == 0`, `repo_map.content` is empty
+**WARN if:** `pagerank.convergence == false`, `coverage < 0.3`
+
+---
+
+### ANALYSIS Subagent → `state.analyze` + `state.map` + `state.database`
+
+**Receives:** `state.validate.path`, `state.validate.mode`, `state.discover.*`, `state.detect.*`, **`state.graph.*`** (v4.2)
 
 ```yaml
 analyze:
@@ -132,10 +210,6 @@ analyze:
       mock_strategy: string  # "mockery" | "gomock" | "manual" | "none"
 ```
 
----
-
-### Phase 4: MAP → `state.map`
-
 ```yaml
 map:
   entry_points:              # REQUIRED
@@ -163,20 +237,16 @@ map:
       name: string           # "PostgreSQL" | "Redis" | "Kafka"
       driver: string         # "pgx" | "go-redis"
       config_location: string
-  dependency_graph:          # NEW — from dependency graph analysis
+  dependency_graph:
     total_packages: int
     max_depth: int
-    hub_packages:            # packages with highest fan-in
+    hub_packages:
       - package: string
         fan_in: int
         fan_out: int
-    circular_deps: string[][]  # groups of cyclically dependent packages
-    isolated_packages: string[] # packages with 0 fan-in (potentially dead code)
+    circular_deps: string[][]
+    isolated_packages: string[]
 ```
-
----
-
-### Phase 5: DATABASE → `state.database`
 
 ```yaml
 database:
@@ -187,7 +257,7 @@ database:
       columns: int
       primary_key: string
       foreign_keys: string[]
-      domain_entity: string  # mapped entity name
+      domain_entity: string
       alignment: "aligned" | "mismatch" | "unmapped"
   alignment_issues: string[]
   statistics:
@@ -199,7 +269,9 @@ database:
 
 ---
 
-### Phase 6: CRITIQUE → `state.critique`
+### CRITIQUE (Inline in Orchestrator) → `state.critique`
+
+**Reads:** `state.detect.*`, `state.analyze.*`, `state.map.*`
 
 ```yaml
 critique:
@@ -220,7 +292,9 @@ critique:
 
 ---
 
-### Phase 7: GENERATE → `state.generate`
+### GENERATION Subagent → `state.generate`
+
+**Receives:** Full state (all previous phases)
 
 ```yaml
 generate:
@@ -237,7 +311,9 @@ generate:
 
 ---
 
-### Phase 8: VERIFY → `state.verify`
+### VERIFICATION Subagent → `state.verify`
+
+**Receives:** `state.generate.artifacts`, `state.validate.path`
 
 ```yaml
 verify:
@@ -257,33 +333,212 @@ verify:
 
 ---
 
+## SUBAGENT INTERFACE
+
+### Input Format (from orchestrator to subagent)
+
+```yaml
+subagent_input:
+  project_path: string       # абсолютный путь к проекту
+  agent_root: string         # путь к директории project-researcher
+  config:
+    dry_run: bool            # только анализ, без записи файлов
+    mode: string             # CREATE | AUGMENT | UPDATE
+    module_target: string    # конкретный модуль (для monorepo parallelization)
+  state:                     # только required fields для данного subagent
+    validate: { ... }
+    discover: { ... }
+    # ... только то, что нужно
+```
+
+### Output Format (from subagent to orchestrator)
+
+```yaml
+subagent_result:
+  status: "success" | "failure" | "partial"
+  state_updates:
+    {phase_name}:
+      {field}: {value}
+  progress_summary: string   # one-line summary
+  error:                     # only if status != "success"
+    code: string             # ERROR_CODE
+    message: string
+    recovery: string         # suggested action
+```
+
+---
+
 ## VALIDATION RULES
 
-Перед стартом каждой фазы проверить:
+### Per-Subagent Required State
 
-| Phase | Required State |
-|-------|---------------|
-| DISCOVER | `state.validate.path`, `state.validate.mode` |
-| DETECT | `state.validate.*`, `state.discover.analysis_targets` |
-| ANALYZE | `state.detect.primary_language`, `state.detect.frameworks` |
-| MAP | `state.analyze.architecture`, `state.analyze.layers` |
-| DATABASE | `state.map.external_integrations` (check for DB) |
-| CRITIQUE | `state.detect.*`, `state.analyze.*`, `state.map.*` |
-| GENERATE | `state.critique.gate_passed == true` |
-| VERIFY | `state.generate.artifacts` |
-| REPORT | `state.verify.gate_passed == true` |
+| Subagent | Required Input State |
+|----------|---------------------|
+| discovery | (none — reads filesystem) |
+| detection | `state.validate.path`, `state.discover.analysis_targets` |
+| **graph** | **`state.validate.path`, `state.detect.analysis_method`, `state.detect.primary_language`, `state.discover.analysis_targets`** |
+| analysis | `state.validate.path`, `state.discover.*`, `state.detect.*`, **`state.graph.*`** |
+| CRITIQUE (inline) | `state.detect.*`, **`state.graph.*`**, `state.analyze.*`, `state.map.*` |
+| generation | `state.critique.gate_passed == true`, all previous state |
+| verification | `state.generate.artifacts`, `state.validate.path` |
+| report | `state.verify.gate_passed == true`, all state |
 
-**On missing required field:** FATAL — вернуться к фазе, которая должна была его заполнить.
+**On missing required field:** FATAL — orchestrator должен re-run предыдущий subagent.
+
+---
+
+## MONOREPO STATE MERGING
+
+### Execution Modes
+
+Merge protocol зависит от execution mode:
+
+| Mode | Condition | Subagent Shape | Merge Timing |
+|------|-----------|---------------|--------------|
+| **Sequential** | `strategy == "single"` | Separate detection, analysis | After each subagent |
+| **Pipeline** | `strategy != "single"` AND modules ≤ 3 | Compound (detect+analyze per module) | After all compound subagents complete |
+| **Batch** | `strategy != "single"` AND modules > 3 | Separate detection, analysis | After each batch (all detect → merge → all analyze → merge) |
+
+### Compound Subagent Result Format (Pipeline Mode)
+
+Compound subagents возвращают результаты DETECTION + GRAPH + ANALYSIS в одном `subagent_result`:
+
+```yaml
+subagent_result:
+  status: "success" | "failure" | "partial"
+  compound: true                          # флаг compound subagent
+  module_target: "services/api"           # какой модуль обработан
+  state_updates:
+    detect:
+      primary_language: "go"
+      primary_confidence: 0.92
+      frameworks: [...]
+      build_tools: [...]
+      test_framework: "testify"
+      analysis_method: "tree-sitter-mcp"
+    graph:                                # NEW v4.2
+      analysis_method: "tree-sitter-mcp"
+      method_confidence: 1.0
+      symbol_table: { total_symbols: 145, by_kind: { ... } }
+      dependency_graph: { total_nodes: 23, total_edges: 52 }
+      pagerank: { algorithm: "pagerank", top_files: [...] }
+      repo_map: { content: "...", token_count: 2800, token_budget: 4000 }
+    analyze:
+      architecture: "clean"
+      architecture_confidence: 0.88
+      layers: [...]
+      conventions: { ... }
+    map:
+      entry_points: [...]
+      core_domain: { ... }
+      design_patterns: [...]
+      dependency_graph: { ... }
+    database:
+      available: false
+      skip_reason: "no DB layer detected"
+  progress_summary: "module=services/api: detect=go(0.92), graph=145sym/52edges, analyze=clean(0.88)"
+  error:                                  # only if status != "success"
+    phase: "detection" | "graph" | "analysis"  # REQUIRED for compound — which phase failed
+    code: "..."
+    message: "..."
+    recovery: "..."
+```
+
+**Compound partial failure:**
+- `error.phase == "detection"` → вся `state_updates` пуста, модуль исключается из merge
+- `error.phase == "graph"` → `state_updates.detect` валиден (мержится), `state_updates.graph/analyze/map/database` пусты. Analysis runs without repo-map context.
+- `error.phase == "analysis"` → `state_updates.detect` и `state_updates.graph` валидны (мержатся), `state_updates.analyze/map/database` пусты
+
+### Per-Module State Lifecycle
+
+```
+Per-module results хранятся в промежуточном формате до агрегации:
+
+state.detect.modules[]:
+  - target: "services/api"           # module path
+    status: "success" | "partial"    # per-module status
+    ...detect fields...
+  - target: "services/auth"
+    status: "success"
+    ...detect fields...
+
+state.analyze.modules[]:
+  - target: "services/api"
+    status: "success" | "partial"
+    ...analyze fields...
+
+state.map.modules[]:
+  - target: "services/api"
+    ...map fields...
+
+После merge всех модулей → агрегация в top-level fields.
+```
+
+### Per-Module Merge (from compound results)
+
+```yaml
+# Per-module results stored as:
+detect:
+  modules:
+    - target: "services/api"
+      status: "success"
+      primary_language: "go"
+      frameworks: [...]
+    - target: "services/auth"
+      status: "success"
+      primary_language: "go"
+      frameworks: [...]
+
+# Aggregated fields (computed by orchestrator):
+detect:
+  primary_language: "go"              # majority vote
+  primary_confidence: 0.90            # weighted average
+  frameworks: [unique union]
+  analysis_method: "tree-sitter-mcp"  # best available across modules
+```
+
+### Merge Functions
+
+| Field | Strategy | Notes |
+|-------|----------|-------|
+| `primary_language` | Majority vote across modules | Tie → largest module (by source_file_count) wins |
+| `primary_confidence` | Weighted average (by source_file_count) | Excludes failed modules |
+| `frameworks` | Unique union (deduplicate by name) | Version conflict → highest version |
+| **`symbol_table`** | **Sum counts across modules** | **`total_symbols = Σ module.total_symbols`** |
+| **`dependency_graph` (graph)** | **Merge graphs + add inter-module edges** | **Per-module graphs merged into project-wide graph** |
+| **`repo_map`** | **Regenerate from merged graph** | **PageRank re-run on merged graph; token budget scales** |
+| `layers` | Concatenate, prefix with module path | `services/api::domain`, `services/auth::domain` |
+| `entry_points` | Concatenate | Each tagged with module_target |
+| `dependency_graph` (map) | Merge graphs + add inter-module edges | From `state.discover.internal_dependencies` |
+| `conventions` | From root_module or majority | If root_module failed → fallback to majority |
+| `architecture` | Per-module (не агрегируется) | Каждый модуль может иметь свою архитектуру |
+
+### Merge Validation
+
+После merge orchestrator проверяет:
+
+```yaml
+merge_validation:
+  - total_modules_expected: N          # from state.discover.modules.length
+  - total_modules_merged: M            # successfully merged
+  - failed_modules: [list]             # modules excluded from merge
+  - partial_modules: [list]            # modules with partial data
+  - merge_complete: M == N             # true only if all succeeded
+  - merge_viable: M >= 1              # at least one module succeeded
+```
+
+**FATAL if:** `merge_viable == false` (all modules failed)
+**WARN if:** `merge_complete == false` (partial merge, continue with available data)
 
 ---
 
 ## COMPACT OUTPUT FORMAT
 
-После каждой фазы выводить только summary, а не весь стейт:
+После каждого subagent call orchestrator выводит:
 
 ```
-[PHASE 2/10] DETECT — DONE
-State: detect.primary_language=go (0.92), frameworks=[chi@v5, pgx@v5], ast_available=true
+[PHASE {n}/10] {NAME} — DONE
+State: {key_field=value, ...}
 ```
 
-Полный стейт доступен через `state.*` для следующих фаз, но не дублируется в output.
+Полный стейт доступен через `state.*` для следующих subagents, но не дублируется в output.

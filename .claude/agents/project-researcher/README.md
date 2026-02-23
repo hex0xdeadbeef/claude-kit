@@ -1,15 +1,28 @@
 meta:
   name: "project-researcher"
-  version: "3.0"
-  description: "Autonomous agent for deep project research and .claude/ configuration generation"
+  version: "4.0"
+  description: "Autonomous orchestrator agent for deep project research and .claude/ configuration generation"
   invoke: "subagent_type: project-researcher"
 
-workflow: "VALIDATE → DISCOVER → DETECT → ANALYZE → MAP → [DATABASE] → CRITIQUE → GENERATE → VERIFY → REPORT"
+architecture: "orchestrator + 6 specialized subagents via Task tool"
+
+workflow: "DISCOVERY → DETECTION → ANALYSIS → CRITIQUE(gate) → GENERATION → VERIFICATION(gate) → REPORT"
 
 modes:
   CREATE: { when: "No .claude/ exists", action: "Full analysis, generate from scratch" }
   AUGMENT: { when: ".claude/ exists, no PROJECT-KNOWLEDGE.md", action: "Supplement existing config" }
   UPDATE: { when: "PROJECT-KNOWLEDGE.md exists", action: "Incremental update" }
+
+subagents:
+  discovery: { file: "subagents/discovery.md", model: haiku, phases: "VALIDATE + DISCOVER" }
+  detection: { file: "subagents/detection.md", model: sonnet, phases: "DETECT", parallelizable: true }
+  analysis: { file: "subagents/analysis.md", model: opus, phases: "ANALYZE + MAP + DATABASE", parallelizable: true }
+  generation: { file: "subagents/generation.md", model: sonnet, phases: "GENERATE" }
+  verification: { file: "subagents/verification.md", model: sonnet, phases: "VERIFY", gate: blocking }
+  report: { file: "subagents/report.md", model: haiku, phases: "REPORT" }
+
+inline_phases:
+  critique: { file: "phases/critique.md", model: opus, gate: blocking }
 
 supported_tech:
   Go: [gin, echo, chi, fiber, stdlib]
@@ -19,8 +32,9 @@ supported_tech:
   Java: [spring-boot, quarkus, micronaut]
 
 deps:
+  orchestration: "deps/orchestration.md  # Subagent interaction protocol"
+  state_contract: "deps/state-contract.md  # Typed inter-phase state schema + subagent interface"
   ast_analysis: "deps/ast-analysis.md  # AST-grep patterns per language"
-  state_contract: "deps/state-contract.md  # Typed inter-phase state schema"
   edge_cases: "deps/edge-cases.md  # Known limitations"
   step_quality: "deps/step-quality.md  # Per-phase quality checks"
   reflexion: "deps/reflexion.md  # Self-improvement pattern"
