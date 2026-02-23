@@ -108,17 +108,17 @@ design_patterns_check:
   when: "Plan mentions patterns (Factory, Strategy, etc.)"
 
   validation:
-    - question: "Паттерны обоснованы (не over-engineering)?"
+    - question: "Are patterns justified (not over-engineering)?"
       check: "Pattern solves real problem, not hypothetical future need"
       pass: "Clear benefit stated (e.g., 'enables multiple implementations')"
       fail: "Pattern added 'for flexibility' without concrete use case"
 
-    - question: "KISS check пройден для каждого паттерна?"
+    - question: "KISS check passed for each pattern?"
       check: "Simpler alternative considered and rejected"
       pass: "Shows why simple approach insufficient"
       fail: "Pattern chosen without considering simple solution"
 
-    - question: "Паттерны соответствуют слоям Clean Architecture?"
+    - question: "Do patterns align with Clean Architecture layers?"
       check: "Pattern doesn't violate layer boundaries"
       pass: "Factory in infrastructure, Strategy in domain"
       fail: "Domain pattern imports infrastructure"
@@ -131,16 +131,16 @@ concurrency_check:
   when: "Plan includes goroutines, channels, sync primitives"
 
   validation:
-    - question: "Выбран подходящий паттерн?"
+    - question: "Is the right concurrency pattern chosen?"
       options: ["Worker Pool", "errgroup", "Pipeline", "Fan-out/Fan-in"]
       check: "Pattern matches problem (e.g., Worker Pool for limited concurrency)"
 
-    - question: "Продуман graceful shutdown?"
+    - question: "Is graceful shutdown addressed?"
       check: "Context cancellation propagates, workers clean up"
       pass: "ctx.Done() handled, resources released"
       fail: "No shutdown mechanism or goroutine leaks"
 
-    - question: "Определён уровень параллелизма?"
+    - question: "Is concurrency level defined?"
       check: "Worker count or buffer size specified"
       pass: "Explicit limit (e.g., 10 workers, 100 buffer)"
       fail: "Unbounded concurrency or missing limits"

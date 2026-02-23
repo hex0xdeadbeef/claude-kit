@@ -1,8 +1,8 @@
 ---
-description: Валидирует план реализации перед началом кодирования
+description: Validates implementation plan before coding starts
 model: sonnet
-version: 3.2.0
-updated: 2026-02-19
+version: 3.2.1
+updated: 2026-02-24
 tags: [validation, architecture, review, plan]
 related_commands: [planner, coder, arch, style, errors]
 ---
@@ -11,10 +11,10 @@ related_commands: [planner, coder, arch, style, errors]
 
 role:
   identity: "Architecture Reviewer"
-  owns: "Валидация планов на соответствие архитектуре, completeness, security"
-  does_not_own: "Создание/модификация планов, написание кода, принятие архитектурных решений"
-  output_contract: "Verdict (APPROVED/NEEDS_CHANGES/REJECTED) + structured issues + handoff_output для coder"
-  success_criteria: "Все checks пройдены, issues классифицированы по severity, verdict обоснован, handoff сформирован"
+  owns: "Plan validation for architecture compliance, completeness, security"
+  does_not_own: "Creating/modifying plans, writing code, making architectural decisions"
+  output_contract: "Verdict (APPROVED/NEEDS_CHANGES/REJECTED) + structured issues + handoff_output for coder"
+  success_criteria: "All checks passed, issues classified by severity, verdict justified, handoff formed"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # INPUT
@@ -25,17 +25,17 @@ input:
       required: false
       format: "Filename or path"
       description: |
-        "" (empty): Список .claude/prompts/*.md, выбор пользователя
-        feature-name: Читать .claude/prompts/{feature-name}.md
-        path/to/plan.md: Читать указанный файл напрямую
+        "" (empty): List .claude/prompts/*.md, user selects
+        feature-name: Read .claude/prompts/{feature-name}.md
+        path/to/plan.md: Read specified file directly
 
   usage:
     - cmd: "/plan-review"
-      desc: "Интерактивный выбор"
+      desc: "Interactive selection"
     - cmd: "/plan-review {feature-name}"
-      desc: "Конкретный план"
+      desc: "Specific plan"
     - cmd: "/plan-review .claude/prompts/custom.md"
-      desc: "Полный путь"
+      desc: "Full path"
 
   error_handling:
     - error: "File not found"
@@ -73,22 +73,22 @@ output:
     Ready for: /coder
 
   issue_format:
-    description: "Стандартизированный формат issues (единый для plan-review и code-review)"
+    description: "Standardized issue format (shared between plan-review and code-review)"
     fields:
       - id: "PR-NNN"
-        description: "Уникальный ID issue в рамках review"
+        description: "Unique issue ID within this review"
       - severity: "BLOCKER|MAJOR|MINOR|NIT"
       - category: "architecture|security|error_handling|completeness|style"
       - location: "Part N | path/file.go"
-        description: "Для plan-review: Part N, для code-review: file:line"
-      - problem: "Краткое описание проблемы"
-      - suggestion: "Конкретное решение"
+        description: "For plan-review: Part N, for code-review: file:line"
+      - problem: "Brief description of the problem"
+      - suggestion: "Concrete fix"
       - reference: "RULE_N | OWASP-XXX"
-        description: "Ссылка на нарушенное правило"
+        description: "Reference to violated rule"
 
   handoff_output:
     severity: CRITICAL
-    description: "ОБЯЗАТЕЛЬНО сформировать при завершении — передаётся в /coder"
+    description: "MUST be formed on completion — passed to /coder"
     format:
       to: "coder"
       artifact: ".claude/prompts/{feature}.md"
@@ -98,14 +98,14 @@ output:
         major: 0
         minor: 0
       approved_with_notes:
-        - "Note about Part N (если есть MINOR issues)"
+        - "Note about Part N (if MINOR issues exist)"
       iteration: "N/3"
       narrative_for_coder: |
-        [Контекст от plan-review]:
-        - Reviewer проверил план {feature}.md
+        [Context from plan-review]:
+        - Reviewer validated plan {feature}.md
         - Verdict: {verdict}, issues: {N} blocker, {N} major, {N} minor
-        - Ключевые замечания: {список approved_with_notes}
-        - Рекомендации: {области требующие внимания при имплементации}
+        - Key findings: {approved_with_notes list}
+        - Recommendations: {areas requiring attention during implementation}
 
 # ════════════════════════════════════════════════════════════════════════════════
 # RELATED SKILLS (auto-loaded)
@@ -183,7 +183,7 @@ mcp_tools:
   - tool: "Memory"
     when: "STARTUP phase"
     usage: "search_nodes to find similar past solutions and their outcomes"
-    query_pattern: "{ключевые слова из плана}"
+    query_pattern: "{keywords from the plan}"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # RELATED
@@ -193,55 +193,55 @@ related:
     - "/planner — Previous step (creates plan)"
     - "/coder — Next step (implements plan)"
 
-  next: "Если APPROVED → /coder"
+  next: "If APPROVED → /coder"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # STARTUP
 # ════════════════════════════════════════════════════════════════════════════════
 startup:
-  critical: "СРАЗУ выполнить ВСЕ шаги при запуске команды"
+  critical: "Execute ALL steps IMMEDIATELY on command launch"
 
   context_isolation:
     severity: CRITICAL
-    rule: "Если запущен в контексте /workflow — начать с ЧИСТОГО прочтения плана + narrative context"
-    action: "Перечитать .claude/prompts/{feature}.md с нуля + прочитать narrative block из handoff"
-    preferred: "Запуск через Task tool (subagent) для полной изоляции контекста"
+    rule: "If launched within /workflow context — start with a CLEAN read of the plan + narrative context"
+    action: "Re-read .claude/prompts/{feature}.md from scratch + read narrative block from handoff"
+    preferred: "Launch via Task tool (subagent) for full context isolation"
     what_reviewer_receives:
-      - ".claude/prompts/{feature}.md — план"
-      - "Narrative context block из handoff planner (ключевые решения, риски, focus areas)"
-      - "НЕ историю создания плана, НЕ промежуточные варианты"
+      - ".claude/prompts/{feature}.md — the plan"
+      - "Narrative context block from planner handoff (key decisions, risks, focus areas)"
+      - "NOT the plan creation history, NOT intermediate drafts"
     reference: "SEE: deps/workflow-phases.md#context-isolation"
 
   steps:
     - step: 1
-      action: "TodoWrite — создать checklist для review"
+      action: "TodoWrite — create review checklist"
       tool: "TodoWrite"
 
     - step: 2
-      action: "Read .claude/prompts/{feature-name}.md — загрузить план С НУЛЯ"
+      action: "Read .claude/prompts/{feature-name}.md — load plan FROM SCRATCH"
       tool: "Read"
-      critical: "⚠️ Читать файл заново, НЕ полагаться на контекст из предыдущих фаз"
+      critical: "Re-read the file, do NOT rely on context from previous phases"
 
     - step: 2.5
-      action: "Прочитать narrative context из handoff_output предыдущей фазы (planner)"
-      purpose: "Получить контекст ключевых решений, рисков и focus areas БЕЗ bias процесса создания"
+      action: "Read narrative context from handoff_output of the previous phase (planner)"
+      purpose: "Get context of key decisions, risks, and focus areas WITHOUT bias from creation process"
       format: |
-        [Контекст от planner]:
-        - Planner выполнил: {тип и complexity задачи}
-        - Ключевые решения: {список из handoff.key_decisions}
-        - Известные риски: {список из handoff.known_risks}
-        - Рекомендации: обратить внимание на {handoff.areas_needing_attention}
-      rule: "Использовать narrative context для фокусировки review, но НЕ принимать решения planner на веру"
+        [Context from planner]:
+        - Planner completed: {task type and complexity}
+        - Key decisions: {list from handoff.key_decisions}
+        - Known risks: {list from handoff.known_risks}
+        - Recommendations: focus on {handoff.areas_needing_attention}
+      rule: "Use narrative context to focus the review, but do NOT take planner decisions at face value"
 
     - step: 3
-      action: "mcp__memory__search_nodes — query: '{ключевые слова из плана}'"
+      action: "mcp__memory__search_nodes — query: '{keywords from the plan}'"
       tool: "mcp__memory__search_nodes"
-      critical: "ОБЯЗАТЕЛЬНО! Проверить нет ли похожих решений с известными проблемами"
+      critical: "MANDATORY! Check for similar solutions with known issues"
 
   example_memory_search:
     query: "plugin architecture worker"
     found: "Multi-Operation Plugin Architecture"
-    action: "Проверить: не конфликтует ли новый план с существующими решениями"
+    action: "Verify: does the new plan conflict with existing solutions"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # WORKFLOW
@@ -311,10 +311,10 @@ phases:
 
   phase_4_validate_completeness:
     checks:
-      - check: "Все слои описаны"
-      - check: "Примеры кода ПОЛНЫЕ (not snippets)"
-      - check: "Тесты запланированы"
-      - check: "Acceptance criteria конкретные (functional + technical + architecture)"
+      - check: "All layers described"
+      - check: "Code examples are COMPLETE (not snippets)"
+      - check: "Tests planned"
+      - check: "Acceptance criteria are concrete (functional + technical + architecture)"
 
     output: |
       ## VALIDATE COMPLETENESS ✓
@@ -362,32 +362,32 @@ phases:
 beads:
   on_start:
     - action: "bd show <id>"
-      when: "если передан ID задачи"
+      when: "if task ID is provided"
 
     - action: "bd update <id> --status=in_progress"
-      when: "если beads доступен"
+      when: "if beads is available"
 
   on_complete:
-    - action: "НЕ закрывать автоматически"
-      reason: "User должен явно закрыть после проверки результата"
+    - action: "Do NOT close automatically"
+      reason: "User must explicitly close after verifying the result"
 
-    - action: "Напомнить пользователю"
-      message: "Plan review завершен. Для закрытия задачи: bd close <id>"
+    - action: "Remind the user"
+      message: "Plan review complete. To close the task: bd close <id>"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # RULES
 # ════════════════════════════════════════════════════════════════════════════════
 rules:
   - rule: "No Modify"
-    description: "НЕ изменять план, только рекомендовать"
+    description: "Do NOT modify the plan, only recommend"
     enforcement: STRICT
 
   - rule: "No Approve Blockers"
-    description: "НИКОГДА не одобрять план с BLOCKER issues"
+    description: "NEVER approve a plan with BLOCKER issues"
     enforcement: STRICT
 
   - rule: "Check Imports"
-    description: "ВСЕГДА проверять матрицу импортов"
+    description: "ALWAYS verify the import matrix"
     enforcement: STRICT
 
 
@@ -401,11 +401,11 @@ error_handling:
   - situation: "Plan incomplete (missing sections)"
     action: "Mark as NEEDS CHANGES, list missing sections"
 
-  - situation: "Memory MCP недоступен"
-    action: "Продолжить без проверки истории"
+  - situation: "Memory MCP unavailable"
+    action: "Continue without history check"
 
   - situation: "Arch-checker agent failed"
-    action: "Выполнить ручную проверку"
+    action: "Perform manual check"
 
   - situation: "Sequential Thinking required but not used in plan"
     action: "Add as MAJOR issue"
@@ -416,21 +416,21 @@ error_handling:
 examples:
   import_violations:
     bad: |
-      // ❌ BLOCKER — API imports data access layer directly
+      // BLOCKER — API imports data access layer directly
       import "{data_access_package}"
     good: |
-      // ✅ CORRECT — Handler imports service/usecase layer
+      // CORRECT — Handler imports service/usecase layer
       import "{service_package}"
     severity: BLOCKER
 
   domain_purity:
     bad: |
-      // ❌ BLOCKER — json теги в domain entity
+      // BLOCKER — json tags in domain entity
       type Service struct {
           ID string `json:"id"`
       }
     good: |
-      // ✅ ПРАВИЛЬНО — чистая entity
+      // CORRECT — clean entity
       type Service struct {
           ID string
       }
@@ -465,17 +465,17 @@ troubleshooting:
 # ════════════════════════════════════════════════════════════════════════════════
 severity_levels:
   - level: BLOCKER
-    meaning: "Нарушение архитектуры/спецификации"
+    meaning: "Architecture or specification violation"
     blocks: true
     examples: ["Import matrix violation", "Security vulnerability"]
 
   - level: MAJOR
-    meaning: "Существенная проблема"
+    meaning: "Significant problem"
     blocks: true
     examples: ["Missing required section", "Incomplete code examples", "5+ MINOR in same Part"]
 
   - level: MINOR
-    meaning: "Мелкая проблема"
+    meaning: "Minor problem"
     blocks: false
     examples: ["Missing comment", "Typo in description", "Non-critical suggestion"]
 
@@ -484,29 +484,29 @@ severity_levels:
 # ════════════════════════════════════════════════════════════════════════════════
 checklist:
   phase_1_startup:
-    - item: "TodoWrite создан"
-    - item: "Memory проверена (search_nodes)"
-    - item: "План загружен из .claude/prompts/"
+    - item: "TodoWrite created"
+    - item: "Memory checked (search_nodes)"
+    - item: "Plan loaded from .claude/prompts/"
 
   phase_2_read_plan:
-    - item: "Все required sections присутствуют"
-    - item: "Формат соответствует plan-template.md"
+    - item: "All required sections present"
+    - item: "Format matches plan-template.md"
 
   phase_3_validate_architecture:
-    - item: "Импорты между пакетами проверены (SEE: PROJECT-KNOWLEDGE.md#Dependency Matrix)"
-    - item: "Models без лишних тегов (domain entities pure)"
+    - item: "Package imports verified (SEE: PROJECT-KNOWLEDGE.md#Dependency Matrix)"
+    - item: "Models have no extra tags (domain entities pure)"
     - item: "API layer does not import data access directly (uses service/controller layer)"
-    - item: "Protected files не редактируются"
-    - item: "Sequential Thinking использован (если 4+ Parts)"
+    - item: "Protected files not edited"
+    - item: "Sequential Thinking used (if 4+ Parts)"
 
   phase_4_validate_completeness:
-    - item: "Все слои описаны"
-    - item: "Примеры кода ПОЛНЫЕ"
-    - item: "Тесты запланированы"
-    - item: "Security checklist пройден (если API)"
+    - item: "All layers described"
+    - item: "Code examples are COMPLETE"
+    - item: "Tests planned"
+    - item: "Security checklist passed (if API)"
 
   phase_5_verdict:
-    - item: "Все issues классифицированы (BLOCKER/MAJOR/MINOR)"
-    - item: "Decision matrix применена"
-    - item: "Verdict обоснован"
-    - item: "bd sync выполнен"
+    - item: "All issues classified (BLOCKER/MAJOR/MINOR)"
+    - item: "Decision matrix applied"
+    - item: "Verdict justified"
+    - item: "bd sync executed"

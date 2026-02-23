@@ -10,30 +10,30 @@
 ```yaml
 security_checklist:
   - check: SQL Injection
-    what_to_look_for: "Только prepared statements/parameterized queries, НЕ string concatenation"
+    what_to_look_for: "Only prepared statements/parameterized queries, NOT string concatenation"
     severity: blocker
     grep_pattern: "fmt.Sprintf.*SELECT|fmt.Sprintf.*INSERT|fmt.Sprintf.*UPDATE|fmt.Sprintf.*DELETE"
     pass_criteria: "All SQL via generated code or parameterized queries"
 
   - check: Input Validation
-    what_to_look_for: "DTO с validate тегами, UUID validation"
+    what_to_look_for: "DTOs with validate tags, UUID validation"
     severity: blocker
     pass_criteria: "All user input validated at API boundary (handlers)"
 
   - check: Auth/AuthZ
-    what_to_look_for: "Authentication middleware используется, токены не логируются"
+    what_to_look_for: "Authentication middleware in use, tokens not logged"
     severity: blocker
     grep_pattern: "log.*token|log.*password|log.*secret"
     pass_criteria: "Auth validated, sensitive data not logged"
 
   - check: Sensitive Data
-    what_to_look_for: "Нет паролей/токенов в логах, нет hardcoded secrets"
+    what_to_look_for: "No passwords/tokens in logs, no hardcoded secrets"
     severity: blocker
     grep_pattern: "password.*=.*\"|token.*=.*\"|secret.*=.*\""
     pass_criteria: "No hardcoded credentials, no sensitive data in logs"
 
   - check: Error Info Leak
-    what_to_look_for: "Внутренние ошибки не exposed в API responses"
+    what_to_look_for: "Internal errors not exposed in API responses"
     severity: major
     pass_criteria: "Internal errors mapped to generic messages, stack traces not exposed"
 ```

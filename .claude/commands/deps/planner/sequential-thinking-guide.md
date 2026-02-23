@@ -8,23 +8,23 @@ Sequential Thinking MCP tool should be used for complex architectural decisions 
 
 ```yaml
 sequential_thinking_required:
-  - condition: "Альтернатив ≥ 3"
+  - condition: "Alternatives >= 3"
     required: true
     example: "Choosing between REST, GraphQL, gRPC for API"
 
-  - condition: "Слоёв архитектуры ≥ 4"
+  - condition: "Architecture layers >= 4"
     required: true
     example: "Feature affects domain, usecase, repository, api layers"
 
-  - condition: "Новый паттерн/интеграция"
+  - condition: "New pattern/integration"
     required: true
     example: "Integrating new external service, plugin system"
 
-  - condition: "Parts в плане ≥ 5"
+  - condition: "Parts in plan >= 5"
     required: true
     example: "Plan has Database, Domain, Contract, Repository, UseCase, API, Tests"
 
-  - condition: "Trade-offs неочевидны"
+  - condition: "Trade-offs are non-obvious"
     required: true
     example: "Performance vs maintainability, simplicity vs extensibility"
 ```
@@ -35,7 +35,7 @@ sequential_thinking_required:
 mcp__sequential-thinking__sequentialthinking:
   thought: "Analyzing approach for {task}"
   thoughtNumber: 1
-  totalThoughts: 5  # минимум для архитектурных решений
+  totalThoughts: 5  # minimum for architectural decisions
   nextThoughtNeeded: true
 ```
 
@@ -44,23 +44,23 @@ mcp__sequential-thinking__sequentialthinking:
 ```yaml
 steps:
   - step: 1
-    action: "Определить constraints и requirements"
+    action: "Identify constraints and requirements"
     output: "List of non-negotiable constraints"
 
   - step: 2
-    action: "Перечислить все возможные подходы (минимум 3)"
+    action: "List all possible approaches (minimum 3)"
     output: "Table: Approach | Pros | Cons"
 
   - step: 3
-    action: "Проанализировать trade-offs каждого"
+    action: "Analyze trade-offs of each"
     output: "Detailed comparison against constraints"
 
   - step: 4
-    action: "Выбрать оптимальный с обоснованием"
+    action: "Select optimal with justification"
     output: "Selected approach with rationale"
 
   - step: 5
-    action: "Верифицировать выбор против constraints"
+    action: "Verify selection against constraints"
     output: "Verification checklist passed"
 ```
 
@@ -93,7 +93,7 @@ Skip Sequential Thinking if:
 - Clear obvious solution with no alternatives
 - Trivial changes (< 3 parts in plan)
 
-**⚠️ If skipped, document why in plan:**
+**If skipped, document why in plan:**
 ```
 Sequential Thinking: NOT USED
 Reason: Standard repository layer addition, follows existing pattern

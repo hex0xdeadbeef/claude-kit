@@ -1,14 +1,14 @@
 # Task Analysis
 
-Классификация и маршрутизация задачи ПЕРЕД началом планирования.
+Task classification and routing BEFORE planning begins.
 
 ---
 
 ## Purpose
 
-Определить тип, сложность и оптимальный маршрут задачи ДО того, как planner начнёт research. Цель — тривиальные задачи не должны проходить полный 4-фазный цикл.
+Determine task type, complexity, and optimal route BEFORE planner starts research. Goal — trivial tasks should not go through the full 4-phase cycle.
 
-**⚠️ NEVER skip TASK ANALYSIS — wrong routing = wasted time on over-/under-planning.**
+**NEVER skip TASK ANALYSIS — wrong routing = wasted time on over-/under-planning.**
 
 ---
 
@@ -17,31 +17,31 @@
 ```yaml
 task_types:
   - type: "new_feature"
-    keywords: "добавить, создать, реализовать, новый endpoint, new"
+    keywords: "add, create, implement, new endpoint, new"
     typical_complexity: M-XL
 
   - type: "bug_fix"
-    keywords: "исправить, баг, fix, broken, не работает"
+    keywords: "fix, bug, broken, not working"
     typical_complexity: S-M
 
   - type: "refactoring"
-    keywords: "рефакторинг, переписать, вынести, разделить, extract"
+    keywords: "refactor, rewrite, extract, split"
     typical_complexity: M-L
 
   - type: "config_change"
-    keywords: "конфиг, параметр, переменная окружения, config"
+    keywords: "config, parameter, environment variable"
     typical_complexity: S
 
   - type: "documentation"
-    keywords: "документация, README, описать, задокументировать"
+    keywords: "documentation, README, describe, document"
     typical_complexity: S
 
   - type: "performance"
-    keywords: "оптимизация, медленно, performance, N+1, cache"
+    keywords: "optimization, slow, performance, N+1, cache"
     typical_complexity: M-L
 
   - type: "integration"
-    keywords: "интеграция, external service, API call, клиент"
+    keywords: "integration, external service, API call, client"
     typical_complexity: L-XL
 ```
 
@@ -56,50 +56,50 @@ complexity_matrix:
     layers: "1"
     files: "1-2"
     examples:
-      - "Добавить поле в модель"
-      - "Исправить опечатку"
-      - "Обновить конфиг"
+      - "Add field to model"
+      - "Fix typo"
+      - "Update config"
     indicators:
-      - "Изменения в одном слое архитектуры"
-      - "Нет новых зависимостей"
-      - "Паттерн уже существует в проекте"
+      - "Changes in single architecture layer"
+      - "No new dependencies"
+      - "Pattern already exists in project"
 
   M:
     parts: "2-3"
     layers: "2"
     files: "3-5"
     examples:
-      - "Добавить новое поле через все слои (model → controller → API)"
-      - "Исправить баг с error handling в нескольких местах"
+      - "Add new field through all layers (model → controller → API)"
+      - "Fix error handling bug in multiple places"
     indicators:
-      - "Изменения в 2 слоях"
-      - "Следует существующим паттернам"
-      - "Нет архитектурных решений"
+      - "Changes in 2 layers"
+      - "Follows existing patterns"
+      - "No architectural decisions"
 
   L:
     parts: "4-6"
     layers: "3+"
     files: "6-10"
     examples:
-      - "Новый endpoint с database → domain → API"
-      - "Рефакторинг controller с разделением на сервисы"
+      - "New endpoint with database → domain → API"
+      - "Refactor controller by splitting into services"
     indicators:
-      - "Затрагивает 3+ слоя архитектуры"
-      - "Может потребовать архитектурное решение"
-      - "Новые SQL queries или миграции"
+      - "Affects 3+ architecture layers"
+      - "May require architectural decision"
+      - "New SQL queries or migrations"
 
   XL:
     parts: "7+"
     layers: "4+"
     files: "10+"
     examples:
-      - "Новый домен с полным стеком (DB → models → controller → API → tests)"
-      - "Интеграция с внешним сервисом"
-      - "Плагинная архитектура"
+      - "New domain with full stack (DB → models → controller → API → tests)"
+      - "Integration with external service"
+      - "Plugin architecture"
     indicators:
-      - "Cross-domain изменения"
-      - "Новая интеграция с внешней системой"
-      - "Нужен Sequential Thinking для выбора подхода"
+      - "Cross-domain changes"
+      - "New external system integration"
+      - "Sequential Thinking needed for approach selection"
 ```
 
 ---
@@ -110,31 +110,31 @@ complexity_matrix:
 routing:
   S:
     planner_mode: "--minimal"
-    plan_review: "SKIP (опционально)"
+    plan_review: "SKIP (optional)"
     code_review: "standard"
-    sequential_thinking: "НЕ нужен"
-    note: "Быстрый путь — не перегружать процесс для тривиальных задач"
+    sequential_thinking: "NOT needed"
+    note: "Fast path — don't overload the process for trivial tasks"
 
   M:
     planner_mode: "standard"
     plan_review: "standard"
     code_review: "standard"
-    sequential_thinking: "по необходимости"
-    note: "Основной рабочий режим"
+    sequential_thinking: "as needed"
+    note: "Main working mode"
 
   L:
     planner_mode: "standard"
     plan_review: "standard"
-    code_review: "standard + parallel agents (если >5 файлов)"
-    sequential_thinking: "РЕКОМЕНДОВАН"
-    note: "Полный flow с возможной параллелизацией ревью"
+    code_review: "standard + parallel agents (if >5 files)"
+    sequential_thinking: "RECOMMENDED"
+    note: "Full flow with possible review parallelization"
 
   XL:
     planner_mode: "full research"
-    plan_review: "standard + Sequential Thinking ОБЯЗАТЕЛЕН"
+    plan_review: "standard + Sequential Thinking REQUIRED"
     code_review: "standard + parallel agents"
-    sequential_thinking: "ОБЯЗАТЕЛЕН"
-    note: "Максимальный flow — все проверки, все инструменты"
+    sequential_thinking: "REQUIRED"
+    note: "Maximum flow — all checks, all tools"
 ```
 
 ---
@@ -148,18 +148,18 @@ preconditions:
       fail_action: "WARN: uncommitted changes detected"
 
   if_beads:
-    - check: "bd show <id> → не blocked?"
-      fail_action: "STOP: задача заблокирована. SEE: bd blocked"
-    - check: "Зависимости закрыты?"
-      fail_action: "WARN: зависимость <dep-id> ещё открыта"
+    - check: "bd show <id> → not blocked?"
+      fail_action: "STOP: task is blocked. SEE: bd blocked"
+    - check: "Dependencies closed?"
+      fail_action: "WARN: dependency <dep-id> still open"
 
   if_database:
-    - check: "Схема актуальна? (migrations applied)"
+    - check: "Schema up to date? (migrations applied)"
       fail_action: "WARN: pending migrations detected"
 
   if_external_library:
-    - check: "Библиотека в go.mod?"
-      fail_action: "INFO: потребуется go get"
+    - check: "Library in go.mod?"
+      fail_action: "INFO: will need go get"
 ```
 
 ---
@@ -176,7 +176,7 @@ Sequential Thinking: {required | recommended | not_needed}
 Plan Review: {skip | standard}
 Preconditions: {all_clear | warnings_list}
 
-Rationale: "{1-2 предложения почему выбрана эта сложность и маршрут}"
+Rationale: "{1-2 sentences explaining chosen complexity and route}"
 ```
 
 ---
@@ -186,7 +186,7 @@ Rationale: "{1-2 предложения почему выбрана эта сл�
 ### Example 1: Simple Config Change
 
 ```
-Input: "Добавить timeout параметр в конфиг HTTP-сервера"
+Input: "Add timeout parameter to HTTP server config"
 
 Task Analysis:
   Type: config_change
@@ -194,13 +194,13 @@ Task Analysis:
   Route: minimal
   Sequential Thinking: not_needed
   Plan Review: skip
-  Rationale: "Стандартное добавление конфиг-параметра, паттерн уже существует"
+  Rationale: "Standard config parameter addition, pattern already exists"
 ```
 
 ### Example 2: New API Endpoint
 
 ```
-Input: "Добавить endpoint GET /api/v1/{resource}/:id"
+Input: "Add endpoint GET /api/v1/{resource}/:id"
 
 Task Analysis:
   Type: new_feature
@@ -208,21 +208,21 @@ Task Analysis:
   Route: standard
   Sequential Thinking: recommended
   Plan Review: standard
-  Rationale: "Новый endpoint через все слои, но следует существующему паттерну для данного ресурса"
+  Rationale: "New endpoint through all layers, but follows existing pattern for this resource"
 ```
 
 ### Example 3: Plugin Architecture
 
 ```
-Input: "Реализовать систему плагинов для worker'а"
+Input: "Implement plugin system for worker"
 
 Task Analysis:
   Type: new_feature
-  Complexity: XL (новый паттерн, cross-domain, 10+ файлов)
+  Complexity: XL (new pattern, cross-domain, 10+ files)
   Route: full
   Sequential Thinking: required
   Plan Review: standard
-  Rationale: "Архитектурное решение с 3+ альтернативами, затрагивает несколько доменов"
+  Rationale: "Architectural decision with 3+ alternatives, affects multiple domains"
 ```
 
 ---
@@ -231,41 +231,41 @@ Task Analysis:
 
 ```yaml
 re_routing:
-  purpose: "Корректировка route если начальная оценка complexity оказалась неточной"
+  purpose: "Route correction if initial complexity estimate was inaccurate"
   severity: MEDIUM
 
   triggers:
     downgrade:
-      - trigger: "plan-review: план проще ожидаемого"
+      - trigger: "plan-review: plan is simpler than expected"
         condition: "Parts < expected for route OR layers < expected"
         actions:
-          L_to_M: "Убрать обязательный Sequential Thinking, standard checks"
-          M_to_S: "Skip plan-review в следующей итерации"
-        example: "Classified as L (5 Parts), plan-review видит 2 Parts → downgrade to M"
+          L_to_M: "Remove mandatory Sequential Thinking, standard checks"
+          M_to_S: "Skip plan-review in next iteration"
+        example: "Classified as L (5 Parts), plan-review sees 2 Parts → downgrade to M"
 
-      - trigger: "coder evaluate: план тривиален"
-        condition: "PROCEED без adjustments, 1-2 файла"
+      - trigger: "coder evaluate: plan is trivial"
+        condition: "PROCEED without adjustments, 1-2 files"
         actions:
           M_to_S: "Simplified code-review (no parallel agents)"
 
     upgrade:
-      - trigger: "plan-review: план сложнее ожидаемого"
+      - trigger: "plan-review: plan is more complex than expected"
         condition: "Parts > expected OR cross-domain dependencies found"
         actions:
-          S_to_M: "Добавить full plan-review (был skipped)"
-          M_to_L: "Добавить Sequential Thinking requirement"
-        example: "Classified as S, but plan-review видит 4 Parts + 3 layers → upgrade to L"
+          S_to_M: "Add full plan-review (was skipped)"
+          M_to_L: "Add Sequential Thinking requirement"
+        example: "Classified as S, but plan-review sees 4 Parts + 3 layers → upgrade to L"
 
       - trigger: "coder evaluate: hidden complexity"
-        condition: "REVISE с 3+ adjustments OR RETURN"
+        condition: "REVISE with 3+ adjustments OR RETURN"
         actions:
-          M_to_L: "Добавить Sequential Thinking, return to planner"
+          M_to_L: "Add Sequential Thinking, return to planner"
           L_to_XL: "Mandatory Sequential Thinking, full research"
-        example: "Classified as M, coder видит нужна DB migration + new service → upgrade to L"
+        example: "Classified as M, coder finds DB migration + new service needed → upgrade to L"
 
   tracking:
-    - "Записать re-routing в checkpoint: original_route → new_route + reason"
-    - "Сохранить в MCP Memory для улучшения heuristics task-analysis"
+    - "Record re-routing in checkpoint: original_route → new_route + reason"
+    - "Save to MCP Memory to improve task-analysis heuristics"
     - "Format: 'Re-routing: {task_type}/{original} → {new} because {reason}'"
 ```
 
@@ -273,26 +273,26 @@ re_routing:
 
 ## Anti-Patterns
 
-❌ **DON'T skip task analysis for "obvious" tasks**
+**DON'T skip task analysis for "obvious" tasks**
 ```
 # BAD: Jump straight to planning
-/planner "добавить поле в модель"
+/planner "add field to model"
 → Full research, full plan, full review for a 5-line change
 ```
 
-✅ **DO classify first, then route appropriately**
+**DO classify first, then route appropriately**
 ```
 # GOOD: Classify → route → execute
 Task Analysis: S complexity → /planner --minimal → skip plan-review → /coder
 ```
 
-❌ **DON'T ignore re-routing signals**
+**DON'T ignore re-routing signals**
 ```
 # BAD: plan-review finds 4 Parts but route stays S
 Plan classified as S → plan-review finds cross-domain dependencies → continues with S route
 ```
 
-✅ **DO re-route when evidence contradicts classification**
+**DO re-route when evidence contradicts classification**
 ```
 # GOOD: re-route based on evidence
 Plan classified as S → plan-review finds 4 Parts + 3 layers → upgrade to M/L

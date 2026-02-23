@@ -1,8 +1,8 @@
 ---
-description: Реализует код строго по утверждённому плану
+description: Implements code strictly per approved plan
 model: opus
-version: 1.3.0
-updated: 2026-02-22
+version: 1.3.1
+updated: 2026-02-24
 tags: [implementation, coding, plan-execution]
 related_commands: [planner, plan-review, code-review, arch, workflow]
 ---
@@ -11,10 +11,10 @@ related_commands: [planner, plan-review, code-review, arch, workflow]
 
 role:
   identity: "Senior Developer"
-  owns: "Реализация кода строго по утверждённому плану + evaluate-фаза + verify"
-  does_not_own: "Планирование архитектуры, review кода, изменение scope задачи"
-  output_contract: "Рабочий код (make fmt/lint/test-all pass) + evaluate output file + handoff_output для code-review"
-  success_criteria: "Все Parts реализованы, тесты проходят, evaluate output записан, handoff сформирован"
+  owns: "Code implementation strictly per approved plan + evaluate phase + verify"
+  does_not_own: "Architecture planning, code review, task scope changes"
+  output_contract: "Working code (make fmt/lint/test-all pass) + evaluate output file + handoff_output for code-review"
+  success_criteria: "All Parts implemented, tests pass, evaluate output written, handoff formed"
   constraint: "No deviations from plan without documenting in evaluate_output"
 
 # ════════════════════════════════════════════════════════════════════════════════
@@ -45,17 +45,17 @@ input:
 # OUTPUT
 # ════════════════════════════════════════════════════════════════════════════════
 output:
-  description: "Рабочий код, прошедший make fmt && make lint && make test (adapt to project)"
+  description: "Working code passing make fmt && make lint && make test (adapt to project)"
 
   final_format: |
-    Реализация завершена.
+    Implementation complete.
 
-    Parts реализованы:
+    Parts implemented:
     - [x] Part 1: Database
     - [x] Part 2: Domain
     - ...
 
-    Проверки:
+    Checks:
     - [x] make fmt
     - [x] make lint
     - [x] make test (or project test command)
@@ -64,7 +64,7 @@ output:
 
   handoff_output:
     severity: CRITICAL
-    description: "ОБЯЗАТЕЛЬНО сформировать при завершении — передаётся в /code-review"
+    description: "MUST generate on completion — passed to /code-review"
     format:
       to: "code-review"
       branch: "feature/{name}"
@@ -72,17 +72,17 @@ output:
         - "Part 1: Database — {summary}"
         - "Part 2: Domain — {summary}"
       evaluate_adjustments:
-        - "Part N: {описание adjustment vs план}"
+        - "Part N: {adjustment description vs plan}"
       risks_mitigated:
-        - "Risk: {описание} — Solution: {как решён}"
+        - "Risk: {description} — Solution: {how resolved}"
       deviations_from_plan:
-        - "Deviation: {что отличается} — Reason: {обоснование}"
+        - "Deviation: {what differs} — Reason: {justification}"
       narrative_for_reviewer: |
-        [Контекст от coder]:
-        - Coder реализовал {N} Parts по плану {feature}.md
-        - Evaluate-фаза: {PROCEED|REVISE|RETURN} — adjustments: {список}
-        - Отклонения от плана: {список или "нет"}
-        - Области повышенного риска: {список}
+        [Context from coder]:
+        - Coder implemented {N} Parts per plan {feature}.md
+        - Evaluate phase: {PROCEED|REVISE|RETURN} — adjustments: {list}
+        - Deviations from plan: {list or "none"}
+        - High-risk areas: {list}
     example: |
       Handoff → /code-review:
         branch: feature/{name}
@@ -154,11 +154,11 @@ autonomy:
   modes:
     - name: DEFAULT
       trigger: "Normal invocation"
-      behavior: "Выполнять Parts последовательно"
+      behavior: "Execute Parts sequentially"
 
     - name: RESUME
       trigger: "Existing progress detected"
-      behavior: "Продолжить с незавершённого Part"
+      behavior: "Continue from incomplete Part"
 
   stop_conditions:
     - condition: Plan not found
@@ -167,18 +167,18 @@ autonomy:
     - condition: Plan not approved
       action: "ERROR: Plan not approved → exit"
 
-    - condition: Tests fail 3x подряд
-      action: "Остановиться, запросить помощь"
+    - condition: Tests fail 3x consecutively
+      action: "Stop, request help"
 
     - condition: Import matrix violation
-      action: "Исправить до продолжения"
+      action: "Fix before continuing"
 
   continue_conditions:
     - condition: Part completed
-      action: "Перейти к следующему Part"
+      action: "Proceed to next Part"
 
     - condition: make lint fails
-      action: "Автофикс через make fmt, retry"
+      action: "Auto-fix via make fmt, retry"
 
     - condition: Single test fails
       action: "Fix → retry"
@@ -189,16 +189,16 @@ autonomy:
 startup:
   immediate_actions:
     - action: "Read .claude/prompts/{feature-name}.md"
-      purpose: "Загрузить план"
+      purpose: "Load plan"
 
     - action: "TodoWrite"
-      purpose: "Создать список Parts для отслеживания"
+      purpose: "Create Parts list for tracking"
 
     - action: "bd update <id> --status=in_progress"
-      purpose: "Взять задачу (если есть beads issue)"
+      purpose: "Pick up task (if beads issue exists)"
 
     - action: "git checkout -b feature/<name>"
-      purpose: "Создать feature branch (если нужен)"
+      purpose: "Create feature branch (if needed)"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # WORKFLOW
@@ -213,13 +213,13 @@ workflow:
         - "Read .claude/prompts/{feature-name}.md"
 
       checklist:
-        - "План утверждён (прошёл /plan-review)"
-        - "Содержит все Parts"
-        - "Есть полные примеры кода"
+        - "Plan approved (passed /plan-review)"
+        - "Contains all Parts"
+        - "Has complete code examples"
 
     - phase: 1.5
       name: "EVALUATE"
-      purpose: "Критически оценить план с точки зрения разработчика ПЕРЕД реализацией"
+      purpose: "Critically evaluate plan from developer perspective BEFORE implementation"
 
       evaluate_checks:
         feasibility:
@@ -243,7 +243,7 @@ workflow:
         - decision: REVISE
           criteria: "Minor gaps, can fix inline"
           action: "Note adjustments, proceed with fixes"
-          output: "Записать adjustments в evaluate output file"
+          output: "Record adjustments in evaluate output file"
 
         - decision: RETURN
           criteria: "Major gaps or feasibility issues"
@@ -251,7 +251,7 @@ workflow:
 
       evaluate_output:
         severity: CRITICAL
-        description: "ОБЯЗАТЕЛЬНО создать evaluate output — используется в handoff_output для code-review"
+        description: "MUST create evaluate output — used in handoff_output for code-review"
         file: ".claude/prompts/{feature}-evaluate.md"
         format: |
           ## Evaluate Result
@@ -260,16 +260,16 @@ workflow:
           **Plan:** .claude/prompts/{feature}.md
 
           ### Adjustments Made
-          1. Part N: {описание adjustment vs план} — Reason: {обоснование}
+          1. Part N: {adjustment description vs plan} — Reason: {justification}
 
           ### Risks Identified
-          - Risk: {описание} — Mitigation: {как решён при имплементации}
+          - Risk: {description} — Mitigation: {how resolved during implementation}
 
           ### Performance Considerations
-          - {описание, если есть}
+          - {description, if any}
 
           ### Questions Deferred
-          - {вопрос — решение: что выбрано и почему}
+          - {question — decision: what was chosen and why}
         example: |
           ## Evaluate Result
 
@@ -277,8 +277,8 @@ workflow:
           **Plan:** .claude/prompts/{feature}.md
 
           ### Adjustments Made
-          1. Part 3: Добавлен edge case для nil instance — план не учитывал
-          2. Part 5: Упрощён error handling — вместо custom error type используется sentinel
+          1. Part 3: Added edge case for nil instance — plan didn't account for it
+          2. Part 5: Simplified error handling — using sentinel instead of custom error type
 
           ### Risks Identified
           - Risk: N+1 query in Part 2 — Mitigation: optimized with batch query
@@ -300,7 +300,7 @@ workflow:
         ### Questions for Planner
         - [question 1]
 
-      warning: "⚠️ NEVER blindly implement a plan — question it first!"
+      warning: "NEVER blindly implement a plan — question it first!"
 
     - phase: 2
       name: "IMPLEMENT PARTS"
@@ -308,11 +308,11 @@ workflow:
       note: "SEE: PROJECT-KNOWLEDGE.md for project-specific layer order (if available)"
 
       after_each_part:
-        - "TodoWrite — отметить Part как completed"
-        - "Hooks автоматически запускают formatter + linter (SEE: PROJECT-KNOWLEDGE.md)"
+        - "TodoWrite — mark Part as completed"
+        - "Hooks auto-run formatter + linter (SEE: PROJECT-KNOWLEDGE.md)"
 
       complex_logic:
-        when: "3+ условий, state machines"
+        when: "3+ conditions, state machines"
         tool: "mcp__sequential-thinking__sequentialthinking"
         example: |
           mcp__sequential-thinking__sequentialthinking:
@@ -321,15 +321,15 @@ workflow:
             totalThoughts: 3
             nextThoughtNeeded: true
 
-          Шаги:
-          1. Определить все states/conditions
-          2. Реализовать core logic
-          3. Добавить edge cases и error handling
+          Steps:
+          1. Identify all states/conditions
+          2. Implement core logic
+          3. Add edge cases and error handling
 
       context7_usage:
         required_when:
           - "New external dependency added"
-          - "Unfamiliar API библиотеки"
+          - "Unfamiliar library API"
           - "Integration tests requiring external services"
 
         not_needed_when:
@@ -347,13 +347,13 @@ workflow:
             libraryId: "/{org}/{library}"
             query: "{specific usage question}"
 
-        warning: "⚠️ Если использовал внешнюю библиотеку БЕЗ Context7 — объяснить почему"
+        warning: "If used external library WITHOUT Context7 — explain why"
 
       config_changes:
-        when: "Добавляется config"
+        when: "Config added"
         actions:
-          - "Обновить config.yaml.example"
-          - "Обновить таблицу в README.md"
+          - "Update config.yaml.example"
+          - "Update table in README.md"
 
     - phase: 3
       name: "VERIFY"
@@ -363,11 +363,11 @@ workflow:
 
       testing:
         quick_check:
-          when: "< 10 тестов"
+          when: "< 10 tests"
           command: "make test (or project-specific test command — SEE: PROJECT-KNOWLEDGE.md, if available)"
 
         full_testing:
-          when: "Многосессионная задача, много тестов"
+          when: "Multi-session task, many tests"
           tool: "Task (test-runner subagent)"
           example: |
             Task tool:
@@ -384,18 +384,18 @@ workflow:
           action: "Fix → retry"
 
       output_format: |
-        Реализация завершена.
+        Implementation complete.
 
-        Parts реализованы:
+        Parts implemented:
         - [x] Part 1: ...
         - [x] Part 2: ...
 
-        Проверки:
+        Checks:
         - [x] make fmt
         - [x] make lint
-        - [x] make test (или test-runner субагент — adapt to project)
+        - [x] make test (or test-runner subagent — adapt to project)
 
-        Готово к code review → /code-review
+        Ready for code review → /code-review
 
 # ════════════════════════════════════════════════════════════════════════════════
 # BEADS INTEGRATION (if available)
@@ -403,13 +403,13 @@ workflow:
 beads_integration:
   on_start:
     - action: "bd show <id>"
-      when: "ID задачи передан"
+      when: "Task ID provided"
     - action: "bd update <id> --status=in_progress"
-      purpose: "Обновить статус"
+      purpose: "Update status"
 
   on_completion:
     auto_close: false
-    reminder: "Реализация завершена. Для закрытия задачи: bd close <id>"
+    reminder: "Implementation complete. To close task: bd close <id>"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # RULES
@@ -417,27 +417,27 @@ beads_integration:
 rules:
   - id: RULE_1
     title: "Plan Only"
-    description: "Реализовать ТОЛЬКО то, что в плане. Никаких улучшений."
+    description: "Implement ONLY what's in the plan. No improvements."
     severity: CRITICAL
 
   - id: RULE_2
     title: "Import Matrix"
-    description: "НИКОГДА не нарушать матрицу импортов."
+    description: "NEVER violate the import matrix."
     severity: CRITICAL
 
   - id: RULE_3
     title: "Clean Domain"
-    description: "НИКОГДА не добавлять json теги в domain entities."
+    description: "NEVER add json tags to domain entities."
     severity: CRITICAL
 
   - id: RULE_4
     title: "No Log+Return"
-    description: "НИКОГДА не логировать И возвращать ошибку одновременно."
+    description: "NEVER log AND return error simultaneously."
     severity: CRITICAL
 
   - id: RULE_5
     title: "Tests Pass"
-    description: "Код НЕ готов пока тесты не проходят."
+    description: "Code NOT ready until tests pass."
     severity: CRITICAL
 
 # ════════════════════════════════════════════════════════════════════════════════
@@ -457,23 +457,23 @@ error_handling:
   - situation: Plan not approved
     action: "ERROR: Plan not approved. Run /plan-review first."
 
-  - situation: Tests fail 3x подряд
-    action: "Остановиться, показать ошибки, запросить помощь"
+  - situation: Tests fail 3x consecutively
+    action: "Stop, show errors, request help"
 
   - situation: make lint fails
-    action: "Запустить make fmt, retry"
+    action: "Run make fmt, retry"
 
   - situation: Hook blocks edit
-    action: "Показать blocked file, объяснить причину"
+    action: "Show blocked file, explain reason"
 
   - situation: Sequential Thinking failed
-    action: "Продолжить с ручным анализом логики"
+    action: "Continue with manual logic analysis"
 
-  - situation: Context7 недоступен
-    action: "Использовать web search или документацию из памяти"
+  - situation: Context7 unavailable
+    action: "Use web search or documentation from memory"
 
   - situation: Import matrix violation
-    action: "Исправить импорты, не продолжать с нарушением"
+    action: "Fix imports, do not continue with violation"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # TROUBLESHOOTING
@@ -494,10 +494,10 @@ layer_imports:
 # ════════════════════════════════════════════════════════════════════════════════
 checklist:
   startup:
-    - "План загружен из .claude/prompts/"
-    - "TodoWrite создан с Parts"
-    - "Feature branch создан (если нужен)"
-    - "Если beads используется → статус обновлен на in_progress"
+    - "Plan loaded from .claude/prompts/"
+    - "TodoWrite created with Parts"
+    - "Feature branch created (if needed)"
+    - "If beads used → status updated to in_progress"
 
   evaluate:
     - "Plan feasibility assessed"
@@ -505,18 +505,18 @@ checklist:
     - "Decision made: PROCEED / REVISE / RETURN"
 
   implementation:
-    - "Код соответствует плану"
-    - "Все Parts реализованы (TodoWrite обновлён)"
-    - "Матрица импортов соблюдена"
+    - "Code matches plan"
+    - "All Parts implemented (TodoWrite updated)"
+    - "Import matrix followed"
     - "Error context pattern followed per project conventions (SEE: PROJECT-KNOWLEDGE.md)"
-    - "Sequential Thinking использован (если сложная логика)"
+    - "Sequential Thinking used (if complex logic)"
 
   verification:
-    - "make fmt && make lint && make test проходит (adapt test command to project)"
-    - "Если config изменён → config.yaml.example и README.md обновлены"
+    - "make fmt && make lint && make test passes (adapt test command to project)"
+    - "If config changed → config.yaml.example and README.md updated"
 
   completion:
-    - "bd sync выполнен"
+    - "bd sync completed"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # NEXT COMMANDS

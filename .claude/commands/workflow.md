@@ -7,8 +7,6 @@ tags: [workflow, pipeline, orchestration]
 related_commands: [planner, plan-review, coder, code-review]
 ---
 
-# WORKFLOW PIPELINE
-
 role:
   identity: "Orchestrator"
   owns: "Координация полного цикла разработки: task-analysis → planner → plan-review → coder → code-review"
@@ -353,14 +351,24 @@ handoff_protocol:
         iteration: "N/3"
 
   narrative_casting:
-    purpose: "Передача контекста review-фазам без bias от процесса создания"
-    format: |
-      [Контекст от предыдущего агента]:
-      - {Агент} выполнил: {краткое описание}
-      - Ключевые решения: {список}
-      - Известные риски: {список}
-      - Рекомендации для reviewer: {список}
-    rule: "Review-фазы получают narrative context + артефакт, но НЕ историю создания"
+    purpose: "Context handoff to review phases without creation-process bias"
+    rule: "Review phases receive narrative context + artifact, NOT creation history"
+    template_fields:
+      - field: "context_source"
+        value: "{agent_name}"
+        description: "Which agent produced the artifact"
+      - field: "work_performed"
+        value: "{brief_description}"
+        description: "What the agent did"
+      - field: "key_decisions"
+        value: "[list]"
+        description: "Architectural/design decisions with rationale"
+      - field: "known_risks"
+        value: "[list]"
+        description: "Identified risks and their status"
+      - field: "reviewer_recommendations"
+        value: "[list]"
+        description: "Specific areas for reviewer attention"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # RULES
@@ -425,23 +433,27 @@ checkpoint_protocol:
       - "Load handoff_payload как input для текущей фазы"
     advantage: "Не нужно re-evaluate состояние по косвенным признакам (plan exists? changes exist?)"
 
-  example: |
-    # .claude/workflow-state/{feature}-checkpoint.yaml
-    feature: {feature-name}
-    phase_completed: 2
-    phase_name: plan-review
-    iteration: { plan_review: "1/3", code_review: "0/3" }
-    verdict: APPROVED
-    timestamp: "2026-02-20T14:30:00Z"
-    complexity: L
-    route: standard
-    handoff_payload:
-      to: coder
-      artifact: .claude/prompts/{feature}.md
-      verdict: APPROVED
-      issues_summary: { blocker: 0, major: 0, minor: 1 }
-      approved_with_notes: ["Part 3: minor — add error context in helper"]
-      iteration: "1/3"
+  example:
+    file: ".claude/workflow-state/{feature}-checkpoint.yaml"
+    fields:
+      feature: "{feature-name}"
+      phase_completed: 2
+      phase_name: "plan-review"
+      iteration:
+        plan_review: "1/3"
+        code_review: "0/3"
+      verdict: "APPROVED"
+      timestamp: "2026-02-20T14:30:00Z"
+      complexity: "L"
+      route: "standard"
+      handoff_payload:
+        to: "coder"
+        artifact: ".claude/prompts/{feature}.md"
+        verdict: "APPROVED"
+        issues_summary: { blocker: 0, major: 0, minor: 1 }
+        approved_with_notes:
+          - "Part 3: minor — add error context in helper"
+        iteration: "1/3"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # RE-ROUTING
@@ -560,31 +572,46 @@ error_handling:
 # ════════════════════════════════════════════════════════════════════════════════
 examples:
   sequential_execution_with_confirmations:
-    good: |
-      User: "Добавь новый endpoint"
-      → Phase 1: /planner → создан plan
-      → "Продолжить к Phase 2?" → yes
-      → Phase 2: /plan-review → APPROVED
-      → "Продолжить к Phase 3?" → yes
-      → Phase 3: /coder → код написан, тесты прошли
-      → "Продолжить к Phase 4?" → yes
-      → Phase 4: /code-review → APPROVED
-      → "Фича готова!"
-    bad: |
-      User: "Просто напиши код, без планирования"
-      → skip Phase 1 and Phase 2
-      → go directly to Phase 3
-    why: "Пропуск фаз ведёт к некачественному коду без архитектурного ревью и валидации"
+    good:
+      input: "Add new endpoint"
+      steps:
+        - phase: 1
+          action: "/planner"
+          result: "Plan created"
+        - checkpoint: "Proceed to Phase 2?"
+          answer: "yes"
+        - phase: 2
+          action: "/plan-review"
+          result: "APPROVED"
+        - checkpoint: "Proceed to Phase 3?"
+          answer: "yes"
+        - phase: 3
+          action: "/coder"
+          result: "Code written, tests pass"
+        - checkpoint: "Proceed to Phase 4?"
+          answer: "yes"
+        - phase: 4
+          action: "/code-review"
+          result: "APPROVED → feature complete"
+    bad:
+      input: "Just write code, no planning"
+      steps:
+        - skip: "Phase 1 and Phase 2"
+        - jump_to: "Phase 3 directly"
+    why: "Skipping phases leads to low-quality code without architectural review and validation"
 
   completion_without_autocommit:
-    good: |
-      Phase 4: APPROVED
-      → Предложить: "git add . && git commit -m 'feat: ...' && bd sync"
-      → Пользователь сам решает когда коммитить
-    bad: |
-      Phase 4: APPROVED
-      → git add && git commit && git push  (автоматически)
-    why: "Автокоммит без разрешения нарушает контроль пользователя над репозиторием"
+    good:
+      trigger: "Phase 4: APPROVED"
+      steps:
+        - action: "Suggest commit command to user"
+          command: "git add . && git commit -m 'feat: ...' && bd sync"
+        - action: "Wait for user to decide when to commit"
+    bad:
+      trigger: "Phase 4: APPROVED"
+      steps:
+        - action: "git add && git commit && git push (automatically)"
+    why: "Auto-commit without permission violates user control over repository"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # TROUBLESHOOTING

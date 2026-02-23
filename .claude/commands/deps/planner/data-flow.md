@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Понять ОТКУДА данные приходят и КУДА идут ПЕРЕД планированием.
+Understand WHERE data comes from and WHERE it goes BEFORE planning.
 
 data_flow_analysis:
   questions:
@@ -39,4 +39,4 @@ data_flow_analysis:
 
 ## Critical Rule
 
-**⚠️ NEVER skip DATA_FLOW — wrong layer selection = wasted refactoring time.**
+**NEVER skip DATA_FLOW — wrong layer selection = wasted refactoring time.**

@@ -2,53 +2,13 @@
 name: project-researcher
 model: opus
 meta:
-  version: 4.2.0
-  updated: 2026-02-23
-  changelog: |
-    v4.2.0: Tree-Sitter MCP + GRAPH Phase + Repo-Map (2026-02-23)
-      - NEW: tree-sitter MCP as primary analysis method (replaces ast-grep as default)
-        - 31 languages supported via tree-sitter-language-pack
-        - Full API: symbols, usage, dependencies, queries, similar code
-        - Fallback chain: tree-sitter-mcp → ast-grep → grep
-      - NEW: GRAPH subagent (sonnet) between DETECTION and ANALYSIS
-        - Builds symbol table (functions, types, interfaces)
-        - Constructs file-level dependency graph
-        - Applies PageRank (or fan-in approximation) for symbol ranking
-        - Generates token-budgeted repo-map for ANALYSIS context
-      - ANALYSIS subagent now receives repo-map as pre-computed context
-        - Faster architecture detection (hub files → domain layer)
-        - Higher confidence scores (+5-10% with repo-map)
-      - Pipeline updated: 10 phases (was 9)
-      - Compound subagents: DETECT+GRAPH+ANALYZE (was DETECT+ANALYZE)
-      - state.graph added to state contract
-      - deps/tree-sitter-patterns.md created (replaces ast-analysis.md)
-      - Batch mode: 3 waves (DETECT → GRAPH → ANALYZE) instead of 2
-    v4.1.0: Pipeline Parallelism for Monorepos (2026-02-23)
-      - Added pipeline parallelism: compound subagents (DETECT+ANALYZE per module)
-      - ≤3 modules: pipeline mode (no inter-phase barrier, ~40% faster)
-      - 4+ modules: batch mode (classic v4.0 approach for concurrency control)
-      - Compound subagent protocol in orchestration.md
-      - Per-module state lifecycle and partial failure handling in state-contract.md
-      - Updated merge validation: per-module status tracking
-    v4.0.0: Multi-Agent Orchestration (2026-02-23)
-      - Refactored from monolithic pipeline to orchestrator + 6 subagents
-      - Subagents: discovery (haiku), detection (sonnet), analysis (opus),
-        generation (sonnet), verification (sonnet), report (haiku)
-      - CRITIQUE remains inline in orchestrator (blocking gate, needs full state)
-      - Added parallel execution for monorepo modules
-      - Added tiered model selection (~40% cost reduction)
-      - Added retry logic and graceful degradation
-      - State contract updated with subagent interface protocol
-      - Created deps/orchestration.md — subagent interaction protocol
-    v3.0.0: AST analysis, dependency graph, structured state (2026-02-23)
-    v2.2.0: YAML-first restructure (2026-01-20)
-    v2.1.0: Size optimization via progressive offloading (2026-01-18)
-    v2.0.0: Major quality upgrade (2026-01-18)
-    v1.0.0: Initial modular implementation with phases/
+  version: 4.3.0
+  updated: 2026-02-24
+  changelog: "SEE: deps/changelog.md"
 description: |
   Автономный агент-оркестратор для глубокого исследования любого проекта и генерации .claude/ конфигурации.
 
-  Архитектура v4.2: orchestrator + 7 specialized subagents + 1 inline phase.
+  Архитектура v4.3: orchestrator + 7 specialized subagents + 1 inline phase.
   Orchestrator управляет state, маршрутизирует фазы, контролирует blocking gates.
   Subagents работают в изолированных контекстах через Task tool.
 
@@ -117,256 +77,110 @@ autonomy:
 # ARCHITECTURE
 # ════════════════════════════════════════════════════════════════════════════════
 
-architecture: |
-  ┌─────────────────────────────────────────────────────────────────────────┐
-  │                  PROJECT-RESEARCHER v4.2 ORCHESTRATOR                   │
-  ├─────────────────────────────────────────────────────────────────────────┤
-  │                                                                         │
-  │  [1] DISCOVERY     [2] DETECTION     [3] GRAPH       [4] ANALYSIS      │
-  │  subagent (haiku)  subagent (sonnet) subagent (sonnet) subagent (opus) │
-  │  VALIDATE+DISCOVER DETECT            SYMBOLS+REPO-MAP ANALYZE+MAP+DB  │
-  │       │                 │                  │                │           │
-  │       ▼                 ▼                  ▼                ▼           │
-  │  ┌─────────────────────────────────────────────────────────────┐       │
-  │  │              ORCHESTRATOR STATE MERGE                        │       │
-  │  └─────────────────────────┬───────────────────────────────────┘       │
-  │                            ▼                                           │
-  │  [5] CRITIQUE ──────── BLOCKING GATE (inline, opus)                    │
-  │                            │                                           │
-  │                            ▼ (if passed)                               │
-  │  [6] GENERATION       [7] VERIFICATION     [8] REPORT                  │
-  │  subagent (sonnet)    subagent (sonnet)     subagent (haiku)           │
-  │  GENERATE             VERIFY ── GATE        REPORT                     │
-  │                                                                         │
-  │  ── Monorepo Mode (v4.2) ──────────────────────────────────────────── │
-  │  ≤3 modules: Pipeline — compound subagents                            │
-  │    (DETECT+GRAPH+ANALYZE per module in one Task call, all parallel)   │
-  │  4+ modules: Batch — all DETECT → merge → all GRAPH → merge →        │
-  │    all ANALYZE → merge                                                 │
-  └─────────────────────────────────────────────────────────────────────────┘
+architecture:
+  pattern: "orchestrator + 7 subagents + 1 inline phase"
+  total_phases: 10
+  pipeline:
+    - {step: 1, name: DISCOVERY, agent: discovery, model: haiku, phases: "VALIDATE + DISCOVER"}
+    - {step: 2, name: DETECTION, agent: detection, model: sonnet, phases: "DETECT"}
+    - {step: 3, name: GRAPH, agent: graph, model: sonnet, phases: "GRAPH (symbols + repo-map)"}
+    - {step: "4-5", name: ANALYSIS, agent: analysis, model: opus, phases: "ANALYZE + MAP + DATABASE"}
+    - {step: 6, name: CRITIQUE, type: inline, model: opus, gate: blocking}
+    - {step: 7, name: GENERATION, agent: generation, model: sonnet, phases: "GENERATE"}
+    - {step: 8, name: VERIFICATION, agent: verification, model: sonnet, gate: blocking}
+    - {step: 9, name: REPORT, agent: report, model: haiku, phases: "REPORT"}
+  monorepo_strategies:
+    single: "sequential: detection → graph → analysis"
+    pipeline: "≤3 modules → compound DETECT+GRAPH+ANALYZE per module (all parallel)"
+    batch: "4+ modules → 3-wave: all DETECT → all GRAPH → all ANALYZE"
+  ref: "SEE: deps/orchestration.md (call protocol, state merging, parallelism)"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # ORCHESTRATION ALGORITHM
 # ════════════════════════════════════════════════════════════════════════════════
 
-orchestration: |
+orchestration:
+  init: "state ← {}, AGENT_ROOT ← directory of this AGENT.md"
+  protocol_ref: "SEE: deps/orchestration.md"
+  state_ref: "SEE: deps/state-contract.md"
 
-  FUNCTION orchestrate(path, flags):
-    state ← {}
-    AGENT_ROOT ← directory containing this AGENT.md
+  subagent_call_template:
+    subagent_type: general-purpose
+    model: "{model_from_registry}"
+    prompt_pattern: "Read {AGENT_ROOT}/subagents/{name}.md and execute. Project path: {path}. State: {serialize(required_state_fields)}"
 
-    # ── STEP 1: DISCOVERY ──────────────────────────────────────────────
-    # Subagent: discovery (haiku)
-    # Validates project, detects mode, discovers monorepo structure
+  steps:
+    - step: 1
+      phase: DISCOVERY
+      call: {subagent_type: general-purpose, model: haiku}
+      prompt: "Read {AGENT_ROOT}/subagents/discovery.md and execute. Project path: {path}. Config: dry_run={flags.dry_run}"
+      merge: "state.validate + state.discover"
+      validate: ["path exists", "analysis_targets non-empty"]
+      fatal_if: "path missing OR analysis_targets empty"
 
-    Call Task tool:
-      subagent_type: general-purpose
-      model: haiku
-      prompt: |
-        Read {AGENT_ROOT}/subagents/discovery.md and execute.
-        Project path: {path}
-        Config: dry_run={flags.dry_run}
-
-    Parse subagent_result → merge into state (state.validate + state.discover)
-    Validate: state.validate.path exists, state.discover.analysis_targets non-empty
-
-    Output: [PHASE 1/10] DISCOVERY — DONE
-
-    # ── STEP 2-4: DETECTION + GRAPH + ANALYSIS ───────────────────────
-    # Strategy depends on project structure (SEE: deps/orchestration.md)
-
-    IF state.discover.strategy == "single" OR modules.length <= 1:
-      # ── SEQUENTIAL (single module) ──
-      # Subagent: detection (sonnet), then graph (sonnet), then analysis (opus)
-
-      Call Task tool:
-        subagent_type: general-purpose
-        model: sonnet
-        prompt: |
-          Read {AGENT_ROOT}/subagents/detection.md and execute.
-          Project path: {path}
-          State: {serialize(state.validate, state.discover)}
-
-      Parse subagent_result → merge into state.detect
-      Validate: state.detect.primary_language exists, confidence ≥ 0.3
-
-      Output: [PHASE 2/10] DETECTION — DONE
-
-      Call Task tool:
-        subagent_type: general-purpose
-        model: sonnet
-        prompt: |
-          Read {AGENT_ROOT}/subagents/graph.md and execute.
-          Project path: {path}
-          State: {serialize(state.validate, state.discover, state.detect)}
-
-      Parse subagent_result → merge into state.graph
-      Validate: state.graph.symbol_table.total_symbols > 0, state.graph.repo_map.content exists
-
-      Output: [PHASE 3/10] GRAPH — DONE
-
-      Call Task tool:
-        subagent_type: general-purpose
-        model: opus
-        prompt: |
-          Read {AGENT_ROOT}/subagents/analysis.md and execute.
-          Project path: {path}
-          State: {serialize(state.validate, state.discover, state.detect, state.graph)}
-
-      Parse subagent_result → merge into state.analyze + state.map + state.database
-      Validate: state.analyze.architecture exists, state.map.entry_points non-empty
-
-      Output: [PHASE 4-5/10] ANALYSIS — DONE
-
-    ELSE IF modules.length <= 3:
-      # ── PIPELINE PARALLELISM (≤3 modules) ──
-      # Compound subagents: DETECTION + GRAPH + ANALYSIS per module in one Task call
-      # All modules launched in parallel — no inter-phase barrier
-      # SEE: deps/orchestration.md → PIPELINE PARALLELISM
-
-      FOR EACH target IN state.discover.analysis_targets (all IN PARALLEL):
-        Call Task tool:
-          subagent_type: general-purpose
+    - step: "2-4"
+      phase: "DETECTION + GRAPH + ANALYSIS"
+      strategy_selector: "state.discover.strategy + modules.length"
+      strategies:
+        single:
+          when: "strategy == single OR modules ≤ 1"
+          execution: "sequential: detection(sonnet) → graph(sonnet) → analysis(opus)"
+          calls:
+            - {subagent: detection, model: sonnet, prompt: "Read {AGENT_ROOT}/subagents/detection.md", merge: "state.detect"}
+            - {subagent: graph, model: sonnet, prompt: "Read {AGENT_ROOT}/subagents/graph.md", merge: "state.graph"}
+            - {subagent: analysis, model: opus, prompt: "Read {AGENT_ROOT}/subagents/analysis.md", merge: "state.analyze + state.map + state.database"}
+          validate: ["primary_language exists", "confidence ≥ 0.3", "symbol_table.total_symbols > 0", "architecture exists"]
+        pipeline:
+          when: "modules 2-3"
+          execution: "parallel compound subagents (DETECT+GRAPH+ANALYZE per module in one Task call)"
           model: opus
-          prompt: |
-            # COMPOUND SUBAGENT: DETECTION + GRAPH + ANALYSIS for "{target}"
-            Phase 1: Read {AGENT_ROOT}/subagents/detection.md and execute.
-            Phase 2: Read {AGENT_ROOT}/subagents/graph.md and execute.
-            Phase 3: Read {AGENT_ROOT}/subagents/analysis.md and execute.
-            Project path: {path}
-            Module target: {target}
-            State: {serialize(state.validate, state.discover)}
+          compound_prompt: "Phase 1: Read detection.md. Phase 2: Read graph.md. Phase 3: Read analysis.md. Module target: {target}"
+          merge: "per-module → aggregate (SEE: deps/state-contract.md → MONOREPO STATE MERGING)"
+          partial_failure: "SEE: deps/orchestration.md → Partial Failure Handling"
+        batch:
+          when: "modules 4+"
+          execution: "3-wave batch parallelism"
+          waves:
+            - {wave: 1, subagent: detection, model: sonnet, parallel: "all modules"}
+            - {wave: 2, subagent: graph, model: sonnet, parallel: "all modules"}
+            - {wave: 3, subagent: analysis, model: opus, parallel: "all modules"}
+          merge: "per-wave merge → aggregate (SEE: deps/state-contract.md)"
 
-      Collect compound results → per-module merge into state.detect + state.graph + state.analyze + state.map
-      Handle partial failures: exclude failed modules, warn on partial
-      Aggregate merged state (SEE: deps/state-contract.md → MONOREPO STATE MERGING)
+    - step: 5
+      phase: CRITIQUE
+      type: inline
+      instruction: "Read {AGENT_ROOT}/phases/critique.md and execute with full state"
+      checks: ["completeness", "accuracy", "quality", "relevance", "adversarial (5 questions)", "confidence calibration"]
+      gate: blocking
+      max_retries: 1
+      merge: "state.critique"
+      on_failure: "Apply plan_adjustments, re-execute. If still fails → FATAL"
 
-      Validate: state.detect.primary_language exists, state.analyze exists
-      Output: [PHASE 2-5/10] DETECTION + GRAPH + ANALYSIS — DONE (pipeline, {N} modules)
+    - step: 6
+      phase: GENERATION
+      call: {subagent_type: general-purpose, model: sonnet}
+      prompt: "Read {AGENT_ROOT}/subagents/generation.md and execute. Config: dry_run={flags.dry_run}, mode={state.validate.mode}"
+      input: "full state"
+      merge: "state.generate"
 
-    ELSE:
-      # ── BATCH PARALLELISM (4+ modules) ──
-      # 3-wave: all DETECTION → merge → all GRAPH → merge → all ANALYSIS → merge
+    - step: 7
+      phase: VERIFICATION
+      call: {subagent_type: general-purpose, model: sonnet}
+      prompt: "Read {AGENT_ROOT}/subagents/verification.md and execute."
+      input: "state.generate + state.validate"
+      gate: blocking
+      max_retries: 1
+      on_failure: "Re-run generation with fix_instructions, re-verify. If still fails → FATAL"
+      merge: "state.verify"
 
-      FOR EACH target IN state.discover.analysis_targets (all IN PARALLEL):
-        Call Task tool:
-          subagent_type: general-purpose
-          model: sonnet
-          prompt: |
-            Read {AGENT_ROOT}/subagents/detection.md and execute.
-            Project path: {path}, Module target: {target}
-            State: {serialize(state.validate, state.discover)}
+    - step: 8
+      phase: REPORT
+      call: {subagent_type: general-purpose, model: haiku}
+      prompt: "Read {AGENT_ROOT}/subagents/report.md and execute."
+      input: "full state"
+      output: "report to user"
 
-      Collect all results → merge per-module into state.detect
-      Validate: state.detect.primary_language exists, confidence ≥ 0.3
-
-      Output: [PHASE 2/10] DETECTION — DONE ({N} modules, batch)
-
-      FOR EACH target IN state.discover.analysis_targets (all IN PARALLEL):
-        Call Task tool:
-          subagent_type: general-purpose
-          model: sonnet
-          prompt: |
-            Read {AGENT_ROOT}/subagents/graph.md and execute.
-            Project path: {path}, Module target: {target}
-            State: {serialize(state.validate, state.discover, state.detect)}
-
-      Collect all results → merge per-module into state.graph
-      Output: [PHASE 3/10] GRAPH — DONE ({N} modules, batch)
-
-      FOR EACH target IN state.discover.analysis_targets (all IN PARALLEL):
-        Call Task tool:
-          subagent_type: general-purpose
-          model: opus
-          prompt: |
-            Read {AGENT_ROOT}/subagents/analysis.md and execute.
-            Project path: {path}, Module target: {target}
-            State: {serialize(state.validate, state.discover, state.detect, state.graph)}
-
-      Collect all results → merge per-module into state.analyze + state.map + state.database
-      Validate: state.analyze.architecture exists
-
-      Output: [PHASE 4-5/10] ANALYSIS — DONE ({N} modules, batch)
-
-    # ── STEP 5: CRITIQUE (INLINE BLOCKING GATE) ───────────────────────
-    # NOT a subagent — executed inline in orchestrator context
-    # Needs full state for adversarial review and confidence calibration
-
-    Read {AGENT_ROOT}/phases/critique.md
-    Execute CRITIQUE with full state:
-      - Checklist review (completeness, accuracy, quality, relevance)
-      - Adversarial review (5 devil's advocate questions)
-      - Confidence calibration (evidence vs claimed confidence)
-      - Plan adjustments
-
-    state.critique ← critique results
-
-    IF state.critique.gate_passed == false:
-      # Retry: fix issues identified by critique
-      Apply plan_adjustments to state
-      Re-execute CRITIQUE (max 1 retry)
-      IF still gate_passed == false:
-        FATAL "Critique gate failed. Issues: {state.critique.issues}"
-
-    Output: [PHASE 6/10] CRITIQUE — DONE (gate: PASSED)
-
-    # ── STEP 6: GENERATION ─────────────────────────────────────────────
-    # Subagent: generation (sonnet)
-    # Creates .claude/ artifacts
-
-    Call Task tool:
-      subagent_type: general-purpose
-      model: sonnet
-      prompt: |
-        Read {AGENT_ROOT}/subagents/generation.md and execute.
-        Project path: {path}
-        Config: dry_run={flags.dry_run}, mode={state.validate.mode}
-        State: {serialize(full_state)}
-
-    Parse subagent_result → merge into state.generate
-
-    Output: [PHASE 7/10] GENERATION — DONE
-
-    # ── STEP 7: VERIFICATION (BLOCKING GATE) ──────────────────────────
-    # Subagent: verification (sonnet)
-    # Validates generated artifacts
-
-    Call Task tool:
-      subagent_type: general-purpose
-      model: sonnet
-      prompt: |
-        Read {AGENT_ROOT}/subagents/verification.md and execute.
-        Project path: {path}
-        State: {serialize(state.generate, state.validate)}
-
-    Parse subagent_result → merge into state.verify
-
-    IF state.verify.gate_passed == false:
-      # Re-run generation with fix instructions, then re-verify
-      fix_instructions = state.verify.issues
-      Re-call generation subagent with fix_instructions
-      Re-call verification subagent
-      IF still gate_passed == false:
-        FATAL "Verification gate failed. Issues: {state.verify.issues}"
-
-    Output: [PHASE 8/10] VERIFICATION — DONE (gate: PASSED)
-
-    # ── STEP 8: REPORT ─────────────────────────────────────────────────
-    # Subagent: report (haiku)
-    # Final summary with metrics and recommendations
-
-    Call Task tool:
-      subagent_type: general-purpose
-      model: haiku
-      prompt: |
-        Read {AGENT_ROOT}/subagents/report.md and execute.
-        State: {serialize(full_state)}
-
-    Output report to user.
-
-    Output: [PHASE 9/10] REPORT — DONE
-
-    RETURN state
+  state_validation: "Validate state contract between every subagent call (SEE: deps/state-contract.md)"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # OPERATION MODES
@@ -472,10 +286,9 @@ inline_phases:
 # ════════════════════════════════════════════════════════════════════════════════
 
 progress:
-  format: |
-    [ORCHESTRATOR] Calling subagent: {name} (model: {model})
-    [PHASE {n}/10] {NAME} — DONE
-    State: {compact_state_summary}
+  calling: "[ORCHESTRATOR] Calling subagent: {name} (model: {model})"
+  done: "[PHASE {n}/10] {NAME} — DONE"
+  state: "State: {compact_state_summary}"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # RULES
@@ -539,8 +352,10 @@ reference_files:
     purpose: "Subagent execution instructions (7 files, including graph.md)"
   - file: "phases/critique.md"
     purpose: "CRITIQUE blocking gate (inline, not subagent)"
+  - file: "deps/changelog.md"
+    purpose: "Full version history"
   - file: "deps/orchestration.md"
-    purpose: "Subagent interaction protocol"
+    purpose: "Subagent call protocol, state serialization, parallelism strategies"
   - file: "deps/state-contract.md"
     purpose: "Typed inter-phase state schema + subagent interface"
   - file: "deps/tree-sitter-patterns.md"

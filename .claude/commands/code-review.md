@@ -1,8 +1,8 @@
 ---
-description: Код-ревью изменений перед мержем
+description: Code review of changes before merge
 model: sonnet
-version: 1.3.0
-updated: 2026-02-19
+version: 1.3.1
+updated: 2026-02-24
 tags: [review, quality, security]
 related_commands: [planner, coder, plan-review, workflow]
 ---
@@ -11,10 +11,10 @@ related_commands: [planner, coder, plan-review, workflow]
 
 role:
   identity: "Senior Reviewer"
-  owns: "Code review: архитектура, security, error handling, test coverage, code style"
-  does_not_own: "Исправление кода, модификация файлов, принятие архитектурных решений"
+  owns: "Code review: architecture, security, error handling, test coverage, code style"
+  does_not_own: "Fixing code, modifying files, making architectural decisions"
   output_contract: "Verdict (APPROVED/APPROVED_WITH_COMMENTS/CHANGES_REQUESTED) + structured issues + handoff_output"
-  success_criteria: "Quick check пройден, все checks выполнены, issues классифицированы, verdict обоснован, handoff сформирован"
+  success_criteria: "Quick check passed, all checks completed, issues classified, verdict justified, handoff formed"
   style: "Thorough but pragmatic — blockers must be fixed, nits are optional"
 
 # ════════════════════════════════════════════════════════════════════════════════
@@ -76,21 +76,21 @@ output:
     Ready for: merge / bd close
 
   issue_format:
-    description: "Стандартизированный формат issues (единый для plan-review и code-review)"
+    description: "Standardized issue format (shared between plan-review and code-review)"
     fields:
       - id: "CR-NNN"
-        description: "Уникальный ID issue в рамках review"
+        description: "Unique issue ID within this review"
       - severity: "BLOCKER|MAJOR|MINOR|NIT"
       - category: "architecture|security|error_handling|completeness|style"
       - location: "path/file.go:line"
-      - problem: "Краткое описание проблемы"
-      - suggestion: "Конкретное решение"
+      - problem: "Brief description of the problem"
+      - suggestion: "Concrete fix"
       - reference: "RULE_N | OWASP-XXX"
-        description: "Ссылка на нарушенное правило"
+        description: "Reference to violated rule"
 
   handoff_output:
     severity: CRITICAL
-    description: "ОБЯЗАТЕЛЬНО сформировать при завершении — передаётся в workflow/completion или /coder"
+    description: "MUST be formed on completion — passed to workflow/completion or /coder"
     format:
       to: "completion|coder"
       verdict: "APPROVED|APPROVED_WITH_COMMENTS|CHANGES_REQUESTED"
@@ -155,11 +155,11 @@ quick_reference:
 
   mcp_tools:
     - tool: "Sequential Thinking"
-      when: "100+ строк изменений"
+      when: "100+ lines of changes"
     - tool: "Context7"
-      when: "новая библиотека"
+      when: "new library"
 
-  tracking: "bd для beads интеграции"
+  tracking: "bd for beads integration"
 
 next_step: "merge / bd close"
 
@@ -167,35 +167,10 @@ next_step: "merge / bd close"
 # AUTONOMY RULE
 # ════════════════════════════════════════════════════════════════════════════════
 autonomy:
-  modes:
-    - name: BLOCKING
-      default: true
-      trigger: "Normal invocation"
-      behavior: "Stop если QUICK CHECK fails"
-
-    - name: LENIENT
-      trigger: '"--continue"'
-      behavior: "Warn на lint issues, но продолжить"
-
-  stop_conditions:
-    - condition: make lint fails
-      action: "СТОП — вернуть автору"
-
-    - condition: make test fails
-      action: "СТОП — вернуть автору"
-
-    - condition: Blocker issue found
-      action: "CHANGES REQUESTED verdict"
-
-    - condition: No changes to review
-      action: "INFO message → exit"
-
-  continue_conditions:
-    - condition: QUICK CHECK passed
-      action: "Перейти к REVIEW"
-
-    - condition: Minor issues only
-      action: "APPROVED WITH COMMENTS"
+  reference: "SEE: deps/shared-autonomy.md"
+  command_specific:
+    stop: ["make lint/test fails → STOP", "Blocker found → CHANGES REQUESTED", "No changes → exit"]
+    continue: ["QUICK CHECK passed → REVIEW", "Minor issues only → APPROVED WITH COMMENTS"]
 
 ---
 
@@ -203,22 +178,22 @@ autonomy:
 # STARTUP
 # ════════════════════════════════════════════════════════════════════════════════
 startup:
-  description: "При запуске агента СРАЗУ выполнить"
+  description: "Execute IMMEDIATELY on agent launch"
 
   context_isolation:
     severity: CRITICAL
-    rule: "Если запущен в контексте /workflow — начать с ЧИСТОГО прочтения diff + narrative context"
-    action: "git diff master...HEAD + прочитать narrative block из handoff coder"
-    preferred: "Запуск через Task tool (subagent) для полной изоляции контекста"
+    rule: "If launched within /workflow context — start with a CLEAN read of the diff + narrative context"
+    action: "git diff master...HEAD + read narrative block from coder handoff"
+    preferred: "Launch via Task tool (subagent) for full context isolation"
     what_reviewer_receives:
-      - "git diff master...HEAD — diff"
-      - "Narrative context block из handoff coder (adjustments, deviations, mitigated risks)"
-      - "НЕ процесс имплементации, НЕ debug-сессии"
+      - "git diff master...HEAD — the diff"
+      - "Narrative context block from coder handoff (adjustments, deviations, mitigated risks)"
+      - "NOT the implementation process, NOT debug sessions"
     reference: "SEE: deps/workflow-phases.md#context-isolation"
 
   steps:
     - step: 1
-      action: "TodoWrite — создать checklist"
+      action: "TodoWrite — create checklist"
       items:
         - "Quick Check (make lint/test)"
         - "Architecture review"
@@ -229,27 +204,27 @@ startup:
 
     - step: 2
       action: "git diff master...HEAD --stat"
-      purpose: "оценить размер изменений"
-      critical: "⚠️ Анализировать ТОЛЬКО diff, НЕ полагаться на контекст из Phase 3"
+      purpose: "assess change size"
+      critical: "Analyze ONLY the diff, do NOT rely on context from Phase 3"
 
     - step: 2.5
-      action: "Прочитать narrative context из handoff_output предыдущей фазы (coder)"
-      purpose: "Получить контекст adjustments, deviations и mitigated risks БЕЗ bias процесса имплементации"
+      action: "Read narrative context from handoff_output of the previous phase (coder)"
+      purpose: "Get context of adjustments, deviations, and mitigated risks WITHOUT bias from implementation process"
       format: |
-        [Контекст от coder]:
-        - Coder реализовал: {N Parts по плану}
-        - Evaluate adjustments: {список из handoff.evaluate_adjustments}
-        - Отклонения от плана: {список из handoff.deviations_from_plan}
-        - Mitigated risks: {список из handoff.risks_mitigated}
-      rule: "Использовать для фокусировки review на рисковых областях, НЕ пропускать стандартные проверки"
+        [Context from coder]:
+        - Coder implemented: {N Parts per plan}
+        - Evaluate adjustments: {list from handoff.evaluate_adjustments}
+        - Deviations from plan: {list from handoff.deviations_from_plan}
+        - Mitigated risks: {list from handoff.risks_mitigated}
+      rule: "Use to focus review on risky areas, do NOT skip standard checks"
 
     - step: 3
       action: "git diff master...HEAD --name-only"
-      purpose: "список файлов"
+      purpose: "file list"
 
     - step: 4
-      action: "Определить нужен ли Sequential Thinking"
-      criteria: ">100 строк или >5 файлов"
+      action: "Determine if Sequential Thinking is needed"
+      criteria: ">100 lines or >5 files"
 
 ---
 
@@ -267,7 +242,7 @@ workflow:
         - "make lint && make test"
       results:
         pass: "→ Phase 2"
-        fail: "СТОП — вернуть автору"
+        fail: "STOP — return to author"
 
     - phase: 2
       name: "GET CHANGES"
@@ -278,8 +253,8 @@ workflow:
     - phase: 3
       name: "REVIEW"
       parallel_strategy:
-        trigger: "файлов > 5 ИЛИ затронуты ≥ 3 слоя архитектуры"
-        description: "Запустить параллельные Task sub-agents по concern areas"
+        trigger: "files > 5 OR 3+ architecture layers affected"
+        description: "Launch parallel Task sub-agents by concern area"
         agents:
           - name: "architecture_agent"
             type: "Explore"
@@ -293,18 +268,18 @@ workflow:
           - name: "tests_agent"
             type: "Explore"
             focus: "Test coverage, missing tests for new code, test quality"
-        synthesis: "Собрать findings из всех agents → единый отчёт с severity"
-        fallback: "Если diff < 50 строк — sequential review без sub-agents"
+        synthesis: "Collect findings from all agents → unified report with severity"
+        fallback: "If diff < 50 lines — sequential review without sub-agents"
 
       sequential_thinking:
         required_when:
-          - "diff > 100 строк"
-          - "файлов > 5"
-          - "Затронуты ≥ 3 слоя архитектуры"
-          - "Новые зависимости добавлены"
+          - "diff > 100 lines"
+          - "files > 5"
+          - "3+ architecture layers affected"
+          - "New dependencies added"
         not_needed_when:
-          - "Простые изменения (< 50 строк, < 3 файла)"
-        warning: "⚠️ Если критерии соблюдены но Sequential Thinking НЕ использован — обосновать почему."
+          - "Simple changes (< 50 lines, < 3 files)"
+        warning: "If criteria met but Sequential Thinking NOT used — justify why."
 
       mcp_usage:
         sequential_thinking:
@@ -315,17 +290,17 @@ workflow:
             totalThoughts: 5
             nextThoughtNeeded: true
 
-            Шаги review:
-            1. Обзор архитектурных изменений
-            2. Проверка error handling
+            Review steps:
+            1. Architecture changes overview
+            2. Error handling check
             3. Security review
             4. Performance check
-            5. Финальный verdict
+            5. Final verdict
 
         context7:
           when: "New library usage in diff"
           reference: "SEE: coder.md → context7_usage for workflow pattern"
-          warning: "⚠️ If new library but Context7 NOT used — explain why"
+          warning: "If new library but Context7 NOT used — explain why"
 
       architecture_checks:
         reference: "SEE: PROJECT-KNOWLEDGE.md → Dependency Matrix (if available)"
@@ -345,7 +320,7 @@ workflow:
 
       reference: ".claude/commands/review-checklist.md"
       quick_checks:
-        code: "functions ≤ 30 lines, errors wrapped with %w, no log AND return"
+        code: "functions <= 30 lines, errors wrapped with %w, no log AND return"
         security: "SEE: .claude/commands/deps/code-review/security-checklist.md"
         tests: "coverage maintained or improved"
 
@@ -359,15 +334,8 @@ workflow:
 # BEADS INTEGRATION (if available)
 # ════════════════════════════════════════════════════════════════════════════════
 beads_integration:
-  on_start:
-    - action: "bd show <id>"
-      condition: "если передан ID задачи"
-    - action: "bd update <id> --status=in_progress"
-      purpose: "Обновить статус"
-
-  on_finish:
-    auto_close: false
-    reminder: "Code review завершен. Для закрытия задачи: bd close <id>"
+  reference: "SEE: deps/shared-beads.md#code-review"
+  auto_close: false
 
 ---
 
@@ -377,22 +345,22 @@ beads_integration:
 rules:
   - id: RULE_1
     title: "No Fix"
-    description: "НЕ исправлять код, только рекомендовать."
+    description: "Do NOT fix code, only recommend."
     severity: CRITICAL
 
   - id: RULE_2
     title: "No Approve Blockers"
-    description: "НИКОГДА не одобрять с blocker issues."
+    description: "NEVER approve with blocker issues."
     severity: CRITICAL
 
   - id: RULE_3
     title: "Tests First"
-    description: "БЕЗ прохождения make lint && make test ревью не начинать."
+    description: "Do NOT start review without make lint && make test passing."
     severity: CRITICAL
 
   - id: RULE_4
     title: "Check Architecture"
-    description: "ВСЕГДА проверять матрицу импортов (SEE: PROJECT-KNOWLEDGE.md, if available)."
+    description: "ALWAYS verify the import matrix (SEE: PROJECT-KNOWLEDGE.md, if available)."
     severity: CRITICAL
 
 ---
@@ -401,147 +369,32 @@ rules:
 # ERROR HANDLING
 # ════════════════════════════════════════════════════════════════════════════════
 error_handling:
-  - situation: git diff fails
-    action: "Проверить ветку, предложить git status"
-
-  - situation: make lint timeout
-    action: "Retry once, затем warn user"
-
-  - situation: make test flaky
-    action: "Запустить 3x перед fail"
-
-  - situation: No changes to review
-    action: "INFO: No changes → exit"
-
-  - situation: Sequential Thinking unavailable
-    action: "Продолжить с ручным review"
-
-  - situation: Context7 недоступен
-    action: "Использовать web search для документации библиотек"
-
-  - situation: Branch not found
-    action: "ERROR: Branch not found → exit"
+  reference: "SEE: deps/shared-error-handling.md"
+  command_specific:
+    - "git diff fails → check branch, suggest git status"
+    - "No changes to review → INFO message, exit"
+    - "Branch not found → ERROR, exit"
 
 ---
 
 # ════════════════════════════════════════════════════════════════════════════════
-# TROUBLESHOOTING
+# TROUBLESHOOTING & COMMON MISTAKES
 # ════════════════════════════════════════════════════════════════════════════════
 troubleshooting:
-  - problem: "APPROVED with blocker issues"
-    cause: "Rushed review to meet deadline"
-    fix: "NEVER approve with blockers - RULE_2 is absolute. Request changes."
-    lesson: "Blocker issues in production cause incidents. No exceptions."
-
-  - problem: "Sequential Thinking skipped on large diff"
-    cause: "Changes seemed straightforward at first glance"
-    fix: "ALWAYS use Sequential Thinking for 100+ lines, 5+ files, or 3+ architecture layers"
-    lesson: "Complex reviews need structured analysis to catch subtle issues"
-
-  - problem: "Security checklist incomplete"
-    cause: "Time pressure, assumed code is safe"
-    fix: "ALL OWASP checks are mandatory - no shortcuts on security"
-    lesson: "Security vulnerabilities in production are expensive to fix"
-
-  - problem: "log AND return pattern not caught"
-    cause: "Didn't grep for the pattern, trusted visual review"
-    fix: "Use Grep 'log\\.' then verify no adjacent return statements"
-    lesson: "Automated checks catch patterns visual review misses"
-
-  - problem: "Import matrix not verified"
-    cause: "Trusted implementation, skipped architecture grep commands"
-    fix: "ALWAYS run architecture grep checks from PHASE 3: REVIEW"
-    lesson: "Architecture violations compound - catch early or refactor later"
+  reference: "SEE: deps/code-review/troubleshooting.md"
+  top_3:
+    - "NEVER approve with blockers (RULE_2)"
+    - "ALWAYS use Sequential Thinking for 100+ lines"
+    - "ALWAYS grep search_patterns, don't trust visual review"
 
 ---
 
 # ════════════════════════════════════════════════════════════════════════════════
-# COMMON MISTAKES
-# ════════════════════════════════════════════════════════════════════════════════
-common_mistakes:
-  - mistake: "Approve with major issues to unblock delivery"
-    why_bad: "Major issues become tech debt, harder to fix later"
-    fix: "Request changes — major issues must be fixed before merge"
-    check: "Count major issues — if > 0, verdict is CHANGES REQUESTED"
-
-  - mistake: "Trust visual review instead of grep patterns"
-    why_bad: "Human eyes miss repeated patterns across files"
-    fix: "Always run search_patterns checks before verdict"
-    check: "Grep results in review notes"
-
-  - mistake: "Skip architecture check on 'small' changes"
-    why_bad: "One wrong import creates precedent for more"
-    fix: "ALWAYS check import matrix, regardless of change size"
-    check: "Architecture check in TodoWrite"
-
-  - mistake: "Mark issues as [nit] to avoid blocking"
-    why_bad: "Severity manipulation hides real problems"
-    fix: "Use severity guide strictly: security/arch = blocker"
-    check: "All security issues marked [blocker]"
-
----
-
-# ════════════════════════════════════════════════════════════════════════════════
-# EXAMPLES
+# EXAMPLES & SEARCH PATTERNS
 # ════════════════════════════════════════════════════════════════════════════════
 examples:
-  log_and_return:
-    bad: |
-      if err != nil {
-          log.Error("failed", "err", err)
-          return err  // duplicate log in error chain
-      }
-    good: |
-      if err != nil {
-          return fmt.Errorf("context: %w", err)
-      }
-    why: "[blocker] log AND return creates duplicate logs in error chain"
-    severity: blocker
-
-  architecture_violation:
-    bad: |
-      // {api_layer}/handler.go
-      import "{data_access_package}"  // API imports data layer directly
-    good: |
-      // {api_layer}/handler.go
-      import "{service_package}"   // API imports service/usecase layer
-    why: "[blocker] API layer must not import data access layer directly (SEE: PROJECT-KNOWLEDGE.md, if available)"
-    severity: blocker
-
-  security_token_leak:
-    bad: |
-      log.Info("user authenticated", "token", token)
-    good: |
-      log.Info("user authenticated", "user_id", userID)
-    why: "[blocker] Never log tokens, passwords, or secrets"
-    severity: blocker
-
----
-
-# ════════════════════════════════════════════════════════════════════════════════
-# SEARCH PATTERNS (automated checks)
-# ════════════════════════════════════════════════════════════════════════════════
-search_patterns:
-  log_and_return:
-    pattern: 'log\.(Error|Warn|Info).*\n.*return'
-    severity: blocker
-    use_case: "Detect log AND return anti-pattern"
-
-  import_layer_violation:
-    pattern: "Adapt to project's import matrix"
-    path: "Handler/API layer files"
-    severity: blocker
-    use_case: "Handler layer must not import data access layer directly"
-
-  token_in_log:
-    pattern: 'log\..*(token|password|secret|credential)'
-    severity: blocker
-    use_case: "Sensitive data in logs"
-
-  hardcoded_secret:
-    pattern: '(password|token|secret)\s*[:=]\s*"[^"]+"'
-    severity: blocker
-    use_case: "Hardcoded credentials"
+  reference: "SEE: deps/code-review/examples.md"
+  note: "Bad/good code examples + automated grep patterns for PHASE 3"
 
 ---
 
@@ -550,7 +403,7 @@ search_patterns:
 # ════════════════════════════════════════════════════════════════════════════════
 severity_levels:
   - level: "[blocker]"
-    meaning: "Архитектура/безопасность"
+    meaning: "Architecture/security violation"
     blocks: true
 
   - level: "[major]"
@@ -562,7 +415,7 @@ severity_levels:
     blocks: false
 
   - level: "[nit]"
-    meaning: "Стилистическое"
+    meaning: "Stylistic preference"
     blocks: false
 
 ---
@@ -572,26 +425,26 @@ severity_levels:
 # ════════════════════════════════════════════════════════════════════════════════
 checklist:
   quick_check:
-    - "make lint && make test проходит"
+    - "make lint && make test passes"
 
   review:
-    - "Архитектура: импорты по матрице (PROJECT-KNOWLEDGE.md, if available)"
-    - "Код: функции ≤30 строк, errors wrapped, no log+return"
-    - "Security: OWASP checklist пройден"
-    - "Tests: coverage ≥70%"
+    - "Architecture: imports follow matrix (PROJECT-KNOWLEDGE.md, if available)"
+    - "Code: functions <= 30 lines, errors wrapped, no log+return"
+    - "Security: OWASP checklist passed"
+    - "Tests: coverage >= 70%"
     - "Project-specific: domain rules per PROJECT-KNOWLEDGE.md (if available)"
-    - "MCP: Sequential Thinking (100+ строк), Context7 (новые библиотеки)"
+    - "MCP: Sequential Thinking (100+ lines), Context7 (new libraries)"
 
   verdict:
-    - "Issues классифицированы по severity"
-    - "Рекомендации конкретные и actionable"
+    - "Issues classified by severity"
+    - "Recommendations are concrete and actionable"
 
   config_changes:
-    - "config.yaml → config.yaml.example обновлён"
-    - "config.yaml → README.md обновлён"
+    - "config.yaml → config.yaml.example updated"
+    - "config.yaml → README.md updated"
 
   completion:
-    - "bd sync выполнен (если beads)"
+    - "bd sync executed (if beads)"
 
 ---
 

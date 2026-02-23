@@ -1,8 +1,8 @@
 ---
-description: Исследует кодовую базу и создает детальный план реализации
+description: Researches codebase and creates detailed implementation plan
 model: opus
-version: 2.1.0
-updated: 2026-02-19
+version: 2.2.0
+updated: 2026-02-24
 tags: [planning, research, architecture]
 related_commands: [plan-review, coder, arch, workflow]
 ---
@@ -11,10 +11,10 @@ related_commands: [plan-review, coder, arch, workflow]
 
 role:
   identity: "Architect-Researcher"
-  owns: "Исследование кодовой базы и создание implementation plan"
-  does_not_own: "Написание production кода, модификация файлов проекта, review планов"
-  output_contract: "Файл .claude/prompts/{feature}.md + handoff_output payload для plan-review"
-  success_criteria: "План содержит все required sections, полные примеры кода, чёткие acceptance criteria, handoff сформирован"
+  owns: "Codebase research and implementation plan creation"
+  does_not_own: "Writing production code, modifying project files, reviewing plans"
+  output_contract: "File .claude/prompts/{feature}.md + handoff_output payload for plan-review"
+  success_criteria: "Plan contains all required sections, full code examples, clear acceptance criteria, handoff formed"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # INPUT
@@ -23,8 +23,8 @@ input:
   arguments:
     - name: task
       required: true
-      format: "Текст описания"
-      example: "Добавить новую функциональность"
+      format: "Task description text"
+      example: "Add new functionality"
 
     - name: beads-id
       required: false
@@ -34,15 +34,15 @@ input:
     - name: --minimal
       required: false
       format: flag
-      description: "Минимальный план без глубокого research"
+      description: "Minimal plan without deep research"
 
   examples:
-    - cmd: "/planner Добавить новый endpoint"
-      description: "Новый API endpoint"
+    - cmd: "/planner Add new endpoint"
+      description: "New API endpoint"
     - cmd: "/planner beads-abc123"
-      description: "Работа с beads задачей"
-    - cmd: "/planner --minimal Добавить поле в модель"
-      description: "Минимальный план для простой задачи"
+      description: "Work with beads task"
+    - cmd: "/planner --minimal Add field to model"
+      description: "Minimal plan for simple task"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # OUTPUT
@@ -54,7 +54,7 @@ output:
 
     Summary:
     - Parts: {N}
-    - Layers: [{список слоёв}]
+    - Layers: [{list of layers}]
     - Saved to memory: {YES/NO}
 
     Checklist:
@@ -67,7 +67,7 @@ output:
 
   handoff_output:
     severity: CRITICAL
-    description: "ОБЯЗАТЕЛЬНО сформировать при завершении — передаётся в /plan-review"
+    description: "MUST be formed on completion — passed to /plan-review"
     format:
       to: "plan-review"
       artifact: ".claude/prompts/{feature}.md"
@@ -77,21 +77,21 @@ output:
         sequential_thinking_used: true|false
         alternatives_considered: N
       key_decisions:
-        - "Решение: {что выбрано} — Причина: {почему}"
+        - "Decision: {what was chosen} — Reason: {why}"
       known_risks:
-        - "Риск: {описание} — Mitigation: {как минимизировать}"
+        - "Risk: {description} — Mitigation: {how to minimize}"
       areas_needing_attention:
-        - "Part N: {почему требует особого внимания при review}"
+        - "Part N: {why it requires special attention during review}"
     example: |
       Handoff → /plan-review:
         artifact: .claude/prompts/{feature}.md
         metadata: { task_type: new_feature, complexity: L, seq_thinking: true, alternatives: 3 }
         key_decisions:
-          - "Repository pattern вместо Active Record — лучше изоляция domain от DB"
+          - "Repository pattern over Active Record — better domain-DB isolation"
         known_risks:
-          - "Миграция может конфликтовать с existing index"
+          - "Migration may conflict with existing index"
         areas_needing_attention:
-          - "Part 3: Controller — сложная логика state transitions"
+          - "Part 3: Controller — complex state transition logic"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # AUTONOMY RULE
@@ -101,21 +101,21 @@ autonomy:
     - name: INTERACTIVE
       default: true
       trigger: "Normal invocation"
-      behavior: "Спрашивать scope clarification"
+      behavior: "Ask scope clarification"
 
     - name: MINIMAL
       trigger: '"--minimal"'
-      behavior: "Минимальный research, только critical checks"
+      behavior: "Minimal research, only critical checks"
 
   stop_conditions:
-    - condition: Scope неясен
-      action: "Ждать ответа пользователя"
+    - condition: Scope unclear
+      action: "Wait for user response"
 
-    - condition: Конфликт с существующей архитектурой
-      action: "Показать конфликт, ждать решения"
+    - condition: Conflict with existing architecture
+      action: "Show conflict, wait for decision"
 
-    - condition: MCP критически недоступен
-      action: "Предупредить, продолжить с ограничениями"
+    - condition: MCP critically unavailable
+      action: "Warn, continue with limitations"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # RELATED SKILLS (auto-loaded)
@@ -160,13 +160,13 @@ quick_references:
 # ════════════════════════════════════════════════════════════════════════════════
 mcp_tools:
   - tool: "Sequential Thinking"
-    when: "для сложных архитектурных решений (ОБЯЗАТЕЛЬНО для задач с 3+ альтернативами)"
+    when: "for complex architectural decisions (MANDATORY for tasks with 3+ alternatives)"
   - tool: "Memory"
-    usage: "search_nodes для поиска похожих решений"
+    usage: "search_nodes to find similar decisions"
   - tool: "Context7"
-    usage: "для документации внешних библиотек"
+    usage: "for external library documentation"
   - tool: "PostgreSQL"
-    usage: "для исследования схемы БД"
+    usage: "for DB schema investigation"
     functions:
       - "mcp__postgres__list_tables"
       - "mcp__postgres__describe_table"
@@ -175,7 +175,7 @@ mcp_tools:
 # CONTEXT
 # ════════════════════════════════════════════════════════════════════════════════
 context:
-  tracking: "bd для beads интеграции"
+  tracking: "bd for beads integration"
   template: ".claude/templates/plan-template.md"
 
 next_step: "/plan-review"
@@ -187,30 +187,30 @@ startup:
   critical: true
   mandatory_steps:
     - step: 0
-      action: "Read .claude/commands/deps/planner/task-analysis.md и выполнить классификацию"
-      purpose: "Определить complexity (S/M/L/XL) и route ПЕРЕД research"
+      action: "Read .claude/commands/deps/planner/task-analysis.md and perform classification"
+      purpose: "Determine complexity (S/M/L/XL) and route BEFORE research"
       output: "Type + Complexity + Route + Sequential Thinking requirement"
-      warning: "⚠️ ОБЯЗАТЕЛЬНО! Неправильная классификация = лишняя работа или недостаточное планирование"
+      warning: "MANDATORY! Wrong classification = wasted work or insufficient planning"
 
     - step: 1
       action: TodoWrite
-      description: "создать список фаз для отслеживания прогресса"
+      description: "create phase list for progress tracking"
 
     - step: 2
       action: "mcp__memory__search_nodes"
-      query: "{ключевые слова задачи}"
-      warning: "⚠️ ОБЯЗАТЕЛЬНО! Если найдены релевантные записи → использовать как контекст"
+      query: "{task keywords}"
+      warning: "MANDATORY! If relevant entries found → use as context"
 
     - step: 3
       action: Read
       file: ".claude/templates/plan-template.md"
-      description: "загрузить шаблон плана"
+      description: "load plan template"
 
   example:
     tool: "mcp__memory__search_nodes"
     query: "worker plugin architecture"
     found: "Multi-Operation Plugin Architecture"
-    action: "Использовать observations как контекст для нового плана"
+    action: "Use observations as context for new plan"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # WORKFLOW
@@ -233,9 +233,9 @@ phases:
     routing:
       S: "--minimal mode, skip plan-review possible"
       M: "standard flow"
-      L: "full flow, Sequential Thinking рекомендован"
-      XL: "full flow, Sequential Thinking ОБЯЗАТЕЛЕН"
-    warning: "⚠️ NEVER skip TASK ANALYSIS — wrong routing = wasted time"
+      L: "full flow, Sequential Thinking recommended"
+      XL: "full flow, Sequential Thinking REQUIRED"
+    warning: "NEVER skip TASK ANALYSIS — wrong routing = wasted time"
 
   phase_1_understand:
     name: "UNDERSTAND"
@@ -246,23 +246,23 @@ phases:
           - type: "API endpoint"
             keywords: "endpoint, handler, HTTP, REST"
           - type: "Database"
-            keywords: "работа с БД, queries, migration"
+            keywords: "DB operations, queries, migration"
           - type: "Domain logic"
-            keywords: "бизнес-логика, controller, usecase"
+            keywords: "business logic, controller, usecase"
           - type: "Integration"
             keywords: "external service, client, API call"
 
       - action: "Ask clarifying questions (MANDATORY)"
         required:
-          - "Scope: что IN, что OUT?"
-          - "Приоритеты: что критично?"
-          - "Ограничения: специфические требования?"
+          - "Scope: what is IN, what is OUT?"
+          - "Priorities: what is critical?"
+          - "Constraints: specific requirements?"
 
   phase_2_data_flow:
     name: "DATA_FLOW"
     critical: true
     reference: ".claude/commands/deps/planner/data-flow.md"
-    warning: "⚠️ NEVER skip DATA_FLOW — wrong layer selection = wasted refactoring time"
+    warning: "NEVER skip DATA_FLOW — wrong layer selection = wasted refactoring time"
 
   phase_3_research:
     name: "RESEARCH"
@@ -270,8 +270,8 @@ phases:
       - step: "Check project memory"
         tool: "mcp__memory__search_nodes"
         find:
-          - "Похожие решения из прошлого"
-          - "Связанные архитектурные паттерны"
+          - "Similar past solutions"
+          - "Related architectural patterns"
 
       - step: "Investigate code"
         simple_search:
@@ -279,15 +279,15 @@ phases:
           tools:
             - "Grep 'pattern' --type go"
             - "Glob 'internal/**/*{keyword}*.go'"
-          note: "Проверять импорты между пакетами (SEE: PROJECT-KNOWLEDGE.md, if available)"
+          note: "Check imports between packages (SEE: PROJECT-KNOWLEDGE.md, if available)"
 
         complex_search:
           when: "Multi-layer patterns"
           tool: "Task (subagent_type='code-searcher', model='haiku')"
           use_for:
-            - "Поиск паттернов по всему проекту"
-            - "Анализ существующих реализаций"
-            - "Сбор примеров из нескольких слоёв"
+            - "Search patterns across entire project"
+            - "Analyze existing implementations"
+            - "Collect examples from multiple layers"
           example: "Find all API handlers implementation patterns including error handling, logging, and response formatting"
 
       - step: "External libraries"
@@ -302,19 +302,19 @@ phases:
           - "mcp__postgres__list_tables"
           - "mcp__postgres__describe_table('{table_name}')"
           - "mcp__postgres__query('SELECT ...')"
-        alternative: "/db-explorer для полного анализа схемы"
+        alternative: "/db-explorer for full schema analysis"
 
   phase_4_design:
     name: "DESIGN"
     sequential_thinking:
       reference: ".claude/commands/deps/planner/sequential-thinking-guide.md"
       use_when:
-        - "Альтернатив ≥ 3"
-        - "Слоёв архитектуры ≥ 4"
-        - "Новый паттерн/интеграция"
-        - "Parts в плане ≥ 5"
-        - "Trade-offs неочевидны"
-      warning: "⚠️ Если НЕ использовал Sequential Thinking — обосновать почему не нужен"
+        - "Alternatives >= 3"
+        - "Architecture layers >= 4"
+        - "New pattern/integration"
+        - "Parts in plan >= 5"
+        - "Trade-offs are non-obvious"
+      warning: "If Sequential Thinking NOT used — justify why it was unnecessary"
 
     parts_order:
       note: "Follow dependency direction — lower layers first. Adapt to project structure."
@@ -325,9 +325,9 @@ phases:
       when: "Adding new configuration"
       files:
         - file: "config.yaml.example"
-          action: "Добавить новый параметр с default value"
+          action: "Add new parameter with default value"
         - file: "README.md"
-          action: "Обновить таблицу конфигурации"
+          action: "Update configuration table"
 
   phase_5_document:
     name: "DOCUMENT"
@@ -335,17 +335,17 @@ phases:
       # Task: {Name}
 
       ## Context
-      [Описание]
+      [Description]
 
       ## Scope
       ### IN
       - [ ] ...
       ### OUT
-      - ... (причина)
+      - ... (reason)
 
       ## Part N: {Name}
       **File:** `path/file.go` (CREATE/UPDATE)
-      [ПОЛНЫЙ пример кода]
+      [FULL code example]
 
       ## Acceptance Criteria
       - [ ] `make lint` passes
@@ -355,22 +355,22 @@ phases:
     name: "SAVE TO MEMORY"
     criteria:
       save_when:
-        - "Использовался Sequential Thinking"
-        - "Новый архитектурный паттерн"
-        - "Выбор из 3+ альтернатив"
-        - "Интеграция с внешней системой"
-        - "План > 200 строк"
+        - "Sequential Thinking was used"
+        - "New architectural pattern"
+        - "Choice from 3+ alternatives"
+        - "Integration with external system"
+        - "Plan > 200 lines"
       skip_when:
-        - "Стандартный CRUD"
-        - "Тривиальные изменения"
+        - "Standard CRUD"
+        - "Trivial changes"
 
     workflow:
       - step: "Check duplicates"
-        action: "mcp__memory__search_nodes — query: '{название решения}'"
+        action: "mcp__memory__search_nodes — query: '{decision name}'"
       - step: "If found similar"
-        action: "mcp__memory__add_observations (добавить к существующему)"
+        action: "mcp__memory__add_observations (add to existing)"
       - step: "If NOT found"
-        action: "mcp__memory__create_entities (создать новый)"
+        action: "mcp__memory__create_entities (create new)"
       - step: "Sync beads"
         action: "bd sync"
         when: "if beads available"
@@ -379,14 +379,14 @@ phases:
       name: "{Feature Name}"
       entityType: "architectural_decision"
       observations:
-        - "Решение: {что выбрано}"
-        - "Причина: {почему}"
-        - "Альтернативы: {что отклонено и почему}"
-        - "Паттерны: {использованные паттерны}"
-        - "Файлы: {ключевые файлы}"
+        - "Decision: {what was chosen}"
+        - "Reason: {why}"
+        - "Alternatives: {what was rejected and why}"
+        - "Patterns: {patterns used}"
+        - "Files: {key files}"
 
     relations:
-      when: "Связь с существующими решениями"
+      when: "Relation with existing decisions"
       action: "mcp__memory__create_relations"
       example: '{"from": "New Feature", "to": "Existing Decision", "relationType": "extends"}'
 
@@ -398,58 +398,58 @@ beads_integration:
 
   on_start:
     - action: "bd show <id>"
-      when: "если передан beads-id"
+      when: "if beads-id provided"
     - action: "bd update <id> --status=in_progress"
-      description: "Обновить статус задачи"
+      description: "Update task status"
 
   on_completion:
     auto_close: false
-    reminder: "План готов. Для закрытия задачи: `bd close <id>`"
+    reminder: "Plan ready. To close task: `bd close <id>`"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # RULES
 # ════════════════════════════════════════════════════════════════════════════════
 rules:
   - rule: "No Code"
-    description: "только исследование и планирование, код НЕ писать"
+    description: "research and planning only, do NOT write code"
     severity: CRITICAL
 
   - rule: "Questions First"
-    description: "ВСЕГДА задавать уточняющие вопросы перед исследованием"
+    description: "ALWAYS ask clarifying questions before research"
     severity: CRITICAL
 
   - rule: "Full Examples"
-    description: "примеры кода ПОЛНЫЕ (не сигнатуры)"
+    description: "code examples must be FULL (not just signatures)"
     severity: HIGH
 
   - rule: "Import Matrix"
-    description: "проверять зависимости между слоями (SEE: PROJECT-KNOWLEDGE.md, if available)"
+    description: "check dependencies between layers (SEE: PROJECT-KNOWLEDGE.md, if available)"
     severity: HIGH
 
 # ════════════════════════════════════════════════════════════════════════════════
 # ERROR HANDLING
 # ════════════════════════════════════════════════════════════════════════════════
 error_handling:
-  - situation: Memory MCP недоступен
-    action: "Продолжить без поиска, предупредить пользователя"
+  - situation: Memory MCP unavailable
+    action: "Continue without search, warn user"
 
   - situation: Sequential Thinking failed
-    action: "Продолжить с ручным анализом альтернатив"
+    action: "Continue with manual alternatives analysis"
 
-  - situation: beads недоступен
-    action: "Пропустить beads интеграцию"
+  - situation: beads unavailable
+    action: "Skip beads integration"
 
-  - situation: Template отсутствует
-    action: "Использовать минимальный формат из PHASE 4: DOCUMENT"
+  - situation: Template missing
+    action: "Use minimal format from PHASE 4: DOCUMENT"
 
-  - situation: Пользователь не отвечает
-    action: "Ждать ответа, не продолжать без scope clarification"
+  - situation: User not responding
+    action: "Wait for response, do not continue without scope clarification"
 
-  - situation: Context7 недоступен
-    action: "Использовать web search или документацию из памяти"
+  - situation: Context7 unavailable
+    action: "Use web search or documentation from memory"
 
-  - situation: PostgreSQL MCP недоступен
-    action: "Исследовать schema через migration files"
+  - situation: PostgreSQL MCP unavailable
+    action: "Investigate schema via migration files"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # EXAMPLES
@@ -458,7 +458,7 @@ examples:
   code_completeness:
     bad:
       code: "func (uc *UseCase) Do(ctx context.Context) error"
-      why: "Неполный пример — только сигнатура без body"
+      why: "Incomplete example — only signature without body"
 
     good:
       code: |
@@ -469,7 +469,7 @@ examples:
             }
             return nil
         }
-      why: "Полный пример с телом функции, error wrapping, context propagation"
+      why: "Full example with function body, error wrapping, context propagation"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # TROUBLESHOOTING
@@ -483,15 +483,15 @@ troubleshooting:
 # ════════════════════════════════════════════════════════════════════════════════
 checklist:
   phase_0_task_analysis:
-    - "Тип задачи классифицирован (new_feature/bug_fix/refactoring/...)"
-    - "Complexity оценена (S/M/L/XL)"
-    - "Route определён (minimal/standard/full)"
-    - "Preconditions проверены"
+    - "Task type classified (new_feature/bug_fix/refactoring/...)"
+    - "Complexity estimated (S/M/L/XL)"
+    - "Route determined (minimal/standard/full)"
+    - "Preconditions checked"
 
   phase_1_understand:
-    - "Тип задачи классифицирован"
-    - "Уточняющие вопросы заданы"
-    - "Scope определен (IN/OUT)"
+    - "Task type classified"
+    - "Clarifying questions asked"
+    - "Scope defined (IN/OUT)"
 
   phase_2_data_flow:
     - "Data source identified (HTTP/Worker/CLI)"
@@ -500,22 +500,22 @@ checklist:
     - "Entry and exit points documented"
 
   phase_3_research:
-    - "Memory проверена (search_nodes)"
-    - "Код исследован (Grep/Glob или code-searcher)"
-    - "Внешние библиотеки проверены (Context7 если нужно)"
-    - "Импорты между пакетами проверены"
+    - "Memory checked (search_nodes)"
+    - "Code investigated (Grep/Glob or code-searcher)"
+    - "External libraries checked (Context7 if needed)"
+    - "Imports between packages verified"
 
   phase_4_design:
-    - "Sequential Thinking использован (если 3+ альтернатив)"
-    - "Parts определены в порядке: DB -> Domain -> Contract -> ..."
-    - "Примеры кода ПОЛНЫЕ"
+    - "Sequential Thinking used (if 3+ alternatives)"
+    - "Parts defined in order: DB -> Domain -> Contract -> ..."
+    - "Code examples are FULL"
 
   phase_5_document:
-    - "План сохранён в `.claude/prompts/`"
-    - "Config changes документированы (если есть)"
+    - "Plan saved to `.claude/prompts/`"
+    - "Config changes documented (if any)"
 
   phase_6_save_to_memory:
-    - "Критерии сохранения проверены"
-    - "Если нетривиальное решение -> сохранено в memory"
-    - "`bd sync` выполнен"
-    - "Если beads используется -> напомнить о закрытии задачи"
+    - "Save criteria checked"
+    - "If non-trivial decision -> saved to memory"
+    - "`bd sync` executed"
+    - "If beads in use -> remind about task closure"
