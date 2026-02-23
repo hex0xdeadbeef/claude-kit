@@ -83,6 +83,12 @@ MSG="${1:-Auto-sync $(date '+%Y-%m-%d %H:%M')}"
 
 if git status --porcelain | grep -q .; then
     git commit -m "$MSG"
+fi
+
+# Rebase on top of remote to handle diverged history, then push
+UNPUSHED=$(git log "origin/$SYNC_BRANCH..HEAD" --oneline 2>/dev/null | wc -l | tr -d ' ')
+if [ "$UNPUSHED" -gt 0 ]; then
+    git pull --rebase origin "$SYNC_BRANCH" 2>/dev/null || true
     git push -u origin "$SYNC_BRANCH"
     echo -e "${GREEN}Synced to GitHub!${NC}"
 else
