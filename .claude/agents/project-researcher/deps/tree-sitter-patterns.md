@@ -614,17 +614,52 @@ config:
 
 ---
 
+## KNOWN ISSUES
+
+### tree-sitter 0.24+ API Change: `get_symbols` / `get_dependencies` may fail
+
+**Symptom:** `mcp__tree_sitter__get_symbols` or `mcp__tree_sitter__get_dependencies` returns error:
+
+```text
+'tree_sitter.Query' object has no attribute 'captures'
+```
+
+**Root cause:** `mcp-server-tree-sitter ≤0.5.1` calls `query.captures(node)` which was removed in `tree-sitter 0.24+`. New API: `QueryCursor(query).captures(node)`.
+
+**Status:** Fixed by patching `analysis.py` / `search.py` in the pipx venv. But may recur after `pipx upgrade`.
+
+**Affected tools:** `get_symbols`, `get_dependencies`, `run_query`
+
+**NOT affected:** `register_project`, `list_languages`, `list_files`, `get_ast`, `get_file`, `find_text`
+
+**Fallback when symptoms appear:**
+
+- For symbol extraction: use `get_ast` + `run_query` with patterns from this file
+- For dependencies: use `go list -json ./...` (Go) or grep-based import extraction
+- Record `analysis_method = "tree-sitter-mcp-partial"` in state, confidence_modifier = -0.05
+
+---
+
 ## FALLBACK CHAIN
 
 ### Priority Order
 
 ```yaml
 fallback_chain:
-  1_tree_sitter_mcp:
-    check: "MCP tree-sitter tools available"
+  1_tree_sitter_mcp_full:
+    check: "MCP tools available AND get_symbols succeeds on a test file"
     capabilities: [symbols, usage, dependencies, queries, ast, similar_code]
     confidence_modifier: 0.0  # baseline
     state_value: "tree-sitter-mcp"
+
+  1b_tree_sitter_mcp_partial:
+    check: "MCP tools available BUT get_symbols fails with 'captures' error"
+    capabilities: [ast, queries, find_text]  # get_ast + run_query still work
+    confidence_modifier: -0.05
+    state_value: "tree-sitter-mcp-partial"
+    symbol_extraction: "run_query with patterns from this file"
+    dependency_extraction: "go list / grep-based"
+    note: "See KNOWN ISSUES section above"
 
   2_ast_grep:
     check: "command -v ast-grep || command -v sg"
