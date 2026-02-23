@@ -1,142 +1,80 @@
-# Meta-Agent v9.0
+meta:
+  name: "meta-agent"
+  version: "9.0.0"
+  description: "Manage Claude Code artifacts (commands, skills, rules, agents)"
+  invoke: "/meta-agent"
 
-Meta-agent for managing Claude Code artifacts (commands, skills, rules, agents).
+workflow: "INIT → EXPLORE → ANALYZE → PLAN(ToT) → CONSTITUTE → DRAFT(+eval+reflect) → APPLY → VERIFY → CLOSE(+archive)"
 
-## What's New in v9.0
+features:
+  CONSTITUTE: "Constitutional AI evaluation (P1-P5 principles, replaces CRITIQUE)"
+  SEPARATED_EVALUATION: "Evaluator + Reflector subagents (Reflexion pattern)"
+  TREE_OF_THOUGHT: "Design space exploration in PLAN phase"
+  ADAS_ARCHIVE: "Self-improving pattern library from successful operations"
+  PHASE_CONTRACTS: "Typed inter-phase communication (MetaGPT pattern)"
+  AGENT_TEAMS: "Peer-to-peer teammates for CREATE mode (v10.0)"
+  MODEL_ROUTING: "haiku/sonnet/opus per task complexity"
+  HOOKS: "Deterministic validation gates (size, YAML, references, phases)"
+  OBSERVABILITY: "Tracing, metrics, MCP memory logging per run"
+  STEP_QUALITY: "Per-phase quality checks (Process Reward Model)"
+  SELF_IMPROVEMENT: "Lessons + reflections via episodic memory"
+  CONTEXT_MANAGEMENT: "4-tier lazy loading with budget tracking"
+  DRY_RUN: "Preview changes without applying"
 
-Based on meta-agent research (best practices 2025-2026):
+usage:
+  enhance: "/meta-agent enhance command my-command"
+  create: "/meta-agent create skill api-patterns"
+  dry_run: "/meta-agent enhance command my-command --dry-run"
+  explore: "/meta-agent create skill new-skill --explore"
+  audit: "/meta-agent audit"
+  delete: "/meta-agent delete skill old-skill"
+  rollback: "/meta-agent rollback"
+  onboard: "/meta-agent onboard /path/to/project"
+  list: "/meta-agent list"
+  resume: "/meta-agent --resume {run_id}"
+  abort: "/meta-agent abort {run_id}"
+  cleanup: "/meta-agent cleanup"
 
-- **CONSTITUTE**: Constitutional AI evaluation (P1-P5 principles, replaces CRITIQUE)
-- **SEPARATED EVALUATION**: Evaluator + Reflector subagents (Reflexion pattern)
-- **TREE OF THOUGHT**: Design space exploration in PLAN phase
-- **ADAS ARCHIVE**: Self-improving pattern library from successful operations
-- **PHASE CONTRACTS**: Typed inter-phase communication (MetaGPT pattern)
-- **AGENT TEAMS**: Peer-to-peer teammates for CREATE mode (v10.0)
-- **MODEL ROUTING**: haiku/sonnet/opus per task complexity
-- **HOOKS**: Deterministic validation gates (size, YAML, references, phases)
-- **OBSERVABILITY**: Tracing, metrics, MCP memory logging per run
-- **STEP QUALITY**: Per-phase quality checks (Process Reward Model)
-- **SELF-IMPROVEMENT**: Lessons + reflections via episodic memory
-- **CONTEXT MANAGEMENT**: 4-tier lazy loading with budget tracking
-- **DRY-RUN MODE**: Preview changes without applying
+deps:
+  artifact_quality: "deps/artifact-quality.md"
+  artifact_analyst: "deps/artifact-analyst.md"
+  artifact_review: "deps/artifact-review.md"
+  artifact_fix: "deps/artifact-fix.md"
+  artifact_constitution: "deps/artifact-constitution.md"
+  artifact_archive: "deps/artifact-archive.md"
+  artifact_handles: "deps/artifact-handles.md"
+  blocking_gates: "deps/blocking-gates.md"
+  phase_contracts: "deps/phase-contracts.md"
+  phases_enhance: "deps/phases-enhance.md"
+  phases_create: "deps/phases-create.md"
+  phases_onboard: "deps/phases-onboard.md"
+  plan_exploration: "deps/plan-exploration.md"
+  subagents: "deps/subagents.md"
+  agent_teams: "deps/agent-teams.md"
+  eval_optimizer: "deps/eval-optimizer.md"
+  self_improvement: "deps/self-improvement.md"
+  step_quality: "deps/step-quality.md"
+  context_management: "deps/context-management.md"
+  load_order: "deps/load-order.md"
+  activation_layer: "deps/activation-layer.md"
+  progress_tracking: "deps/progress-tracking.md"
+  observability: "deps/observability.md"
+  troubleshooting: "deps/troubleshooting.md"
+  changelog: "deps/changelog.md"
 
-## Structure
+scripts:
+  check_artifact_size: "scripts/check-artifact-size.sh  # PreToolUse: SIZE_GATE"
+  yaml_lint: "scripts/yaml-lint.sh  # PostToolUse: YAML validation"
+  check_references: "scripts/check-references.sh  # PostToolUse: reference validation"
+  verify_phases: "scripts/verify-phase-completion.sh  # Stop: phase completion check"
 
-```
-.claude/
-├── commands/
-│   └── meta-agent.md              # Main command (invoke with /meta-agent)
-│
-├── agents/meta-agent/
-│   ├── README.md                  # This file
-│   ├── deps/                      # Supporting files (24 files, loaded on demand)
-│   │   ├── artifact-quality.md    # Quality criteria & external validation
-│   │   ├── artifact-analyst.md    # Analysis patterns (CREATE/ENHANCE)
-│   │   ├── artifact-review.md     # Review workflow
-│   │   ├── artifact-fix.md        # Fix patterns
-│   │   ├── artifact-constitution.md # Constitutional AI evaluation (P1-P5)
-│   │   ├── artifact-archive.md    # ADAS pattern library
-│   │   ├── artifact-handles.md    # Handle pattern for section-level loading
-│   │   ├── blocking-gates.md      # Gate definitions & recovery strategies
-│   │   ├── phase-contracts.md     # Typed inter-phase contracts
-│   │   ├── phases-enhance.md      # ENHANCE mode phases (9 phases)
-│   │   ├── phases-create.md       # CREATE mode phases
-│   │   ├── phases-onboard.md      # Onboarding workflow
-│   │   ├── plan-exploration.md    # Tree of Thought exploration
-│   │   ├── subagents.md           # DAG execution & predefined agents
-│   │   ├── agent-teams.md         # Peer-to-peer Agent Teams (v10.0)
-│   │   ├── eval-optimizer.md      # MAR evaluation loop
-│   │   ├── self-improvement.md    # Reflexion pattern & episodic memory
-│   │   ├── step-quality.md        # Per-phase quality checks
-│   │   ├── context-management.md  # Context budget & hierarchy
-│   │   ├── load-order.md          # 4-tier lazy loading strategy
-│   │   ├── activation-layer.md    # Command activation & disambiguation
-│   │   ├── progress-tracking.md   # Session persistence & resume
-│   │   ├── observability.md       # Tracing & metrics
-│   │   ├── troubleshooting.md     # Common problems & mistakes
-│   │   └── changelog.md           # Version history (v5-v9)
-│   │
-│   ├── scripts/                   # Deterministic hook scripts
-│   │   ├── check-artifact-size.sh # PreToolUse: enforce SIZE_GATE
-│   │   ├── yaml-lint.sh           # PostToolUse: validate YAML syntax
-│   │   ├── check-references.sh    # PostToolUse: validate file references
-│   │   └── verify-phase-completion.sh # Stop: verify all phases ran
-│   │
-│   └── templates/onboarding/      # Onboarding templates
-│       ├── mcp.json               # MCP configuration template
-│       ├── settings.json          # Claude Code settings template
-│       └── sync-to-github.sh      # GitHub sync helper
-│
-├── templates/                     # Templates for new artifacts
-│   ├── command.md
-│   ├── skill.md
-│   ├── rule.md
-│   ├── agent.md
-│   └── plan-template.md
-│
-└── archive/                       # Backup storage (for rollback)
-```
+dependencies:
+  mcp_memory: "optional (recommended) — context persistence, lessons learned"
+  beads: "optional — use --track flag for task tracking"
 
-## Usage
-
-```bash
-# Enhance existing artifact
-/meta-agent enhance command my-command
-
-# Create new artifact (with agent teams research)
-/meta-agent create skill api-patterns
-
-# Preview changes without applying
-/meta-agent enhance command my-command --dry-run
-
-# Force design exploration
-/meta-agent create skill new-skill --explore
-
-# Audit all artifacts
-/meta-agent audit
-
-# Delete artifact (with backup)
-/meta-agent delete skill old-skill
-
-# Rollback from backup
-/meta-agent rollback
-
-# Bootstrap new project
-/meta-agent onboard /path/to/project
-
-# Session management
-/meta-agent list                  # List all runs
-/meta-agent --resume {run_id}     # Resume from checkpoint
-/meta-agent abort {run_id}        # Abort run
-/meta-agent cleanup               # Delete runs older than 7 days
-```
-
-## Workflow
-
-```
-INIT → EXPLORE → ANALYZE → PLAN(ToT) → CONSTITUTE → DRAFT(+eval+reflect) → APPLY → VERIFY → CLOSE(+archive)
-```
-
-Key features:
-
-- **CONSTITUTE**: Constitutional evaluation via 5 principles (replaces CRITIQUE)
-- **DRAFT**: Separated evaluator + reflector subagents (Reflexion pattern)
-- **PLAN**: Tree of Thought exploration for complex changes
-- **VERIFY**: External validation (YAML, references, size, structure)
-- **CLOSE**: ADAS archive extraction for self-improvement
-- **CHECKPOINT**: User approval required before any changes
-- **STEP QUALITY**: Quality checks after each phase
-- **HOOKS**: Deterministic gates that agent cannot skip
-
-## Dependencies
-
-- **MCP memory** (optional but recommended): For context persistence, lessons learned
-- **beads** (optional): Use `--track` flag for task tracking
-
-## Customization
-
-1. Adjust thresholds in `deps/blocking-gates.md`
-2. Add project-specific templates in `templates/`
-3. Update `deps/artifact-quality.md` with project patterns
-4. Tune `deps/step-quality.md` criteria per phase
-5. Configure hooks in `scripts/` for deterministic validation
+customization:
+  - "Adjust thresholds: deps/blocking-gates.md"
+  - "Add project templates: templates/"
+  - "Update project patterns: deps/artifact-quality.md"
+  - "Tune phase criteria: deps/step-quality.md"
+  - "Configure deterministic validation: scripts/"

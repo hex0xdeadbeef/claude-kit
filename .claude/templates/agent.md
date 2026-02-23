@@ -1,6 +1,7 @@
 meta:
   type: "agent"
-  purpose: "Template для создания agent артефактов"
+  purpose: "Template for creating agent artifacts"
+  format: "> 80% YAML, no prose paragraphs, no ## headers"
 
 template:
   file_path: ".claude/agents/<name>/<name>.md"
@@ -8,146 +9,163 @@ template:
   structure:
     meta:
       name: "<agent-name>"
+      version: "1.0.0"
       model: "opus | sonnet | haiku"
-      description: |
-        <What this agent does>
-
-        Use when:
-        - Condition 1
-        - Condition 2
-      tools:
-        - "Read"
-        - "Write"
-        - "Bash"
+      description: "<One-line: what this agent does>"
+      tools: ["Read", "Write", "Bash", "Glob", "Grep"]
       triggers:
         - "<trigger keyword 1>"
         - "<trigger keyword 2>"
 
     autonomy:
-      rule: "<when to stop/continue>"
+      rule: "<When to stop vs continue>"
+      continue_conditions:
+        - "<condition to keep going>"
       stop_conditions:
-        - "<condition 1>"
-        - "<condition 2>"
+        - "FATAL error encountered"
+        - "<task completion condition>"
 
     input:
-      arguments: "<format>"
+      arguments: "<format: path | name | none>"
       modes:
         - input: "<mode1>"
           action: "<what happens>"
+        - input: "<mode2>"
+          action: "<what happens>"
 
-    workflow: "<PHASE1 → PHASE2 → PHASE3>"
+    workflow: "<PHASE1 → PHASE2 → PHASE3 → PHASE4>"
 
     phases:
       - phase: 1
-        name: "<Name>"
+        name: "<NAME>"
+        purpose: "<description>"
+        steps: ["step1", "step2", "step3"]
+        output: "<expected output or state>"
+
+      - phase: 2
+        name: "<NAME>"
         purpose: "<description>"
         steps: ["step1", "step2"]
         output: "<expected output>"
 
+    rules:
+      - id: R1
+        severity: critical
+        rule: "<Must-do or must-not-do>"
+      - id: R2
+        severity: high
+        rule: "<Important constraint>"
+
+    error_handling:
+      - situation: "<error condition>"
+        action: "<what to do>"
+      - situation: "File not found"
+        action: "FATAL: <message> — stop execution"
+
+    beads_integration:
+      on_start: "bd create --title='<agent> {input}' --type=task"
+      on_finish: "bd close {id} --reason='Completed'"
+
     output:
-      format: "<expected format>"
+      format: "<markdown | YAML | text>"
       sections: ["section1", "section2"]
 
     fatal_errors:
       - error: "<ERROR_CODE>"
-        condition: "<when>"
-        message: "<FATAL: message>"
+        condition: "<when this happens>"
+        message: "FATAL: <message>"
+
+    checklist:
+      startup: ["Load PROJECT-KNOWLEDGE.md if exists", "Confirm input valid"]
+      execution: ["<phase 1 check>", "<phase 2 check>"]
+      completion: ["Output written", "beads closed"]
 
 ai_first_principles:
-  core_rule: "All artifacts are instructions for LLM, not for humans"
-
-  format_priority:
-    - format: "pure YAML"
-      when: "configuration, rules, agents"
-      why: "maximum structure"
-
-    - format: "YAML + code blocks"
-      when: "skills with code examples"
-      why: "syntax highlighting"
-
-    - format: "AVOID"
-      what: "prose, ## headers, tables"
-      why: "ambiguous for LLM"
-
+  format:
+    prefer: "pure YAML"
+    allow: "YAML + fenced code blocks for code examples"
+    avoid: ["prose paragraphs", "## headers inside content", "markdown tables"]
   metrics:
-    yaml_structure: "> 80%"
+    yaml_ratio: "> 80%"
     prose_max: "< 10%"
-    code_examples: "always bad/good pairs"
+    examples: "always bad/good pairs with 'why'"
+  patterns:
+    examples: "grep/glob patterns to find current code — never hardcode snippets"
+    structure: "YAML lists over prose bullets"
 
 quality_gates:
-  pre_implementation:
-    - "Plan passed /artifact-review (APPROVED)"
-    - "All issues resolved"
-    - "Integration steps defined"
-
-  post_implementation:
-    - "File created in correct location"
-    - "YAML frontmatter valid"
-    - "All required sections present"
-    - "AI-first format checklist passed"
-    - "Added to CLAUDE.md"
-    - "beads updated"
-
-  final_check:
-    command:
-      - "description in YAML"
-      - "WORKFLOW section"
-      - "OUTPUT section"
-    skill:
-      - "name + description in YAML"
-      - "Trigger keywords"
-      - "< 500 lines"
-    rule:
-      - "paths in YAML"
-      - "Quick checklist"
-      - "@skill reference"
-    agent:
-      - "name + description + tools in YAML"
-      - "AUTONOMY RULE"
-      - "INPUT/OUTPUT"
+  post_create:
+    - "File at correct path: .claude/agents/<name>/<name>.md"
+    - "All required sections present: meta, autonomy, input, workflow, phases, rules, output"
+    - "YAML > 80% of file content"
+    - "No prose paragraphs or ## headers"
+    - "fatal_errors defined"
+    - "beads_integration present"
+    - "checklist present"
 
 examples:
   good:
-    description: "YAML structure + phases"
+    description: "Complete YAML structure with all required sections"
     content: |
       meta:
         name: doc-gen
+        version: "1.0.0"
         model: sonnet
-        description: |
-          Generate documentation for {project} code
-
-          Use when:
-          - Documentation is needed
-          Keywords: docs, documentation
-        tools: ["Read", "Write", "Grep"]
+        description: "Generate API documentation for Go services"
+        tools: ["Read", "Glob", "Write"]
+        triggers: ["docs", "documentation", "generate docs"]
 
       autonomy:
-        rule: "Execute until all files generated"
+        rule: "Execute until all docs generated or FATAL error"
         stop_conditions:
-          - "FATAL ERROR"
-          - "All docs generated"
+          - "FATAL error"
+          - "All target files documented"
 
       workflow: "SCAN → ANALYZE → GENERATE → VERIFY"
 
       phases:
         - phase: 1
-          name: "SCAN"
+          name: SCAN
           purpose: "Find source files"
-          tools: ["Glob"]
+          steps: ["Glob **/*.go", "Filter exported symbols"]
+          output: "file_list[]"
+
+        - phase: 2
+          name: GENERATE
+          purpose: "Write documentation"
+          steps: ["Read each file", "Write docs/<name>.md"]
+          output: "docs/ populated"
+
+      rules:
+        - id: R1
+          severity: critical
+          rule: "Never overwrite existing docs without --force flag"
+
+      error_handling:
+        - situation: "Source file unreadable"
+          action: "Skip with warning, continue"
+        - situation: "Output dir missing"
+          action: "FATAL: docs/ not found — create it first"
+
+      beads_integration:
+        on_start: "bd create --title='doc-gen {input}' --type=task"
+        on_finish: "bd close {id} --reason='Docs generated'"
+
+      output:
+        format: "markdown"
+        sections: ["overview", "functions", "types"]
 
   bad:
-    description: "Prose without structure"
+    description: "Prose-heavy, missing structure"
+    why: "No autonomy rule, no phases, no rules, no error_handling — unpredictable behavior"
     content: |
       ---
       name: doc-gen
       description: Documentation generator
-      tools: [Read, Write]
       ---
 
       # DOC-GEN
 
       This agent generates documentation for your code.
-      It will scan your codebase, analyze the structure...
-
-      (too much prose, no YAML structure, no phases)
-    why: "prose, no phases, no autonomy rule"
+      It scans the codebase and writes markdown files.
+      Run it when you need docs updated.
