@@ -6,6 +6,8 @@
 
 **Outputs:** `state.analyze`
 
+**SEE:** `deps/state-contract.md` для полной схемы state, `deps/ast-analysis.md` для каталога AST-паттернов.
+
 ---
 
 ## 3.1 Architecture Pattern Detection

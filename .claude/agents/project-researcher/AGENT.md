@@ -12,7 +12,8 @@ meta:
       - Added DISCOVER phase (1.5) for monorepo/module detection
       - Progressive context loading: phases load on-demand, unload after
       - All phases output structured state, not just markdown
-      - Phase count: 9 → 10 (added DISCOVER)
+      - Added DISCOVER as sub-phase 1.5 (9 main phases + 1 sub-phase)
+      - CRITIQUE phase upgraded to adversarial review with confidence calibration
     v2.2.0: YAML-first restructure (2026-01-20)
       - Added triggers to frontmatter
       - Converted AUTONOMY RULE to YAML autonomy section

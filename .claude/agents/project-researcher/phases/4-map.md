@@ -6,6 +6,8 @@
 
 **Outputs:** `state.map`
 
+**SEE:** `deps/state-contract.md` для полной схемы state, `deps/ast-analysis.md` для каталога AST-паттернов.
+
 ---
 
 ## 4.1 Entry Points

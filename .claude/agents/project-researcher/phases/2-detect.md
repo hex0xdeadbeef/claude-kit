@@ -6,6 +6,8 @@
 
 **Outputs:** `state.detect`
 
+**SEE:** `deps/state-contract.md` для полной схемы state.
+
 ---
 
 ## 2.0 AST Availability Check
