@@ -1,0 +1,6 @@
+# meta-agent session state (ephemeral, not for VCS)
+.meta-agent/runs/
+!.meta-agent/runs/.gitkeep
+
+# OS
+.DS_Store
