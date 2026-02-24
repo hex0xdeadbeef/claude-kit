@@ -179,6 +179,8 @@ progressive_offloading:
         4. Verify reference is clear and findable
 
 artifact_quality:
+  constitution_ref: "SEE: deps/artifact-constitution.md for P1-P5 (universal) + P6-P7 (domain-specific per type)"
+
   command:
     required:
       - field: "description"
@@ -192,6 +194,11 @@ artifact_quality:
       - "examples with arguments"
       - "NEXT command reference"
       - "@skill references"
+
+    domain_principles:
+      P6: "executability — every workflow step has explicit tool/action"
+      P7: "composability — output format + NEXT + @skills + exit codes"
+      ref: "SEE: deps/artifact-constitution.md#domain_principles.per_type.command"
 
     template: |
       ---
@@ -221,6 +228,11 @@ artifact_quality:
       - "< 600 lines (warning threshold)"
       - "triggers section"
       - "forbidden section"
+
+    domain_principles:
+      P6: "trigger_coverage — all use-cases + negative triggers + overlap"
+      P7: "example_depth — bad/good/why for every non-trivial pattern"
+      ref: "SEE: deps/artifact-constitution.md#domain_principles.per_type.skill"
 
     template: |
       meta:
@@ -254,6 +266,11 @@ artifact_quality:
       - "@skill references"
       - "quick checklist (3-7 items)"
 
+    domain_principles:
+      P6: "specificity — precise paths, clear scope boundary, no overlap"
+      P7: "enforcement — automatable checks, hook-ready"
+      ref: "SEE: deps/artifact-constitution.md#domain_principles.per_type.rule"
+
     template: |
       ---
       paths: internal/{layer}/**/*.go
@@ -283,6 +300,11 @@ artifact_quality:
     recommended:
       - "error handling"
       - "progress tracking"
+
+    domain_principles:
+      P6: "autonomy_bounds — explicit stop conditions, escalation, failure modes"
+      P7: "observability — every phase produces visible progress output"
+      ref: "SEE: deps/artifact-constitution.md#domain_principles.per_type.agent"
 
     template: |
       ---

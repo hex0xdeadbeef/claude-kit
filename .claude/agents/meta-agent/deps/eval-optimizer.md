@@ -1,7 +1,7 @@
 # Eval-Optimizer Loop
 
 purpose: "Iterative quality improvement through evaluation cycles"
-difference_from_step_quality: "step_quality = pass/fail gate; eval-optimizer = iterate until threshold"
+difference_from_step_quality: "step_quality = continuous per-phase scoring (0.0-1.0) with trajectory tracking; eval-optimizer = iterative loop until 0.85 threshold in DRAFT specifically"
 
 ## Loop Configuration
 
@@ -158,13 +158,14 @@ separated_evaluator:
     evaluation_team:
       - name: correctness_critic
         persona: "Senior engineer focused on correctness and edge cases"
-        focus: [P1_correctness, P3_robustness]
+        focus: [P1_correctness, P3_robustness, P6_domain, P7_domain]
         model: opus
-        scoring_dimensions: [accuracy, completeness]
+        scoring_dimensions: [accuracy, completeness, domain_p6, domain_p7]
         weight: 0.40
-        context_provided: ["draft artifact", "artifact constitution P1+P3", "adaptive weights"]
+        context_provided: ["draft artifact", "artifact constitution P1+P3", "domain principles P6+P7 for artifact_type (v9.2)", "adaptive weights"]
         context_NOT_provided: ["generation plan", "previous drafts", "user conversation"]
-        output: "scores{accuracy, completeness} + issues[{severity, location, suggestion}]"
+        output: "scores{accuracy, completeness, domain_p6, domain_p7} + issues[{severity, location, suggestion}]"
+        v9_2_note: "P6+P7 domain principles assigned to correctness_critic (opus) as bonus scoring"
 
       - name: clarity_critic
         persona: "Technical writer focused on readability and structure"
@@ -192,44 +193,121 @@ separated_evaluator:
       max_concurrent: 3
       isolation: "Each critic has own context — no cross-contamination"
 
-    aggregation:
-      method: "weighted_merge"
-      aggregate_score: "correctness_critic.score * 0.40 + clarity_critic.score * 0.35 + efficiency_critic.score * 0.25"
-      issue_merge: "Union of all issues, deduplicated by location"
-      conflict_resolution: "If critics disagree on severity → use highest severity"
-      consensus_bonus: "If all 3 agree on an issue → severity += 1 level"
+    debate:
+      purpose: "Cross-critique between critics to catch blind spots and resolve disagreements"
+      research:
+        - "Du et al. 2023: multi-agent debate improves factual accuracy +10-15%"
+        - "ChatEval (ICLR 2024): diverse role prompts essential — same roles degrade performance"
+      principle: "Critics reviewing each other's findings surface issues that solo evaluation misses"
 
-    key: "Each critic ONLY sees output + their focused principles, never the generation process"
+      trigger:
+        condition: "score_spread > 0.15 OR aggregate_score in [0.75, 0.90]"
+        score_spread: "max(critic_scores) - min(critic_scores)"
+        rationale: |
+          - spread > 0.15: critics significantly disagree → debate resolves conflict
+          - aggregate in [0.75, 0.90]: borderline pass/fail → debate breaks tie
+          - aggregate < 0.75: clearly failing, debate won't help → skip to REFLECT
+          - aggregate > 0.90: clearly passing, debate overhead not justified → skip to APPLY
+        skip_reason: "When outcome is unambiguous, debate adds cost without value"
+
+      rounds: 1  # single round — diminishing returns on additional rounds (Du et al.)
+
+      execution:
+        mode: "parallel"
+        note: "All 3 debate reviews run concurrently (each reviews the other two)"
+        max_concurrent: 3
+
+      per_critic_input:
+        correctness_critic_debate:
+          receives: ["own issues", "clarity_critic issues", "efficiency_critic issues", "draft artifact"]
+          prompt_focus: "Review other critics' issues through correctness lens. Do clarity/efficiency issues mask correctness problems?"
+        clarity_critic_debate:
+          receives: ["own issues", "correctness_critic issues", "efficiency_critic issues", "draft artifact"]
+          prompt_focus: "Review other critics' issues through clarity lens. Are correctness fixes introducing ambiguity?"
+        efficiency_critic_debate:
+          receives: ["own issues", "correctness_critic issues", "clarity_critic issues", "draft artifact"]
+          prompt_focus: "Review other critics' issues through efficiency lens. Do proposed fixes increase bloat?"
+
+      per_critic_output:
+        actions:
+          - type: "agree"
+            meaning: "Confirm another critic's issue as valid"
+            effect: "Issue gets +1 confirmation"
+          - type: "disagree"
+            meaning: "Challenge another critic's issue with reasoning"
+            effect: "Issue gets -1 confirmation, reasoning logged"
+          - type: "escalate"
+            meaning: "Raise severity of another critic's issue"
+            effect: "Issue severity += 1 level (minor→major, major→critical)"
+          - type: "add"
+            meaning: "New issue discovered while reviewing others' findings"
+            effect: "Added to issue pool with source='debate'"
+        output_schema:
+          reviews: "list[{critic_name, issue_id, action, reasoning}]"
+          new_issues: "list[{severity, location, description, suggestion, discovered_via}]"
+
+      post_debate_scoring:
+        confirmed_issues: "Issues agreed by 2+ critics → severity += 1 level (consensus bonus)"
+        disputed_issues: "Issues with disagree + no other support → severity -= 1 level (min: minor)"
+        new_debate_issues: "Added to issue pool at stated severity"
+        score_adjustment: |
+          post_debate_score = recalculate aggregate using adjusted issue severities
+          critical_count_change: log if debate promoted issues to critical
+
+    aggregation:
+      method: "weighted_merge + domain bonus (v9.2)"
+      base_score: "correctness_critic.score * 0.40 + clarity_critic.score * 0.35 + efficiency_critic.score * 0.25"
+      domain_bonus: "(correctness_critic.domain_p6 + correctness_critic.domain_p7) / 2 * 0.10 - 0.05"
+      aggregate_score: "clamp(base_score + domain_bonus, 0.0, 1.0)"
+      v9_2_note: "Domain bonus ±0.05 from P6+P7. SEE: deps/artifact-constitution.md#domain_principles"
+      post_debate: "If debate triggered → recalculate using debate-adjusted issues and severities (domain bonus applied after)"
+      issue_merge: "Union of all issues (initial + debate-discovered + domain P6/P7), deduplicated by location"
+      conflict_resolution: "If critics disagree on severity → use debate consensus; if no debate → use highest severity"
+      consensus_bonus: "If 2+ critics confirm an issue (initial or debate) → severity += 1 level"
+
+    key: "Each critic ONLY sees output + their focused principles, never the generation process. Debate adds cross-visibility of ISSUES ONLY (not scores)."
 
   reflector_role:
-    trigger: "After MAR evaluation if aggregate_score < 0.85 OR after user rejection"
+    trigger: "After MAR evaluation + optional debate, if aggregate_score < 0.85 OR after user rejection"
     implementation: "Subagent (SEE: deps/subagents.md#reflector_agent)"
-    v10_change: "Reflector now receives merged feedback from 3 critics instead of 1"
+    v10_change: "Reflector now receives merged feedback from 3 critics + debate consensus instead of 1"
     context_provided:
       - "Draft artifact"
       - "All 3 critic evaluations (scores + issues, attributed by critic)"
+      - "Debate results if triggered (consensus actions, disputed/confirmed issues, new debate issues)"
       - "Past reflections on same artifact type (from episodic memory)"
     output:
-      what_failed: "Linguistic description (which critics flagged what)"
-      why_failed: "Root cause analysis (pattern across critics)"
-      how_to_fix: "Actionable steps (prioritized by cross-critic consensus)"
+      what_failed: "Linguistic description (which critics flagged what, debate consensus)"
+      why_failed: "Root cause analysis (pattern across critics, confirmed by debate)"
+      how_to_fix: "Actionable steps (prioritized by debate consensus > individual critic)"
       key_insight: "One-line lesson for future"
     storage: "mcp__memory as meta-agent-reflection entity"
 
   updated_flow_v10: |
     GENERATE (actor)
       → EVALUATE (3 critics in parallel):
-          ├── correctness_critic (opus) → scores + issues
-          ├── clarity_critic (sonnet) → scores + issues
-          └── efficiency_critic (haiku) → scores + issues
-      → AGGREGATE (lead merges scores, dedup issues)
+          ├── correctness_critic (opus, max_turns:3) → scores + issues
+          ├── clarity_critic (sonnet, max_turns:3) → scores + issues
+          └── efficiency_critic (haiku, max_turns:3) → scores + issues
+      → PRE-AGGREGATE (lead computes initial scores + spread)
+      → DEBATE GATE: spread > 0.15 OR score in [0.75, 0.90]?
+          ↓ YES
+         DEBATE (3 critics in parallel, max_turns:3 each):
+          ├── correctness_critic reviews clarity + efficiency issues
+          ├── clarity_critic reviews correctness + efficiency issues
+          └── efficiency_critic reviews correctness + clarity issues
+         → each outputs: agree/disagree/escalate/add per issue
+          ↓
+         POST-DEBATE SCORING (adjust severities by consensus)
+          ↓ NO (skip debate)
+      → AGGREGATE (lead merges scores, apply consensus adjustments)
       → aggregate_score < 0.85?
           ↓ YES
-         REFLECT (reflector, opus) ← all 3 critic reports
+         REFLECT (reflector, opus, max_turns:5) ← all critic reports + debate results
           ↓
-         OPTIMIZE (actor with reflection context)
+         OPTIMIZE (actor with reflection + debate context)
           ↓
-         EVALUATE (3 critics again, parallel) → ...
+         EVALUATE → [DEBATE if triggered] → AGGREGATE → ...
           ↓ (max 3 iterations)
          aggregate_score >= 0.85? → APPLY
 

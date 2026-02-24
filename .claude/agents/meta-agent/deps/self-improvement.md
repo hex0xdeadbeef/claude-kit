@@ -59,62 +59,55 @@ format: |
   SEVERITY: {severity}
   OCCURRED: {times_occurred}
 
-## Auto-Injection (Few-Shot Hints)
+# ── Auto-Injection (Few-Shot Hints) ──
+auto_injection:
+  when: "INIT phase — before any planning"
+  purpose: "Inject relevant lessons as few-shot examples"
 
-when: "INIT phase — before any planning"
-purpose: "Inject relevant lessons as few-shot examples"
+  steps:
+    1_load:
+      action: "mcp__memory__read_graph"
+      query: "meta-agent-lesson"
+    2_filter:
+      criteria:
+        - "artifact_type matches current operation"
+        - "mode matches (create/enhance)"
+        - "severity >= medium OR times_occurred >= 2"
+      max_lessons: 5
+      sort_by: "severity DESC, times_occurred DESC, date DESC"
+    3_format:
+      output: |
+        ## 📚 Relevant Lessons ({N} loaded)
 
-### Injection Process
+        ### Lesson 1: {short_title}
+        - **Trigger**: {trigger}
+        - **Don't**: {mistake}
+        - **Do**: {fix}
+        - **Example**:
+          - ❌ Bad: {bad}
+          - ✅ Good: {good}
 
-steps:
-  1_load:
-    action: "mcp__memory__read_graph"
-    query: "meta-agent-lesson"
+        [repeat for each lesson]
+    4_inject:
+      position: "After INIT, before EXPLORE/RESEARCH"
+      visibility: "Show to user in INIT output"
 
-  2_filter:
-    criteria:
-      - "artifact_type matches current operation"
-      - "mode matches (create/enhance)"
-      - "severity >= medium OR times_occurred >= 2"
-    max_lessons: 5
-    sort_by: "severity DESC, times_occurred DESC, date DESC"
+  output: |
+    ## [1/8] INIT ✓
+    Artifact: .claude/<type>/<name>.md (XXX lines)
 
-  3_format:
-    output: |
-      ## 📚 Relevant Lessons ({N} loaded)
+    📚 **Lessons Loaded: {N}** (from previous runs)
+    [if N > 0]
+    ⚠️ Watch for:
+    - {lesson_1_trigger}: {lesson_1_fix_short}
+    - {lesson_2_trigger}: {lesson_2_fix_short}
+    [/if]
 
-      ### Lesson 1: {short_title}
-      - **Trigger**: {trigger}
-      - **Don't**: {mistake}
-      - **Do**: {fix}
-      - **Example**:
-        - ❌ Bad: {bad}
-        - ✅ Good: {good}
+    📋 Continue? [Y/n]
 
-      [repeat for each lesson]
-
-  4_inject:
-    position: "After INIT, before EXPLORE/RESEARCH"
-    visibility: "Show to user in INIT output"
-
-### Injection Output
-
-output: |
-  ## [1/8] INIT ✓
-  Artifact: .claude/<type>/<name>.md (XXX lines)
-
-  📚 **Lessons Loaded: {N}** (from previous runs)
-  [if N > 0]
-  ⚠️ Watch for:
-  - {lesson_1_trigger}: {lesson_1_fix_short}
-  - {lesson_2_trigger}: {lesson_2_fix_short}
-  [/if]
-
-  📋 Continue? [Y/n]
-
-## Decay Mechanism
-
-purpose: "Prevent stale lessons from cluttering context"
+# ── Decay Mechanism ──
+decay_mechanism:
+  purpose: "Prevent stale lessons from cluttering context"
 
 rules:
   - condition: "lesson.date > 30 days AND times_occurred == 1"

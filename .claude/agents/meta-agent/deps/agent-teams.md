@@ -25,6 +25,7 @@ constraints:
   one_team_per_session: "Only one team active at a time"
   lead_is_fixed: "Lead agent (meta-agent) fixed for session lifetime"
   max_teammates: 7  # Same as max_concurrent subagents
+  max_turns: "All teammates MUST have max_turns set — SEE: subagents.md#max_turns_policy"
 
 ## CREATE Mode Team Definition
 
@@ -39,6 +40,7 @@ create_mode_team:
     researcher:
       task: "Analyze codebase for patterns related to {topic}"
       model: haiku
+      max_turns: 5  # haiku tier — scanning/exploration
       tools: [Read, Glob, Grep, WebSearch]
       output: "code_examples[], patterns_found[], api_conventions"
       maps_to: "codebase_analyzer + context_loader (merged role)"
@@ -47,6 +49,7 @@ create_mode_team:
     scanner:
       task: "Find existing similar artifacts, check for duplicates"
       model: haiku
+      max_turns: 5  # haiku tier — scanning/validation
       tools: [Read, Glob, Grep]
       output: "similar_artifacts[], overlap_score, duplicate_risk"
       maps_to: "artifact_scanner + dependency_analyzer (merged role)"
@@ -55,6 +58,7 @@ create_mode_team:
     designer:
       task: "Draft artifact structure based on research"
       model: sonnet
+      max_turns: 10  # sonnet tier — generation needs room for iteration
       tools: [Read, Write]
       input_from: [researcher, scanner]  # peer-to-peer
       output: "artifact_draft, structure_rationale"
@@ -97,13 +101,15 @@ phase_integration:
 evaluator_reflector_note:
   pattern: "3 MAR critics + reflector kept as subagents (Task tool), NOT teammates"
   v10: "Single evaluator_agent → 3 persona-driven critics (MAR pattern)"
-  critics: [correctness_critic (opus), clarity_critic (sonnet), efficiency_critic (haiku)]
+  critics: [correctness_critic (opus, max_turns:3), clarity_critic (sonnet, max_turns:3), efficiency_critic (haiku, max_turns:3)]
+  reflector: "reflector_agent (opus, max_turns:5)"
   reason: |
     1. Fresh context is CRITICAL — critics must not see generation history
     2. One-shot execution per eval iteration — no need for persistent context
     3. Mixed model tiers — opus/sonnet/haiku (different from team default)
     4. Reflexion pattern requires isolation between generator and evaluator
     5. MAR requires independent perspectives — teammates sharing context would defeat purpose
+  max_turns_ref: "SEE: subagents.md#max_turns_policy for limits and on_limit_reached behavior"
   ref: "SEE: subagents.md#correctness_critic, eval-optimizer.md#mar_evaluation"
 
 ## Fallback

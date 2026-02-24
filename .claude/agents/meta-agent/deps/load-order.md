@@ -41,7 +41,7 @@ tier_3:
       - "deps/artifact-constitution.md (NEW — replaces ad-hoc CRITIQUE)"
     DRAFT:
       - "deps/eval-optimizer.md"
-      - "deps/artifact-archive.md (NEW — compose from patterns, CREATE mode only)"
+      - "deps/artifact-archive.md (step 0 — active composition, BOTH modes, v9.2)"
       - "templates/<type>.md"
     APPLY:
       - "deps/artifact-quality.md"
@@ -217,7 +217,7 @@ tier_3_v9_updates:
       - "deps/artifact-constitution.md (NEW — replaces ad-hoc CRITIQUE)"
     DRAFT_phase:
       - "deps/eval-optimizer.md (existing, enhanced with separated evaluator)"
-      - "deps/artifact-archive.md (NEW — compose from patterns, CREATE mode only)"
+      - "deps/artifact-archive.md (step 0 — active composition, BOTH modes, v9.2)"
       - "templates/<type>.md (existing)"
     CLOSE_phase:
       - "deps/artifact-archive.md (NEW — extract patterns)"

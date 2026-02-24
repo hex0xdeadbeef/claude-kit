@@ -44,8 +44,10 @@ SIZE_GATE:
 STEP_QUALITY_GATE:
   when: "after each phase"
   enforcement: "partially deterministic (Stop hook: verify-phase-completion.sh checks all phases ran)"
-  checks: ["phase-specific criteria met (min_pass per phase)", "no consecutive failures (max 1)"]
-  on_fail: "⚠️ Repeat phase or escalate to user"
+  scoring: "v9.1: continuous 0.0-1.0 per check, weighted average per phase (replaces boolean min_pass)"
+  checks: ["phase_score >= 0.5 (continuous scoring)", "no 2 consecutive phases < 0.5", "trajectory not declining 3+ phases (advisory)"]
+  on_fail: "score < 0.5 → repeat phase or escalate. Declining trajectory → advisory warning at checkpoint."
+  ref: "SEE: deps/step-quality.md for full scoring model and trajectory tracking"
 
 EXTERNAL_VALIDATION_GATE:
   when: "VERIFY phase"

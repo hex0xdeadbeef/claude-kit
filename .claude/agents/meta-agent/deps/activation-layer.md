@@ -114,25 +114,23 @@ prompts:
     2. {match_2}
     Which did you mean? [1/2]
 
-## Auto-Chain
+# ── Auto-Chain ──
+auto_chain:
+  purpose: "Automatically trigger related commands after success"
+  chains:
+    - trigger: "/meta-agent create success"
+      next: "Run VERIFY phase automatically"
+      condition: "artifact created"
+    - trigger: "/meta-agent enhance success"
+      next: "Suggest /meta-agent audit"
+      condition: "major changes"
+  user_notification:
+    before_chain: "Auto-triggering {next} based on {trigger}..."
+    allow_skip: true
+    skip_phrase: "skip auto"
 
-purpose: "Automatically trigger related commands after success"
-
-chains:
-  - trigger: "/meta-agent create success"
-    next: "Run VERIFY phase automatically"
-    condition: "artifact created"
-
-  - trigger: "/meta-agent enhance success"
-    next: "Suggest /meta-agent audit"
-    condition: "major changes"
-
-user_notification:
-  before_chain: "Auto-triggering {next} based on {trigger}..."
-  allow_skip: true
-  skip_phrase: "skip auto"
-
-## Integration
+# ── Integration ──
+integration:
 
 INIT:
   steps:

@@ -56,7 +56,8 @@ fallback_sequential:
 
 step_quality:
   checks: ["≥3 code examples", "patterns identified", "similar artifacts checked"]
-  min_pass: 3
+  scoring: "continuous 0.0-1.0 per check, weighted average (SEE: deps/step-quality.md#phase_criteria.RESEARCH)"
+  threshold: 0.5  # minimum phase_score to proceed
 
 output: |
   ## [2/9] RESEARCH ✓ (agent team)
@@ -95,8 +96,15 @@ note: |
   Same as ENHANCE with integrated patterns:
   - PLAN (phase 4): Tier 3 load/unload + checkpoint
   - CONSTITUTE (phase 5): constitutional evaluation + checkpoint
-  - DRAFT (phase 6): 'designer' teammate generates draft → evaluator_agent (subagent, opus) → reflector_agent (subagent, opus) if needed
-    Note: evaluator/reflector remain subagents (NOT teammates) for fresh-context isolation. SEE: deps/agent-teams.md#evaluator_reflector_note
+  - DRAFT (phase 6):
+    Step 0: Archive Active Composition — query archive → structural hints → track usage
+      SEE: deps/artifact-archive.md#active_composition
+      Note: In CREATE mode archive is especially valuable (no existing artifact to reference)
+    Step 2+: 'designer' teammate generates draft (with archive hints as context)
+      → MAR evaluation (3 critics) → debate (if triggered) → reflector if needed
+    Note: evaluator/reflector remain subagents (NOT teammates) for fresh-context isolation.
+      SEE: deps/agent-teams.md#evaluator_reflector_note
   - APPLY (phase 7): Tier 3 load/unload + checkpoint
   - VERIFY (phase 8): Tier 3 load/unload + checkpoint
-  - CLOSE (phase 9): final progress update + auto-chain
+  - CLOSE (phase 9): final progress update + archive feedback + auto-chain
+    v9.2: Added archive feedback step — update success_rate for patterns used in DRAFT

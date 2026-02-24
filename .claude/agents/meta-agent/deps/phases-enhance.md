@@ -35,7 +35,7 @@ phases_enhance:
       - "9. mcp__memory__read_graph (load context)"
       - "9a. Load episodic reflections: SEE deps/self-improvement.md#episodic_memory"
       - "10. Read current artifact file"
-      - "11. Load lessons (auto-injection): SEE deps/self-improvement.md#auto-injection"
+      - "11. Load lessons (auto-injection): SEE deps/self-improvement.md#auto_injection"
       - "12. If --track: bd create"
       # Phase Contract Output (v9.0)
       - "12a. Validate INIT output against phase contract: SEE deps/phase-contracts.md"
@@ -94,7 +94,8 @@ phases_enhance:
       pattern: "internal/{layer}/ — {layer description}"
     step_quality:
       checks: ["PROJECT-KNOWLEDGE.md read", "artifact loaded", "≥1 skill/pattern found"]
-      min_pass: 3
+      scoring: "continuous 0.0-1.0 per check, weighted average (SEE: deps/step-quality.md#phase_criteria.EXPLORE)"
+      threshold: 0.5  # minimum phase_score to proceed
     output: "USE phase_output_template: fields=[sources, new_findings, lessons:{N}, quality_checks, budget, gate:EXPLORE_GATE]"
 
   phase_3_analyze:
@@ -156,11 +157,12 @@ phases_enhance:
       # Load Order (Pattern 3) — Tier 3
       - "1. LOAD: Tier 3 — deps/artifact-constitution.md"
       # Constitutional evaluation (v9.0, replaces ad-hoc critique)
-      - "2. Evaluate plan against each principle (P1-P5)"
+      - "2. Evaluate plan against each universal principle (P1-P5)"
       - "3. Score each principle 0.0-1.0 with explicit reasoning"
+      - "3a. Evaluate domain-specific P6-P7 for artifact_type (v9.2, SEE: artifact-constitution.md#domain_principles)"
       - "4. If any principle < 0.7: describe violation + propose fix"
-      - "5. Calculate aggregate: weighted_sum(P1*0.30 + P2*0.25 + P3*0.20 + P4*0.15 + P5*0.10)"
-      - "6. If aggregate < 0.85: propose improvements, loop"
+      - "5. Calculate: base = weighted_sum(P1-P5), bonus = (P6+P7)/2*0.10-0.05, final = clamp(base+bonus, 0, 1)"
+      - "6. If final < 0.85: propose improvements, loop"
       # Legacy critique questions (kept for compatibility)
       - "7. Cross-check: Is this the simplest solution?"
       - "8. Cross-check: Am I missing edge cases?"
@@ -174,9 +176,10 @@ phases_enhance:
       - "12. CHECKPOINT: Update progress.json (CONSTITUTE: done), write checkpoints/constitute.json"
     constitution:
       ref: "SEE: deps/artifact-constitution.md"
-      principles: ["P1_correctness (0.30)", "P2_clarity (0.25)", "P3_robustness (0.20)", "P4_efficiency (0.15)", "P5_maintainability (0.10)"]
+      universal: ["P1_correctness (0.30)", "P2_clarity (0.25)", "P3_robustness (0.20)", "P4_efficiency (0.15)", "P5_maintainability (0.10)"]
+      domain: "P6 + P7 per artifact_type (v9.2, bonus ±0.05)"
       threshold: 0.85
-    output: "USE phase_output_template: fields=[P1-P5_scores, aggregate, issues(if any), CHECKPOINT]"
+    output: "USE phase_output_template: fields=[P1-P5_scores, P6-P7_domain, base, bonus, final, issues(if any), CHECKPOINT]"
 
   phase_6_draft:
     name: "DRAFT"
@@ -189,46 +192,64 @@ phases_enhance:
       - "1. LOAD: Tier 3 — deps/eval-optimizer.md, templates/<type>.md"
       # Context Budget Check (v9.0)
       - "1a. BUDGET: Check total + new_files <= max_total before loading"
-      # Archive composition (v9.0, CREATE mode)
-      - "1b. If CREATE mode: LOAD deps/artifact-archive.md, compose from archive patterns"
+      # ── Step 0: Archive Active Composition (v9.2) ──
+      - "0a. LOAD: deps/artifact-archive.md (Tier 3)"
+      - "0b. ARCHIVE QUERY: Query archive with {artifact_type, domain_tags, mode}"
+      - "0c. ARCHIVE HINTS: Format top 5 patterns as structural_hints (max 50 lines)"
+      - "0d. ARCHIVE TRACK: Record patterns_queried, patterns_presented in progress.json"
+      - "0e. If no matching patterns: skip silently, proceed to generation"
+      - "0f. Present hints to generator as pre-generation context"
+      # SEE: deps/artifact-archive.md#active_composition for query API + hint format
+      # Note: archive unloaded in step 11 together with eval-optimizer
+      # ── End Step 0 ──
       # Draft generation (Actor)
-      - "2. GENERATE: Create initial artifact based on approved plan + reflections"
+      - "2. GENERATE: Create initial artifact based on approved plan + archive hints + reflections"
       - "3. Save draft to workspace: drafts/v1.md"
       # MAR Evaluation (v10.0 — 3 critics in parallel)
-      - "4. EVALUATE (MAR): Spawn 3 critics in parallel:"
-      - "   4a. correctness_critic (opus) → P1+P3 scores + issues"
+      - "4. EVALUATE (MAR): Spawn 3 critics in parallel (max_turns:3 each):"
+      - "   4a. correctness_critic (opus) → P1+P3+P6+P7 scores + issues"
       - "   4b. clarity_critic (sonnet) → P2+P5 scores + issues"
       - "   4c. efficiency_critic (haiku) → P4+token_density scores + issues"
-      - "5. AGGREGATE: Merge critic scores (weighted: 0.40/0.35/0.25), deduplicate issues"
+      # Debate Round (v9.2 — conditional, SEE: eval-optimizer.md#debate)
+      - "4d. DEBATE GATE: if score_spread > 0.15 OR aggregate in [0.75, 0.90]:"
+      - "   4e. Spawn 3 debate reviews in parallel (max_turns:3 each) — each critic reviews other two's issues"
+      - "   4f. POST-DEBATE: adjust severities by consensus (confirmed ↑, disputed ↓)"
+      - "5. AGGREGATE: Merge critic scores (weighted: 0.40/0.35/0.25), apply debate adjustments, deduplicate issues"
       # Decision
       - "6. If aggregate_score >= 0.85: PASS → continue to step 10"
       - "7. If aggregate_score < 0.85: REFLECT → spawn reflector_agent"
-      # Reflection (v9.0+ — Reflector receives all 3 critic reports)
-      - "8. REFLECT: Reflector receives all 3 critic evaluations, generates synthesis"
+      # Reflection (v9.0+ — Reflector receives all 3 critic reports + debate results)
+      - "8. REFLECT: Reflector receives all 3 critic evaluations + debate consensus, generates synthesis"
       - "8a. Store reflection in episodic memory (mcp__memory)"
       # Optimize loop
       - "9. OPTIMIZE: Fix issues prioritized by cross-critic consensus (max 3 iterations, return to step 4)"
       # Save results
       - "10. Save eval_history to progress.json (includes per-critic scores)"
+      - "10a. Save archive_composition to progress.json: {patterns_queried, patterns_presented, patterns_used, patterns_skipped}"
       # Unload (Pattern 3)
       - "11. UNLOAD: Tier 3 (eval-optimizer.md, artifact-archive.md)"
       # Phase Contract Output (v9.0)
       - "11a. Validate DRAFT output against phase contract: SEE deps/phase-contracts.md"
       # Checkpoint (Pattern 1)
       - "12. CHECKPOINT: Update progress.json (DRAFT: done), write checkpoints/draft.json"
+    archive_composition:
+      ref: "SEE: deps/artifact-archive.md#active_composition"
+      trigger: "Step 0, before generation (BOTH enhance and create modes)"
+      v9_2_note: "Was CREATE-only → now both modes"
     eval_optimizer:
-      ref: "SEE: deps/eval-optimizer.md#mar_evaluation"
+      ref: "SEE: deps/eval-optimizer.md#mar_evaluation and #debate"
       max_iterations: 3
       quality_threshold: 0.85
       adaptive_weights: "SEE: deps/eval-optimizer.md#adaptive_weights"
       mar_critics: "SEE: deps/subagents.md#correctness_critic, clarity_critic, efficiency_critic"
+      debate: "SEE: deps/subagents.md#debate_round (v9.2 — conditional on spread/score)"
       reflector: "SEE: deps/subagents.md#reflector_agent"
       flow: |
-        GENERATE → [correctness_critic ∥ clarity_critic ∥ efficiency_critic] → AGGREGATE → 0.65
-                                                                                            ↓ REFLECT
-        OPTIMIZE → [3 critics ∥] → AGGREGATE → 0.78
-                                                  ↓ REFLECT
-        OPTIMIZE → [3 critics ∥] → AGGREGATE → 0.87 ✓ → APPLY
+        GENERATE → [3 critics ∥] → DEBATE GATE → [3 debate reviews ∥ if triggered] → AGGREGATE → 0.65
+                                                                                                     ↓ REFLECT
+        OPTIMIZE → [3 critics ∥] → DEBATE GATE → ... → AGGREGATE → 0.78
+                                                                       ↓ REFLECT
+        OPTIMIZE → [3 critics ∥] → (no debate: clear pass) → AGGREGATE → 0.87 ✓ → APPLY
       fallback: "If MAR unavailable → single evaluator_agent (opus, v9 behavior)"
     output: "USE phase_output_template: fields=[iterations, per_critic_scores, aggregate_progression, final_score, reflections(if >1 iter), budget]"
 
@@ -298,6 +319,9 @@ phases_enhance:
       - "3a. LOAD: deps/artifact-archive.md"
       - "3b. ARCHIVE: Extract reusable patterns from created/enhanced artifact"
       - "3c. Save patterns to .meta-agent/archive/ with quality_score"
+      # Archive feedback (v9.2 — Active Composition feedback loop)
+      - "3e. FEEDBACK: If patterns_used non-empty in progress.json → update success_rate"
+      - "3f. FEEDBACK: SEE deps/artifact-archive.md#feedback for EMA formula"
       - "3d. UNLOAD: deps/artifact-archive.md"
       # Original steps
       - "4. If --track: bd close"
@@ -314,6 +338,6 @@ phases_enhance:
       trigger: "After successful APPLY"
       action: "Extract self-contained patterns into archive"
     auto_chain:
-      ref: "SEE: deps/activation-layer.md#auto-chain"
+      ref: "SEE: deps/activation-layer.md#auto_chain"
       suggestion: "Run /meta-agent audit to verify all artifacts"
     output: "USE phase_output_template: fields=[mcp_memory, metrics(duration|reads|writes), lessons:{N}, patterns:{P}, run_id, auto_chain(if major)]"

@@ -343,6 +343,11 @@ hooks:
         gate: "EXTERNAL_VALIDATION_GATE (partial)"
         action: "warn"
         what: "Validates all SEE:/Read/deps/ references resolve to existing files"
+      - hook: "check-plan-drift.sh"
+        matcher: "Write, Edit"
+        gate: "PLAN_DRIFT (v9.1)"
+        action: "warn"
+        what: "Detects APPLY changes not in approved plan. Warns on unplanned files, alerts on >20% drift."
     Stop:
       - hook: "verify-phase-completion.sh"
         gate: "STEP_QUALITY_GATE"
@@ -353,6 +358,7 @@ hooks:
     SIZE_GATE: {advisory: "blocking-gates.md", deterministic: "check-artifact-size.sh (PreToolUse, blocks)"}
     YAML_VALIDATION: {advisory: "blocking-gates.md#EXTERNAL_VALIDATION_GATE", deterministic: "yaml-lint.sh (PostToolUse)"}
     REFERENCE_CHECK: {advisory: "blocking-gates.md#EXTERNAL_VALIDATION_GATE", deterministic: "check-references.sh (PostToolUse)"}
+    PLAN_DRIFT: {advisory: "PLAN phase approval", deterministic: "check-plan-drift.sh (PostToolUse, warns on >20% drift)"}
     PHASE_COMPLETION: {advisory: "blocking-gates.md#STEP_QUALITY_GATE", deterministic: "verify-phase-completion.sh (Stop)"}
 
 # ════════════════════════════════════════════════════════════════════════════════
@@ -407,9 +413,10 @@ observability:
 # STEP QUALITY (Process Reward)
 # ════════════════════════════════════════════════════════════════════════════════
 step_quality:
-  purpose: "Evaluate quality after each phase, catch errors early"
+  purpose: "Continuous quality scoring per phase — catch degradation early via trajectory analysis"
   enabled: true
-  output_per_phase: "Quality: {passed}/{total} checks ✅"
+  scoring: "v9.1: continuous 0.0-1.0 per check, weighted average per phase, trajectory tracking"
+  output_per_phase: "Quality: {phase_score}/1.0 ({grade}) | Trajectory: [{scores}] {trend_icon}"
   details: "SEE: .claude/agents/meta-agent/deps/step-quality.md"
 
 # ════════════════════════════════════════════════════════════════════════════════
@@ -527,7 +534,7 @@ eval_optimizer:
   flow: "GENERATE → EVALUATE(separated) → score < 0.85? → REFLECT → OPTIMIZE → loop"
   separated_evaluator: "Subagent evaluates independently (no sunk cost bias)"
   reflector: "Subagent extracts lessons into episodic memory"
-  difference: "step_quality = pass/fail gate; eval_optimizer = iterate until good"
+  difference: "step_quality = continuous per-phase scoring (0.0-1.0) with trajectory; eval_optimizer = iterative loop until 0.85 in DRAFT"
   details: "SEE: .claude/agents/meta-agent/deps/eval-optimizer.md"
 
 # ════════════════════════════════════════════════════════════════════════════════

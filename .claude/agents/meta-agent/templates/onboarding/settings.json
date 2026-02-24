@@ -30,6 +30,16 @@
         "matcher": "Write",
         "command": ".claude/agents/meta-agent/scripts/check-references.sh",
         "description": "REF_CHECK: Validate all file references after writes"
+      },
+      {
+        "matcher": "Write",
+        "command": ".claude/agents/meta-agent/scripts/check-plan-drift.sh",
+        "description": "PLAN_DRIFT: Warn when APPLY changes diverge from approved plan"
+      },
+      {
+        "matcher": "Edit",
+        "command": ".claude/agents/meta-agent/scripts/check-plan-drift.sh",
+        "description": "PLAN_DRIFT: Warn when APPLY changes diverge from approved plan"
       }
     ],
     "Stop": [

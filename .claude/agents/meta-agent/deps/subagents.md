@@ -59,9 +59,9 @@ process:
 
 purpose: "Use cheapest model that meets quality requirements per task"
 principle: "Haiku for search/validation (90% quality, 2x speed), Sonnet for generation, Opus for judgment"
-source: "https://code.claude.com/docs/en/sub-agents — native model: field support"
+source: "<https://code.claude.com/docs/en/sub-agents> — native model: field support"
 
-model_tiers:
+model_routing:
   haiku:
     use_for: "Read-only exploration, scanning, validation, pattern matching"
     quality: "~90% of Sonnet on agentic tasks"
@@ -83,6 +83,30 @@ override_policy:
   env_var: "ANTHROPIC_DEFAULT_SONNET_MODEL" # Global Sonnet override
   fallback: "If specified model unavailable → fall back to sonnet"
 
+## Max Turns Guard
+
+purpose: "Prevent runaway subagents from consuming excessive context and time"
+research: "Claude Code max_turns parameter; Agent safety literature (2025)"
+source: "<https://code.claude.com/docs/en/sub-agents> — native max_turns support"
+
+max_turns_policy:
+  principle: "Every subagent MUST have max_turns set. No unbounded execution."
+  by_model_tier:
+    haiku: 5       # scanning, validation — fast tasks, tight bound
+    sonnet: 10     # generation, analysis — needs room for iteration
+    opus: 8        # judgment, reflection — deep but bounded reasoning
+  by_role:
+    critics: 3     # single evaluation pass — read draft, score, output
+    reflector: 5   # analyze + write reflection + store to memory
+    predefined: "inherit from model tier"
+    dynamic: "inherit from model tier, cap at 10"
+  override: "user can set --max-turns=N flag to override all limits"
+  enforcement: "Task tool max_turns parameter — hard cutoff, agent stops at limit"
+  on_limit_reached:
+    action: "Return partial results with truncation warning"
+    output_prefix: "⚠️ MAX_TURNS reached ({turns}/{max_turns})"
+    handling: "Treat as soft failure — use partial results, log to observability"
+
 ## Subagent Templates
 
 ### Base Template
@@ -90,6 +114,7 @@ override_policy:
 all_subagents:
   timeout: "30s"
   max_context: "8000 tokens"
+  max_turns: "inherit from max_turns_policy (by model tier or role)"
   tools_default: ["Read", "Glob", "Grep"]
   output_format: "structured JSON"
   error_handling: "Return partial results + error description"
@@ -99,6 +124,7 @@ all_subagents:
 
 codebase_analyzer:
   model: haiku
+  max_turns: 5
   task: "Find code patterns for {topic}"
   tools: ["Glob", "Grep", "Read"]
   constraints:
@@ -110,6 +136,7 @@ codebase_analyzer:
 
 artifact_scanner:
   model: haiku
+  max_turns: 5
   task: "Find similar existing artifacts"
   tools: ["Glob", "Read"]
   constraints:
@@ -121,6 +148,7 @@ artifact_scanner:
 
 context_loader:
   model: haiku
+  max_turns: 5
   task: "Load project context and prior knowledge"
   tools: ["Read", "mcp__memory__read_graph"]
   constraints:
@@ -131,6 +159,7 @@ context_loader:
 
 dependency_analyzer:
   model: haiku
+  max_turns: 5
   task: "Analyze artifact dependencies"
   tools: ["Grep", "Read"]
   constraints:
@@ -141,6 +170,7 @@ dependency_analyzer:
 
 quality_checker:
   model: haiku
+  max_turns: 5
   task: "Pre-check quality criteria"
   tools: ["Read"]
   constraints:
@@ -150,27 +180,33 @@ quality_checker:
     failed: "array of {check, reason}"
 
 # ── MAR Evaluation Team (v10.0 — replaces single evaluator_agent) ──
+
 # Multi-Agent Reflexion: 3 persona-driven critics run in parallel
+
 # SEE: deps/eval-optimizer.md#mar_evaluation for full architecture
 
 correctness_critic:
   model: opus
-  persona: "Senior engineer focused on correctness and edge cases"
+  max_turns: 3  # single evaluation pass — read, score, output
+  persona: "Senior engineer focused on correctness, edge cases, and domain-specific quality"
   trigger: "DRAFT phase → EVALUATE sub-phase (parallel with other critics)"
-  focus: [P1_correctness, P3_robustness]
-  max_context: "200 lines (draft + constitution P1+P3)"
+  focus: [P1_correctness, P3_robustness, P6_domain, P7_domain]
+  max_context: "250 lines (draft + constitution P1+P3+P6+P7)"
   tools: ["Read"]
   input:
     - "Draft artifact content"
     - "Artifact constitution P1 (correctness) + P3 (robustness)"
+    - "Domain-specific P6 + P7 for artifact_type (v9.2)"
     - "Adaptive weights for artifact type"
   output:
-    scores: "dict {accuracy: float, completeness: float}"
+    scores: "dict {accuracy: float, completeness: float, domain_p6: float, domain_p7: float}"
     issues: "list[{severity, location, description, suggestion}]"
   key_constraint: "Does NOT receive generation plan, conversation history, or previous drafts"
+  v9_2_note: "P6+P7 are domain bonus — SEE deps/artifact-constitution.md#domain_principles"
 
 clarity_critic:
   model: sonnet
+  max_turns: 3  # single evaluation pass — read, score, output
   persona: "Technical writer focused on readability and structure"
   trigger: "DRAFT phase → EVALUATE sub-phase (parallel with other critics)"
   focus: [P2_clarity, P5_maintainability]
@@ -187,6 +223,7 @@ clarity_critic:
 
 efficiency_critic:
   model: haiku
+  max_turns: 3  # single evaluation pass — read, score, output
   persona: "Performance engineer focused on size and duplication"
   trigger: "DRAFT phase → EVALUATE sub-phase (parallel with other critics)"
   focus: [P4_efficiency, token_density]
@@ -202,17 +239,71 @@ efficiency_critic:
   key_constraint: "Does NOT receive generation plan or previous drafts"
 
 mar_aggregation:
-  note: "Lead agent aggregates 3 critic outputs"
-  aggregate_score: "correctness * 0.40 + clarity * 0.35 + efficiency * 0.25"
+  note: "Lead agent aggregates 3 critic outputs, optionally after debate round"
+  aggregate_score: "correctness *0.40 + clarity* 0.35 + efficiency * 0.25"
+  post_debate: "Recalculate with debate-adjusted severities if debate was triggered"
   verdict: "PASS (>= 0.85) | FAIL"
   fallback: "If critics unavailable → single evaluator (v9 behavior, opus)"
 
+# ── DEBATE ROUND ──
+
+# Each critic reviews the other two critics' issues and responds with agree/disagree/escalate/add
+
+# Runs only when triggered (spread > 0.15 OR score in [0.75, 0.90])
+
+# SEE: deps/eval-optimizer.md#debate for full architecture
+
+debate_round:
+  purpose: "Cross-critique to resolve disagreements and catch blind spots"
+  trigger: "score_spread > 0.15 OR aggregate_score in [0.75, 0.90]"
+  execution: "parallel — all 3 debate reviews run concurrently"
+
+  correctness_critic_debate:
+    model: opus
+    max_turns: 3
+    persona: "Same as correctness_critic — now reviewing peer issues"
+    input:
+      - "Draft artifact"
+      - "Own initial issues"
+      - "clarity_critic issues + efficiency_critic issues"
+    output:
+      reviews: "list[{critic_name, issue_id, action(agree|disagree|escalate), reasoning}]"
+      new_issues: "list[{severity, location, description, suggestion}]"
+    key_constraint: "Review ISSUES only, not other critics' scores. Focus on correctness lens."
+
+  clarity_critic_debate:
+    model: sonnet
+    max_turns: 3
+    persona: "Same as clarity_critic — now reviewing peer issues"
+    input:
+      - "Draft artifact"
+      - "Own initial issues"
+      - "correctness_critic issues + efficiency_critic issues"
+    output:
+      reviews: "list[{critic_name, issue_id, action(agree|disagree|escalate), reasoning}]"
+      new_issues: "list[{severity, location, description, suggestion}]"
+    key_constraint: "Review ISSUES only. Focus on clarity implications of proposed fixes."
+
+  efficiency_critic_debate:
+    model: haiku
+    max_turns: 3
+    persona: "Same as efficiency_critic — now reviewing peer issues"
+    input:
+      - "Draft artifact"
+      - "Own initial issues"
+      - "correctness_critic issues + clarity_critic issues"
+    output:
+      reviews: "list[{critic_name, issue_id, action(agree|disagree|escalate), reasoning}]"
+      new_issues: "list[{severity, location, description, suggestion}]"
+    key_constraint: "Review ISSUES only. Focus on size/efficiency impact of proposed fixes."
+
 reflector_agent:
   model: opus
+  max_turns: 5  # analyze + reflect + store to MCP memory
   description: "Episodic learning extraction (Reflexion pattern)"
-  trigger: "DRAFT phase → REFLECT sub-phase (after EVALUATE fails)"
+  trigger: "DRAFT phase → REFLECT sub-phase (after EVALUATE + optional DEBATE fails)"
   purpose: "Generate linguistic reflection and store in episodic memory"
-  max_context: "300 lines (draft + eval results + past reflections)"
+  max_context: "300 lines (draft + eval results + debate results + past reflections)"
   tools: ["Read", "mcp__memory__add_observations"]
   input:
     - "Draft artifact"
@@ -239,6 +330,8 @@ process:
     template: |
       dynamic_subagent:
         task: "{task_description}"
+        model: "{inferred_model}"
+        max_turns: "{from max_turns_policy by model tier, cap at 10}"
         tools: [{inferred_tools}]
         constraints:
           max_files: {based_on_scope}
@@ -264,7 +357,9 @@ team:
   evaluator: "subagent (opus) — NOT teammate, needs fresh context"
 
 fallback_dag: |
-  # Used when Agent Teams unavailable
+
+# Used when Agent Teams unavailable
+
   INIT
     ├── codebase_analyzer (parallel)
     ├── artifact_scanner (parallel)
@@ -291,13 +386,25 @@ default_dag: |
 ### Mode: DRAFT (v10.0 — MAR)
 
 draft_phase_dag:
-  note: "v10.0: Multi-Agent Reflexion replaces single evaluator"
-  dag: "GENERATE → [correctness_critic ∥ clarity_critic ∥ efficiency_critic] → AGGREGATE → [if fail] reflector_agent → OPTIMIZE → [3 critics] → ..."
+  note: "v10.0+v9.2: MAR with conditional debate round"
+  dag: |
+    GENERATE
+      → [correctness_critic ∥ clarity_critic ∥ efficiency_critic] (parallel, max_turns:3 each)
+      → PRE-AGGREGATE (compute spread + initial score)
+      → DEBATE GATE (spread > 0.15 OR score in [0.75, 0.90]?)
+        → YES: [correctness_debate ∥ clarity_debate ∥ efficiency_debate] (parallel, max_turns:3 each)
+               → POST-DEBATE SCORING (consensus adjustments)
+        → NO: skip debate
+      → AGGREGATE
+      → score < 0.85?
+        → YES: reflector_agent (max_turns:5) → OPTIMIZE → loop back to EVALUATE
+        → NO: → APPLY
   max_loops: 3
   parallel_evaluation: true  # 3 critics run concurrently
+  parallel_debate: true      # 3 debate reviews run concurrently (if triggered)
   critical_tasks: ["correctness_critic"]
-  optional_tasks: ["reflector_agent"]
-  ref: "SEE: deps/eval-optimizer.md#mar_evaluation"
+  optional_tasks: ["reflector_agent", "debate_round"]
+  ref: "SEE: deps/eval-optimizer.md#mar_evaluation and #debate"
 
 ### Mode: AUDIT
 
@@ -329,9 +436,10 @@ steps:
 ### Priority Calculation
 
 factors:
-  - critical_path: "Tasks on longest path get priority"
-  - blocking_count: "Tasks blocking many others get priority"
-  - estimated_duration: "Shorter tasks may run first (SJF optional)"
+
+- critical_path: "Tasks on longest path get priority"
+- blocking_count: "Tasks blocking many others get priority"
+- estimated_duration: "Shorter tasks may run first (SJF optional)"
 
 ## Aggregation
 
@@ -348,27 +456,34 @@ weighted_merge:
 ### Output Format
 
 research_summary: |
-  ## Research Summary (DAG execution)
 
-  ### Execution Graph
+## Research Summary (DAG execution)
+
+### Execution Graph
+
   Tasks: {total_tasks}
   Parallel batches: {batch_count}
   Duration: {total_time}s
 
-  ### Code Examples ({N} found)
+### Code Examples ({N} found)
+
   [from codebase_analyzer]
 
-  ### Similar Artifacts ({N} found)
+### Similar Artifacts ({N} found)
+
   [from artifact_scanner]
   Overlap analysis: [from overlap_analyzer, if exists]
 
-  ### Dependencies
+### Dependencies
+
   [from dependency_analyzer]
 
-  ### Project Context
+### Project Context
+
   [from context_loader]
 
-  ### Quality Pre-Check
+### Quality Pre-Check
+
   [from quality_checker, if exists]
 
 ## Error Handling
@@ -391,9 +506,10 @@ on_error:
 
 rule: "Single task failure should not fail entire DAG"
 implementation:
-  - "Mark dependent tasks as 'degraded' not 'failed'"
-  - "Aggregate available results"
-  - "Report gaps in final summary"
+
+- "Mark dependent tasks as 'degraded' not 'failed'"
+- "Aggregate available results"
+- "Report gaps in final summary"
 
 ### Critical Task Failure
 
@@ -412,14 +528,17 @@ on_critical_fail:
 ### DAG Trace
 
 capture:
-  - task_graph: "Nodes and edges"
-  - execution_order: "Actual execution sequence"
-  - timing: "Start/end per task"
-  - results: "Output summaries"
-  - errors: "Any failures or retries"
+
+- task_graph: "Nodes and edges"
+- execution_order: "Actual execution sequence"
+- timing: "Start/end per task"
+- results: "Output summaries"
+- errors: "Any failures or retries"
 
 output: |
-  ### DAG Execution Trace
+
+### DAG Execution Trace
+
   ```
   T0 INIT ──────────────────── 0.5s ✅
   T1 codebase_analyzer ─────── 2.1s ✅ (parallel)
@@ -435,7 +554,8 @@ output: |
 when: "Subagent system unavailable or disabled"
 action: "Sequential execution in main context"
 steps:
-  - "Execute tasks in topological order"
-  - "No parallelism"
-  - "Same aggregation logic"
+
+- "Execute tasks in topological order"
+- "No parallelism"
+- "Same aggregation logic"
 note: "Slower but produces identical results"
