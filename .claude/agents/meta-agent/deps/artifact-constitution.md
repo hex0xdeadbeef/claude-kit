@@ -1,7 +1,6 @@
 # ════════════════════════════════════════════════════════════════════════════════
-# ARTIFACT CONSTITUTION (P3.3)
+# ARTIFACT CONSTITUTION
 # Constitutional AI pattern for artifact quality
-# v9.0.0
 # ════════════════════════════════════════════════════════════════════════════════
 
 purpose: "Systematic quality evaluation via explicit constitutional principles"
@@ -107,13 +106,12 @@ principles:
       bad: "Hardcoded code snippets that break when codebase evolves"
 
 # ════════════════════════════════════════════════════════════════════════════════
-# DOMAIN-SPECIFIC PRINCIPLES P6-P7 (v9.2)
+# DOMAIN-SPECIFIC PRINCIPLES P6-P7
 # Per artifact type — activated only when artifact_type is known
 # ════════════════════════════════════════════════════════════════════════════════
 
 domain_principles:
   purpose: "P1-P5 are universal. P6-P7 capture type-specific quality dimensions that universal checks miss."
-  v9_2_change: "NEW — extends constitution from 5 to 5+2 principles per evaluation"
   activation: "When artifact_type is known (always after INIT phase)"
   weight_budget: |
     P1-P5 weights sum to 1.0 (unchanged).
@@ -233,7 +231,7 @@ domain_principles:
 # ════════════════════════════════════════════════════════════════════════════════
 
 critique_protocol:
-  when: "CONSTITUTE phase (formerly CRITIQUE)"
+  when: "CONSTITUTE phase"
   who: "Meta-agent self-evaluation; later verified by separated evaluator in DRAFT"
 
   for_each_principle:
@@ -245,12 +243,11 @@ critique_protocol:
   aggregate:
     method: |
       base = weighted_sum(P1*0.30 + P2*0.25 + P3*0.20 + P4*0.15 + P5*0.10)
-      bonus = (P6_score + P7_score) / 2 * 0.10 - 0.05   # v9.2: domain bonus ±0.05
+      bonus = (P6_score + P7_score) / 2 * 0.10 - 0.05   # domain bonus ±0.05
       final = clamp(base + bonus, 0.0, 1.0)
     threshold: 0.85
     on_pass: "Proceed to DRAFT"
     on_fail: "Fix issues, re-evaluate until >= 0.85 or escalate to user"
-    v9_2_note: "P6-P7 bonus cannot compensate for weak P1-P5 (max +0.05)"
 
   output_format: |
     ## Constitution Review
@@ -292,10 +289,9 @@ evaluator_usage:
   context_provided:
     - "Draft artifact (complete content)"
     - "This constitution (P1-P5 universal principles)"
-    - "Domain-specific P6-P7 for artifact_type (v9.2)"
+    - "Domain-specific P6-P7 for artifact_type"
     - "Adaptive weights for artifact type (SEE: deps/eval-optimizer.md#adaptive_weights)"
   context_NOT_provided:
     - "Generation process or plan (prevents sunk cost bias)"
     - "Previous drafts (evaluates only current version)"
   output: "Same format as critique_protocol.output_format (includes P6-P7 domain section)"
-  v9_2_note: "MAR critics receive P6-P7 alongside their focused P1-P5 principles"

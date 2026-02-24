@@ -130,7 +130,7 @@ final_output: |
   Final: PASS ✅
 
 # ════════════════════════════════════════════════════════════════════════════════
-# SEPARATED EVALUATOR (v9.0 — P3.5)
+# SEPARATED EVALUATOR
 # Reflexion pattern: evaluator as separate subagent
 # ════════════════════════════════════════════════════════════════════════════════
 
@@ -147,13 +147,13 @@ separated_evaluator:
     reflector: "Subagent (REFLECT sub-phase) — synthesizes all critic feedback"
 
   # ──────────────────────────────────────────────────────────────────────────
-  # MULTI-AGENT REFLEXION (v10.0 — MAR)
+  # MULTI-AGENT REFLEXION (MAR)
   # ──────────────────────────────────────────────────────────────────────────
   mar_evaluation:
     purpose: "Diverse persona critics eliminate blind spots of single evaluator"
     principle: "Each critic has distinct expertise, focus, and model tier"
     paper: "MAR (2024) — persona-driven critics with diverse perspectives"
-    replaces: "Single evaluator_agent (v9.0)"
+    replaces: "Single evaluator_agent"
 
     evaluation_team:
       - name: correctness_critic
@@ -162,10 +162,9 @@ separated_evaluator:
         model: opus
         scoring_dimensions: [accuracy, completeness, domain_p6, domain_p7]
         weight: 0.40
-        context_provided: ["draft artifact", "artifact constitution P1+P3", "domain principles P6+P7 for artifact_type (v9.2)", "adaptive weights"]
+        context_provided: ["draft artifact", "artifact constitution P1+P3", "domain principles P6+P7 for artifact_type", "adaptive weights"]
         context_NOT_provided: ["generation plan", "previous drafts", "user conversation"]
         output: "scores{accuracy, completeness, domain_p6, domain_p7} + issues[{severity, location, suggestion}]"
-        v9_2_note: "P6+P7 domain principles assigned to correctness_critic (opus) as bonus scoring"
 
       - name: clarity_critic
         persona: "Technical writer focused on readability and structure"
@@ -193,6 +192,10 @@ separated_evaluator:
       max_concurrent: 3
       isolation: "Each critic has own context — no cross-contamination"
 
+    # ──────────────────────────────────────────────────────────────────────────
+    # DEBATE ROUND
+    # Research: Du et al. 2023 "Multi-Agent Debate"; ChatEval (ICLR 2024)
+    # ──────────────────────────────────────────────────────────────────────────
     debate:
       purpose: "Cross-critique between critics to catch blind spots and resolve disagreements"
       research:
@@ -255,11 +258,10 @@ separated_evaluator:
           critical_count_change: log if debate promoted issues to critical
 
     aggregation:
-      method: "weighted_merge + domain bonus (v9.2)"
+      method: "weighted_merge + domain bonus"
       base_score: "correctness_critic.score * 0.40 + clarity_critic.score * 0.35 + efficiency_critic.score * 0.25"
       domain_bonus: "(correctness_critic.domain_p6 + correctness_critic.domain_p7) / 2 * 0.10 - 0.05"
       aggregate_score: "clamp(base_score + domain_bonus, 0.0, 1.0)"
-      v9_2_note: "Domain bonus ±0.05 from P6+P7. SEE: deps/artifact-constitution.md#domain_principles"
       post_debate: "If debate triggered → recalculate using debate-adjusted issues and severities (domain bonus applied after)"
       issue_merge: "Union of all issues (initial + debate-discovered + domain P6/P7), deduplicated by location"
       conflict_resolution: "If critics disagree on severity → use debate consensus; if no debate → use highest severity"
@@ -270,7 +272,6 @@ separated_evaluator:
   reflector_role:
     trigger: "After MAR evaluation + optional debate, if aggregate_score < 0.85 OR after user rejection"
     implementation: "Subagent (SEE: deps/subagents.md#reflector_agent)"
-    v10_change: "Reflector now receives merged feedback from 3 critics + debate consensus instead of 1"
     context_provided:
       - "Draft artifact"
       - "All 3 critic evaluations (scores + issues, attributed by critic)"
@@ -319,11 +320,11 @@ separated_evaluator:
 
   fallback:
     when: "Cannot spawn 3 critics (e.g., context budget exceeded)"
-    action: "Fall back to single evaluator_agent (v9.0 behavior)"
+    action: "Fall back to single evaluator_agent"
     note: "Single evaluator still provides value — MAR is enhancement, not requirement"
 
 # ════════════════════════════════════════════════════════════════════════════════
-# ADAPTIVE WEIGHTS PER ARTIFACT TYPE (v9.0 — P3.6)
+# ADAPTIVE WEIGHTS PER ARTIFACT TYPE
 # ════════════════════════════════════════════════════════════════════════════════
 
 adaptive_weights:

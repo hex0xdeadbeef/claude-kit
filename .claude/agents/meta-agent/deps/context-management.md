@@ -50,7 +50,7 @@ strategy:
 - trace metrics
 
 # ════════════════════════════════════════════════════════════════════════════════
-# CONTEXT BUDGET TRACKING & ENFORCEMENT (v9.0 — P3.8)
+# CONTEXT BUDGET TRACKING & ENFORCEMENT
 # ════════════════════════════════════════════════════════════════════════════════
 
 budget_tracking:
@@ -64,8 +64,8 @@ budget_tracking:
         lines: "int"
         tier: "int (1-4)"
         loaded_at: "string (phase name)"
-        load_mode: "full | handle | handle+sections"  # v10.0
-    handles:  # v10.0 — Handle Pattern
+        load_mode: "full | handle | handle+sections"
+    handles:  # Handle Pattern
       - path: "string"
         handle_lines: "int (~15)"
         loaded_sections: "list[string]"
@@ -75,7 +75,7 @@ budget_tracking:
     budget_remaining: "int (global_budget - total_lines)"
     percent_used: "float (total_lines / global_budget * 100)"
 
-  # v10.0 — Handle-Aware Tracking
+  # Handle-Aware Tracking
   handle_tracking:
     purpose: "Track handle vs full-load budget costs separately"
     ref: "SEE: deps/artifact-handles.md for Handle Pattern details"

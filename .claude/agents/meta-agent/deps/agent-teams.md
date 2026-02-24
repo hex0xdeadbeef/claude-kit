@@ -1,4 +1,4 @@
-# Agent Teams (v10.0)
+# Agent Teams
 
 purpose: "Peer-to-peer collaboration for CREATE mode — replaces orchestrator-worker DAG"
 source: "https://code.claude.com/docs/en/agent-teams"

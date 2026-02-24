@@ -1,4 +1,4 @@
-# Artifact Handles (v10.0)
+# Artifact Handles
 
 purpose: "Pass lightweight references instead of full content — save context budget"
 source: "Context engineering research + Google ADK handle pattern"

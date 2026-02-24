@@ -59,7 +59,7 @@ process:
 
 purpose: "Use cheapest model that meets quality requirements per task"
 principle: "Haiku for search/validation (90% quality, 2x speed), Sonnet for generation, Opus for judgment"
-source: "<https://code.claude.com/docs/en/sub-agents> — native model: field support"
+source: "https://code.claude.com/docs/en/sub-agents — native model: field support"
 
 model_routing:
   haiku:
@@ -87,7 +87,7 @@ override_policy:
 
 purpose: "Prevent runaway subagents from consuming excessive context and time"
 research: "Claude Code max_turns parameter; Agent safety literature (2025)"
-source: "<https://code.claude.com/docs/en/sub-agents> — native max_turns support"
+source: "https://code.claude.com/docs/en/sub-agents — native max_turns support"
 
 max_turns_policy:
   principle: "Every subagent MUST have max_turns set. No unbounded execution."
@@ -179,10 +179,8 @@ quality_checker:
     passed: "array of check names"
     failed: "array of {check, reason}"
 
-# ── MAR Evaluation Team (v10.0 — replaces single evaluator_agent) ──
-
+# ── MAR Evaluation Team (replaces single evaluator_agent) ──
 # Multi-Agent Reflexion: 3 persona-driven critics run in parallel
-
 # SEE: deps/eval-optimizer.md#mar_evaluation for full architecture
 
 correctness_critic:
@@ -196,13 +194,12 @@ correctness_critic:
   input:
     - "Draft artifact content"
     - "Artifact constitution P1 (correctness) + P3 (robustness)"
-    - "Domain-specific P6 + P7 for artifact_type (v9.2)"
+    - "Domain-specific P6 + P7 for artifact_type"
     - "Adaptive weights for artifact type"
   output:
     scores: "dict {accuracy: float, completeness: float, domain_p6: float, domain_p7: float}"
     issues: "list[{severity, location, description, suggestion}]"
   key_constraint: "Does NOT receive generation plan, conversation history, or previous drafts"
-  v9_2_note: "P6+P7 are domain bonus — SEE deps/artifact-constitution.md#domain_principles"
 
 clarity_critic:
   model: sonnet
@@ -240,18 +237,15 @@ efficiency_critic:
 
 mar_aggregation:
   note: "Lead agent aggregates 3 critic outputs, optionally after debate round"
-  aggregate_score: "correctness *0.40 + clarity* 0.35 + efficiency * 0.25"
+  aggregate_score: "correctness * 0.40 + clarity * 0.35 + efficiency * 0.25"
   post_debate: "Recalculate with debate-adjusted severities if debate was triggered"
   verdict: "PASS (>= 0.85) | FAIL"
   fallback: "If critics unavailable → single evaluator (v9 behavior, opus)"
 
 # ── DEBATE ROUND ──
-
-# Each critic reviews the other two critics' issues and responds with agree/disagree/escalate/add
-
-# Runs only when triggered (spread > 0.15 OR score in [0.75, 0.90])
-
-# SEE: deps/eval-optimizer.md#debate for full architecture
+# Each critic reviews the other two critics' issues and responds with agree/disagree/escalate/add.
+# Runs only when triggered (spread > 0.15 OR score in [0.75, 0.90]).
+# SEE: deps/eval-optimizer.md#debate for full architecture.
 
 debate_round:
   purpose: "Cross-critique to resolve disagreements and catch blind spots"
@@ -347,7 +341,7 @@ process:
 
 ## Execution Modes
 
-### Mode: CREATE (v10.0 — Agent Teams)
+### Mode: CREATE (Agent Teams)
 
 recommended: "Agent Teams pattern (peer-to-peer)"
 details: "SEE: deps/agent-teams.md for full team definition"
@@ -357,9 +351,7 @@ team:
   evaluator: "subagent (opus) — NOT teammate, needs fresh context"
 
 fallback_dag: |
-
-# Used when Agent Teams unavailable
-
+  # Used when Agent Teams unavailable
   INIT
     ├── codebase_analyzer (parallel)
     ├── artifact_scanner (parallel)
@@ -383,10 +375,10 @@ default_dag: |
     └── dependency_analyzer (parallel)
   ANALYZE (depends: all above)
 
-### Mode: DRAFT (v10.0 — MAR)
+### Mode: DRAFT (MAR)
 
 draft_phase_dag:
-  note: "v10.0+v9.2: MAR with conditional debate round"
+  note: "MAR with conditional debate round"
   dag: |
     GENERATE
       → [correctness_critic ∥ clarity_critic ∥ efficiency_critic] (parallel, max_turns:3 each)
@@ -436,10 +428,9 @@ steps:
 ### Priority Calculation
 
 factors:
-
-- critical_path: "Tasks on longest path get priority"
-- blocking_count: "Tasks blocking many others get priority"
-- estimated_duration: "Shorter tasks may run first (SJF optional)"
+  - critical_path: "Tasks on longest path get priority"
+  - blocking_count: "Tasks blocking many others get priority"
+  - estimated_duration: "Shorter tasks may run first (SJF optional)"
 
 ## Aggregation
 
@@ -456,34 +447,27 @@ weighted_merge:
 ### Output Format
 
 research_summary: |
+  ## Research Summary (DAG execution)
 
-## Research Summary (DAG execution)
-
-### Execution Graph
-
+  ### Execution Graph
   Tasks: {total_tasks}
   Parallel batches: {batch_count}
   Duration: {total_time}s
 
-### Code Examples ({N} found)
-
+  ### Code Examples ({N} found)
   [from codebase_analyzer]
 
-### Similar Artifacts ({N} found)
-
+  ### Similar Artifacts ({N} found)
   [from artifact_scanner]
   Overlap analysis: [from overlap_analyzer, if exists]
 
-### Dependencies
-
+  ### Dependencies
   [from dependency_analyzer]
 
-### Project Context
-
+  ### Project Context
   [from context_loader]
 
-### Quality Pre-Check
-
+  ### Quality Pre-Check
   [from quality_checker, if exists]
 
 ## Error Handling
@@ -506,10 +490,9 @@ on_error:
 
 rule: "Single task failure should not fail entire DAG"
 implementation:
-
-- "Mark dependent tasks as 'degraded' not 'failed'"
-- "Aggregate available results"
-- "Report gaps in final summary"
+  - "Mark dependent tasks as 'degraded' not 'failed'"
+  - "Aggregate available results"
+  - "Report gaps in final summary"
 
 ### Critical Task Failure
 
@@ -528,17 +511,14 @@ on_critical_fail:
 ### DAG Trace
 
 capture:
-
-- task_graph: "Nodes and edges"
-- execution_order: "Actual execution sequence"
-- timing: "Start/end per task"
-- results: "Output summaries"
-- errors: "Any failures or retries"
+  - task_graph: "Nodes and edges"
+  - execution_order: "Actual execution sequence"
+  - timing: "Start/end per task"
+  - results: "Output summaries"
+  - errors: "Any failures or retries"
 
 output: |
-
-### DAG Execution Trace
-
+  ### DAG Execution Trace
   ```
   T0 INIT ──────────────────── 0.5s ✅
   T1 codebase_analyzer ─────── 2.1s ✅ (parallel)
@@ -554,8 +534,7 @@ output: |
 when: "Subagent system unavailable or disabled"
 action: "Sequential execution in main context"
 steps:
-
-- "Execute tasks in topological order"
-- "No parallelism"
-- "Same aggregation logic"
+  - "Execute tasks in topological order"
+  - "No parallelism"
+  - "Same aggregation logic"
 note: "Slower but produces identical results"

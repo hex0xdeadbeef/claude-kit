@@ -6,7 +6,7 @@ note: |
   - Pattern 2 (Eval-Optimizer): DRAFT phase with quality loop
   - Pattern 3 (4-Tier Loading): Tier 3 load/unload per phase
   - Pattern 4 (Activation Layer): validation in INIT
-  v10.0: Agent Teams pattern for RESEARCH + DRAFT phases
+  Agent Teams pattern for RESEARCH + DRAFT phases
   - SEE: deps/agent-teams.md for team definition and constraints
 
 ## phase_1_init
@@ -90,9 +90,9 @@ duplicate_check:
     ⚠️ Similar artifact may exist: {found_name}
     Options: [Enhance existing / Create new / Cancel]
 
-## other_phases
-
-note: |
+# ── Other Phases (shared with ENHANCE) ──
+other_phases:
+  note: |
   Same as ENHANCE with integrated patterns:
   - PLAN (phase 4): Tier 3 load/unload + checkpoint
   - CONSTITUTE (phase 5): constitutional evaluation + checkpoint
@@ -107,4 +107,4 @@ note: |
   - APPLY (phase 7): Tier 3 load/unload + checkpoint
   - VERIFY (phase 8): Tier 3 load/unload + checkpoint
   - CLOSE (phase 9): final progress update + archive feedback + auto-chain
-    v9.2: Added archive feedback step — update success_rate for patterns used in DRAFT
+    note: Added archive feedback step — update success_rate for patterns used in DRAFT

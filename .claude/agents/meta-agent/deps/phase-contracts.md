@@ -1,7 +1,6 @@
 # ════════════════════════════════════════════════════════════════════════════════
-# TYPED PHASE CONTRACTS (P3.1)
+# TYPED PHASE CONTRACTS
 # Structured inter-phase communication — MetaGPT pattern
-# v9.0.0
 # ════════════════════════════════════════════════════════════════════════════════
 
 purpose: "Eliminate information loss between phases via typed contracts"

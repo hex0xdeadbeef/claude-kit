@@ -12,7 +12,7 @@ features:
   TREE_OF_THOUGHT: "Design space exploration in PLAN phase"
   ADAS_ARCHIVE: "Self-improving pattern library from successful operations"
   PHASE_CONTRACTS: "Typed inter-phase communication (MetaGPT pattern)"
-  AGENT_TEAMS: "Peer-to-peer teammates for CREATE mode (v10.0)"
+  AGENT_TEAMS: "Peer-to-peer teammates for CREATE mode"
   MODEL_ROUTING: "haiku/sonnet/opus per task complexity"
   HOOKS: "Deterministic validation gates (size, YAML, references, phases)"
   OBSERVABILITY: "Tracing, metrics, MCP memory logging per run"

@@ -20,7 +20,7 @@ tier_2:
     create:
       - "deps/blocking-gates.md"
       - "deps/subagents.md"
-      - "deps/agent-teams.md (v10.0 — Agent Teams for CREATE mode)"
+      - "deps/agent-teams.md (Agent Teams for CREATE mode)"
     enhance:
       - "deps/artifact-analyst.md"
     audit:
@@ -36,19 +36,19 @@ tier_3:
       - "deps/artifact-analyst.md"
     PLAN:
       - "deps/artifact-review.md"
-      - "deps/plan-exploration.md (NEW — ToT, conditional: CREATE or changes > 5)"
+      - "deps/plan-exploration.md (ToT, conditional: CREATE or changes > 5)"
     CONSTITUTE:
-      - "deps/artifact-constitution.md (NEW — replaces ad-hoc CRITIQUE)"
+      - "deps/artifact-constitution.md"
     DRAFT:
       - "deps/eval-optimizer.md"
-      - "deps/artifact-archive.md (step 0 — active composition, BOTH modes, v9.2)"
+      - "deps/artifact-archive.md (step 0 — active composition, both modes)"
       - "templates/<type>.md"
     APPLY:
       - "deps/artifact-quality.md"
     VERIFY:
       - "deps/artifact-quality.md#external_validation"
     CLOSE:
-      - "deps/artifact-archive.md (NEW — extract patterns)"
+      - "deps/artifact-archive.md (extract patterns + feedback)"
   max_lines: 400
   unload: "When phase completes"
 
@@ -70,9 +70,9 @@ rules:
   - "Unload Tier 3 when phase completes"
   - "Track loaded_deps to avoid duplicate loads"
   - "Total loaded at any time: <1500 lines"
-  - "v10.0: Prefer handles for Tier 3/4 — load sections on demand"
+  - "Prefer handles for Tier 3/4 — load sections on demand"
 
-# v10.0 — Handle-Aware Loading
+# Handle-Aware Loading
 handle_aware_loading:
   purpose: "Use artifact handles to reduce budget consumption"
   ref: "SEE: deps/artifact-handles.md for full Handle Pattern"
@@ -178,7 +178,7 @@ on_demand:
   - "Use, then immediately unload"
 
 # ════════════════════════════════════════════════════════════════════════════════
-# BEFORE-LOAD CHECKS (v9.0 — P3.8)
+# BEFORE-LOAD CHECKS
 # ════════════════════════════════════════════════════════════════════════════════
 
 before_load_checks:
@@ -195,7 +195,7 @@ before_load_checks:
 
   check_3_alternatives:
     action: "Is there a lighter-weight alternative (handle, summary, cached findings)?"
-    if_yes: "Use handle (v10.0) or summary instead of full file"
+    if_yes: "Use handle or summary instead of full file"
     v10_preference: "For Tier 3/4: always try handle first → section on demand → full load as last resort"
 
 enforcement_gates:
@@ -204,20 +204,6 @@ enforcement_gates:
   at_tier_4_load: "Check budget; unload other Tier 4"
 
 # ════════════════════════════════════════════════════════════════════════════════
-# UPDATED TIER 3 MAPPING (v9.0)
+# UPDATED TIER 3 MAPPING
 # ════════════════════════════════════════════════════════════════════════════════
 
-tier_3_v9_updates:
-  note: "New deps added to Tier 3 loading schedule"
-  new_mappings:
-    PLAN_phase:
-      - "deps/artifact-review.md (existing)"
-      - "deps/plan-exploration.md (NEW — ToT, conditional: CREATE or changes > 5)"
-    CONSTITUTE_phase:
-      - "deps/artifact-constitution.md (NEW — replaces ad-hoc CRITIQUE)"
-    DRAFT_phase:
-      - "deps/eval-optimizer.md (existing, enhanced with separated evaluator)"
-      - "deps/artifact-archive.md (step 0 — active composition, BOTH modes, v9.2)"
-      - "templates/<type>.md (existing)"
-    CLOSE_phase:
-      - "deps/artifact-archive.md (NEW — extract patterns)"

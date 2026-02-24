@@ -1,10 +1,10 @@
 # ════════════════════════════════════════════════════════════════════════════════
 # TROUBLESHOOTING & COMMON MISTAKES
-# Offloaded from meta-agent.md v9.0.0
+# Offloaded from meta-agent.md
 # ════════════════════════════════════════════════════════════════════════════════
 
 troubleshooting:
-  - problem: "Claude skips CONSTITUTE (formerly CRITIQUE)"
+  - problem: "Claude skips CONSTITUTE"
     cause: "Plan seems good → rushed to CHECKPOINT"
     fix: "ALWAYS run constitutional evaluation (P1-P5), even if plan seems perfect"
     lesson: "Self-review catches issues before user sees them"

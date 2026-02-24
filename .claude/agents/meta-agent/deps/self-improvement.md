@@ -185,7 +185,7 @@ output: |
   - Estimated issues prevented: {lessons_helped}
 
 # ════════════════════════════════════════════════════════════════════════════════
-# EPISODIC MEMORY (v9.0 — P3.5)
+# EPISODIC MEMORY
 # Reflexion pattern: trajectory-level learning
 # ════════════════════════════════════════════════════════════════════════════════
 

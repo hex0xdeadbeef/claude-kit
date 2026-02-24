@@ -2,7 +2,7 @@
 
 purpose: "Continuous quality scoring per phase — catch degradation early via trajectory analysis"
 enabled: true
-version: "v9.1 — continuous scoring replaces boolean pass/fail"
+version: "continuous scoring (0.0-1.0 per check, weighted average)"
 research: "Lightman et al. 2023 'Let's Verify Step by Step'; AgentPRM (2025); DSPy assertions"
 backward_compat: "threshold 0.5 = old 'pass', below = old 'fail'. Existing gates unchanged."
 
@@ -95,7 +95,7 @@ phase_criteria:
         weight: 0.30
     on_low: "Fix issues before VERIFY"
 
-# ── Trajectory Tracking (v9.1) ──
+# ── Trajectory Tracking ──
 
 trajectory:
   purpose: "Detect quality degradation across phases before hard failure"

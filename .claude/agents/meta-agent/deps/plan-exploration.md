@@ -1,7 +1,6 @@
 # ════════════════════════════════════════════════════════════════════════════════
-# TREE OF THOUGHT — PLAN EXPLORATION (P3.4)
+# TREE OF THOUGHT — PLAN EXPLORATION
 # Design space exploration for PLAN phase
-# v9.0.0
 # ════════════════════════════════════════════════════════════════════════════════
 
 purpose: "Explore multiple design approaches instead of single linear plan"

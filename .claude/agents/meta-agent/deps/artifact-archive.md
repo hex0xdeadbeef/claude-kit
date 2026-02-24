@@ -1,7 +1,6 @@
 # ════════════════════════════════════════════════════════════════════════════════
-# ARTIFACT ARCHIVE — ADAS Pattern (P3.2)
+# ARTIFACT ARCHIVE — ADAS Pattern
 # Evolving library of successful patterns
-# v9.0.0
 # ════════════════════════════════════════════════════════════════════════════════
 
 purpose: "Extract, compose, evaluate, and promote patterns from successful artifacts"
@@ -66,7 +65,6 @@ operations:
   compose:
     trigger: "DRAFT phase, step 0 (BOTH enhance and create modes)"
     condition: "Archive exists AND has patterns for target artifact_type"
-    v9_2_change: "Expanded from CREATE-only to BOTH modes (enhance benefits from same patterns)"
     process:
       - "Query archive: patterns matching artifact_type + domain_tags"
       - "Sort by: quality_score * 0.6 + usage_count * 0.2 + recency * 0.2"
@@ -108,13 +106,12 @@ operations:
       - {pattern}: now part of {template}
 
 # ════════════════════════════════════════════════════════════════════════════════
-# ACTIVE COMPOSITION (v9.2 — ADAS Active Composition)
+# ACTIVE COMPOSITION (ADAS)
 # Step 0 in DRAFT phase: query archive → structural hints → track usage
 # ════════════════════════════════════════════════════════════════════════════════
 
 active_composition:
   purpose: "Transform archive from passive storage to active design advisor"
-  v9_2_change: "Archive patterns were stored but never queried during DRAFT. Now DRAFT step 0 queries archive before generation."
   principle: "Successful patterns from past artifacts accelerate and improve new generation"
 
   query_api:
@@ -172,7 +169,7 @@ active_composition:
     net_effect: "Positive ROI when archive has ≥3 patterns for artifact type"
 
 # ════════════════════════════════════════════════════════════════════════════════
-# FEEDBACK LOOP (v9.2 — post-VERIFY success_rate update)
+# FEEDBACK LOOP (post-VERIFY success_rate update)
 # ════════════════════════════════════════════════════════════════════════════════
 
 feedback:
@@ -228,10 +225,9 @@ integration:
   phases:
     DRAFT: "Step 0 — Active composition: query → hints → track (BOTH enhance and create modes)"
     CLOSE_extract: "Extract patterns (always for successful runs)"
-    CLOSE_feedback: "Update success_rate for patterns used in DRAFT (v9.2)"
+    CLOSE_feedback: "Update success_rate for patterns used in DRAFT"
     CLEANUP: "Prune old patterns"
   load_tier: "Tier 3 (loaded in DRAFT step 0 and CLOSE, unloaded after)"
-  v9_2_change: "DRAFT_CREATE → DRAFT (both modes). Added CLOSE_feedback."
   mcp_memory: "Archive metadata also saved to mcp__memory for cross-session access"
   phase_refs:
     DRAFT_enhance: "SEE: deps/phases-enhance.md#phase_6_draft (step 0)"
