@@ -1,10 +1,6 @@
 ---
 description: "Полный цикл разработки: task-analysis → planner → plan-review → coder → code-review"
 model: opus
-version: 2.1.0
-updated: 2026-02-19
-tags: [workflow, pipeline, orchestration]
-related_commands: [planner, plan-review, coder, code-review]
 ---
 
 role:
@@ -91,43 +87,21 @@ output:
 # AUTONOMY RULE
 # ════════════════════════════════════════════════════════════════════════════════
 autonomy_rule:
-  # <!-- FROM: deps/shared-autonomy.md — inline subset -->
-  common_modes:
-    INTERACTIVE: "Ask for confirmation at checkpoints (default)"
-    AUTONOMOUS: "Execute all phases automatically (--auto flag)"
-    RESUME: "Continue from last checkpoint (--from-phase N or checkpoint-based)"
-    MINIMAL: "Minimal research, only critical checks (--minimal flag)"
-  common_stop_conditions:
-    FATAL_ERROR: "Plan/file not found → stop immediately"
-    USER_INTERVENTION: "Scope unclear, user says 'stop' → wait"
-    TOOL_UNAVAILABLE: "MCP tool unavailable → warn and adapt"
-    FAILURE_THRESHOLD: "Tests/lint fail 3x → stop, request fix"
-  # Full reference: deps/shared-autonomy.md
+  # Common autonomy patterns: SEE deps/shared-core.md#autonomy
+  modes:
+    - INTERACTIVE (default): Ask before each phase
+    - AUTONOMOUS (--auto): Execute all phases automatically
+    - RESUME (--from-phase N): Skip to specified phase (or checkpoint-based)
+    - MINIMAL (--minimal): Minimal research, only critical checks
 
-  workflow_specific:
-    modes:
-      - INTERACTIVE (default): Ask before each phase
-      - AUTONOMOUS (--auto): Execute all phases automatically
-      - RESUME (--from-phase N): Skip to specified phase (or checkpoint-based)
+  stop_conditions:
+    - Plan REJECTED → Stop, request new requirements
+    - Tests FAIL 3x → Stop, request manual intervention
+    - Loop limit exceeded (3 iterations) → Stop, show summary
 
-    stop_conditions:
-      - Plan REJECTED → Stop, request new requirements
-      - Tests FAIL 3x → Stop, request manual intervention
-      - Loop limit exceeded (3 iterations) → Stop, show summary
-
-    continue_conditions:  # autonomous mode only
-      - Phase completed → Next phase
-      - NEEDS_CHANGES → Return to previous phase
-
-# ════════════════════════════════════════════════════════════════════════════════
-# RELATED SKILLS
-# ════════════════════════════════════════════════════════════════════════════════
-related_skills:
-  note: "Populate with project-specific skills after /meta-agent onboard"
-
-  - skill: "{vcs-commits-skill}"
-    when: "Creating commits at completion"
-    priority: CRITICAL
+  continue_conditions:  # autonomous mode only
+    - Phase completed → Next phase
+    - NEEDS_CHANGES → Return to previous phase
 
 # ════════════════════════════════════════════════════════════════════════════════
 # RELATED TOOLS
@@ -142,67 +116,16 @@ related_tools:
 # MCP TOOLS
 # ════════════════════════════════════════════════════════════════════════════════
 mcp_tools:
-  # <!-- FROM: deps/shared-mcp.md — inline subset -->
-  available:
-    Memory: "create_entities, search_nodes, add_observations, create_relations"
-    Sequential_Thinking: "sequentialthinking — multi-step reasoning"
-    Context7: "resolve-library-id, query-docs — library documentation"
-    PostgreSQL: "list_tables, describe_table, query — DB schema (read-only)"
-  error_pattern: "try-catch at use time, NOT pre-check at startup"
-  unavailability: "NON_CRITICAL — warn and continue with degraded quality"
-  # Full reference: deps/shared-mcp.md
+  # Common MCP patterns: SEE deps/shared-core.md#mcp-tools
+  - tool: "Sequential Thinking"
+    usage: "Complex multi-phase orchestration"
+    when:
+      - "Task spans 4+ phases with complex dependencies"
+      - "Multiple sub-commands need coordination"
+      - "Recovery from failed phase requires analysis"
 
-  workflow_specific:
-    - tool: "Sequential Thinking"
-      usage: "Complex multi-phase orchestration"
-      when:
-        - "Task spans 4+ phases with complex dependencies"
-        - "Multiple sub-commands need coordination"
-        - "Recovery from failed phase requires analysis"
-
-    - tool: "Memory"
-      usage: "STARTUP: search_nodes; ЗАВЕРШЕНИЕ: save lessons_learned + pipeline_metrics"
-
-# ════════════════════════════════════════════════════════════════════════════════
-# RELATED
-# ════════════════════════════════════════════════════════════════════════════════
-related:
-  commands:
-    - topic: Планирование
-      command: "/planner"
-      note: "Phase 1"
-
-    - topic: Ревью плана
-      command: "/plan-review"
-      note: "Phase 2"
-
-    - topic: Реализация
-      command: "/coder"
-      note: "Phase 3"
-
-    - topic: Ревью кода
-      command: "/code-review"
-      note: "Phase 4"
-
-    - topic: Code Review
-      command: "/code-review"
-      note: "Чеклист ревью"
-
-    - topic: Трекинг задач
-      command: "bd ready, bd close"
-      note: "Phase 0 / Завершение"
-
-  skills:
-    - topic: Коммиты
-      skill: "{vcs-commits-skill}"
-      note: "Commits at completion"
-
-  tools:
-    - topic: Память
-      tool: "mcp__memory (MCP server)"
-      note: "Lessons learned"
-
-  next: "После завершения → Фича готова"
+  - tool: "Memory"
+    usage: "STARTUP: search_nodes; ЗАВЕРШЕНИЕ: save lessons_learned + pipeline_metrics"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # STARTUP
@@ -249,30 +172,25 @@ startup:
         - "Есть ли beads issue in_progress? → bd show <id>"
 
   beads_integration:
-    # <!-- FROM: deps/shared-beads.md — inline subset -->
-    availability: "NON_CRITICAL — если bd недоступен, skip beads phases, continue workflow"
-    on_id_provided: "bd show <id> (view), bd update <id> --status=in_progress (claim)"
-    on_completion: "bd sync (MANDATORY), remind user: bd close <id>"
-    on_unavailable: "Warn: 'Beads unavailable, skipping task tracking' → continue"
-    # Full reference: deps/shared-beads.md
+    # SEE: deps/shared-core.md#beads-integration
 
 # ════════════════════════════════════════════════════════════════════════════════
 # SESSION RECOVERY
 # ════════════════════════════════════════════════════════════════════════════════
 session_recovery:
-  reference: "SEE: .claude/commands/deps/session-recovery.md"
+  reference: "SEE: .claude/commands/deps/shared-core.md#session-recovery"
   contains: "Auto-detect algorithm, decision table, quick check commands"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # PIPELINE
 # ════════════════════════════════════════════════════════════════════════════════
 pipeline:
-  mandatory: "🔴 MANDATORY: Read .claude/commands/deps/workflow-phases.md BEFORE executing any phase"
+  mandatory: "🔴 MANDATORY: Read .claude/commands/deps/shared-core.md BEFORE executing any phase"
 
   flow: "task-analysis → /planner → /plan-review → /coder → /code-review"
 
   load_phases:
-    action: "Read .claude/commands/deps/workflow-phases.md"
+    action: "Read .claude/commands/deps/shared-core.md"
     when: "BEFORE starting Phase 0"
     required: true
     contains:
@@ -388,12 +306,12 @@ rules:
 
   - rule: "Loop Limits"
     description: "Максимум 3 итерации для каждого цикла ревью (plan-review, code-review)"
-    reference: "SEE: deps/workflow-phases.md#loop-limits"
+    reference: "SEE: deps/shared-core.md#loop-limits"
     severity: CRITICAL
 
   - rule: "Context Isolation"
     description: "Review-фазы ДОЛЖНЫ работать с чистым контекстом (subagent или перечитывание с нуля)"
-    reference: "SEE: deps/workflow-phases.md#context-isolation"
+    reference: "SEE: deps/shared-core.md#context-isolation"
     severity: CRITICAL
 
 # ════════════════════════════════════════════════════════════════════════════════
@@ -534,38 +452,25 @@ pipeline_metrics:
 # ERROR HANDLING
 # ════════════════════════════════════════════════════════════════════════════════
 error_handling:
-  # <!-- FROM: deps/shared-error-handling.md — inline subset -->
-  common_errors:
-    Memory_MCP_unavailable: "NON_CRITICAL → warn, proceed without memory"
-    Sequential_Thinking_unavailable: "NON_CRITICAL → warn, use manual analysis"
-    Context7_unavailable: "NON_CRITICAL → fallback to WebSearch or memory"
-    PostgreSQL_unavailable: "NON_CRITICAL → use migration files"
-    Plan_not_found: "FATAL → exit immediately"
-    Plan_not_approved: "FATAL → exit immediately"
-    Tests_fail_3x: "STOP_AND_WAIT → request manual fix"
-    Import_violation: "STOP_AND_FIX → fix before proceeding"
-    Beads_unavailable: "NON_CRITICAL → skip beads phases"
-  # Full reference: deps/shared-error-handling.md
+  # Common error patterns: SEE deps/shared-core.md#error-handling
+  - error: "Plan review REJECTED"
+    action: "Request new requirements, return to Phase 1"
 
-  workflow_specific:
-    - error: "Plan review REJECTED"
-      action: "Request new requirements, return to Phase 1"
+  - error: "Plan review NEEDS_CHANGES"
+    action: "Pass issues to /planner, retry Phase 1"
 
-    - error: "Plan review NEEDS_CHANGES"
-      action: "Pass issues to /planner, retry Phase 1"
+  - error: "Code review CHANGES_REQUESTED"
+    action: "Pass issues to /coder, retry Phase 3"
 
-    - error: "Code review CHANGES_REQUESTED"
-      action: "Pass issues to /coder, retry Phase 3"
+  - error: "Tests failing"
+    action: "Fix in Phase 3"
 
-    - error: "Tests failing"
-      action: "Fix in Phase 3"
+  - error: "User says 'stop'"
+    action: "Stop immediately, await instructions"
 
-    - error: "User says 'stop'"
-      action: "Stop immediately, await instructions"
-
-    - error: "Loop limit exceeded (3 iterations in plan-review or code-review cycle)"
-      action: "STOP. Show: what was requested in each iteration, what issues persisted. Request user to either simplify task or provide specific guidance."
-      reference: "SEE: deps/workflow-phases.md#loop-limits"
+  - error: "Loop limit exceeded (3 iterations in plan-review or code-review cycle)"
+    action: "STOP. Show: what was requested in each iteration, what issues persisted. Request user to either simplify task or provide specific guidance."
+    reference: "SEE: deps/shared-core.md#loop-limits"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # EXAMPLES

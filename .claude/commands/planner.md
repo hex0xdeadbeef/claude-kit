@@ -1,10 +1,6 @@
 ---
 description: Researches codebase and creates detailed implementation plan
 model: opus
-version: 2.2.0
-updated: 2026-02-24
-tags: [planning, research, architecture]
-related_commands: [plan-review, coder, arch, workflow]
 ---
 
 # PLANNER
@@ -118,44 +114,6 @@ autonomy:
       action: "Warn, continue with limitations"
 
 # ════════════════════════════════════════════════════════════════════════════════
-# RELATED SKILLS (auto-loaded)
-# ════════════════════════════════════════════════════════════════════════════════
-related_skills:
-  note: "Populate with project-specific skills after /meta-agent onboard"
-  reference: "SEE: .claude/skills/*/SKILL.md (if configured)"
-
-  critical:
-    - skill: "{architecture-skill}"
-      when: "Decision tree for layer placement, import matrix"
-
-  high:
-    - skill: "{design-patterns-skill}"
-      when: "Choosing patterns (factory, strategy, etc.)"
-    - skill: "{data-access-skill}"
-      when: "Planning DB schema, queries"
-    - skill: "{error-handling-skill}"
-      when: "Error patterns"
-
-  medium:
-    - tool: "mcp__memory"
-      when: "Searching/saving architectural decisions"
-    - command: "/db-explorer"
-      when: "Database schema exploration"
-
-# ════════════════════════════════════════════════════════════════════════════════
-# QUICK REFERENCES
-# ════════════════════════════════════════════════════════════════════════════════
-quick_references:
-  note: "Replace with project-specific skill names"
-  skills:
-    - skill: "{architecture-skill}"
-      description: "Architecture patterns, module boundaries"
-    - skill: "{code-style-skill}"
-      description: "Code style, naming, formatting"
-    - skill: "{error-handling-skill}"
-      description: "Error handling patterns"
-
-# ════════════════════════════════════════════════════════════════════════════════
 # MCP TOOLS
 # ════════════════════════════════════════════════════════════════════════════════
 mcp_tools:
@@ -177,8 +135,6 @@ mcp_tools:
 context:
   tracking: "bd for beads integration"
   template: ".claude/templates/plan-template.md"
-
-next_step: "/plan-review"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # STARTUP
@@ -394,17 +350,7 @@ phases:
 # BEADS INTEGRATION
 # ════════════════════════════════════════════════════════════════════════════════
 beads_integration:
-  enabled: "if available"
-
-  on_start:
-    - action: "bd show <id>"
-      when: "if beads-id provided"
-    - action: "bd update <id> --status=in_progress"
-      description: "Update task status"
-
-  on_completion:
-    auto_close: false
-    reminder: "Plan ready. To close task: `bd close <id>`"
+  # SEE: deps/shared-core.md#beads-integration
 
 # ════════════════════════════════════════════════════════════════════════════════
 # RULES
@@ -430,26 +376,12 @@ rules:
 # ERROR HANDLING
 # ════════════════════════════════════════════════════════════════════════════════
 error_handling:
-  - situation: Memory MCP unavailable
-    action: "Continue without search, warn user"
-
-  - situation: Sequential Thinking failed
-    action: "Continue with manual alternatives analysis"
-
-  - situation: beads unavailable
-    action: "Skip beads integration"
-
-  - situation: Template missing
-    action: "Use minimal format from PHASE 4: DOCUMENT"
-
-  - situation: User not responding
-    action: "Wait for response, do not continue without scope clarification"
-
-  - situation: Context7 unavailable
-    action: "Use web search or documentation from memory"
-
-  - situation: PostgreSQL MCP unavailable
-    action: "Investigate schema via migration files"
+  # Common MCP/beads errors: SEE deps/shared-core.md#error-handling
+  command_specific:
+    - situation: Template missing
+      action: "Use minimal format from PHASE 4: DOCUMENT"
+    - situation: User not responding
+      action: "Wait for response, do not continue without scope clarification"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # EXAMPLES

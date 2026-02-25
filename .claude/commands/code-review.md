@@ -1,10 +1,6 @@
 ---
 description: Code review of changes before merge
 model: sonnet
-version: 1.3.1
-updated: 2026-02-24
-tags: [review, quality, security]
-related_commands: [planner, coder, plan-review, workflow]
 ---
 
 # CODE REVIEWER
@@ -121,53 +117,10 @@ triggers:
     then: "Verify config.yaml.example and README.md updated"
 
 # ════════════════════════════════════════════════════════════════════════════════
-# RELATED SKILLS (auto-loaded)
-# ════════════════════════════════════════════════════════════════════════════════
-related_skills:
-  note: "Populate with project-specific skills after /meta-agent onboard"
-
-  - skill: "{error-handling-skill}"
-    when: "Error pattern validation"
-    priority: CRITICAL
-
-  - skill: "{architecture-skill}"
-    when: "Layer and import rule validation"
-    priority: CRITICAL
-
-  - skill: "{testing-skill}"
-    when: "Test quality check"
-    priority: HIGH
-
-  - skill: "{code-style-skill}"
-    when: "Naming, formatting review"
-    priority: MEDIUM
-
-  - skill: "{design-patterns-skill}"
-    when: "Reviewing pattern usage"
-    priority: MEDIUM
-
-quick_reference:
-  mandatory_skills:
-    note: "Replace with project-specific skill names"
-    - "{architecture-skill} — import/layer rules"
-    - "{code-style-skill} — code style"
-    - "{error-handling-skill} — error patterns"
-
-  mcp_tools:
-    - tool: "Sequential Thinking"
-      when: "100+ lines of changes"
-    - tool: "Context7"
-      when: "new library"
-
-  tracking: "bd for beads integration"
-
-next_step: "merge / bd close"
-
-# ════════════════════════════════════════════════════════════════════════════════
 # AUTONOMY RULE
 # ════════════════════════════════════════════════════════════════════════════════
 autonomy:
-  reference: "SEE: deps/shared-autonomy.md"
+  reference: "SEE: deps/shared-core.md#autonomy"
   command_specific:
     stop: ["make lint/test fails → STOP", "Blocker found → CHANGES REQUESTED", "No changes → exit"]
     continue: ["QUICK CHECK passed → REVIEW", "Minor issues only → APPROVED WITH COMMENTS"]
@@ -189,7 +142,7 @@ startup:
       - "git diff master...HEAD — the diff"
       - "Narrative context block from coder handoff (adjustments, deviations, mitigated risks)"
       - "NOT the implementation process, NOT debug sessions"
-    reference: "SEE: deps/workflow-phases.md#context-isolation"
+    reference: "SEE: deps/shared-core.md#context-isolation"
 
   steps:
     - step: 1
@@ -334,7 +287,7 @@ workflow:
 # BEADS INTEGRATION (if available)
 # ════════════════════════════════════════════════════════════════════════════════
 beads_integration:
-  reference: "SEE: deps/shared-beads.md#code-review"
+  reference: "SEE: deps/shared-core.md#beads-integration"
   auto_close: false
 
 ---
@@ -369,7 +322,7 @@ rules:
 # ERROR HANDLING
 # ════════════════════════════════════════════════════════════════════════════════
 error_handling:
-  reference: "SEE: deps/shared-error-handling.md"
+  reference: "SEE: deps/shared-core.md#error-handling"
   command_specific:
     - "git diff fails → check branch, suggest git status"
     - "No changes to review → INFO message, exit"
@@ -402,21 +355,7 @@ examples:
 # SEVERITY
 # ════════════════════════════════════════════════════════════════════════════════
 severity_levels:
-  - level: "[blocker]"
-    meaning: "Architecture/security violation"
-    blocks: true
-
-  - level: "[major]"
-    meaning: "Error handling, logging"
-    blocks: true
-
-  - level: "[minor]"
-    meaning: "Code style, naming"
-    blocks: false
-
-  - level: "[nit]"
-    meaning: "Stylistic preference"
-    blocks: false
+  # SEE: review-checklist.md#severity_classification
 
 ---
 
@@ -447,23 +386,3 @@ checklist:
     - "bd sync executed (if beads)"
 
 ---
-
-# ════════════════════════════════════════════════════════════════════════════════
-# NEXT COMMANDS
-# ════════════════════════════════════════════════════════════════════════════════
-next_commands:
-  on_approved:
-    - action: "bd close <id>"
-      condition: "if beads tracked"
-      description: "Close beads task after successful review"
-
-  on_approved_with_comments:
-    - action: "bd close <id> --reason='Approved with minor comments'"
-      condition: "if beads tracked"
-      description: "Close with reason explaining minor issues"
-
-  on_changes_requested:
-    - action: "/coder"
-      description: "Return to implementation to fix blocker/major issues"
-    - action: "Manual fixes"
-      description: "Fix issues manually then re-run /code-review"

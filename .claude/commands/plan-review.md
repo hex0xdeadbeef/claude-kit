@@ -1,10 +1,6 @@
 ---
 description: Validates implementation plan before coding starts
 model: sonnet
-version: 3.2.1
-updated: 2026-02-24
-tags: [validation, architecture, review, plan]
-related_commands: [planner, coder, arch, style, errors]
 ---
 
 # PLAN REVIEWER
@@ -108,32 +104,6 @@ output:
         - Recommendations: {areas requiring attention during implementation}
 
 # ════════════════════════════════════════════════════════════════════════════════
-# RELATED SKILLS (auto-loaded)
-# ════════════════════════════════════════════════════════════════════════════════
-related_skills:
-  note: "Populate with project-specific skills after /meta-agent onboard"
-  reference: "SEE: .claude/skills/*/SKILL.md (if configured)"
-
-  critical:
-    - skill: "{architecture-skill}"
-      when: "Checking layer boundaries and import rules"
-      priority: CRITICAL
-
-    - skill: "{error-handling-skill}"
-      when: "Validating error handling patterns"
-      priority: CRITICAL
-
-  high:
-    - skill: "{data-access-skill}"
-      when: "Plan includes repository/data access changes"
-      priority: HIGH
-
-  medium:
-    - skill: "{design-patterns-skill}"
-      when: "Plan mentions patterns (Factory, Strategy, etc.)"
-      priority: MEDIUM
-
-# ════════════════════════════════════════════════════════════════════════════════
 # AUTONOMY RULE
 # ════════════════════════════════════════════════════════════════════════════════
 autonomy:
@@ -164,14 +134,6 @@ autonomy:
       action: "Can approve with notes"
 
 # ════════════════════════════════════════════════════════════════════════════════
-# QUICK REFERENCE
-# ════════════════════════════════════════════════════════════════════════════════
-quick_reference:
-  skills: ["project-specific skills from .claude/skills/"]
-  commands: ["/planner (PREV)", "/coder (NEXT)"]
-  mcp_tools: ["Sequential Thinking (complex plans)", "Memory (similar solutions)"]
-
-# ════════════════════════════════════════════════════════════════════════════════
 # MCP TOOLS
 # ════════════════════════════════════════════════════════════════════════════════
 mcp_tools:
@@ -184,16 +146,6 @@ mcp_tools:
     when: "STARTUP phase"
     usage: "search_nodes to find similar past solutions and their outcomes"
     query_pattern: "{keywords from the plan}"
-
-# ════════════════════════════════════════════════════════════════════════════════
-# RELATED
-# ════════════════════════════════════════════════════════════════════════════════
-related:
-  commands:
-    - "/planner — Previous step (creates plan)"
-    - "/coder — Next step (implements plan)"
-
-  next: "If APPROVED → /coder"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # STARTUP
@@ -210,7 +162,7 @@ startup:
       - ".claude/prompts/{feature}.md — the plan"
       - "Narrative context block from planner handoff (key decisions, risks, focus areas)"
       - "NOT the plan creation history, NOT intermediate drafts"
-    reference: "SEE: deps/workflow-phases.md#context-isolation"
+    reference: "SEE: deps/shared-core.md#context-isolation"
 
   steps:
     - step: 1
@@ -360,19 +312,7 @@ phases:
 # BEADS INTEGRATION
 # ════════════════════════════════════════════════════════════════════════════════
 beads:
-  on_start:
-    - action: "bd show <id>"
-      when: "if task ID is provided"
-
-    - action: "bd update <id> --status=in_progress"
-      when: "if beads is available"
-
-  on_complete:
-    - action: "Do NOT close automatically"
-      reason: "User must explicitly close after verifying the result"
-
-    - action: "Remind the user"
-      message: "Plan review complete. To close the task: bd close <id>"
+  # SEE: deps/shared-core.md#beads-integration
 
 # ════════════════════════════════════════════════════════════════════════════════
 # RULES
@@ -395,46 +335,22 @@ rules:
 # ERROR HANDLING
 # ════════════════════════════════════════════════════════════════════════════════
 error_handling:
-  - situation: "Plan file not found"
-    action: "ERROR: Plan not found. Create with /planner first."
-
-  - situation: "Plan incomplete (missing sections)"
-    action: "Mark as NEEDS CHANGES, list missing sections"
-
-  - situation: "Memory MCP unavailable"
-    action: "Continue without history check"
-
-  - situation: "Arch-checker agent failed"
-    action: "Perform manual check"
-
-  - situation: "Sequential Thinking required but not used in plan"
-    action: "Add as MAJOR issue"
+  # Common MCP errors: SEE deps/shared-core.md#error-handling
+  command_specific:
+    - situation: "Plan file not found"
+      action: "ERROR: Plan not found. Create with /planner first."
+    - situation: "Plan incomplete (missing sections)"
+      action: "Mark as NEEDS CHANGES, list missing sections"
+    - situation: "Arch-checker agent failed"
+      action: "Perform manual check"
+    - situation: "Sequential Thinking required but not used in plan"
+      action: "Add as MAJOR issue"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # EXAMPLES
 # ════════════════════════════════════════════════════════════════════════════════
 examples:
-  import_violations:
-    bad: |
-      // BLOCKER — API imports data access layer directly
-      import "{data_access_package}"
-    good: |
-      // CORRECT — Handler imports service/usecase layer
-      import "{service_package}"
-    severity: BLOCKER
-
-  domain_purity:
-    bad: |
-      // BLOCKER — json tags in domain entity
-      type Service struct {
-          ID string `json:"id"`
-      }
-    good: |
-      // CORRECT — clean entity
-      type Service struct {
-          ID string
-      }
-    severity: BLOCKER
+  # SEE: deps/plan-review/architecture-checks.md (full import matrix + domain purity checks)
 
 # ════════════════════════════════════════════════════════════════════════════════
 # TROUBLESHOOTING
@@ -464,20 +380,7 @@ troubleshooting:
 # SEVERITY LEVELS
 # ════════════════════════════════════════════════════════════════════════════════
 severity_levels:
-  - level: BLOCKER
-    meaning: "Architecture or specification violation"
-    blocks: true
-    examples: ["Import matrix violation", "Security vulnerability"]
-
-  - level: MAJOR
-    meaning: "Significant problem"
-    blocks: true
-    examples: ["Missing required section", "Incomplete code examples", "5+ MINOR in same Part"]
-
-  - level: MINOR
-    meaning: "Minor problem"
-    blocks: false
-    examples: ["Missing comment", "Typo in description", "Non-critical suggestion"]
+  # SEE: review-checklist.md#severity_classification
 
 # ════════════════════════════════════════════════════════════════════════════════
 # CHECKLIST

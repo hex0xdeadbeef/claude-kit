@@ -64,6 +64,6 @@ common_mistakes:
 
 ## SEE ALSO
 
-- `deps/shared-error-handling.md` — Common error scenarios (MCP, git, tests)
+- `deps/shared-core.md#error-handling` — Common error scenarios (MCP, git, tests)
 - `security-checklist.md` — OWASP checks
 - `examples.md` — Bad/good code patterns

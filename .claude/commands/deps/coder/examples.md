@@ -5,16 +5,8 @@
 # ════════════════════════════════════════════════════════════════════════════════
 examples:
   log_and_return:
-    bad: |
-      if err != nil {
-          log.Error("failed", "err", err)
-          return err
-      }
-    good: |
-      if err != nil {
-          return fmt.Errorf("operation context: %w", err)
-      }
-    why: "RULE_4: Never log AND return - creates duplicate logs in error chain"
+    # SEE: deps/code-review/examples.md#log_and_return (full bad/good/why + grep pattern)
+    rule: "RULE_4: Never log AND return — creates duplicate logs in error chain"
 
   domain_entity_with_tags:
     bad: |

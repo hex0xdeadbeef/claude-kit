@@ -1,10 +1,6 @@
 ---
 description: Implements code strictly per approved plan
 model: opus
-version: 1.3.1
-updated: 2026-02-24
-tags: [implementation, coding, plan-execution]
-related_commands: [planner, plan-review, code-review, arch, workflow]
 ---
 
 # CODER
@@ -111,41 +107,6 @@ triggers:
 
   - if: "Implementing database/repository code"
     then: "Check generated code exists, run code generation if needed"
-
-# ════════════════════════════════════════════════════════════════════════════════
-# RELATED SKILLS (auto-loaded)
-# ════════════════════════════════════════════════════════════════════════════════
-related_skills:
-  note: "Populate with project-specific skills after /meta-agent onboard"
-  reference: "SEE: .claude/skills/*/SKILL.md (if configured)"
-
-  critical:
-    - skill: "{architecture-skill}"
-      when: "Layer dependencies, import rules, module boundaries"
-    - skill: "{error-handling-skill}"
-      when: "Error patterns, wrapping, propagation"
-
-  high:
-    - skill: "{data-access-skill}"
-      when: "Implementing repository/data access code"
-    - skill: "{testing-skill}"
-      when: "Writing tests for implemented code"
-
-  medium:
-    - skill: "{code-style-skill}"
-      when: "Naming, formatting questions"
-
-quick_reference:
-  skills: ["<project-specific skills from .claude/skills/>"]
-  commands: ["/code-review (NEXT)"]
-  mcp_tools: ["Sequential Thinking (complex logic)", "Context7 (external libs)"]
-  integrations: ["beads tracking (bd)"]
-
-search_patterns:
-  note: "Adapt patterns to project's language and framework"
-  error_pattern: "Grep for project-specific error handling patterns"
-  handler_pattern: "Grep for HTTP handler functions (adapt to project's framework)"
-  test_pattern: "Grep for test files and patterns"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # AUTONOMY RULE
@@ -401,15 +362,7 @@ workflow:
 # BEADS INTEGRATION (if available)
 # ════════════════════════════════════════════════════════════════════════════════
 beads_integration:
-  on_start:
-    - action: "bd show <id>"
-      when: "Task ID provided"
-    - action: "bd update <id> --status=in_progress"
-      purpose: "Update status"
-
-  on_completion:
-    auto_close: false
-    reminder: "Implementation complete. To close task: bd close <id>"
+  # SEE: deps/shared-core.md#beads-integration
 
 # ════════════════════════════════════════════════════════════════════════════════
 # RULES
@@ -451,29 +404,18 @@ examples:
 # ERROR HANDLING
 # ════════════════════════════════════════════════════════════════════════════════
 error_handling:
-  - situation: Plan not found
-    action: "ERROR: Plan not found. Create with /planner first."
-
-  - situation: Plan not approved
-    action: "ERROR: Plan not approved. Run /plan-review first."
-
-  - situation: Tests fail 3x consecutively
-    action: "Stop, show errors, request help"
-
-  - situation: make lint fails
-    action: "Run make fmt, retry"
-
-  - situation: Hook blocks edit
-    action: "Show blocked file, explain reason"
-
-  - situation: Sequential Thinking failed
-    action: "Continue with manual logic analysis"
-
-  - situation: Context7 unavailable
-    action: "Use web search or documentation from memory"
-
-  - situation: Import matrix violation
-    action: "Fix imports, do not continue with violation"
+  # Common MCP errors: SEE deps/shared-core.md#error-handling
+  command_specific:
+    - situation: Plan not found
+      action: "ERROR: Plan not found. Create with /planner first."
+    - situation: Plan not approved
+      action: "ERROR: Plan not approved. Run /plan-review first."
+    - situation: Tests fail 3x consecutively
+      action: "Stop, show errors, request help"
+    - situation: make lint fails
+      action: "Run make fmt, retry"
+    - situation: Hook blocks edit
+      action: "Show blocked file, explain reason"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # TROUBLESHOOTING
@@ -517,17 +459,3 @@ checklist:
 
   completion:
     - "bd sync completed"
-
-# ════════════════════════════════════════════════════════════════════════════════
-# NEXT COMMANDS
-# ════════════════════════════════════════════════════════════════════════════════
-next_commands:
-  on_success:
-    - action: "/code-review"
-      description: "Review implementation before merge"
-
-  on_blocked:
-    - action: "/planner"
-      description: "Return to planning if major gaps found"
-    - action: "AskUserQuestion"
-      description: "Clarify requirements if plan unclear"

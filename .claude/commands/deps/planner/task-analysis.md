@@ -302,6 +302,5 @@ Plan classified as S → plan-review finds 4 Parts + 3 layers → upgrade to M/L
 
 ## SEE ALSO
 
-- `shared-autonomy.md` — Autonomy modes affected by routing
-- `workflow-phases.md` — Phase execution affected by skip decisions
+- `shared-core.md` — Autonomy modes, pipeline phases, error handling
 - `planner.md` — Receives classification as input context
