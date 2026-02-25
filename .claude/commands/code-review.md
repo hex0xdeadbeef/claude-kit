@@ -274,7 +274,7 @@ workflow:
       reference: ".claude/commands/review-checklist.md"
       quick_checks:
         code: "functions <= 30 lines, errors wrapped with %w, no log AND return"
-        security: "SEE: .claude/commands/deps/code-review/security-checklist.md"
+        security: "SEE: .claude/commands/deps/code-review/security-checklist.md (SKIP if complexity S)"
         tests: "coverage maintained or improved"
 
     - phase: 4

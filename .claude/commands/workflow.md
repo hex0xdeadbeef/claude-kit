@@ -143,6 +143,7 @@ startup:
         M: "standard flow (все фазы)"
         L: "full flow + Sequential Thinking рекомендован"
         XL: "full flow + Sequential Thinking ОБЯЗАТЕЛЕН"
+      after_classification: "Применить CONDITIONAL DEPS LOADING (секция ниже) — НЕ ЧИТАЙ deps, помеченные SKIP для этой complexity"
       warning: "ОБЯЗАТЕЛЬНО! Неправильная классификация = лишняя работа"
 
     - step: 1
@@ -200,6 +201,36 @@ pipeline:
       - Phase 0-4 detailed instructions
       - Completion actions (git, beads)
       - Lessons learned format
+
+# ════════════════════════════════════════════════════════════════════════════════
+# CONDITIONAL DEPS LOADING
+# ════════════════════════════════════════════════════════════════════════════════
+conditional_deps:
+  purpose: "Не загружать тяжёлые deps для простых задач. Complexity определяется в Phase 0.5 (task-analysis)."
+  severity: HIGH
+
+  rule: |
+    ПОСЛЕ task-analysis определена complexity (S/M/L/XL).
+    Используй таблицу ниже — НЕ ЧИТАЙ файлы, помеченные SKIP для текущей complexity.
+
+  matrix: |
+    | Dep file                                  | S    | M    | L/XL | Reason (S skip)                     |
+    |-------------------------------------------|------|------|------|-------------------------------------|
+    | planner/sequential-thinking-guide.md (100) | SKIP | SKIP | LOAD | Нет 3+ альтернатив при S/M          |
+    | plan-review/sequential-thinking-guide.md(76)| SKIP | SKIP | LOAD | Simple plan не требует SeqThinking   |
+    | plan-review/architecture-checks.md (171)  | SKIP | LOAD | LOAD | Phase 2 скипнута при S               |
+    | plan-review/required-sections.md (136)    | SKIP | LOAD | LOAD | Phase 2 скипнута при S               |
+    | planner/data-flow.md (42)                 | SKIP | LOAD | LOAD | Простые задачи — один слой           |
+    | code-review/security-checklist.md (72)    | SKIP | LOAD | LOAD | Простые задачи — низкий security risk |
+
+    Savings: S = ~597 строк (~4 800 токенов), M = ~176 строк (~1 400 токенов), L/XL = загружать всё.
+
+  always_load:
+    - "deps/shared-core.md — всегда нужен"
+    - "deps/planner/task-analysis.md — нужен для классификации"
+    - "deps/coder/examples.md — нужен при имплементации"
+    - "deps/code-review/examples.md — нужен при ревью"
+    - "deps/*/troubleshooting.md — загружать только при ошибках"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # HANDOFF PROTOCOL

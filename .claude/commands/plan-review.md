@@ -141,6 +141,7 @@ mcp_tools:
     when: "Complex plans (4+ Parts, 3+ layers, >150 lines)"
     usage: "Structured validation with exploration of edge cases"
     reference: ".claude/commands/deps/plan-review/sequential-thinking-guide.md"
+    condition: "ONLY read this guide if complexity L/XL. SKIP for S/M."
 
   - tool: "Memory"
     when: "STARTUP phase"
@@ -252,7 +253,8 @@ phases:
 
     sequential_thinking:
       reference: ".claude/commands/deps/plan-review/sequential-thinking-guide.md"
-      enforcement: "If criteria met but not used → add MAJOR issue"
+      condition: "ONLY read this guide if complexity L/XL. SKIP for S/M."
+      enforcement: "L/XL only: if criteria met but not used → add MAJOR issue. S/M: not required."
 
     output: |
       ## VALIDATE ARCHITECTURE ✓

@@ -216,9 +216,9 @@ phases:
 
   phase_2_data_flow:
     name: "DATA_FLOW"
-    critical: true
     reference: ".claude/commands/deps/planner/data-flow.md"
-    warning: "NEVER skip DATA_FLOW — wrong layer selection = wasted refactoring time"
+    condition: "SKIP if complexity S. LOAD for M/L/XL."
+    critical_for: "M/L/XL — wrong layer selection = wasted refactoring time"
 
   phase_3_research:
     name: "RESEARCH"
@@ -264,6 +264,7 @@ phases:
     name: "DESIGN"
     sequential_thinking:
       reference: ".claude/commands/deps/planner/sequential-thinking-guide.md"
+      condition: "ONLY read this guide if complexity L/XL. SKIP for S/M — simple tasks don't need structured analysis."
       use_when:
         - "Alternatives >= 3"
         - "Architecture layers >= 4"
