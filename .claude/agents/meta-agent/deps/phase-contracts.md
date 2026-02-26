@@ -100,7 +100,7 @@ validation_protocol:
   on_fail:
     - "Log: 'Contract validation failed: {phase} → {field}: {reason}'"
     - "Attempt auto-fix if possible (fill missing fields)"
-    - "If unfixable: escalate to gate recovery (SEE deps/blocking-gates.md#recovery_strategies)"
+    - "If unfixable: escalate to gate recovery → deps/blocking-gates.md#recovery_strategies"
   output: |
     📝 Contract: {phase_from} → {phase_to}: {VALID/INVALID}
     [if INVALID]

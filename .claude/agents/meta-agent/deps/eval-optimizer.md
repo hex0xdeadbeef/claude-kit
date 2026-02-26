@@ -271,7 +271,7 @@ separated_evaluator:
 
   reflector_role:
     trigger: "After MAR evaluation + optional debate, if aggregate_score < 0.85 OR after user rejection"
-    implementation: "Subagent (SEE: deps/subagents.md#reflector_agent)"
+    implementation: "Subagent → deps/subagents.md#reflector_agent — episodic learning, reflection synthesis"
     context_provided:
       - "Draft artifact"
       - "All 3 critic evaluations (scores + issues, attributed by critic)"

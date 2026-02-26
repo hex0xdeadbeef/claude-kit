@@ -144,11 +144,11 @@ budget_comparison:
 integration:
   load_order:
     change: "Tier 3/4 files loaded as handles by default, sections on demand"
-    ref: "SEE: deps/load-order.md#handle_aware_loading"
+    ref: "deps/load-order.md#handle_aware_loading"  # handle pattern, on-demand loading, tier-aware
 
   context_management:
     change: "budget_tracking.loaded_files gets handle_sections field"
-    ref: "SEE: deps/context-management.md#handle_tracking"
+    ref: "deps/context-management.md#handle_tracking"  # handle tracking, section budgeting
 
   subagents:
     change: "Subagent inputs specify sections, not full files"

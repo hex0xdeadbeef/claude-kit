@@ -7,7 +7,7 @@ note: |
   - Pattern 3 (4-Tier Loading): Tier 3 load/unload per phase
   - Pattern 4 (Activation Layer): validation in INIT
   Agent Teams pattern for RESEARCH + DRAFT phases
-  - SEE: deps/agent-teams.md for team definition and constraints
+  - "→ deps/agent-teams.md"  # team definition, constraints, evaluator/reflector roles
 
 ## phase_1_init
 
@@ -19,7 +19,7 @@ name: "RESEARCH"
 effort: medium
 model: "haiku (teammates) / sonnet (lead)"
 mode: "agent_team"
-team_ref: "SEE: deps/agent-teams.md#create_mode_team"
+team_ref: "deps/agent-teams.md#create_mode_team"  # researcher and scanner teammates, peer-to-peer collaboration
 
 steps_v10_team:
   # Load Order (Pattern 3) — Tier 3
@@ -56,7 +56,8 @@ fallback_sequential:
 
 step_quality:
   checks: ["≥3 code examples", "patterns identified", "similar artifacts checked"]
-  scoring: "continuous 0.0-1.0 per check, weighted average (SEE: deps/step-quality.md#phase_criteria.RESEARCH)"
+  scoring: "continuous 0.0-1.0 per check, weighted average"
+  scoring_ref: "deps/step-quality.md#phase_criteria.RESEARCH"  # RESEARCH phase weights and evaluation criteria
   threshold: 0.5  # minimum phase_score to proceed
 
 output: |
@@ -98,12 +99,12 @@ other_phases:
   - CONSTITUTE (phase 5): constitutional evaluation + checkpoint
   - DRAFT (phase 6):
     Step 0: Archive Active Composition — query archive → structural hints → track usage
-      SEE: deps/artifact-archive.md#active_composition
+      "→ deps/artifact-archive.md#active_composition"  # query API, hints format, pattern tracking
       Note: In CREATE mode archive is especially valuable (no existing artifact to reference)
     Step 2+: 'designer' teammate generates draft (with archive hints as context)
       → MAR evaluation (3 critics) → debate (if triggered) → reflector if needed
     Note: evaluator/reflector remain subagents (NOT teammates) for fresh-context isolation.
-      SEE: deps/agent-teams.md#evaluator_reflector_note
+      "→ deps/agent-teams.md#evaluator_reflector_note"  # evaluator/reflector subagent roles, isolation strategy
   - APPLY (phase 7): Tier 3 load/unload + checkpoint
   - VERIFY (phase 8): Tier 3 load/unload + checkpoint
   - CLOSE (phase 9): final progress update + archive feedback + auto-chain

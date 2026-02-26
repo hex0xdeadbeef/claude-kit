@@ -67,7 +67,7 @@ fi
 
 # Block on critical
 if (( LINE_COUNT > CRITICAL )); then
-  echo "{\"decision\":\"block\",\"reason\":\"SIZE_GATE: ${TYPE} artifact is ${LINE_COUNT} lines (critical threshold: ${CRITICAL}). Split via progressive_offloading before writing. SEE: deps/artifact-quality.md#progressive_offloading\"}"
+  echo "{\"decision\":\"block\",\"reason\":\"SIZE_GATE: ${TYPE} artifact is ${LINE_COUNT} lines (critical threshold: ${CRITICAL}). Split via progressive_offloading before writing → deps/artifact-quality.md#progressive_offloading\"}"
   exit 0
 fi
 

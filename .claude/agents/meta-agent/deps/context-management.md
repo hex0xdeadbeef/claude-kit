@@ -78,7 +78,7 @@ budget_tracking:
   # Handle-Aware Tracking
   handle_tracking:
     purpose: "Track handle vs full-load budget costs separately"
-    ref: "SEE: deps/artifact-handles.md for Handle Pattern details"
+    ref: "deps/artifact-handles.md"  # handle pattern, budget costs, section loading
     rule: "Prefer handle for Tier 3/4 files; full load only when explicitly needed"
     budget_display: |
       📊 Context Budget: {total}/{global_budget} ({percent}%)
@@ -101,7 +101,7 @@ enforcement:
   if_exceed:
     step_1: "Attempt unload lowest-tier file (Tier 4 first, then Tier 3)"
     step_2: "If still exceed: summarize file contents (10-15 line summary) + unload"
-    step_3: "Log context_pressure event to observability (SEE deps/observability.md)"
+    step_3: "Log context_pressure event → deps/observability.md"  # trace events, logging format
     step_4: "Warn user if exceed 90% budget"
     step_5: "HARD STOP if exceed 100% (force unload before proceeding)"
 

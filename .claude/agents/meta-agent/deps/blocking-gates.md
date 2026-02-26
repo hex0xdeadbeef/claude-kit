@@ -4,7 +4,7 @@ purpose: "Prevent skipping mandatory steps"
 enforcement_layers:
   advisory: "This file — agent follows instructions (can be skipped)"
   deterministic: "Hooks in settings.json — guaranteed execution (cannot be skipped)"
-  mapping: "SEE: meta-agent.md#hooks for advisory_vs_deterministic table"
+  mapping: "→ meta-agent.md#hooks — advisory vs deterministic hook definitions"
 
 ## gates
 
@@ -39,7 +39,7 @@ SIZE_GATE:
   enforcement: "deterministic (PreToolUse hook: check-artifact-size.sh blocks on critical)"
   thresholds: {command: [300/500/800], skill: [300/600/700], rule: [100/200/400]}
   format: "[recommended/warning/critical]"
-  on_exceed: "Split — SEE: artifact-quality.md#progressive_offloading"
+  on_exceed: "Split → deps/artifact-quality.md#progressive_offloading"
 
 STEP_QUALITY_GATE:
   when: "after each phase"
@@ -47,7 +47,7 @@ STEP_QUALITY_GATE:
   scoring: "continuous 0.0-1.0 per check, weighted average per phase"
   checks: ["phase_score >= 0.5 (continuous scoring)", "no 2 consecutive phases < 0.5", "trajectory not declining 3+ phases (advisory)"]
   on_fail: "score < 0.5 → repeat phase or escalate. Declining trajectory → advisory warning at checkpoint."
-  ref: "SEE: deps/step-quality.md for full scoring model and trajectory tracking"
+  ref: "deps/step-quality.md#STEP_QUALITY_GATE"  # scoring model, phase criteria, trajectory tracking
 
 EXTERNAL_VALIDATION_GATE:
   when: "VERIFY phase"
@@ -130,7 +130,7 @@ recovery_strategies:
       steps:
         - "Identify sections > 100 lines"
         - "Move largest section to deps/ file"
-        - "Update artifact with SEE: reference"
+        - "Update artifact with deps/ reference"
         - "Verify references work"
       retry: 1
     fallback:

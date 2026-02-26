@@ -17,7 +17,7 @@ troubleshooting:
     fix: |
       Option 1: Split into multiple enhance calls
       Option 2: Move details to deps/ files (progressive loading)
-    recovery: "SEE: deps/blocking-gates.md#recovery_strategies → SIZE_GATE"
+    recovery: "→ deps/blocking-gates.md#recovery_strategies — SIZE_GATE recovery options"
   - problem: "Artifact broken after APPLY"
     cause: "Bad edit or missing section"
     fix: "/meta-agent rollback"
@@ -26,12 +26,12 @@ troubleshooting:
     fix: "Always save key findings to MCP memory"
   - problem: "Gate fails with no recovery"
     cause: "Blocking gate rejects but no clear next step"
-    fix: "Use gate recovery strategies: SEE deps/blocking-gates.md#recovery_strategies"
+    fix: "Use gate recovery strategies → deps/blocking-gates.md#recovery_strategies"
     lesson: "Every gate failure should have an auto-recovery or escalation path"
   - problem: "Context budget exceeded mid-phase"
     cause: "Too many deps loaded simultaneously"
     fix: "Check budget before loading; unload lowest-tier files first"
-    recovery: "SEE: deps/context-management.md#budget_tracking"
+    recovery: "→ deps/context-management.md#budget_tracking — context budget enforcement"
 
 common_mistakes:
   - mistake: "Skip EXPLORE, jump to PLAN"

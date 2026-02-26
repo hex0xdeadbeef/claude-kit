@@ -246,7 +246,7 @@ phase_7_memory:
 # ════════════════════════════════════════════════════════════════════════════════
 phase_8_lessons:
   purpose: "Сохранить уроки для self-improvement"
-  integration: "SEE: meta-agent.md#self_improvement"
+  integration: "→ meta-agent.md#self_improvement — self-improvement integration"
 
   capture_when:
     - "Fix required multiple iterations"
@@ -323,7 +323,7 @@ severity_levels:
     must_fix: true
     examples:
       - "No examples section"
-      - "No trigger keywords"
+      - "No trigger phrases in description"
       - "Missing autonomy rule (for agent)"
 
   - level: "MEDIUM"
@@ -380,10 +380,18 @@ fix_patterns:
           good: "correct code"
           why: "explanation"
 
-  - issue: "No trigger keywords"
-    fix: "Add to description"
+  - issue: "No trigger phrases in description"
+    fix: "Add trigger phrases — format depends on artifact type"
     tool: "Edit"
-    template: |
+    note: |
+      Skills use Anthropic standard format (frontmatter description).
+      Commands/agents use YAML description field.
+    template_skill: |
+      # In YAML frontmatter (--- delimiters):
+      description: What this skill does. Use when user asks about "trigger phrase 1",
+        "trigger phrase 2", or works with [domain]. Keywords: kw1, kw2.
+    template_other: |
+      # In YAML description field:
       description: |
         Purpose...
 

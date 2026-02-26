@@ -358,13 +358,14 @@ quality_checklists:
       - "common_mistakes"
 
   rule:
+    note: "Rules use Claude Code format: YAML frontmatter (---) with paths: + Markdown body"
     required:
-      - "YAML with paths (glob)"
-      - "@skill references"
-      - "Quick checklist"
+      - "YAML frontmatter with paths: (quoted glob patterns) — or no frontmatter for global rules"
+      - "Markdown body with ## Checklist (3-7 actionable items)"
     recommended:
-      - "examples"
-      - "exceptions"
+      - "## Forbidden section with Bad/Good code examples"
+      - "## References with @skill links"
+      - "## Exceptions (when rule does NOT apply)"
 
   agent:
     required:

@@ -181,7 +181,7 @@ quality_checker:
 
 # ── MAR Evaluation Team (replaces single evaluator_agent) ──
 # Multi-Agent Reflexion: 3 persona-driven critics run in parallel
-# SEE: deps/eval-optimizer.md#mar_evaluation for full architecture
+# → deps/eval-optimizer.md#mar_evaluation — full MAR architecture, scoring, debate rules
 
 correctness_critic:
   model: opus
@@ -245,7 +245,7 @@ mar_aggregation:
 # ── DEBATE ROUND ──
 # Each critic reviews the other two critics' issues and responds with agree/disagree/escalate/add.
 # Runs only when triggered (spread > 0.15 OR score in [0.75, 0.90]).
-# SEE: deps/eval-optimizer.md#debate for full architecture.
+# → deps/eval-optimizer.md#debate — debate triggering, peer review, consensus adjustment
 
 debate_round:
   purpose: "Cross-critique to resolve disagreements and catch blind spots"
@@ -344,7 +344,7 @@ process:
 ### Mode: CREATE (Agent Teams)
 
 recommended: "Agent Teams pattern (peer-to-peer)"
-details: "SEE: deps/agent-teams.md for full team definition"
+details: "deps/agent-teams.md"  # team definition, constraints, peer-to-peer interaction patterns
 team:
   lead: meta-agent
   teammates: [researcher (haiku), scanner (haiku), designer (sonnet)]
@@ -396,7 +396,7 @@ draft_phase_dag:
   parallel_debate: true      # 3 debate reviews run concurrently (if triggered)
   critical_tasks: ["correctness_critic"]
   optional_tasks: ["reflector_agent", "debate_round"]
-  ref: "SEE: deps/eval-optimizer.md#mar_evaluation and #debate"
+  ref: "deps/eval-optimizer.md"  # MAR evaluation, debate rules, aggregation logic
 
 ### Mode: AUDIT
 

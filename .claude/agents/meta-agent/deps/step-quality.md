@@ -91,7 +91,7 @@ phase_criteria:
         question: "YAML/markdown syntax valid (lint passes)?"
         weight: 0.30
       - name: "references_intact"
-        question: "No broken references (SEE:, deps/, @skill)?"
+        question: "No broken references (deps/, @skill)?"
         weight: 0.30
     on_low: "Fix issues before VERIFY"
 
@@ -135,13 +135,13 @@ trajectory:
 
 ## Integration Points
 
-blocking_gates_ref: "SEE: deps/blocking-gates.md#STEP_QUALITY_GATE"
+blocking_gates_ref: "deps/blocking-gates.md#STEP_QUALITY_GATE"  # gate enforcement, recovery strategies
 gate_behavior: "STEP_QUALITY_GATE passes if phase_score >= 0.5 (backward compat)"
 
-progress_tracking_ref: "SEE: deps/progress-tracking.md"
+progress_tracking_ref: "deps/progress-tracking.md"  # checkpoint management, quality_trajectory storage
 checkpoint_write: "quality_trajectory appended after each phase"
 
-observability_ref: "SEE: deps/observability.md"
+observability_ref: "deps/observability.md"  # trace events, logging
 trace_event: "step_quality_score logged per phase with full check breakdown"
 
 ## Output Format

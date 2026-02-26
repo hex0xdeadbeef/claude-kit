@@ -75,7 +75,7 @@ rules:
 # Handle-Aware Loading
 handle_aware_loading:
   purpose: "Use artifact handles to reduce budget consumption"
-  ref: "SEE: deps/artifact-handles.md for full Handle Pattern"
+  ref: "deps/artifact-handles.md"  # handle pattern, section-aware loading, budget optimization
   policy:
     tier_1: "Always full load (meta-agent.md — too critical for partial)"
     tier_2: "Full load (mode-specific deps, persistent for run)"
@@ -187,7 +187,7 @@ before_load_checks:
   check_1_budget:
     action: "total_lines + new_file_lines <= max_total?"
     if_no: "Unload lowest-tier file, summarize if needed, retry"
-    ref: "SEE: deps/context-management.md#enforcement"
+    ref: "deps/context-management.md#enforcement"  # budget enforcement, unload strategy
 
   check_2_necessity:
     action: "Is this file actually needed for current phase?"

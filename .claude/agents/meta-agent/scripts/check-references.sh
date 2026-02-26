@@ -8,9 +8,10 @@
 #   exit 0 always
 #
 # Checks:
-#   1. All SEE: references point to existing files
-#   2. All Read/Load references point to existing files
-#   3. No self-references
+#   1. All ref:/deps/ references point to existing files
+#   2. All arrow (→) references point to existing files
+#   3. Legacy SEE: references (warn to migrate)
+#   4. No self-references
 
 set -euo pipefail
 
@@ -35,17 +36,29 @@ fi
 ERRORS=()
 WARNINGS=()
 
-# Extract all referenced file paths from common patterns:
-#   SEE: path/to/file.md
-#   "path/to/file.md"
-#   deps/something.md
-REFS=$(grep -oP '(?:SEE:|Read |Load )\s*["\x27]?([a-zA-Z0-9_./-]+\.md)' "$FILE_PATH" | \
-       grep -oP '[a-zA-Z0-9_./-]+\.md' | sort -u)
+# Extract all referenced file paths from patterns:
+#   ref: "deps/file.md"          — new standard format
+#   "→ deps/file.md"             — arrow inline format
+#   # → deps/file.md             — arrow comment format
+#   deps/something.md            — bare deps/ path
+#   SEE: path/to/file.md         — legacy format (will warn)
 
-# Also check deps/ references
-DEPS_REFS=$(grep -oP 'deps/[a-zA-Z0-9_-]+\.md' "$FILE_PATH" | sort -u)
+# New format: ref fields and arrow references
+# Note: || true prevents pipefail from killing script when grep finds no matches
+NEW_REFS=$(grep -oP '(?:ref:\s*"|"→\s*|#\s*→\s*)[a-zA-Z0-9_./-]+\.md' "$FILE_PATH" 2>/dev/null | \
+           grep -oP '[a-zA-Z0-9_./-]+\.md' | sort -u || true)
 
-ALL_REFS=$(echo -e "${REFS}\n${DEPS_REFS}" | sort -u | grep -v '^$')
+# Bare deps/ paths (catches both old and new)
+DEPS_REFS=$(grep -oP 'deps/[a-zA-Z0-9_.-]+\.md' "$FILE_PATH" 2>/dev/null | sort -u || true)
+
+# Legacy SEE: references (should be migrated)
+LEGACY_REFS=$(grep -oP 'SEE:\s*["\x27]?[a-zA-Z0-9_./-]+\.md' "$FILE_PATH" 2>/dev/null | \
+              grep -oP '[a-zA-Z0-9_./-]+\.md' | sort -u || true)
+if [[ -n "$LEGACY_REFS" ]]; then
+  WARNINGS+=("REF_FORMAT: Found legacy SEE: references in ${FILE_PATH} — migrate to ref: format")
+fi
+
+ALL_REFS=$(echo -e "${NEW_REFS}\n${DEPS_REFS}\n${LEGACY_REFS}" | sort -u | grep -v '^$' || true)
 
 if [[ -z "$ALL_REFS" ]]; then
   exit 0

@@ -37,7 +37,7 @@ principles:
     weight: 0.25
     question: "Can a developer understand the artifact in 2 minutes?"
     checks:
-      - "Structure is primarily YAML (>80% not prose)"
+      - "Structure is primarily YAML (>80% not prose) — applies to commands/agents; skills and rules use YAML frontmatter + Markdown body per platform specs"
       - "Each major section has purpose or description"
       - "Examples for each non-trivial pattern (bad/good/why)"
       - "No ambiguous terminology without explanation"
@@ -73,7 +73,7 @@ principles:
     weight: 0.15
     question: "Does the artifact use LLM context optimally?"
     checks:
-      - "Size within type-specific threshold (SEE blocking-gates.md)"
+      - "Size within type-specific threshold → deps/blocking-gates.md"
       - "No semantic duplication with other artifacts"
       - "Progressive offloading applied (deps/ for large sections)"
       - "Load order tier appropriate"
@@ -151,10 +151,11 @@ domain_principles:
     skill:
       P6_trigger_coverage:
         question: "Do triggers cover all realistic use-cases?"
+        note: "Skills use Anthropic format: triggers are in frontmatter description field as [What]+[When]+[Capabilities]"
         checks:
-          - "Load when: conditions cover primary + secondary scenarios"
-          - "Keywords include synonyms and common misspellings"
-          - "Negative triggers present (when NOT to load)"
+          - "Description trigger phrases cover primary + secondary scenarios"
+          - "Keywords in description include synonyms and common misspellings"
+          - "Negative triggers present (when NOT to load) — in description or body"
           - "Trigger overlap with other skills documented"
         scoring:
           1.0: "All scenarios covered, negative triggers present, overlap mapped"
@@ -290,7 +291,7 @@ evaluator_usage:
     - "Draft artifact (complete content)"
     - "This constitution (P1-P5 universal principles)"
     - "Domain-specific P6-P7 for artifact_type"
-    - "Adaptive weights for artifact type (SEE: deps/eval-optimizer.md#adaptive_weights)"
+    - "Adaptive weights for artifact type → deps/eval-optimizer.md#adaptive_weights"
   context_NOT_provided:
     - "Generation process or plan (prevents sunk cost bias)"
     - "Previous drafts (evaluates only current version)"

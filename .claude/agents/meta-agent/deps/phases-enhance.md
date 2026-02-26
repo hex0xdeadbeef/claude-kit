@@ -33,22 +33,22 @@ phases_enhance:
       - "8a. BUDGET: Initialize budget_tracking (total=0, loaded_files=[])"
       # Original steps
       - "9. mcp__memory__read_graph (load context)"
-      - "9a. Load episodic reflections: SEE deps/self-improvement.md#episodic_memory"
+      - "9a. Load episodic reflections → deps/self-improvement.md#episodic_memory"
       - "10. Read current artifact file"
-      - "11. Load lessons (auto-injection): SEE deps/self-improvement.md#auto_injection"
+      - "11. Load lessons (auto-injection) → deps/self-improvement.md#auto_injection"
       - "12. If --track: bd create"
       # Phase Contract Output
-      - "12a. Validate INIT output against phase contract: SEE deps/phase-contracts.md"
+      - "12a. Validate INIT output against phase contract → deps/phase-contracts.md"
       # Checkpoint (Pattern 1)
       - "13. CHECKPOINT: Update progress.json (INIT: done), write checkpoints/init.json"
     activation:
-      ref: "SEE: deps/activation-layer.md"
+      ref: "deps/activation-layer.md"  # keyword matching, pattern extraction, false positive filtering
       steps: ["keywords", "patterns", "filter", "validate", "disambiguate"]
     progress:
-      ref: "SEE: deps/progress-tracking.md"
+      ref: "deps/progress-tracking.md"  # workspace creation, progress tracking, checkpoint management
       creates: ["workspace dir", "progress.json", "checkpoints/init.json"]
     load_order:
-      ref: "SEE: deps/load-order.md"
+      ref: "deps/load-order.md"  # tier-based loading strategy, tier definitions, unload operations
       tier_1: "meta-agent.md (already loaded)"
       tier_2: "deps/artifact-analyst.md"
       loaded_deps: ["meta-agent.md", "artifact-analyst.md"]
@@ -60,7 +60,7 @@ phases_enhance:
       enabled: true
       max_inject: 3
       filter: "artifact_type matches, recency weighted"
-      ref: "SEE: deps/self-improvement.md#episodic_memory"
+      ref: "deps/self-improvement.md#episodic_memory"  # episodic memory storage, lesson injection, filters
     output: "USE phase_output_template: fields=[activation, run_id, workspace, artifact, lessons:{N}, reflections:{R}, loaded_deps, budget]"
 
   phase_2_explore:
@@ -81,7 +81,7 @@ phases_enhance:
       # Unload (Pattern 3)
       - "6. UNLOAD: Tier 3 (keep findings in memory)"
       # Phase Contract Output
-      - "6a. Validate EXPLORE output against phase contract: SEE deps/phase-contracts.md"
+      - "6a. Validate EXPLORE output against phase contract → deps/phase-contracts.md"
       # Checkpoint (Pattern 1)
       - "7. CHECKPOINT: Update progress.json (EXPLORE: done), write checkpoints/explore.json"
     knowledge_hierarchy:
@@ -94,7 +94,8 @@ phases_enhance:
       pattern: "internal/{layer}/ — {layer description}"
     step_quality:
       checks: ["PROJECT-KNOWLEDGE.md read", "artifact loaded", "≥1 skill/pattern found"]
-      scoring: "continuous 0.0-1.0 per check, weighted average (SEE: deps/step-quality.md#phase_criteria.EXPLORE)"
+      scoring: "continuous 0.0-1.0 per check, weighted average"
+      scoring_ref: "deps/step-quality.md#phase_criteria.EXPLORE"  # EXPLORE phase weights and scoring thresholds
       threshold: 0.5  # minimum phase_score to proceed
     output: "USE phase_output_template: fields=[sources, new_findings, lessons:{N}, quality_checks, budget, gate:EXPLORE_GATE]"
 
@@ -106,7 +107,7 @@ phases_enhance:
       - "1. Analyze artifact against checklist"
       - "2. Identify gaps and priorities"
       # Phase Contract Output
-      - "2a. Validate ANALYZE output against phase contract: SEE deps/phase-contracts.md"
+      - "2a. Validate ANALYZE output against phase contract → deps/phase-contracts.md"
       # Checkpoint (Pattern 1)
       - "3. CHECKPOINT: Update progress.json (ANALYZE: done), write checkpoints/analyze.json"
     checklist:
@@ -134,11 +135,11 @@ phases_enhance:
       # Unload (Pattern 3)
       - "4. UNLOAD: Tier 3 (artifact-review.md, plan-exploration.md)"
       # Phase Contract Output
-      - "4a. Validate PLAN output against phase contract: SEE deps/phase-contracts.md"
+      - "4a. Validate PLAN output against phase contract → deps/phase-contracts.md"
       # Checkpoint (Pattern 1)
       - "5. CHECKPOINT: Update progress.json (PLAN: done), write checkpoints/plan.json"
     tree_of_thought:
-      ref: "SEE: deps/plan-exploration.md"
+      ref: "deps/plan-exploration.md"  # tree-of-thought exploration, multi-branch evaluation, pruning strategy
       trigger: "CREATE mode OR estimated_changes > 5"
       fallback: "Linear plan if ToT not triggered or all branches < 0.7"
     thresholds:
@@ -158,7 +159,7 @@ phases_enhance:
       # Constitutional evaluation(replaces ad-hoc critique)
       - "2. Evaluate plan against each universal principle (P1-P5)"
       - "3. Score each principle 0.0-1.0 with explicit reasoning"
-      - "3a. Evaluate domain-specific P6-P7 for artifact_type (SEE: artifact-constitution.md#domain_principles)"
+      - "3a. Evaluate domain-specific P6-P7 for artifact_type → deps/artifact-constitution.md#domain_principles"
       - "4. If any principle < 0.7: describe violation + propose fix"
       - "5. Calculate: base = weighted_sum(P1-P5), bonus = (P6+P7)/2*0.10-0.05, final = clamp(base+bonus, 0, 1)"
       - "6. If final < 0.85: propose improvements, loop"
@@ -170,11 +171,11 @@ phases_enhance:
       # Unload (Pattern 3)
       - "11. UNLOAD: Tier 3 (artifact-constitution.md)"
       # Phase Contract Output
-      - "11a. Validate CONSTITUTE output against phase contract: SEE deps/phase-contracts.md"
+      - "11a. Validate CONSTITUTE output against phase contract → deps/phase-contracts.md"
       # Checkpoint (Pattern 1)
       - "12. CHECKPOINT: Update progress.json (CONSTITUTE: done), write checkpoints/constitute.json"
     constitution:
-      ref: "SEE: deps/artifact-constitution.md"
+      ref: "deps/artifact-constitution.md"  # universal principles P1-P5, domain principles P6-P7, scoring
       universal: ["P1_correctness (0.30)", "P2_clarity (0.25)", "P3_robustness (0.20)", "P4_efficiency (0.15)", "P5_maintainability (0.10)"]
       domain: "P6 + P7 per artifact_type (bonus ±0.05)"
       threshold: 0.85
@@ -198,7 +199,7 @@ phases_enhance:
       - "0d. ARCHIVE TRACK: Record patterns_queried, patterns_presented in progress.json"
       - "0e. If no matching patterns: skip silently, proceed to generation"
       - "0f. Present hints to generator as pre-generation context"
-      # SEE: deps/artifact-archive.md#active_composition for query API + hint format
+      # → deps/artifact-archive.md#active_composition — query API, hint format, pattern composition
       # Note: archive unloaded in step 11 together with eval-optimizer
       # ── End Step 0 ──
       # Draft generation (Actor)
@@ -209,7 +210,7 @@ phases_enhance:
       - "   4a. correctness_critic (opus) → P1+P3+P6+P7 scores + issues"
       - "   4b. clarity_critic (sonnet) → P2+P5 scores + issues"
       - "   4c. efficiency_critic (haiku) → P4+token_density scores + issues"
-      # Debate Round (conditional, SEE: eval-optimizer.md#debate)
+      # Debate Round (conditional → deps/eval-optimizer.md#debate)
       - "4d. DEBATE GATE: if score_spread > 0.15 OR aggregate in [0.75, 0.90]:"
       - "   4e. Spawn 3 debate reviews in parallel (max_turns:3 each) — each critic reviews other two's issues"
       - "   4f. POST-DEBATE: adjust severities by consensus (confirmed ↑, disputed ↓)"
@@ -228,20 +229,21 @@ phases_enhance:
       # Unload (Pattern 3)
       - "11. UNLOAD: Tier 3 (eval-optimizer.md, artifact-archive.md)"
       # Phase Contract Output
-      - "11a. Validate DRAFT output against phase contract: SEE deps/phase-contracts.md"
+      - "11a. Validate DRAFT output against phase contract → deps/phase-contracts.md"
       # Checkpoint (Pattern 1)
       - "12. CHECKPOINT: Update progress.json (DRAFT: done), write checkpoints/draft.json"
     archive_composition:
-      ref: "SEE: deps/artifact-archive.md#active_composition"
+      ref: "deps/artifact-archive.md#active_composition"  # archive queries, pattern hints, composition tracking
       trigger: "Step 0, before generation (BOTH enhance and create modes)"
     eval_optimizer:
-      ref: "SEE: deps/eval-optimizer.md#mar_evaluation and #debate"
+      ref: "deps/eval-optimizer.md#mar_evaluation"  # MAR evaluation architecture, debate rules, aggregation
+      debate_ref: "deps/eval-optimizer.md#debate"  # debate triggering, review process, consensus
       max_iterations: 3
       quality_threshold: 0.85
-      adaptive_weights: "SEE: deps/eval-optimizer.md#adaptive_weights"
-      mar_critics: "SEE: deps/subagents.md#correctness_critic, clarity_critic, efficiency_critic"
-      debate: "SEE: deps/subagents.md#debate_round (conditional on spread/score)"
-      reflector: "SEE: deps/subagents.md#reflector_agent"
+      adaptive_weights: "deps/eval-optimizer.md#adaptive_weights"  # weight adaptation per artifact type
+      mar_critics: "deps/subagents.md"  # correctness_critic, clarity_critic, efficiency_critic roles
+      debate: "deps/subagents.md#debate_round"  # debate round architecture, conditional triggering
+      reflector: "deps/subagents.md#reflector_agent"  # reflector synthesis and optimization guidance
       flow: |
         GENERATE → [3 critics ∥] → DEBATE GATE → [3 debate reviews ∥ if triggered] → AGGREGATE → 0.65
                                                                                                      ↓ REFLECT
@@ -263,10 +265,10 @@ phases_enhance:
       # Unload (Pattern 3)
       - "4. UNLOAD: Tier 3 (artifact-quality.md)"
       # Phase Contract Output
-      - "4a. Validate APPLY output against phase contract: SEE deps/phase-contracts.md"
+      - "4a. Validate APPLY output against phase contract → deps/phase-contracts.md"
       # Checkpoint (Pattern 1)
       - "5. CHECKPOINT: Update progress.json (APPLY: done), write checkpoints/apply.json"
-    quality_checklist: ".claude/agents/meta-agent/deps/artifact-quality.md"
+    quality_checklist: "deps/artifact-quality.md"  # AI-first principles, size baselines, external validation
     output: "USE phase_output_template: fields=[modified_file, changes_applied:{N}]"
 
   phase_8_verify:
@@ -284,7 +286,7 @@ phases_enhance:
       # Unload (Pattern 3)
       - "6. UNLOAD: Tier 3 (artifact-quality.md)"
       # Phase Contract Output
-      - "6a. Validate VERIFY output against phase contract: SEE deps/phase-contracts.md"
+      - "6a. Validate VERIFY output against phase contract → deps/phase-contracts.md"
       # Checkpoint (Pattern 1)
       - "7. CHECKPOINT: Update progress.json (VERIFY: done), write checkpoints/verify.json"
     external_validation:
@@ -319,7 +321,7 @@ phases_enhance:
       - "3c. Save patterns to .meta-agent/archive/ with quality_score"
       # Archive feedback
       - "3e. FEEDBACK: If patterns_used non-empty in progress.json → update success_rate"
-      - "3f. FEEDBACK: SEE deps/artifact-archive.md#feedback for EMA formula"
+      - "3f. FEEDBACK → deps/artifact-archive.md#feedback for EMA formula"
       - "3d. UNLOAD: deps/artifact-archive.md"
       # Original steps
       - "4. If --track: bd close"
@@ -332,10 +334,10 @@ phases_enhance:
       save_trace: true
       save_lessons: "if CONSTITUTE found issues or VERIFY had problems"
     archive_extraction:
-      ref: "SEE: deps/artifact-archive.md"
+      ref: "deps/artifact-archive.md"  # pattern extraction, quality scoring, archive storage
       trigger: "After successful APPLY"
       action: "Extract self-contained patterns into archive"
     auto_chain:
-      ref: "SEE: deps/activation-layer.md#auto_chain"
+      ref: "deps/activation-layer.md#auto_chain"  # auto-chaining rules, suggestion triggers, artifact audit
       suggestion: "Run /meta-agent audit to verify all artifacts"
     output: "USE phase_output_template: fields=[mcp_memory, metrics(duration|reads|writes), lessons:{N}, patterns:{P}, run_id, auto_chain(if major)]"

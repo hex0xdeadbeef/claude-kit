@@ -156,7 +156,7 @@ active_composition:
       patterns_used: "list[pattern_id] (generator explicitly incorporated)"
       patterns_skipped: "list[pattern_id] (presented but not used)"
     storage: "progress.json → phases.DRAFT.archive_composition"
-    feedback_loop: "patterns_used → update success_rate in CLOSE phase (SEE: feedback operation)"
+    feedback_loop: "patterns_used → update success_rate in CLOSE phase → deps/artifact-archive.md#feedback"
 
   when_no_archive:
     condition: "Archive empty OR no patterns match"
@@ -230,6 +230,6 @@ integration:
   load_tier: "Tier 3 (loaded in DRAFT step 0 and CLOSE, unloaded after)"
   mcp_memory: "Archive metadata also saved to mcp__memory for cross-session access"
   phase_refs:
-    DRAFT_enhance: "SEE: deps/phases-enhance.md#phase_6_draft (step 0)"
-    DRAFT_create: "SEE: deps/phases-create.md#other_phases (step 0)"
-    CLOSE: "SEE: deps/phases-enhance.md#phase_9_close (steps 3a-3d + 3e feedback)"
+    DRAFT_enhance: "→ deps/phases-enhance.md#phase_6_draft — step 0 archive composition"
+    DRAFT_create: "→ deps/phases-create.md#other_phases — step 0 archive composition"
+    CLOSE: "→ deps/phases-enhance.md#phase_9_close — steps 3a-3d + 3e feedback"

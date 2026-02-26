@@ -25,7 +25,7 @@ constraints:
   one_team_per_session: "Only one team active at a time"
   lead_is_fixed: "Lead agent (meta-agent) fixed for session lifetime"
   max_teammates: 7  # Same as max_concurrent subagents
-  max_turns: "All teammates MUST have max_turns set — SEE: subagents.md#max_turns_policy"
+  max_turns: "All teammates MUST have max_turns set → deps/subagents.md#max_turns_policy"
 
 ## CREATE Mode Team Definition
 
@@ -109,15 +109,15 @@ evaluator_reflector_note:
     3. Mixed model tiers — opus/sonnet/haiku (different from team default)
     4. Reflexion pattern requires isolation between generator and evaluator
     5. MAR requires independent perspectives — teammates sharing context would defeat purpose
-  max_turns_ref: "SEE: subagents.md#max_turns_policy for limits and on_limit_reached behavior"
-  ref: "SEE: subagents.md#correctness_critic, eval-optimizer.md#mar_evaluation"
+  max_turns_ref: "→ deps/subagents.md#max_turns_policy — max turns limits, on_limit_reached behavior"
+  ref: "→ deps/subagents.md and deps/eval-optimizer.md — MAR critic and evaluation architecture"
 
 ## Fallback
 
 fallback:
   when: "Agent Teams API unavailable or team spawn fails"
   action: "Fall back to DAG orchestrator-worker pattern"
-  ref: "SEE: subagents.md#Mode: CREATE for original DAG"
+  ref: "→ deps/subagents.md#Mode: CREATE — original DAG orchestration pattern"
   note: "Produces identical results, just without peer-to-peer messaging"
 
 ## Migration Path

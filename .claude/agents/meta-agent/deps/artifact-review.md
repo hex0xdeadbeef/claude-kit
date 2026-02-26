@@ -261,7 +261,7 @@ phase_7_output:
 # REFERENCE: Quality Criteria (canonical source: artifact-quality.md)
 # ════════════════════════════════════════════════════════════════════════════════
 quality_criteria:
-  ref: "SEE: artifact-quality.md for complete required fields, sections, and criteria by type"
+  ref: "deps/artifact-quality.md"  # required fields, sections, criteria by type, rating scale
   decision_gate: "Score >= 3/5 (all REQUIRED met) → APPROVED"
 
 # ════════════════════════════════════════════════════════════════════════════════
@@ -270,7 +270,7 @@ quality_criteria:
 auto_fix_rules:
   - "Missing YAML field → add placeholder (e.g. name: <artifact-name>)"
   - "Missing section → add outline + TODO markers"
-  - "No trigger keywords → add 'Load when:' + keywords to description"
+  - "No trigger phrases → for skills: add [What]+[When]+[Capabilities] to frontmatter description; for other types: add 'Load when:' + keywords to description"
   - "No examples → add EXAMPLES with bad/good/why structure"
   - "No error handling → add errors: {fatal: [...], recoverable: [...]}"
   - "No NEXT reference → add 'NEXT: /next-command' (if pipeline)"

@@ -1,5 +1,12 @@
 ---
-description: "Meta-agent for Claude Code artifacts (commands, skills, rules, agents)"
+name: meta-agent
+description: >-
+  CRUD lifecycle manager for Claude Code artifacts — commands, skills, rules, agents.
+  Use when user asks to "create command", "create skill", "enhance artifact",
+  "audit artifacts", "delete rule", "rollback changes", or "onboard project".
+  Modes: create, enhance, audit, delete, rollback, list, onboard.
+  Features 9-phase workflow with quality gates, constitutional evaluation, and progress tracking.
+  Do NOT use for writing application code, file operations, or general coding tasks.
 model: opus
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, mcp__memory__read_graph, mcp__memory__add_observations
 ---
@@ -7,7 +14,7 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, mcp__memory__read_graph, mcp
 meta:
   version: 9.0.0
   updated: 2026-02-08
-  changelog: "SEE: deps/changelog.md"
+  changelog: "deps/changelog.md"  # version history, breaking changes per release
 
 # ════════════════════════════════════════════════════════════════════════════════
 # WORKFLOW
@@ -21,7 +28,7 @@ workflow:
     PLAN: "Tree of Thought exploration (conditional: CREATE or changes > 5)"
     DRAFT: "EVALUATE (separated evaluator subagent) + REFLECT (reflector subagent) loop"
     CLOSE: "ARCHIVE extraction (ADAS pattern)"
-  enforcement: "SEE: #phase_enforcement section below"
+  enforcement: "→ #phase_enforcement section below"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # MODES
@@ -78,9 +85,9 @@ phase_enforcement:
     VERIFY: { gate: "EXTERNAL_VALIDATION_GATE", skip_consequence: "Broken artifact released" }
     CLOSE: { gate: "OBSERVABILITY_GATE", skip_consequence: "Lost knowledge between sessions", sub: "ARCHIVE extraction" }
 
-  gates_ref: "SEE: .claude/agents/meta-agent/deps/blocking-gates.md"
-  recovery_ref: "SEE: .claude/agents/meta-agent/deps/blocking-gates.md#recovery_strategies"
-  contracts_ref: "SEE: .claude/agents/meta-agent/deps/phase-contracts.md"
+  gates_ref: "deps/blocking-gates.md"              # gate definitions, thresholds, pass/fail criteria
+  recovery_ref: "deps/blocking-gates.md#recovery_strategies"  # auto-recovery → fallback → user escalation
+  contracts_ref: "deps/phase-contracts.md"          # typed inter-phase data contracts, validation rules
 
   stop_conditions:
     - "Gate FAILED → attempt auto-recovery, then fallback, then escalate to user"
@@ -103,7 +110,7 @@ phase_enforcement:
 phases_enhance:
   summary: "9 phases with integrated v9.0 patterns: Constitutional critique, separated evaluation, episodic reflection, ADAS archive"
   phases: ["INIT", "EXPLORE", "ANALYZE", "PLAN(ToT)", "CONSTITUTE", "DRAFT(+eval+reflect)", "APPLY", "VERIFY", "CLOSE(+archive)"]
-  details: "SEE: .claude/agents/meta-agent/deps/phases-enhance.md"
+  ref: "deps/phases-enhance.md"  # 9-phase workflow steps, integration patterns, load order per phase
   key_v9_changes:
     - "CRITIQUE → CONSTITUTE: formal constitutional evaluation (P1-P5 principles)"
     - "DRAFT: separated evaluator subagent + reflector subagent (Reflexion pattern)"
@@ -117,10 +124,10 @@ phases_enhance:
 phases_create:
   note: "CREATE mode uses same 9 phases as ENHANCE with RESEARCH instead of EXPLORE"
   phases: ["INIT", "RESEARCH", "TEMPLATE", "PLAN", "CONSTITUTE", "DRAFT", "APPLY", "VERIFY", "CLOSE"]
-  details: "SEE: .claude/agents/meta-agent/deps/phases-create.md"
+  ref: "deps/phases-create.md"  # CREATE mode phases, agent team integration, template loading
   v10_agent_teams:
     pattern: "Agent Teams (peer-to-peer) replaces orchestrator-worker DAG"
-    team: "SEE: deps/agent-teams.md#create_mode_team"
+    team: "deps/agent-teams.md#create_mode_team"  # team composition, constraints, peer-to-peer protocol
     teammates: [researcher (haiku), scanner (haiku), designer (sonnet)]
     note: "evaluator/reflector remain subagents (opus) — need fresh context"
   key_differences:
@@ -187,7 +194,7 @@ phases_rollback:
 phases_onboard:
   description: "Bootstrap .claude/ for new project"
   workflow: "VALIDATE → DETECT → GENERATE → CONFIGURE → REPORT"
-  details: "SEE: .claude/agents/meta-agent/deps/phases-onboard.md"
+  ref: "deps/phases-onboard.md"  # VALIDATE → DETECT → GENERATE → CONFIGURE → REPORT steps
 
 # ════════════════════════════════════════════════════════════════════════════════
 # CHECKPOINT PROTOCOL
@@ -205,14 +212,12 @@ checkpoint:
 # TROUBLESHOOTING & COMMON MISTAKES
 # ════════════════════════════════════════════════════════════════════════════════
 troubleshooting:
-  details: "SEE: .claude/agents/meta-agent/deps/troubleshooting.md"
+  ref: "deps/troubleshooting.md"  # 7 scenarios: gate recovery, context budget, evaluator bias
   key_items: 7
-  note: "Includes v9.0 items: gate recovery, context budget, evaluator bias"
 
 common_mistakes:
-  details: "SEE: .claude/agents/meta-agent/deps/troubleshooting.md#common_mistakes"
+  ref: "deps/troubleshooting.md#common_mistakes"  # 6 mistakes: separated evaluator, gate recovery usage
   key_items: 6
-  note: "Includes v9.0 items: separated evaluator, gate recovery usage"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # BLOCKING GATES
@@ -221,7 +226,7 @@ blocking_gates:
   purpose: "Prevent skipping mandatory steps"
   gates: ["RESEARCH", "EXPLORE", "CONSTITUTE", "CHECKPOINT", "EVALUATE", "QUALITY", "SIZE", "EXTERNAL_VALIDATION"]
   recovery: "Every gate: auto-recovery → fallback → user escalation"
-  details: "SEE: deps/blocking-gates.md (full definitions, thresholds, recovery strategies)"
+  ref: "deps/blocking-gates.md"  # full gate definitions, thresholds, recovery strategies
 
 # ════════════════════════════════════════════════════════════════════════════════
 # PHASE CONTRACTS (v9.0)
@@ -231,7 +236,7 @@ phase_contracts:
   principle: "Each phase produces structured output validated before next phase starts"
   contracts: 8
   pattern_source: "MetaGPT (Hong et al., 2023)"
-  details: "SEE: .claude/agents/meta-agent/deps/phase-contracts.md"
+  ref: "deps/phase-contracts.md"  # 8 typed contracts, validation conditions, required fields
 
 # ════════════════════════════════════════════════════════════════════════════════
 # ARTIFACT CONSTITUTION (v9.0)
@@ -241,7 +246,7 @@ artifact_constitution:
   principles: ["P1_correctness (0.30)", "P2_clarity (0.25)", "P3_robustness (0.20)", "P4_efficiency (0.15)", "P5_maintainability (0.10)"]
   threshold: 0.85
   pattern_source: "Constitutional AI (Bai et al., 2022)"
-  details: "SEE: .claude/agents/meta-agent/deps/artifact-constitution.md"
+  ref: "deps/artifact-constitution.md"  # P1-P5 universal + P6-P7 domain-specific principles, scoring
 
 # ════════════════════════════════════════════════════════════════════════════════
 # ARTIFACT ARCHIVE — ADAS (v9.0)
@@ -251,7 +256,7 @@ artifact_archive:
   operations: ["extract (CLOSE)", "compose (DRAFT/CREATE)", "evaluate", "prune (90 days)", "promote (→templates/)"]
   storage: ".meta-agent/archive/"
   pattern_source: "ADAS (Hu et al., 2024)"
-  details: "SEE: .claude/agents/meta-agent/deps/artifact-archive.md"
+  ref: "deps/artifact-archive.md"  # extract/compose/evaluate/prune/promote operations, index format
 
 # ════════════════════════════════════════════════════════════════════════════════
 # PLAN EXPLORATION — Tree of Thought (v9.0)
@@ -261,7 +266,7 @@ plan_exploration:
   trigger: "CREATE mode OR enhance with estimated_changes > 5 OR --explore flag"
   strategy: "breadth_first, max 3 branches, depth 2"
   pattern_source: "Tree of Thought (Yao et al., NeurIPS 2023)"
-  details: "SEE: .claude/agents/meta-agent/deps/plan-exploration.md"
+  ref: "deps/plan-exploration.md"  # ToT trigger conditions, branch strategy, evaluation levels
 
 # ════════════════════════════════════════════════════════════════════════════════
 # AI-FIRST PRINCIPLES
@@ -289,12 +294,13 @@ ai_first_principles:
 model_routing:
   purpose: "Use cheapest model meeting quality requirements per task"
   principle: "haiku for search/validation, sonnet for generation, opus for judgment"
-  per_agent: "SEE: deps/subagents.md#model_routing for full agent→model mapping"
+  per_agent: "deps/subagents.md#model_routing"  # full agent→model mapping table
   summary:
     haiku: [codebase_analyzer, artifact_scanner, context_loader, dependency_analyzer, quality_checker, efficiency_critic]
     sonnet: [content generation, APPLY changes, dynamic subagents, clarity_critic]
     opus: [correctness_critic, reflector_agent]
-  mar_note: "v10.0: evaluator_agent → 3 MAR critics (SEE: deps/eval-optimizer.md#mar_evaluation)"
+  mar_note: "v10.0: evaluator_agent → 3 MAR critics"
+  mar_ref: "deps/eval-optimizer.md#mar_evaluation"  # MAR architecture, critic personas, debate protocol
   override: "--model {model} flag overrides all subagents"
 
 # ════════════════════════════════════════════════════════════════════════════════
@@ -322,7 +328,7 @@ effort_levels:
 hooks:
   principle: "Advisory (CLAUDE.md) + Deterministic (hooks) = defense in depth"
   note: "Hooks guarantee execution — agent cannot skip them, unlike CLAUDE.md instructions"
-  config: "SEE: .claude/agents/meta-agent/templates/onboarding/settings.json#hooks"
+  config: "templates/onboarding/settings.json#hooks"  # hook definitions, matchers, script paths
   scripts: ".claude/agents/meta-agent/scripts/"
 
   deterministic_gates:
@@ -342,7 +348,7 @@ hooks:
         matcher: "Write"
         gate: "EXTERNAL_VALIDATION_GATE (partial)"
         action: "warn"
-        what: "Validates all SEE:/Read/deps/ references resolve to existing files"
+        what: "Validates all ref:/deps/ references resolve to existing files"
       - hook: "check-plan-drift.sh"
         matcher: "Write, Edit"
         gate: "PLAN_DRIFT (v9.1)"
@@ -366,40 +372,40 @@ hooks:
 # ════════════════════════════════════════════════════════════════════════════════
 references:
   # Core deps
-  changelog: ".claude/agents/meta-agent/deps/changelog.md"
-  quality: ".claude/agents/meta-agent/deps/artifact-quality.md"
-  templates: ".claude/templates/"
-  analyst: ".claude/agents/meta-agent/deps/artifact-analyst.md"
+  changelog: "deps/changelog.md"                    # version history, breaking changes
+  quality: "deps/artifact-quality.md"                # AI-first principles, size baselines, external validation
+  templates: ".claude/templates/"                    # artifact templates by type
+  analyst: "deps/artifact-analyst.md"                # UNDERSTAND → RESEARCH → ANALYZE → PLAN → OUTPUT workflow
   # Phase-specific deps
-  phases_enhance: ".claude/agents/meta-agent/deps/phases-enhance.md"
-  phases_create: ".claude/agents/meta-agent/deps/phases-create.md"
-  phases_onboard: ".claude/agents/meta-agent/deps/phases-onboard.md"
+  phases_enhance: "deps/phases-enhance.md"           # 9-phase ENHANCE steps, load order per phase
+  phases_create: "deps/phases-create.md"             # CREATE mode phases, agent team integration
+  phases_onboard: "deps/phases-onboard.md"           # VALIDATE → DETECT → GENERATE → CONFIGURE → REPORT
   # Quality & validation
-  blocking_gates: ".claude/agents/meta-agent/deps/blocking-gates.md"
-  artifact_constitution: ".claude/agents/meta-agent/deps/artifact-constitution.md"
-  external_validation: ".claude/agents/meta-agent/deps/artifact-quality.md#external_validation"
-  step_quality: ".claude/agents/meta-agent/deps/step-quality.md"
-  artifact_fix: ".claude/agents/meta-agent/deps/artifact-fix.md"
-  artifact_review: ".claude/agents/meta-agent/deps/artifact-review.md"
+  blocking_gates: "deps/blocking-gates.md"           # gate definitions, thresholds, recovery strategies
+  artifact_constitution: "deps/artifact-constitution.md"  # P1-P5 universal + P6-P7 domain principles
+  external_validation: "deps/artifact-quality.md#external_validation"  # YAML, refs, size, structure checks
+  step_quality: "deps/step-quality.md"               # per-phase scoring, trajectory, early termination
+  artifact_fix: "deps/artifact-fix.md"               # 9-phase fix pipeline, severity levels, fix patterns
+  artifact_review: "deps/artifact-review.md"         # 7-phase review, auto-fix rules, decision matrix
   # Execution & context
-  agent_teams: ".claude/agents/meta-agent/deps/agent-teams.md"
-  subagents: ".claude/agents/meta-agent/deps/subagents.md"
-  eval_optimizer: ".claude/agents/meta-agent/deps/eval-optimizer.md"
-  load_order: ".claude/agents/meta-agent/deps/load-order.md"
-  artifact_handles: ".claude/agents/meta-agent/deps/artifact-handles.md"
-  context_management: ".claude/agents/meta-agent/deps/context-management.md"
-  activation_layer: ".claude/agents/meta-agent/deps/activation-layer.md"
-  progress_tracking: ".claude/agents/meta-agent/deps/progress-tracking.md"
+  agent_teams: "deps/agent-teams.md"                 # peer-to-peer CREATE mode team, constraints
+  subagents: "deps/subagents.md"                     # DAG execution, predefined agents, model routing
+  eval_optimizer: "deps/eval-optimizer.md"           # eval loop, MAR critics, debate, adaptive weights
+  load_order: "deps/load-order.md"                   # 4-tier strategy, budget limits, handle-aware loading
+  artifact_handles: "deps/artifact-handles.md"       # lightweight refs, section loading, 87% context savings
+  context_management: "deps/context-management.md"   # 3-tier hierarchy, compaction, budget enforcement
+  activation_layer: "deps/activation-layer.md"       # 5-layer filtering, false positives, auto-chain
+  progress_tracking: "deps/progress-tracking.md"     # workspace structure, progress.json, resume flow
   # Learning & improvement
-  self_improvement: ".claude/agents/meta-agent/deps/self-improvement.md"
-  artifact_archive: ".claude/agents/meta-agent/deps/artifact-archive.md"
+  self_improvement: "deps/self-improvement.md"       # Reflexion pattern, lessons, episodic memory, decay
+  artifact_archive: "deps/artifact-archive.md"       # ADAS pattern, extract/compose/prune/promote
   # Contracts & troubleshooting
-  phase_contracts: ".claude/agents/meta-agent/deps/phase-contracts.md"
-  plan_exploration: ".claude/agents/meta-agent/deps/plan-exploration.md"
-  troubleshooting: ".claude/agents/meta-agent/deps/troubleshooting.md"
+  phase_contracts: "deps/phase-contracts.md"         # 8 typed contracts, validation conditions
+  plan_exploration: "deps/plan-exploration.md"       # ToT trigger, branch strategy, evaluation levels
+  troubleshooting: "deps/troubleshooting.md"         # 7 scenarios, 6 common mistakes, recovery steps
   # Other
-  observability: ".claude/agents/meta-agent/deps/observability.md"
-  archive: ".claude/archive/"
+  observability: "deps/observability.md"             # execution trace, metrics, MCP storage
+  archive: ".claude/archive/"                        # backup storage for deleted/rolled-back artifacts
 
 # ════════════════════════════════════════════════════════════════════════════════
 # OBSERVABILITY
@@ -407,7 +413,7 @@ references:
 observability:
   purpose: "Track execution, find bottlenecks, debug failures"
   enabled: true
-  details: "SEE: .claude/agents/meta-agent/deps/observability.md"
+  ref: "deps/observability.md"  # execution trace format, captured metrics, MCP storage
 
 # ════════════════════════════════════════════════════════════════════════════════
 # STEP QUALITY (Process Reward)
@@ -417,7 +423,7 @@ step_quality:
   enabled: true
   scoring: "v9.1: continuous 0.0-1.0 per check, weighted average per phase, trajectory tracking"
   output_per_phase: "Quality: {phase_score}/1.0 ({grade}) | Trajectory: [{scores}] {trend_icon}"
-  details: "SEE: .claude/agents/meta-agent/deps/step-quality.md"
+  ref: "deps/step-quality.md"  # per-phase scoring criteria, trajectory tracking, early termination
 
 # ════════════════════════════════════════════════════════════════════════════════
 # SELF-IMPROVEMENT (Reflexion Pattern)
@@ -445,7 +451,7 @@ self_improvement:
       stale_threshold: "60 days without use"
       archive_threshold: "120 days, effectiveness < 0.5"
       promotion_threshold: "effectiveness >= 0.8, used >= 3 → lesson"
-  details: "SEE: .claude/agents/meta-agent/deps/self-improvement.md"
+  ref: "deps/self-improvement.md"  # lesson format, auto-injection, decay mechanism, MCP storage
 
 # ════════════════════════════════════════════════════════════════════════════════
 # SUBAGENTS & DAG EXECUTION
@@ -466,7 +472,7 @@ subagents:
   max_concurrent: 7
   scheduling: "Ready-first with priority (critical path)"
   cascade_prevention: "Single failure doesn't fail entire DAG"
-  details: "SEE: .claude/agents/meta-agent/deps/subagents.md"
+  ref: "deps/subagents.md"  # DAG execution, predefined agents, model routing, max_turns
 
 # ════════════════════════════════════════════════════════════════════════════════
 # CONTEXT MANAGEMENT
@@ -480,7 +486,7 @@ context_management:
     tracking: "loaded_files[], total_lines, budget_remaining"
     enforcement: "Check before every load; unload lowest-tier on exceed"
     output: "📊 Context Budget: {loaded_lines}/{max_total} ({percent}%)"
-  details: "SEE: .claude/agents/meta-agent/deps/context-management.md"
+  ref: "deps/context-management.md"  # 3-tier hierarchy, compaction rules, budget enforcement
 
 # ════════════════════════════════════════════════════════════════════════════════
 # EXTERNAL VALIDATION
@@ -497,7 +503,7 @@ external_validation:
     duplicates: "Semantic similarity with existing artifacts"
   gate: "EXTERNAL_VALIDATION_GATE"
   blocking: true
-  details: "SEE: .claude/agents/meta-agent/deps/artifact-quality.md#external_validation"
+  ref: "deps/artifact-quality.md#external_validation"  # YAML syntax, references, size, structure, duplicates
 
 # ════════════════════════════════════════════════════════════════════════════════
 # DRY-RUN MODE
@@ -519,7 +525,7 @@ progress_tracking:
   checkpoint_trigger: "After each phase completion"
   resume_command: "/meta-agent --resume {run_id}"
   benefit: "Context exhaustion = no longer lost work"
-  details: "SEE: .claude/agents/meta-agent/deps/progress-tracking.md"
+  ref: "deps/progress-tracking.md"  # workspace structure, progress.json schema, resume flow
 
 # ════════════════════════════════════════════════════════════════════════════════
 # EVAL-OPTIMIZER LOOP
@@ -529,13 +535,14 @@ eval_optimizer:
   trigger: "After DRAFT phase, before APPLY"
   max_iterations: 3
   quality_threshold: 0.85
-  scoring_dimensions: "Adaptive per artifact type (SEE: deps/eval-optimizer.md#adaptive_weights)"
+  scoring_dimensions: "Adaptive per artifact type"
+  weights_ref: "deps/eval-optimizer.md#adaptive_weights"  # per-type weight tables
   default_weights: ["completeness (30%)", "accuracy (30%)", "clarity (20%)", "integration (20%)"]
   flow: "GENERATE → EVALUATE(separated) → score < 0.85? → REFLECT → OPTIMIZE → loop"
   separated_evaluator: "Subagent evaluates independently (no sunk cost bias)"
   reflector: "Subagent extracts lessons into episodic memory"
   difference: "step_quality = continuous per-phase scoring (0.0-1.0) with trajectory; eval_optimizer = iterative loop until 0.85 in DRAFT"
-  details: "SEE: .claude/agents/meta-agent/deps/eval-optimizer.md"
+  ref: "deps/eval-optimizer.md"  # eval loop flow, MAR critics, debate, adaptive weights
 
 # ════════════════════════════════════════════════════════════════════════════════
 # 4-TIER LAZY LOADING
@@ -548,10 +555,11 @@ load_order:
     3_phase: "deps/ per phase, UNLOAD when phase completes (400 lines)"
     4_on_demand: "reference files when needed, unload after (250 lines)"
   max_total: 1500
-  before_load: "Check budget → necessity → alternatives (SEE: deps/load-order.md#before_load_checks)"
+  before_load: "Check budget → necessity → alternatives"
+  before_load_ref: "deps/load-order.md#before_load_checks"  # 3-step validation before any file load
   key_insight: "Tier 3 UNLOADING frees context for next phase"
   difference: "context_management = what to preserve; load_order = when to load/unload"
-  details: "SEE: .claude/agents/meta-agent/deps/load-order.md"
+  ref: "deps/load-order.md"  # 4-tier definitions, budget limits, handle-aware loading
 
 # ════════════════════════════════════════════════════════════════════════════════
 # ACTIVATION LAYER
@@ -569,7 +577,17 @@ activation:
     exclude: ["what is a skill?", "list skills", "where is skill X?"]
     activate: ["create skill errors", "new skill for logging"]
   auto_chain: "After success, suggest related commands"
-  details: "SEE: .claude/agents/meta-agent/deps/activation-layer.md"
+  ref: "deps/activation-layer.md"  # 5-layer filtering, false positive examples, auto-chain rules
+
+# ════════════════════════════════════════════════════════════════════════════════
+# CUSTOMIZATION
+# ════════════════════════════════════════════════════════════════════════════════
+customization:
+  - "Adjust thresholds: deps/blocking-gates.md"
+  - "Add project templates: templates/"
+  - "Update project patterns: deps/artifact-quality.md"
+  - "Tune phase criteria: deps/step-quality.md"
+  - "Configure deterministic validation: scripts/"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # QUICK REFERENCE
