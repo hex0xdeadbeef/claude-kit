@@ -1,4 +1,5 @@
 ---
+name: workflow
 description: "Полный цикл разработки: task-analysis → planner → plan-review → coder → code-review"
 model: opus
 ---

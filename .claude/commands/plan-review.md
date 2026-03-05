@@ -1,4 +1,5 @@
 ---
+name: plan-review
 description: Validates implementation plan before coding starts
 model: sonnet
 ---

@@ -1,4 +1,5 @@
 ---
+name: coder
 description: Implements code strictly per approved plan
 model: opus
 ---

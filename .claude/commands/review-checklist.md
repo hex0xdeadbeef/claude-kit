@@ -1,12 +1,7 @@
 ---
+name: review-checklist
 description: Code review checklist reference - architecture, security, quality, performance checks
 model: sonnet
-version: 1.2.0
-updated: 2026-02-22
-type: reference
-changelog: |
-  v1.2.0 — Convert to YAML-first format, add workflow, fix PROJECT-KNOWLEDGE.md ref
-  v1.1.0 — Initial checklist
 ---
 
 role:

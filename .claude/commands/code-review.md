@@ -1,4 +1,5 @@
 ---
+name: code-review
 description: Code review of changes before merge
 model: sonnet
 ---
