@@ -76,3 +76,7 @@ output: |
   1. bd init (initialize beads)
   2. /project-researcher (analyze codebase)
   3. /meta-agent create skill <name> (add project-specific skills)
+  4. Verify MCP servers:
+     - Run: mcp__memory__search_nodes — query: 'test'
+     - If fails: "⚠️ Memory MCP not configured. See shared-core.md → Memory health check"
+     - If works: "✅ Memory MCP available"

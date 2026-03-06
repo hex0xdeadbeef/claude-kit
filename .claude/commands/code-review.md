@@ -156,6 +156,12 @@ startup:
         - "Test coverage check"
         - "Verdict"
 
+    - step: 1.5
+      action: "mcp__memory__search_nodes — query: '{feature keywords} review'"
+      purpose: "Find past review issues for similar code patterns"
+      use_result: "Check if similar issues were flagged before — ensure consistency across reviews"
+      note: "NON_CRITICAL — if Memory unavailable, warn and continue"
+
     - step: 2
       action: "git diff master...HEAD --stat"
       purpose: "assess change size"
@@ -366,6 +372,7 @@ severity_levels:
 checklist:
   quick_check:
     - "make lint && make test passes"
+    - "Memory checked: search_nodes for past review issues (NON_CRITICAL)"
 
   review:
     - "Architecture: imports follow matrix (PROJECT-KNOWLEDGE.md, if available)"

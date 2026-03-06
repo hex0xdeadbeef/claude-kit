@@ -156,6 +156,11 @@ startup:
     - action: "TodoWrite"
       purpose: "Create Parts list for tracking"
 
+    - action: "mcp__memory__search_nodes — query: '{feature keywords} {domain}'"
+      purpose: "Find lessons learned and architectural decisions for similar implementations"
+      use_result: "If found → check past mistakes, reuse patterns, avoid known pitfalls"
+      note: "NON_CRITICAL — if Memory unavailable, warn and continue"
+
     - action: "bd update <id> --status=in_progress"
       purpose: "Pick up task (if beads issue exists)"
 
@@ -439,6 +444,7 @@ checklist:
   startup:
     - "Plan loaded from .claude/prompts/"
     - "TodoWrite created with Parts"
+    - "Memory checked: search_nodes for lessons/decisions (NON_CRITICAL)"
     - "Feature branch created (if needed)"
     - "If beads used → status updated to in_progress"
 

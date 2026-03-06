@@ -23,6 +23,19 @@ Consolidated reference for all shared patterns. Commands reference specific sect
 
 **PostgreSQL safety:** Read-only queries only (SELECT). No INSERT/UPDATE/DELETE.
 
+**Memory health check (onboarding / first run):**
+Run `mcp__memory__search_nodes — query: 'health_check'`.
+- If responds → Memory available, proceed normally.
+- If fails → warn user: "Memory MCP not configured. Copy template: `cp .claude/agents/meta-agent/templates/onboarding/mcp.json ~/.claude/mcp.json` and replace `${USERNAME}`, `${DB_USER}`, `${DB_PASSWORD}`, `${DB_NAME}` placeholders. Then restart Claude."
+- Do NOT block workflow — Memory is NON_CRITICAL.
+
+**Memory query patterns:**
+- By feature: `'{feature name} {domain}'` — e.g. `'auth middleware'`
+- By file/package: `'{package name} {layer}'` — e.g. `'user repository'`
+- By problem: `'{error type} lesson'` — e.g. `'race condition lesson'`
+- By decision: `'{pattern name} architecture decision'` — e.g. `'caching strategy architecture decision'`
+- Tips: use 2-4 keywords, include domain/package for precision, add `lesson` or `decision` suffix for entity type filtering.
+
 ---
 
 ## Autonomy

@@ -79,8 +79,8 @@ output:
       location: Console
 
     - phase: Completion
-      produces: Git commit
-      location: Repository
+      produces: Git commit + lessons_learned in Memory (if non-trivial)
+      location: Repository + Memory MCP
 
   final_output: "Реализованный, протестированный и отревьюенный код с коммитом."
 
@@ -606,7 +606,26 @@ checklist:
     - "Loop limits не превышены (max 3 итерации per cycle)"
 
   completion:
-    - "Если ценные insights → lessons learned сохранены в memory"
+    - step: "Save lessons learned to Memory"
+      condition: "Sequential Thinking used OR review iterations > 1 OR re-routing occurred OR non-trivial decision made"
+      action: |
+        1. mcp__memory__search_nodes — query: '{feature name} {domain}'
+        2. If 0 results → mcp__memory__create_entities:
+           entities: [{
+             name: "{Feature Name}",
+             entityType: "lessons_learned",
+             observations: [
+               "PROBLEM: {problem encountered}",
+               "SOLUTION: {how resolved}",
+               "CONTEXT: {when applicable}",
+               "COMPLEXITY: estimated={X} actual={Y}",
+               "ITERATIONS: plan_review={N} code_review={N}",
+               "CREATED: {ISO date}"
+             ]
+           }]
+        3. If 1 result → mcp__memory__add_observations (merge new findings)
+        4. If 2+ results → show to user, ask which to update
+      note: "Follow Memory sequence from shared-core.md. NON_CRITICAL."
     - "Если задача из beads → напомнить о закрытии (`bd close <id>`)"
     - "Git commit создан"
     - "**`bd sync` выполнен** (ОБЯЗАТЕЛЬНО)"
