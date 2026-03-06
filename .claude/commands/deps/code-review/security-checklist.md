@@ -54,7 +54,7 @@ security_checklist:
 ```markdown
 ### Issues
 #### [blocker] SQL Injection Risk
-**File:** `internal/{layer}/{file}.go:42`
+**File:** `{source_dir}/{layer}/{file}{EXT}:42`
 **Problem:** String concatenation in SQL query
 **Solution:** Use parameterized queries instead of fmt.Sprintf
 ```

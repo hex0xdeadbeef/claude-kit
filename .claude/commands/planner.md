@@ -4,6 +4,14 @@ description: Researches codebase and creates detailed implementation plan
 model: opus
 ---
 
+# Language defaults (from PROJECT-KNOWLEDGE.md, Go fallback):
+#   VERIFY = make fmt && make lint && make test
+#   FMT = make fmt | LINT = make lint | TEST = make test
+#   EXT = .go | ERROR_WRAP = %w | DOMAIN_PROHIBIT = encoding/json tags
+#   GENERATED = *_gen.go | MOCKS = */mocks/*.go | SOURCE_GLOB = internal/**/*.go
+#   CONFIG_EXAMPLE = config.yaml.example | CONFIG_DOCS = README.md
+# Override: define language_profile in PROJECT-KNOWLEDGE.md for non-Go projects.
+
 # PLANNER
 
 role:
@@ -65,20 +73,7 @@ output:
   handoff_output:
     severity: CRITICAL
     description: "MUST be formed on completion — passed to /plan-review"
-    format:
-      to: "plan-review"
-      artifact: ".claude/prompts/{feature}.md"
-      metadata:
-        task_type: "{new_feature|bug_fix|refactoring|config_change|documentation|performance|integration}"
-        complexity: "{S|M|L|XL}"
-        sequential_thinking_used: true|false
-        alternatives_considered: N
-      key_decisions:
-        - "Decision: {what was chosen} — Reason: {why}"
-      known_risks:
-        - "Risk: {description} — Mitigation: {how to minimize}"
-      areas_needing_attention:
-        - "Part N: {why it requires special attention during review}"
+    # SEE: workflow.md#handoff_protocol → planner_to_plan_review (canonical field schema)
     example: |
       Handoff → /plan-review:
         artifact: .claude/prompts/{feature}.md
@@ -198,7 +193,7 @@ phases:
     name: "UNDERSTAND"
     steps:
       - action: "Classify task type"
-        note: "SEE: PROJECT-KNOWLEDGE.md for project-specific domains (if available)"
+        note: "SEE: PROJECT-KNOWLEDGE.md for project-specific domains (if available). Fallback: SEE deps/shared-core.md#project-knowledge"
         task_types:
           - type: "API endpoint"
             keywords: "endpoint, handler, HTTP, REST"
@@ -234,8 +229,8 @@ phases:
         simple_search:
           when: "1-2 files"
           tools:
-            - "Grep 'pattern' --type go"
-            - "Glob 'internal/**/*{keyword}*.go'"
+            - "Grep 'pattern' --type {language}"
+            - "Glob '{SOURCE_GLOB}' (Go default: internal/**/*{keyword}*.go)"
           note: "Check imports between packages (SEE: PROJECT-KNOWLEDGE.md, if available)"
 
         complex_search:
@@ -264,7 +259,7 @@ phases:
   phase_4_design:
     name: "DESIGN"
     sequential_thinking:
-      reference: ".claude/commands/deps/planner/sequential-thinking-guide.md"
+      reference: ".claude/commands/deps/sequential-thinking-guide.md"
       condition: "ONLY read this guide if complexity L/XL. SKIP for S/M — simple tasks don't need structured analysis."
       use_when:
         - "Alternatives >= 3"
@@ -282,9 +277,9 @@ phases:
     config_changes:
       when: "Adding new configuration"
       files:
-        - file: "config.yaml.example"
+        - file: "CONFIG_EXAMPLE (Go default: config.yaml.example)"
           action: "Add new parameter with default value"
-        - file: "README.md"
+        - file: "CONFIG_DOCS (Go default: README.md)"
           action: "Update configuration table"
 
   phase_5_document:
@@ -302,12 +297,12 @@ phases:
       - ... (reason)
 
       ## Part N: {Name}
-      **File:** `path/file.go` (CREATE/UPDATE)
+      **File:** `path/file{EXT}` (CREATE/UPDATE)
       [FULL code example]
 
       ## Acceptance Criteria
-      - [ ] `make lint` passes
-      - [ ] `make test-all` passes
+      - [ ] LINT passes
+      - [ ] TEST passes
 
   phase_6_save_to_memory:
     name: "SAVE TO MEMORY"

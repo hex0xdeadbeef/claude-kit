@@ -61,8 +61,8 @@ required_sections:
   - section: "Config Changes"
     required: IF_CONFIG_TOUCHED
     validate:
-      - config_yaml_updated: "config.yaml.example has new fields"
-      - readme_updated: "README.md documents new config"
+      - config_example_updated: "CONFIG_EXAMPLE has new fields (Go default: config.yaml.example)"
+      - config_docs_updated: "CONFIG_DOCS documents new config (Go default: README.md)"
       - example_values: "Sensible defaults provided"
 ```
 

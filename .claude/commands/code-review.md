@@ -4,6 +4,14 @@ description: Code review of changes before merge
 model: sonnet
 ---
 
+# Language defaults (from PROJECT-KNOWLEDGE.md, Go fallback):
+#   VERIFY = make fmt && make lint && make test
+#   FMT = make fmt | LINT = make lint | TEST = make test
+#   EXT = .go | ERROR_WRAP = %w | DOMAIN_PROHIBIT = encoding/json tags
+#   GENERATED = *_gen.go | MOCKS = */mocks/*.go | SOURCE_GLOB = internal/**/*.go
+#   CONFIG_EXAMPLE = config.yaml.example | CONFIG_DOCS = README.md
+# Override: define language_profile in PROJECT-KNOWLEDGE.md for non-Go projects.
+
 # CODE REVIEWER
 
 role:
@@ -62,7 +70,7 @@ output:
     ### Issues Found (if any)
     #### [CR-001] [blocker] Issue Name
     - **Category:** architecture|security|error_handling|completeness|style
-    - **Location:** path/file.go:line
+    - **Location:** path/file{EXT}:line
     - **Problem:** ...
     - **Suggestion:** ...
     - **Reference:** RULE_N
@@ -79,7 +87,7 @@ output:
         description: "Unique issue ID within this review"
       - severity: "BLOCKER|MAJOR|MINOR|NIT"
       - category: "architecture|security|error_handling|completeness|style"
-      - location: "path/file.go:line"
+      - location: "path/file{EXT}:line"
       - problem: "Brief description of the problem"
       - suggestion: "Concrete fix"
       - reference: "RULE_N | OWASP-XXX"
@@ -88,18 +96,7 @@ output:
   handoff_output:
     severity: CRITICAL
     description: "MUST be formed on completion — passed to workflow/completion or /coder"
-    format:
-      to: "completion|coder"
-      verdict: "APPROVED|APPROVED_WITH_COMMENTS|CHANGES_REQUESTED"
-      issues:
-        - id: "CR-001"
-          severity: "BLOCKER"
-          category: "architecture"
-          location: "{path/to/file.go}:42"
-          problem: "..."
-          suggestion: "..."
-          reference: "RULE_2"
-      iteration: "N/3"
+    # SEE: workflow.md#handoff_protocol → code_review_to_completion (canonical field schema)
 
 # ════════════════════════════════════════════════════════════════════════════════
 # TRIGGERS
@@ -115,7 +112,7 @@ triggers:
     then: "Use Context7 to verify correct usage patterns"
 
   - if: "Config files changed"
-    then: "Verify config.yaml.example and README.md updated"
+    then: "Verify CONFIG_EXAMPLE and CONFIG_DOCS updated"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # AUTONOMY RULE
@@ -123,7 +120,7 @@ triggers:
 autonomy:
   reference: "SEE: deps/shared-core.md#autonomy"
   command_specific:
-    stop: ["make lint/test fails → STOP", "Blocker found → CHANGES REQUESTED", "No changes → exit"]
+    stop: ["LINT/TEST fails → STOP", "Blocker found → CHANGES REQUESTED", "No changes → exit"]
     continue: ["QUICK CHECK passed → REVIEW", "Minor issues only → APPROVED WITH COMMENTS"]
 
 ---
@@ -149,12 +146,17 @@ startup:
     - step: 1
       action: "TodoWrite — create checklist"
       items:
-        - "Quick Check (make lint/test)"
+        - "Quick Check (LINT/TEST)"
         - "Architecture review"
         - "Error handling review"
         - "Security checklist"
         - "Test coverage check"
         - "Verdict"
+
+    - step: 1.2
+      action: "Read .claude/commands/deps/shared-review.md"
+      when: "ALWAYS — contains severity classification and decision matrix"
+      tool: "Read"
 
     - step: 1.5
       action: "mcp__memory__search_nodes — query: '{feature keywords} review'"
@@ -199,7 +201,7 @@ workflow:
       name: "QUICK CHECK"
       blocking: true
       commands:
-        - "make lint && make test"
+        - "LINT && TEST"
       results:
         pass: "→ Phase 2"
         fail: "STOP — return to author"
@@ -264,6 +266,7 @@ workflow:
 
       architecture_checks:
         reference: "SEE: PROJECT-KNOWLEDGE.md → Dependency Matrix (if available)"
+        fallback: "SEE: deps/shared-core.md#project-knowledge — heuristic discovery when PK missing"
         note: "Import violations are project-specific, check actual matrix"
         quick_check: "Grep for cross-layer imports that violate matrix"
 
@@ -274,19 +277,24 @@ workflow:
           - check: "{project-specific domain rule}"
             what: "{domain-specific validation — e.g., state transitions, business invariants per PROJECT-KNOWLEDGE.md}"
           - check: "Clean models"
-            what: "No encoding/json tags in domain entities (internal/<domain>/models/)"
+            what: "No DOMAIN_PROHIBIT in domain entities (Go default: encoding/json tags)"
           - check: "{project-specific convention}"
             what: "{shared library or convention check per project conventions}"
 
       reference: ".claude/commands/review-checklist.md"
       quick_checks:
-        code: "functions <= 30 lines, errors wrapped with %w, no log AND return"
+        code: "functions <= 30 lines, errors wrapped with ERROR_WRAP, no log AND return"
         security: "SEE: .claude/commands/deps/code-review/security-checklist.md (SKIP if complexity S)"
         tests: "coverage maintained or improved"
 
     - phase: 4
       name: "VERDICT"
       reference: ".claude/commands/review-checklist.md"
+      # SEE: deps/shared-review.md#review-verdict — decision_matrix + auto_escalation
+      next_steps:
+        APPROVED: "merge / bd close"
+        APPROVED_WITH_COMMENTS: "merge with notes"
+        CHANGES_REQUESTED: "Return to /coder"
 
 ---
 
@@ -315,7 +323,7 @@ rules:
 
   - id: RULE_3
     title: "Tests First"
-    description: "Do NOT start review without make lint && make test passing."
+    description: "Do NOT start review without LINT && TEST passing."
     severity: CRITICAL
 
   - id: RULE_4
@@ -362,7 +370,7 @@ examples:
 # SEVERITY
 # ════════════════════════════════════════════════════════════════════════════════
 severity_levels:
-  # SEE: review-checklist.md#severity_classification
+  # SEE: deps/shared-review.md#review-verdict
 
 ---
 
@@ -371,7 +379,7 @@ severity_levels:
 # ════════════════════════════════════════════════════════════════════════════════
 checklist:
   quick_check:
-    - "make lint && make test passes"
+    - "LINT && TEST passes"
     - "Memory checked: search_nodes for past review issues (NON_CRITICAL)"
 
   review:
@@ -387,8 +395,8 @@ checklist:
     - "Recommendations are concrete and actionable"
 
   config_changes:
-    - "config.yaml → config.yaml.example updated"
-    - "config.yaml → README.md updated"
+    - "config changed → CONFIG_EXAMPLE updated"
+    - "config changed → CONFIG_DOCS updated"
 
   completion:
     - "bd sync executed (if beads)"

@@ -12,7 +12,7 @@ troubleshooting:
     lesson: "Architecture violations caught early prevent major refactoring later"
 
   - problem: "Hook blocks edit - generated file"
-    cause: "Attempted to edit generated files (*_gen.go, mocks/*.go) directly"
+    cause: "Attempted to edit generated files (GENERATED/MOCKS — Go default: *_gen.go, mocks/*.go) directly"
     fix: "Regenerate via project's code generation commands (SEE: PROJECT-KNOWLEDGE.md or Makefile), edit source files instead"
     lesson: "Generated files must be regenerated, not manually edited"
 
@@ -21,7 +21,7 @@ troubleshooting:
     fix: "ALWAYS use Context7 for external dependencies: resolve-library-id → query-docs"
     lesson: "Documentation prevents incorrect API usage and saves debugging time"
 
-  - problem: "Config added without README update"
+  - problem: "Config added without docs update"
     cause: "Forgot RULE about config changes"
-    fix: "Update config.yaml.example AND README.md table with new config parameters"
+    fix: "Update CONFIG_EXAMPLE AND CONFIG_DOCS with new config parameters"
     lesson: "Config changes require documentation updates - mandatory per project rules"

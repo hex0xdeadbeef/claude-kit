@@ -31,15 +31,15 @@ manual_checks:
     how: "Verify project-specific error handling pattern (SEE: PROJECT-KNOWLEDGE.md)"
     pass_criteria:
       - error_context: "Errors carry context per project convention"
-      - wrap_with_w: "Errors wrapped with %w (standard Go error wrapping)"
+      - wrap_with_w: "Errors wrapped with ERROR_WRAP (Go default: %w)"
       - no_log_and_return: "Never log AND return same error"
 
   - check: Protected files
     how: "Verify plan doesn't edit generated files"
     pass_criteria:
       - no_generated_edits: "No changes to generated query files"
-      - no_gen_edits: "No changes to *_gen.go files"
-      - no_mock_edits: "No changes to */mocks/*.go files"
+      - no_gen_edits: "No changes to GENERATED files (Go default: *_gen.go)"
+      - no_mock_edits: "No changes to MOCKS files (Go default: */mocks/*.go)"
     severity_if_fail: BLOCKER
 ```
 
@@ -58,14 +58,14 @@ automated_checks:
     prompt_template: |
       Validate architecture compliance for files mentioned in the plan:
       - Check layer imports matrix compliance
-      - Find json/db tags in domain entities
-      - Verify error handling patterns per project conventions (%w wrapping, error context)
+      - Find DOMAIN_PROHIBIT in domain entities (Go default: encoding/json tags)
+      - Verify error handling patterns per project conventions (ERROR_WRAP, error context)
       - List any protected file modifications
 
     output_format:
       - violations: "List of import matrix violations"
-      - domain_issues: "Tags found in entities"
-      - error_issues: "Missing error context or %w wrapping"
+      - domain_issues: "DOMAIN_PROHIBIT found in entities"
+      - error_issues: "Missing error context or ERROR_WRAP"
       - protected_files: "Generated files in change list"
 ```
 
@@ -128,7 +128,7 @@ design_patterns_check:
 
 ```yaml
 concurrency_check:
-  when: "Plan includes goroutines, channels, sync primitives"
+  when: "Plan includes concurrency primitives (Go default: goroutines, channels, sync primitives)"
 
   validation:
     - question: "Is the right concurrency pattern chosen?"
@@ -138,7 +138,7 @@ concurrency_check:
     - question: "Is graceful shutdown addressed?"
       check: "Context cancellation propagates, workers clean up"
       pass: "ctx.Done() handled, resources released"
-      fail: "No shutdown mechanism or goroutine leaks"
+      fail: "No shutdown mechanism or concurrency leaks (Go default: goroutine leaks)"
 
     - question: "Is concurrency level defined?"
       check: "Worker count or buffer size specified"

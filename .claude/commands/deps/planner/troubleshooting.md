@@ -21,7 +21,7 @@ troubleshooting:
     fix: "Check PROJECT-KNOWLEDGE.md layer imports before writing Parts"
     lesson: "Architecture violations caught early save refactoring"
 
-  - problem: "Config changes but README.md not updated"
-    cause: "Forgot to document config in README"
-    fix: "PHASE 3: DESIGN - Config changes require README.md update"
+  - problem: "Config changes but CONFIG_DOCS not updated"
+    cause: "Forgot to document config in CONFIG_DOCS"
+    fix: "PHASE 3: DESIGN - Config changes require CONFIG_DOCS update"
     lesson: "Undocumented config = production incidents"

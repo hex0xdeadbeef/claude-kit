@@ -4,6 +4,14 @@ description: "Полный цикл разработки: task-analysis → plan
 model: opus
 ---
 
+# Language defaults (from PROJECT-KNOWLEDGE.md, Go fallback):
+#   VERIFY = make fmt && make lint && make test
+#   FMT = make fmt | LINT = make lint | TEST = make test
+#   EXT = .go | ERROR_WRAP = %w | DOMAIN_PROHIBIT = encoding/json tags
+#   GENERATED = *_gen.go | MOCKS = */mocks/*.go | SOURCE_GLOB = internal/**/*.go
+#   CONFIG_EXAMPLE = config.yaml.example | CONFIG_DOCS = README.md
+# Override: define language_profile in PROJECT-KNOWLEDGE.md for non-Go projects.
+
 role:
   identity: "Orchestrator"
   owns: "Координация полного цикла разработки: task-analysis → planner → plan-review → coder → code-review"
@@ -180,7 +188,7 @@ startup:
 # SESSION RECOVERY
 # ════════════════════════════════════════════════════════════════════════════════
 session_recovery:
-  reference: "SEE: .claude/commands/deps/shared-core.md#session-recovery"
+  reference: "SEE: .claude/commands/deps/workflow/orchestration-core.md#session-recovery"
   contains: "Auto-detect algorithm, decision table, quick check commands"
 
 # ════════════════════════════════════════════════════════════════════════════════
@@ -192,16 +200,20 @@ pipeline:
   flow: "task-analysis → /planner → /plan-review → /coder → /code-review"
 
   load_phases:
-    action: "Read .claude/commands/deps/shared-core.md"
-    when: "BEFORE starting Phase 0"
-    required: true
-    contains:
-      - Pipeline diagram with verdicts and routing
-      - Loop limits (max 3 iterations per review cycle)
-      - Context isolation rules for review phases
-      - Phase 0-4 detailed instructions
-      - Completion actions (git, beads)
-      - Lessons learned format
+    - action: "Read .claude/commands/deps/shared-core.md"
+      when: "BEFORE starting Phase 0"
+      required: true
+      contains:
+        - MCP Tools, Autonomy, Beads Integration, Error Handling
+        - Context isolation rules for review phases
+        - Project Knowledge fallback protocol
+    - action: "Read .claude/commands/deps/workflow/orchestration-core.md"
+      when: "ALWAYS — contains pipeline phases, loop limits, session recovery"
+      required: true
+      contains:
+        - Pipeline diagram with verdicts and routing
+        - Loop limits (max 3 iterations per review cycle, tracking protocol)
+        - Session recovery (checkpoint-first, heuristic fallback)
 
 # ════════════════════════════════════════════════════════════════════════════════
 # CONDITIONAL DEPS LOADING
@@ -217,17 +229,21 @@ conditional_deps:
   matrix: |
     | Dep file                                  | S    | M    | L/XL | Reason (S skip)                     |
     |-------------------------------------------|------|------|------|-------------------------------------|
-    | planner/sequential-thinking-guide.md (100) | SKIP | SKIP | LOAD | Нет 3+ альтернатив при S/M          |
-    | plan-review/sequential-thinking-guide.md(76)| SKIP | SKIP | LOAD | Simple plan не требует SeqThinking   |
+    | sequential-thinking-guide.md (120)          | SKIP | SKIP | LOAD | Нет 3+ альтернатив при S/M          |
     | plan-review/architecture-checks.md (171)  | SKIP | LOAD | LOAD | Phase 2 скипнута при S               |
     | plan-review/required-sections.md (136)    | SKIP | LOAD | LOAD | Phase 2 скипнута при S               |
     | planner/data-flow.md (42)                 | SKIP | LOAD | LOAD | Простые задачи — один слой           |
     | code-review/security-checklist.md (72)    | SKIP | LOAD | LOAD | Простые задачи — низкий security risk |
+    | workflow/pipeline-metrics.md (97)         | SKIP | SKIP | SKIP | Load только в completion фазе         |
+    | workflow/examples-troubleshooting.md (90) | SKIP | SKIP | SKIP | Load on-demand при проблемах           |
 
-    Savings: S = ~597 строк (~4 800 токенов), M = ~176 строк (~1 400 токенов), L/XL = загружать всё.
+    Savings: S = ~784 строк (~6 300 токенов), M = ~363 строк (~2 900 токенов), L/XL = ~187 строк (~1 500 токенов).
+    Note: workflow/* файлы имеют SKIP для всех complexity — загружаются по event trigger, а не по complexity.
 
   always_load:
-    - "deps/shared-core.md — всегда нужен"
+    - "deps/shared-core.md — всегда нужен (все агенты)"
+    - "deps/workflow/orchestration-core.md — pipeline, loop limits, session recovery (workflow only)"
+    - "deps/shared-review.md — severity classification, decision matrix (plan-review, code-review only)"
     - "deps/planner/task-analysis.md — нужен для классификации"
     - "deps/coder/examples.md — нужен при имплементации"
     - "deps/code-review/examples.md — нужен при ревью"
@@ -295,7 +311,7 @@ handoff_protocol:
           - id: "CR-001"
             severity: "BLOCKER|MAJOR|MINOR|NIT"
             category: "architecture|security|error_handling|completeness|style"
-            location: "path/file.go:line"
+            location: "path/file{EXT}:line"
             problem: "..."
             suggestion: "..."
         iteration: "N/3"
@@ -338,7 +354,7 @@ rules:
 
   - rule: "Loop Limits"
     description: "Максимум 3 итерации для каждого цикла ревью (plan-review, code-review)"
-    reference: "SEE: deps/shared-core.md#loop-limits"
+    reference: "SEE: deps/workflow/orchestration-core.md#loop-limits"
     severity: CRITICAL
 
   - rule: "Context Isolation"
@@ -367,6 +383,12 @@ checkpoint_protocol:
     timestamp: "ISO 8601"
     complexity: "S|M|L|XL"
     route: "minimal|standard|full"
+    re_routing:
+      occurred: false
+      original_route: "null|minimal|standard|full"
+      new_route: "null|minimal|standard|full"
+      reason: "null|string"
+      phase: "null|plan-review|implementation"
     handoff_payload: "{ ... содержимое последнего handoff_output ... }"
     issues_history:
       - phase: 2
@@ -396,6 +418,12 @@ checkpoint_protocol:
       timestamp: "2026-02-20T14:30:00Z"
       complexity: "L"
       route: "standard"
+      re_routing:
+        occurred: false
+        original_route: null
+        new_route: null
+        reason: null
+        phase: null
       handoff_payload:
         to: "coder"
         artifact: ".claude/prompts/{feature}.md"
@@ -430,55 +458,25 @@ re_routing:
       examples:
         - "M→L: evaluate обнаружил что нужна миграция БД (не учтена в плане)"
 
-  tracking: "Записать re-routing в checkpoint для анализа точности task-analysis"
+  tracking:
+    when: "Immediately when re-routing decision is made (before continuing pipeline)"
+    action: "Update checkpoint re_routing fields"
+    fields:
+      occurred: true
+      original_route: "{route from task-analysis}"
+      new_route: "{new route after re-routing}"
+      reason: "{1-sentence: trigger + evidence}"
+      phase: "{phase that triggered re-routing}"
+    note: "pipeline_metrics reads re_routing data from checkpoint at completion"
   learning: "Сохранить в MCP Memory: original_route → actual_route + причина для улучшения heuristics"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # PIPELINE METRICS
 # ════════════════════════════════════════════════════════════════════════════════
 pipeline_metrics:
-  purpose: "Автоматический сбор метрик для оптимизации pipeline"
-  when: "В completion-фазе workflow"
-  severity: MEDIUM
-
-  format:
-    feature: "{feature-name}"
-    timestamp: "ISO 8601"
-    total_phases_executed: N
-    review_iterations:
-      plan_review: N
-      code_review: N
-    complexity:
-      estimated: "S|M|L|XL"
-      actual: "S|M|L|XL (если re-routing произошёл)"
-    re_routing_occurred: true|false
-    issues_found:
-      blocker: N
-      major: N
-      minor: N
-      nit: N
-    sequential_thinking_used: true|false
-    mcp_tools_used: ["memory", "sequential_thinking", "context7", "postgresql"]
-    evaluate_decision: "PROCEED|REVISE|RETURN"
-
-  storage:
-    action: "mcp__memory__create_entities"
-    entity:
-      name: "Pipeline Metrics: {feature}"
-      entityType: "pipeline_metrics"
-      observations:
-        - "Phases: {total}, PR iterations: {N}, CR iterations: {N}"
-        - "Complexity: estimated {X} → actual {Y}"
-        - "Issues: {blocker}B {major}M {minor}m"
-        - "Tools: {list}"
-
-  analysis:
-    purpose: "Со временем позволяет:"
-    benefits:
-      - "Оценивать точность task-analysis (estimated vs actual complexity)"
-      - "Находить паттерны (какие типы задач генерируют больше issues)"
-      - "Оптимизировать pipeline на основе данных"
-      - "Выявлять bottlenecks (какая фаза генерирует больше итераций)"
+  # SEE: deps/workflow/pipeline-metrics.md (load at completion phase only)
+  trigger: "В completion-фазе workflow — read full metrics guide before saving"
+  contains: "format (12 fields), storage (MCP Memory entity), analysis (4 benefits), aggregation (query + report + anomaly detection)"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # ERROR HANDLING
@@ -502,90 +500,14 @@ error_handling:
 
   - error: "Loop limit exceeded (3 iterations in plan-review or code-review cycle)"
     action: "STOP. Show: what was requested in each iteration, what issues persisted. Request user to either simplify task or provide specific guidance."
-    reference: "SEE: deps/shared-core.md#loop-limits"
+    reference: "SEE: deps/workflow/orchestration-core.md#loop-limits"
 
 # ════════════════════════════════════════════════════════════════════════════════
-# EXAMPLES
+# EXAMPLES & TROUBLESHOOTING
 # ════════════════════════════════════════════════════════════════════════════════
-examples:
-  sequential_execution_with_confirmations:
-    good:
-      input: "Add new endpoint"
-      steps:
-        - phase: 1
-          action: "/planner"
-          result: "Plan created"
-        - checkpoint: "Proceed to Phase 2?"
-          answer: "yes"
-        - phase: 2
-          action: "/plan-review"
-          result: "APPROVED"
-        - checkpoint: "Proceed to Phase 3?"
-          answer: "yes"
-        - phase: 3
-          action: "/coder"
-          result: "Code written, tests pass"
-        - checkpoint: "Proceed to Phase 4?"
-          answer: "yes"
-        - phase: 4
-          action: "/code-review"
-          result: "APPROVED → feature complete"
-    bad:
-      input: "Just write code, no planning"
-      steps:
-        - skip: "Phase 1 and Phase 2"
-        - jump_to: "Phase 3 directly"
-    why: "Skipping phases leads to low-quality code without architectural review and validation"
-
-  completion_without_autocommit:
-    good:
-      trigger: "Phase 4: APPROVED"
-      steps:
-        - action: "Suggest commit command to user"
-          command: "git add . && git commit -m 'feat: ...' && bd sync"
-        - action: "Wait for user to decide when to commit"
-    bad:
-      trigger: "Phase 4: APPROVED"
-      steps:
-        - action: "git add && git commit && git push (automatically)"
-    why: "Auto-commit without permission violates user control over repository"
-
-# ════════════════════════════════════════════════════════════════════════════════
-# TROUBLESHOOTING
-# ════════════════════════════════════════════════════════════════════════════════
-troubleshooting:
-  - problem: "Phase 2 keeps returning NEEDS_CHANGES"
-    cause: "Plan missing critical sections (Scope, Architecture Decision, Tests)"
-    fix: "Check plan against templates/plan-template.md, ensure all sections filled"
-
-  - problem: "Phase 3 tests fail repeatedly"
-    cause: "Plan not detailed enough or missing edge cases"
-    fix: "Return to Phase 1, add specific test cases to plan"
-
-  - problem: "Stuck in Phase 1 → Phase 2 loop"
-    cause: "Requirements unclear or too broad"
-    fix: "Ask user to clarify scope, break task into smaller pieces"
-
-  - problem: "Session interrupted mid-workflow"
-    cause: "Connection lost, timeout, or manual stop"
-    fix: "Check `.claude/prompts/{feature}.md` for saved plan, use --from-phase to resume"
-
-  - problem: "bd sync fails"
-    cause: "Network issue or beads daemon not running"
-    fix: "Run `bd doctor` to diagnose, restart daemon if needed"
-
-common_mistakes:
-  - mistake: "Skipping Phase 2 (plan-review)"
-    why_bad: "Unvalidated plans lead to rework in Phase 3/4"
-    fix: "Always run /plan-review even for 'simple' tasks"
-
-  - mistake: "Auto-committing without user consent"
-    why_bad: "User loses control over repository state"
-    fix: "Always ask before git commit, never auto-push"
-
-  - mistake: "Not saving lessons_learned for complex tasks"
-    why_bad: "Knowledge lost, same mistakes repeated"
-    fix: "After non-trivial tasks, save insights to MCP memory"
+# SEE: deps/workflow/examples-troubleshooting.md
+# Load on-demand: при первом запуске workflow или при возникновении проблем.
+# Содержит: execution examples (good/bad), troubleshooting (5 problems), common_mistakes (3 items).
 
 # ════════════════════════════════════════════════════════════════════════════════
 # CHECKLIST

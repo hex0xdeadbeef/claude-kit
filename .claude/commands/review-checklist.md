@@ -23,7 +23,7 @@ architecture_checks:
 code_quality:
   checks:
     - "Functions <= 30 lines"
-    - "Errors wrapped with %w"
+    - "Errors wrapped with ERROR_WRAP (Go default: %w)"
     - "No log AND return"
 
 security_owasp:
@@ -54,10 +54,10 @@ design_patterns:
     - "Patterns match architecture layers"
 
 concurrency:
-  when: "Code uses goroutines"
+  when: "Code uses concurrency primitives (Go default: goroutines)"
   checks:
-    - "No goroutine leaks"
-    - "No race conditions (go test -race)"
+    - "No concurrency leaks (Go default: goroutine leaks)"
+    - "No race conditions (Go default: go test -race)"
     - "Context passed correctly"
     - "Graceful shutdown works"
 
@@ -75,19 +75,7 @@ library_usage:
     - "Patterns are current (not deprecated)"
 
 severity_classification:
-  levels:
-    - level: "[blocker]"
-      meaning: "Architecture / security"
-      blocks: true
-    - level: "[major]"
-      meaning: "Error handling, logging"
-      blocks: true
-    - level: "[minor]"
-      meaning: "Code style, naming"
-      blocks: false
-    - level: "[nit]"
-      meaning: "Stylistic"
-      blocks: false
+  # SEE: deps/shared-review.md#review-verdict — severity levels, decision matrix, auto-escalation
 
 verdict_template: |
   ## Code Review: {branch}
@@ -99,7 +87,7 @@ verdict_template: |
   | Error Handling | PASS/FAIL |
   ### Issues
   #### [blocker] Issue
-  **File:** `path/file.go:42`
+  **File:** `path/file{EXT}:42`
   **Problem:** ...
   **Solution:** ...
   ### What's Good

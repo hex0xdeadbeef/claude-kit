@@ -4,6 +4,14 @@ description: Validates implementation plan before coding starts
 model: sonnet
 ---
 
+# Language defaults (from PROJECT-KNOWLEDGE.md, Go fallback):
+#   VERIFY = make fmt && make lint && make test
+#   FMT = make fmt | LINT = make lint | TEST = make test
+#   EXT = .go | ERROR_WRAP = %w | DOMAIN_PROHIBIT = encoding/json tags
+#   GENERATED = *_gen.go | MOCKS = */mocks/*.go | SOURCE_GLOB = internal/**/*.go
+#   CONFIG_EXAMPLE = config.yaml.example | CONFIG_DOCS = README.md
+# Override: define language_profile in PROJECT-KNOWLEDGE.md for non-Go projects.
+
 # PLAN REVIEWER
 
 role:
@@ -76,7 +84,7 @@ output:
         description: "Unique issue ID within this review"
       - severity: "BLOCKER|MAJOR|MINOR|NIT"
       - category: "architecture|security|error_handling|completeness|style"
-      - location: "Part N | path/file.go"
+      - location: "Part N | path/file{EXT}"
         description: "For plan-review: Part N, for code-review: file:line"
       - problem: "Brief description of the problem"
       - suggestion: "Concrete fix"
@@ -86,23 +94,13 @@ output:
   handoff_output:
     severity: CRITICAL
     description: "MUST be formed on completion — passed to /coder"
-    format:
-      to: "coder"
-      artifact: ".claude/prompts/{feature}.md"
-      verdict: "APPROVED|NEEDS_CHANGES|REJECTED"
-      issues_summary:
-        blocker: 0
-        major: 0
-        minor: 0
-      approved_with_notes:
-        - "Note about Part N (if MINOR issues exist)"
-      iteration: "N/3"
-      narrative_for_coder: |
-        [Context from plan-review]:
-        - Reviewer validated plan {feature}.md
-        - Verdict: {verdict}, issues: {N} blocker, {N} major, {N} minor
-        - Key findings: {approved_with_notes list}
-        - Recommendations: {areas requiring attention during implementation}
+    # SEE: workflow.md#handoff_protocol → plan_review_to_coder (canonical field schema)
+    narrative_for_coder: |
+      [Context from plan-review]:
+      - Reviewer validated plan {feature}.md
+      - Verdict: {verdict}, issues: {N} blocker, {N} major, {N} minor
+      - Key findings: {approved_with_notes list}
+      - Recommendations: {areas requiring attention during implementation}
 
 # ════════════════════════════════════════════════════════════════════════════════
 # AUTONOMY RULE
@@ -141,7 +139,7 @@ mcp_tools:
   - tool: "Sequential Thinking"
     when: "Complex plans (4+ Parts, 3+ layers, >150 lines)"
     usage: "Structured validation with exploration of edge cases"
-    reference: ".claude/commands/deps/plan-review/sequential-thinking-guide.md"
+    reference: ".claude/commands/deps/sequential-thinking-guide.md"
     condition: "ONLY read this guide if complexity L/XL. SKIP for S/M."
 
   - tool: "Memory"
@@ -170,6 +168,11 @@ startup:
     - step: 1
       action: "TodoWrite — create review checklist"
       tool: "TodoWrite"
+
+    - step: 1.5
+      action: "Read .claude/commands/deps/shared-review.md"
+      when: "ALWAYS — contains severity classification and decision matrix"
+      tool: "Read"
 
     - step: 2
       action: "Read .claude/prompts/{feature-name}.md — load plan FROM SCRATCH"
@@ -253,7 +256,7 @@ phases:
         prompt: "Validate architecture compliance for files mentioned in the plan"
 
     sequential_thinking:
-      reference: ".claude/commands/deps/plan-review/sequential-thinking-guide.md"
+      reference: ".claude/commands/deps/sequential-thinking-guide.md"
       condition: "ONLY read this guide if complexity L/XL. SKIP for S/M."
       enforcement: "L/XL only: if criteria met but not used → add MAJOR issue. S/M: not required."
 
@@ -279,31 +282,11 @@ phases:
       - Config changes documented: [YES/NO/N/A]
 
   phase_5_verdict:
-    decision_matrix:
-      - verdict: APPROVED
-        condition: "0 BLOCKER, 0 MAJOR"
-        next_step: "/coder"
-
-      - verdict: NEEDS CHANGES
-        condition: "0 BLOCKER, 1+ MAJOR or 3+ MINOR"
-        next_step: "Return to /planner"
-
-      - verdict: REJECTED
-        condition: "1+ BLOCKER"
-        next_step: "Full re-plan required"
-
-    auto_escalation:
-      - rule: "5+ MINOR issues in same Part"
-        action: "Escalate to MAJOR"
-        reason: "Many small issues = systemic problem"
-
-      - rule: "Security issue"
-        action: "Always BLOCKER"
-        reason: "Security cannot be compromised"
-
-      - rule: "Import matrix violation"
-        action: "Always BLOCKER"
-        reason: "Architecture violations cause long-term maintainability issues"
+    # SEE: deps/shared-review.md#review-verdict — decision_matrix + auto_escalation
+    next_steps:
+      APPROVED: "/coder"
+      NEEDS_CHANGES: "Return to /planner"
+      REJECTED: "Full re-plan required"
 
     output: |
       ## VERDICT
@@ -383,7 +366,7 @@ troubleshooting:
 # SEVERITY LEVELS
 # ════════════════════════════════════════════════════════════════════════════════
 severity_levels:
-  # SEE: review-checklist.md#severity_classification
+  # SEE: deps/shared-review.md#review-verdict
 
 # ════════════════════════════════════════════════════════════════════════════════
 # CHECKLIST

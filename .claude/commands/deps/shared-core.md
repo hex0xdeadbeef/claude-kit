@@ -60,7 +60,7 @@ Run `mcp__memory__search_nodes — query: 'health_check'`.
 | Condition | Action |
 |-----------|--------|
 | Phase completed | → next phase |
-| Auto-fixable (lint fail → make fmt) | Fix → retry |
+| Auto-fixable (lint fail → FMT) | Fix → retry |
 | Non-critical tool unavailable | Warn → continue |
 
 ---
@@ -112,6 +112,7 @@ bd doctor           — check sync, hooks, issues
 | Plan not found | FATAL | EXIT — run /planner first |
 | Plan not approved | FATAL | EXIT — run /plan-review first |
 | Template missing | NON_CRITICAL | Use minimal format |
+| PROJECT-KNOWLEDGE.md missing | NON_CRITICAL | Heuristic fallback (SEE: #project-knowledge) |
 | Git repo issues | WARNING | Continue (may skip commit phase) |
 | Tests fail 3x | STOP_AND_WAIT | Show errors, request manual fix |
 | Lint fail 3x | STOP_AND_WAIT | Show issues, request decision (manual fix / nolint / config) |
@@ -121,43 +122,88 @@ bd doctor           — check sync, hooks, issues
 
 ---
 
+## Review Verdict
+# MOVED → deps/shared-review.md#review-verdict
+# Loaded by: plan-review, code-review. Referenced from: review-checklist.md.
+
+---
+
+## Project Knowledge
+
+**File:** PROJECT-KNOWLEDGE.md (project root or .claude/)
+**Status:** NON_CRITICAL — workflow continues without it, but with reduced precision.
+**Created by:** Manual analysis or /planner onboarding phase.
+
+language_profile:
+  description: "Language-specific patterns. Agents use aliases (VERIFY, FMT, LINT, TEST, EXT, etc.) from PK or Go defaults below."
+
+  commands:
+    format: "make fmt"            # alias: FMT
+    lint: "make lint"             # alias: LINT
+    test: "make test"             # alias: TEST
+    verify: "make fmt && make lint && make test"  # alias: VERIFY
+
+  error_pattern:
+    wrap: "%w"                    # alias: ERROR_WRAP
+    example: 'fmt.Errorf("context: %w", err)'
+    anti_patterns: ["log AND return same error"]
+
+  domain_rules:
+    prohibited_annotations: ["encoding/json tags in domain entities"]  # alias: DOMAIN_PROHIBIT
+    note: "Domain entities must be pure — no serialization annotations. Tags belong in DTOs."
+
+  file_patterns:
+    source_ext: ".go"             # alias: EXT
+    generated: ["*_gen.go"]       # alias: GENERATED
+    mocks: ["*/mocks/*.go"]       # alias: MOCKS
+    source_glob: "internal/**/*.go"  # alias: SOURCE_GLOB
+
+  config_convention:
+    example_file: "config.yaml.example"    # alias: CONFIG_EXAMPLE
+    docs_file: "README.md"                 # alias: CONFIG_DOCS
+    note: "When config changes → update CONFIG_EXAMPLE + CONFIG_DOCS"
+
+  concurrency:
+    primitives: ["goroutines", "channels", "mutex", "sync primitives"]
+    race_check: "go test -race"
+
+fallback_protocol:
+  step_1_check: "Read PROJECT-KNOWLEDGE.md from project root, then .claude/"
+  step_2_if_missing:
+    warn: "PROJECT-KNOWLEDGE.md not found. Using Go defaults from language_profile above."
+    actions:
+      import_matrix: "Infer from project structure: ls internal/ (or src/) → identify layers → grep import patterns"
+      layer_naming: "Detect via directory naming: controller|service|usecase|handler|repository|storage"
+      layer_order: "Default: data-access → domain/models → business-logic → api/handler → tests → wiring"
+      test_command: "Use language_profile.commands.test (Go default: make test)"
+      error_pattern: "Use language_profile.error_pattern (Go default: wrap with %w, no log+return)"
+      domain_structure: "Infer: ls internal/*/models/ (or src/*/models/)"
+    language_profile: "Use Go defaults from schema above. Override in PROJECT-KNOWLEDGE.md for non-Go projects."
+
+heuristic_discovery:
+  description: "When PROJECT-KNOWLEDGE.md is missing, agent SHOULD attempt auto-discovery"
+  commands:
+    - "ls -la internal/ (or src/)"
+    - "head -20 Makefile (or package.json, pyproject.toml, Cargo.toml)"
+    - "grep -r 'import' internal/*/handler*/ | head -10"
+    - "grep -r 'import' internal/*/service*/ | head -10"
+  output: "Use discovered structure as runtime substitute. Note in handoff: 'PK missing, used heuristic discovery.'"
+
+save_recommendation:
+  when: "Planner successfully discovers project structure via heuristic"
+  action: "Recommend user: 'Consider creating PROJECT-KNOWLEDGE.md to improve precision. Run /planner --analyze to generate.'"
+
+---
+
 ## Pipeline & Phases
-
-```
-task-analysis → /planner → /plan-review → /coder → /code-review
-     ↓              ↓           ↓            ↓           ↓
-  Classify        План    Валидация       Код       Ревью
-  S → skip PR              ↓ FAIL         ↓ FAIL
-                          ← назад ←      ← назад ←
-                          (max 3x)       (max 3x)
-```
-
-**Phase 0.5 — Task Analysis:** Classify (type + S/M/L/XL) → Route. S: skip plan-review. L/XL: Sequential Thinking recommended/required.
-
-**Phase 1 — Planning:** Execute /planner. Output: `.claude/prompts/{feature}.md`
-
-**Phase 2 — Plan Review:** Execute /plan-review. APPROVED → Phase 3. NEEDS_CHANGES → Phase 1 (iteration N/3). REJECTED → Stop.
-
-**Phase 3 — Implementation:** Execute /coder. Verify: `make fmt && make lint && make test`. PASS → Phase 4. FAIL → fix + retry.
-
-**Phase 4 — Code Review:** Execute /code-review. APPROVED → Done. CHANGES_REQUESTED → Phase 3 (iteration N/3).
-
-**Phase 0 — Get Task (optional):** If beads task → `bd show <id>` + `bd update <id> --status=in_progress`. Skip if ad-hoc.
-
-**Завершение:** git commit (required) → bd sync (if beads) → remind bd close → save lessons if non-trivial.
-
-**Lessons learned format (if saving):** create_entities with entityType="lessons_learned", observations: ["Проблема: X → Решение: Y", "Паттерн: Z работает хорошо для W"].
+# MOVED → deps/workflow/orchestration-core.md#pipeline--phases
+# Loaded by: workflow only
 
 ---
 
 ## Loop Limits
-
-```yaml
-plan_review_cycle: max 3 iterations (planner ↔ plan-review)
-code_review_cycle: max 3 iterations (coder ↔ code-review)
-total_phases: max 12 per /workflow run
-on_exceeded: STOP → summary of each iteration → unresolved issues → request user intervention
-```
+# MOVED → deps/workflow/orchestration-core.md#loop-limits
+# Loaded by: workflow only
 
 ---
 
@@ -178,31 +224,5 @@ on_exceeded: STOP → summary of each iteration → unresolved issues → reques
 ---
 
 ## Session Recovery
-
-**Strategy:** Checkpoint-first, heuristic fallback.
-
-**Quick check commands:**
-```
-ls .claude/workflow-state/*-checkpoint.yaml  # Checkpoint?
-ls .claude/prompts/                          # Plan?
-bd list --status=in_progress                 # Active beads?
-git diff master...HEAD --stat                # Code changes?
-make test                                    # Tests pass?
-```
-
-**Step 1:** Check `.claude/workflow-state/*-checkpoint.yaml`
-
-**Step 2A — Checkpoint found:** Read → verify integrity → resume from `phase_completed + 1` → restore iteration counters.
-
-**Step 2B — No checkpoint (heuristic):**
-
-| Plan exists? | Code changes? | Tests pass? | Resume from |
-|-------------|---------------|-------------|-------------|
-| No | — | — | Phase 1: Planning |
-| Yes | No | — | Phase 3: Implementation |
-| Yes | Yes | No | Phase 3: Fix tests |
-| Yes | Yes | Yes | Phase 4: Code Review |
-
-**Warning:** Heuristic fallback loses iteration counters — assume iteration 1/3.
-
-**Checkpoint format:** `{feature}-checkpoint.yaml` with fields: feature, phase_completed, phase_name, iteration (plan_review N/3, code_review N/3), verdict, timestamp, complexity, route, handoff_payload, issues_history.
+# MOVED → deps/workflow/orchestration-core.md#session-recovery
+# Loaded by: workflow only

@@ -4,13 +4,21 @@ description: Implements code strictly per approved plan
 model: opus
 ---
 
+# Language defaults (from PROJECT-KNOWLEDGE.md, Go fallback):
+#   VERIFY = make fmt && make lint && make test
+#   FMT = make fmt | LINT = make lint | TEST = make test
+#   EXT = .go | ERROR_WRAP = %w | DOMAIN_PROHIBIT = encoding/json tags
+#   GENERATED = *_gen.go | MOCKS = */mocks/*.go | SOURCE_GLOB = internal/**/*.go
+#   CONFIG_EXAMPLE = config.yaml.example | CONFIG_DOCS = README.md
+# Override: define language_profile in PROJECT-KNOWLEDGE.md for non-Go projects.
+
 # CODER
 
 role:
   identity: "Senior Developer"
   owns: "Code implementation strictly per approved plan + evaluate phase + verify"
   does_not_own: "Architecture planning, code review, task scope changes"
-  output_contract: "Working code (make fmt/lint/test-all pass) + evaluate output file + handoff_output for code-review"
+  output_contract: "Working code (VERIFY passes) + evaluate output file + handoff_output for code-review"
   success_criteria: "All Parts implemented, tests pass, evaluate output written, handoff formed"
   constraint: "No deviations from plan without documenting in evaluate_output"
 
@@ -42,7 +50,7 @@ input:
 # OUTPUT
 # ════════════════════════════════════════════════════════════════════════════════
 output:
-  description: "Working code passing make fmt && make lint && make test (adapt to project)"
+  description: "Working code passing VERIFY (adapt to project — SEE Language Header)"
 
   final_format: |
     Implementation complete.
@@ -53,33 +61,22 @@ output:
     - ...
 
     Checks:
-    - [x] make fmt
-    - [x] make lint
-    - [x] make test (or project test command)
+    - [x] FMT
+    - [x] LINT
+    - [x] TEST (or project test command)
 
     Ready for: /code-review
 
   handoff_output:
     severity: CRITICAL
     description: "MUST generate on completion — passed to /code-review"
-    format:
-      to: "code-review"
-      branch: "feature/{name}"
-      parts_implemented:
-        - "Part 1: Database — {summary}"
-        - "Part 2: Domain — {summary}"
-      evaluate_adjustments:
-        - "Part N: {adjustment description vs plan}"
-      risks_mitigated:
-        - "Risk: {description} — Solution: {how resolved}"
-      deviations_from_plan:
-        - "Deviation: {what differs} — Reason: {justification}"
-      narrative_for_reviewer: |
-        [Context from coder]:
-        - Coder implemented {N} Parts per plan {feature}.md
-        - Evaluate phase: {PROCEED|REVISE|RETURN} — adjustments: {list}
-        - Deviations from plan: {list or "none"}
-        - High-risk areas: {list}
+    # SEE: workflow.md#handoff_protocol → coder_to_code_review (canonical field schema)
+    narrative_for_reviewer: |
+      [Context from coder]:
+      - Coder implemented {N} Parts per plan {feature}.md
+      - Evaluate phase: {PROCEED|REVISE|RETURN} — adjustments: {list}
+      - Deviations from plan: {list or "none"}
+      - High-risk areas: {list}
     example: |
       Handoff → /code-review:
         branch: feature/{name}
@@ -101,7 +98,7 @@ triggers:
     then: "Use Context7 (resolve-library-id → query-docs)"
 
   - if: "Config changes in plan"
-    then: "Verify config.yaml.example and README.md updates"
+    then: "Verify CONFIG_EXAMPLE and CONFIG_DOCS updates"
 
   - if: "Tests fail 3x consecutively"
     then: "STOP → use Sequential Thinking for root cause analysis"
@@ -139,8 +136,8 @@ autonomy:
     - condition: Part completed
       action: "Proceed to next Part"
 
-    - condition: make lint fails
-      action: "Auto-fix via make fmt, retry"
+    - condition: LINT fails
+      action: "Auto-fix via FMT, retry"
 
     - condition: Single test fails
       action: "Fix → retry"
@@ -319,19 +316,19 @@ workflow:
       config_changes:
         when: "Config added"
         actions:
-          - "Update config.yaml.example"
-          - "Update table in README.md"
+          - "Update CONFIG_EXAMPLE (Go default: config.yaml.example)"
+          - "Update CONFIG_DOCS (Go default: README.md)"
 
     - phase: 3
       name: "VERIFY"
 
       formatting:
-        command: "make fmt && make lint"
+        command: "FMT && LINT"
 
       testing:
         quick_check:
           when: "< 10 tests"
-          command: "make test (or project-specific test command — SEE: PROJECT-KNOWLEDGE.md, if available)"
+          command: "TEST (or project-specific test command — SEE: PROJECT-KNOWLEDGE.md)"
 
         full_testing:
           when: "Multi-session task, many tests"
@@ -358,9 +355,9 @@ workflow:
         - [x] Part 2: ...
 
         Checks:
-        - [x] make fmt
-        - [x] make lint
-        - [x] make test (or test-runner subagent — adapt to project)
+        - [x] FMT
+        - [x] LINT
+        - [x] TEST (or test-runner subagent — adapt to project)
 
         Ready for code review → /code-review
 
@@ -386,7 +383,7 @@ rules:
 
   - id: RULE_3
     title: "Clean Domain"
-    description: "NEVER add json tags to domain entities."
+    description: "NEVER add DOMAIN_PROHIBIT to domain entities (Go default: encoding/json tags)."
     severity: CRITICAL
 
   - id: RULE_4
@@ -418,8 +415,8 @@ error_handling:
       action: "ERROR: Plan not approved. Run /plan-review first."
     - situation: Tests fail 3x consecutively
       action: "Stop, show errors, request help"
-    - situation: make lint fails
-      action: "Run make fmt, retry"
+    - situation: LINT fails
+      action: "Run FMT, retry"
     - situation: Hook blocks edit
       action: "Show blocked file, explain reason"
 
@@ -435,6 +432,7 @@ troubleshooting:
 # ════════════════════════════════════════════════════════════════════════════════
 layer_imports:
   reference: "SEE: PROJECT-KNOWLEDGE.md (if available)"
+  fallback: "SEE: deps/shared-core.md#project-knowledge — heuristic discovery when PK missing"
   description: "Import matrix and layer dependency rules from project analysis"
 
 # ════════════════════════════════════════════════════════════════════════════════
@@ -461,8 +459,8 @@ checklist:
     - "Sequential Thinking used (if complex logic)"
 
   verification:
-    - "make fmt && make lint && make test passes (adapt test command to project)"
-    - "If config changed → config.yaml.example and README.md updated"
+    - "VERIFY passes (adapt commands to project — SEE Language Header)"
+    - "If config changed → CONFIG_EXAMPLE and CONFIG_DOCS updated"
 
   completion:
     - "bd sync completed"
