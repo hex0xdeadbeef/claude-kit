@@ -1,121 +1,120 @@
 # Claude Kit
 
-Переиспользуемый конфигурационный набор для [Claude Code](https://docs.anthropic.com/en/docs/claude-code), предоставляющий структурированный мультиагентный workflow разработки со встроенными фазами планирования, имплементации и код-ревью.
+Reusable configuration kit for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) that provides a structured multi-agent development workflow with built-in planning, implementation, and code review phases.
 
-## Быстрый старт
+Supports any language and framework — Go, Python, TypeScript, Rust, Java, and 26 more via tree-sitter analysis.
 
-### Установка
+## Quick Start
 
-Скопируйте kit в ваш проект:
+### Installation
+
+Copy the kit into your project:
 
 ```bash
 cp -r .claude/ /path/to/your/project/
 cp CLAUDE.md /path/to/your/project/
 ```
 
-### Первые шаги
+### First Steps
 
 ```bash
-# Инициализировать .claude/ конфигурацию для проекта
+# Initialize .claude/ configuration for the project
 /meta-agent onboard
 
-# Проанализировать кодовую базу и сгенерировать PROJECT-KNOWLEDGE.md
+# Analyze codebase and generate PROJECT-KNOWLEDGE.md
 /project-researcher
 ```
 
-## Команды
+## Commands
 
-### `/workflow` — Полный цикл разработки
+### `/workflow` — Full Development Cycle
 
-Основная команда, оркестрирующая весь процесс разработки. Выполняет все фазы последовательно с подтверждением пользователя между шагами.
+The main command that orchestrates the entire development process. Executes all phases sequentially with user confirmation between steps.
 
 **Pipeline:** task-analysis → planner → plan-review → coder → code-review
 
 ```bash
-/workflow Добавить новый REST endpoint для профилей
-/workflow --auto Реализовать обновление ресурса    # автономный режим, без подтверждений
-/workflow --from-phase 3                            # продолжить с указанной фазы
-/workflow --minimal Добавить поле в модель          # минимальное исследование, только критичные проверки
-/workflow beads-abc123                              # задача из beads
+/workflow Add new REST endpoint for profiles
+/workflow --auto Implement resource update         # autonomous mode, no confirmations
+/workflow --from-phase 3                            # resume from specified phase
+/workflow --minimal Add field to model              # minimal research, critical checks only
 ```
 
-**Режимы:**
+**Modes:**
 
-- **INTERACTIVE** (по умолчанию) — подтверждение перед каждой фазой
-- **AUTONOMOUS** (`--auto`) — все фазы автоматически, без подтверждений
-- **RESUME** (`--from-phase N`) — продолжить с указанной фазы
-- **MINIMAL** (`--minimal`) — минимальное исследование, только критичные проверки
+- **INTERACTIVE** (default) — confirmation before each phase
+- **AUTONOMOUS** (`--auto`) — all phases automatically, no confirmations
+- **RESUME** (`--from-phase N`) — resume from specified phase
+- **MINIMAL** (`--minimal`) — minimal research, critical checks only
 
-**Фазы:**
-1. **Task Analysis** — классификация сложности задачи (S/M/L/XL) и определение маршрута
-2. **Planning** — исследование кодовой базы, создание плана имплементации
-3. **Plan Review** — валидация плана на соответствие архитектуре (пропускается при S-complexity)
-4. **Implementation** — написание кода строго по утверждённому плану, запуск тестов
-5. **Code Review** — ревью изменений: архитектура, безопасность, качество
+**Phases:**
 
-**Результат:** реализованный, протестированный и отревьюенный код с git-коммитом.
+1. **Task Analysis** — task complexity classification (S/M/L/XL) and route selection
+2. **Planning** — codebase research, implementation plan creation
+3. **Plan Review** — plan validation against architecture (skipped for S-complexity)
+4. **Implementation** — code writing strictly per approved plan, running tests
+5. **Code Review** — change review: architecture, security, quality
+
+**Result:** implemented, tested, and reviewed code with a git commit.
 
 ---
 
-### `/planner` — Планирование имплементации
+### `/planner` — Implementation Planning
 
-Исследует кодовую базу и создаёт детальный план имплементации с примерами кода и критериями приёмки. Не модифицирует файлы проекта.
+Researches the codebase and creates a detailed implementation plan with code examples and acceptance criteria. Does not modify project files.
 
 ```bash
-/planner Добавить пагинацию в endpoint списка
-/planner --minimal Добавить поле в модель          # минимальный план без глубокого исследования
-/planner beads-abc123                               # задача из beads
+/planner Add pagination to list endpoint
+/planner --minimal Add field to model               # minimal plan without deep research
 ```
 
-**Результат:** файл плана в `.claude/prompts/{feature}.md`
+**Result:** plan file at `.claude/prompts/{feature}.md`
 
 ---
 
-### `/plan-review` — Валидация плана
+### `/plan-review` — Plan Validation
 
-Проверяет план имплементации на соответствие архитектуре, полноту и безопасность перед началом написания кода.
+Checks the implementation plan for architecture compliance, completeness, and security before coding begins.
 
 ```bash
-/plan-review                                # интерактивный выбор плана из списка
-/plan-review my-feature                     # ревью конкретного плана по имени
-/plan-review .claude/prompts/custom.md      # ревью по полному пути к файлу
+/plan-review                                # interactive plan selection from list
+/plan-review my-feature                     # review specific plan by name
+/plan-review .claude/prompts/custom.md      # review by full file path
 ```
 
-**Вердикты:** `APPROVED` | `NEEDS_CHANGES` | `REJECTED`
+**Verdicts:** `APPROVED` | `NEEDS_CHANGES` | `REJECTED`
 
 ---
 
-### `/coder` — Имплементация кода
+### `/coder` — Code Implementation
 
-Реализует код строго по утверждённому плану. Запускает форматирование, линтинг и тесты после имплементации.
+Implements code strictly per approved plan. Runs formatting, linting, and tests after implementation.
 
 ```bash
-/coder                          # автоматический поиск плана в prompts/
-/coder my-feature               # реализовать конкретный план
-/coder beads-abc123             # получить задачу из beads
+/coder                          # auto-find plan in prompts/
+/coder my-feature               # implement specific plan
 ```
 
-**Результат:** работающий код с пройденными тестами + evaluate output с документацией отклонений.
+**Result:** working code with passing tests + evaluate output with deviation documentation.
 
 ---
 
-### `/code-review` — Код-ревью
+### `/code-review` — Code Review
 
-Проверяет изменения кода: архитектура, безопасность, обработка ошибок, покрытие тестами, стиль кода.
+Reviews code changes: architecture, security, error handling, test coverage, code style.
 
 ```bash
-/code-review                            # ревью текущей ветки vs main
-/code-review feature/add-endpoint       # ревью конкретной ветки
-/code-review beads-abc123               # получить контекст из beads
+/code-review                            # review current branch vs main
+/code-review feature/add-endpoint       # review specific branch
 ```
 
-**Вердикты:** `APPROVED` | `APPROVED_WITH_COMMENTS` | `CHANGES_REQUESTED`
+**Verdicts:** `APPROVED` | `APPROVED_WITH_COMMENTS` | `CHANGES_REQUESTED`
 
 ---
 
-### `/review-checklist` — Справочник чеклиста ревью
+### `/review-checklist` — Review Checklist Reference
 
-Отображает чеклист код-ревью: архитектура, безопасность (OWASP), качество кода, производительность. Используется как справочник при ручном или автоматическом ревью.
+Displays the code review checklist: architecture, security (OWASP), code quality, performance. Used as a reference for manual or automated reviews.
 
 ```bash
 /review-checklist
@@ -123,45 +122,45 @@ cp CLAUDE.md /path/to/your/project/
 
 ---
 
-### `/meta-agent` — Менеджер жизненного цикла артефактов
+### `/meta-agent` — Artifact Lifecycle Manager
 
-Создаёт, улучшает, аудитирует и управляет артефактами Claude Code (команды, скиллы, правила, агенты). 9-фазный workflow с quality gates.
-
-**Основные режимы:**
+Creates, enhances, audits, and manages Claude Code artifacts (commands, skills, rules, agents). 9-phase workflow with quality gates.
 
 ```bash
-/meta-agent onboard                    # инициализация .claude/ для нового проекта
-/meta-agent create command my-cmd      # создать новую slash-команду
-/meta-agent create skill my-skill      # создать новый переиспользуемый скилл
-/meta-agent create agent my-agent      # создать нового агента
-/meta-agent enhance command my-cmd     # улучшить существующий артефакт
-/meta-agent audit                      # отчёт о качестве всех артефактов
-/meta-agent delete rule my-rule        # удалить артефакт
-/meta-agent rollback                   # откатить последнее изменение
-/meta-agent list                       # список всех артефактов
+/meta-agent onboard                    # initialize .claude/ for a new project
+/meta-agent create command my-cmd      # create a new slash command
+/meta-agent create skill my-skill      # create a new reusable skill
+/meta-agent create agent my-agent      # create a new agent
+/meta-agent enhance command my-cmd     # improve an existing artifact
+/meta-agent audit                      # quality report for all artifacts
+/meta-agent delete rule my-rule        # delete an artifact
+/meta-agent rollback                   # rollback last change
+/meta-agent list                       # list all artifacts
 ```
 
-**Управление сессиями:**
+**Session management:**
 
 ```bash
-/meta-agent --resume {run_id}          # возобновить с последнего чекпоинта
-/meta-agent abort {run_id}             # отметить запуск как прерванный
-/meta-agent cleanup                    # удалить запуски старше 7 дней
+/meta-agent --resume {run_id}          # resume from last checkpoint
+/meta-agent abort {run_id}             # mark run as aborted
+/meta-agent cleanup                    # remove runs older than 7 days
 ```
 
-**Флаги:**
+**Flags:**
 
-- `--dry-run` — предпросмотр изменений без применения
-- `--track` — включить отслеживание задач через beads
-- `--explore` — принудительный Tree of Thought в фазе планирования
+- `--dry-run` — preview changes without applying
+- `--track` — enable task tracking via beads
+- `--explore` — force Tree of Thought in planning phase
 
-**Типы артефактов:** `command`, `skill`, `rule`, `agent`
+**Artifact types:** `command`, `skill`, `rule`, `agent`
 
 ---
 
-### `/project-researcher` — Анализ проекта
+### `/project-researcher` — Project Analysis
 
-Автономный агент для глубокого анализа кодовой базы, архитектуры, зависимостей и схемы БД. Генерирует `PROJECT-KNOWLEDGE.md`, который используется другими командами как контекст.
+Autonomous agent for deep codebase analysis: architecture, dependencies, and DB schema. Generates `PROJECT-KNOWLEDGE.md` used by other commands as context.
+
+Architecture: orchestrator + 7 specialized subagents (detection, discovery, graph, analysis, generation, verification, report).
 
 ```bash
 /project-researcher
@@ -169,58 +168,114 @@ cp CLAUDE.md /path/to/your/project/
 
 ---
 
-### `/db-explorer` — Обозреватель базы данных
+### `/db-explorer` — Database Explorer
 
-Исследует схему и данные PostgreSQL через MCP. Требует настроенный MCP-сервер `postgres`.
+Explores PostgreSQL schema and data via MCP. Requires configured `postgres` MCP server.
 
 ```bash
-/db-explorer                    # исследовать всю схему
-/db-explorer users              # исследовать конкретную таблицу
+/db-explorer                    # explore entire schema
+/db-explorer users              # explore specific table
 ```
 
-## Какую команду использовать
+## Which Command to Use
 
-| Сценарий | Команда |
+| Scenario | Command |
 |---|---|
-| Полная реализация фичи с нуля | `/workflow` |
-| Быстрая реализация простой задачи | `/workflow --minimal` |
-| Автономная реализация без подтверждений | `/workflow --auto` |
-| Нужен план перед написанием кода | `/planner` |
-| Есть план, нужна его валидация | `/plan-review` |
-| План утверждён, нужна имплементация | `/coder` |
-| Код написан, нужно ревью | `/code-review` |
-| Настройка kit в новом проекте | `/meta-agent onboard` |
-| Создание новых команд/скиллов/агентов | `/meta-agent create` |
-| Предпросмотр изменений артефакта | `/meta-agent enhance --dry-run` |
-| Понять структуру проекта | `/project-researcher` |
-| Исследовать схему БД | `/db-explorer` |
+| Full feature implementation from scratch | `/workflow` |
+| Quick implementation of a simple task | `/workflow --minimal` |
+| Autonomous implementation without confirmations | `/workflow --auto` |
+| Need a plan before writing code | `/planner` |
+| Have a plan, need validation | `/plan-review` |
+| Plan approved, need implementation | `/coder` |
+| Code written, need review | `/code-review` |
+| Setting up kit in a new project | `/meta-agent onboard` |
+| Creating new commands/skills/agents | `/meta-agent create` |
+| Preview artifact changes | `/meta-agent enhance --dry-run` |
+| Understand project structure | `/project-researcher` |
+| Explore DB schema | `/db-explorer` |
 
-## MCP-серверы
+## Architecture
 
-Настраиваются в `~/.claude/mcp.json`:
+The system is a **5-phase development pipeline** managed by the orchestrator (`/workflow`), which sequentially delegates work to four specialized agents. Each agent has a strictly defined responsibility zone.
 
-**Обязательные:**
-- `memory` (@modelcontextprotocol/server-memory) — персистентная память агента между сессиями
-- `context7` (@upstash/context7-mcp) — поиск документации библиотек
-- `sequential-thinking` — структурированное рассуждение для сложных задач
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                       WORKFLOW (Orchestrator)                        │
+│                                                                      │
+│  Phase 0.5       Phase 1       Phase 2       Phase 3      Phase 4   │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌─────────┐  ┌────────┐ │
+│  │  TASK    │─▶│ PLANNER  │─▶│  PLAN    │─▶│ CODER   │─▶│ CODE   │ │
+│  │ ANALYSIS │  │          │  │ REVIEW   │  │         │  │ REVIEW │ │
+│  └──────────┘  └──────────┘  └──────────┘  └─────────┘  └────────┘ │
+│                                   ▲  │          ▲  │               │
+│                              NEEDS_CHANGES  CHANGES_REQ            │
+│                              (max 3x loop)  (max 3x loop)         │
+└──────────────────────────────────────────────────────────────────────┘
+```
 
-**Опциональные:**
-- `postgres` (@anthropic/mcp-postgres) — необходим для `/db-explorer`
+**Key principles:**
 
-## Структура проекта
+- **Sequential execution** — phases don't run in parallel
+- **Handoff Protocol** — structured payload passed between phases
+- **Context Isolation** — review phases run as isolated subagents (clean context, no authorship bias)
+- **Loop Limits** — max 3 iterations per review cycle
+- **Checkpoint Protocol** — state saved after each phase for session recovery
+- **Conditional Deps Loading** — lightweight deps for simple tasks (S-complexity saves ~6,300 tokens)
+- **Re-Routing** — pipeline adjusts route on complexity mismatch
+
+## MCP Servers
+
+Configure in `~/.claude/mcp.json`:
+
+**Required:**
+
+- `memory` (@modelcontextprotocol/server-memory) — persistent agent memory across sessions
+- `context7` (@upstash/context7-mcp) — library documentation lookup
+- `sequential-thinking` — structured reasoning for complex tasks
+
+**Optional:**
+
+- `postgres` (@anthropic/mcp-postgres) — required for `/db-explorer`
+- `tree_sitter` — code analysis (symbols, dependencies, repo-map)
+
+## Project Structure
 
 ```
 .claude/
-├── commands/          # slash-команды (/workflow, /planner и др.)
-│   └── deps/          # общие зависимости команд
-├── agents/            # автономные агенты (project-researcher, db-explorer)
-├── templates/         # шаблоны для создания новых артефактов
-├── prompts/           # сгенерированные планы имплементации
-└── workflow-state/    # чекпоинты pipeline для восстановления сессии
+├── agents/                # Autonomous agents
+│   ├── meta-agent/        # Artifact lifecycle management (20+ deps, 5 scripts, templates)
+│   ├── project-researcher/# Codebase analysis (7 subagents, AST analysis, scoring)
+│   └── db-explorer/       # PostgreSQL exploration
+├── commands/              # Slash commands (/workflow, /planner, /coder, etc.)
+│   └── deps/              # Shared dependencies
+│       ├── core/          # Cross-cutting: autonomy, beads, context-isolation, error-handling, MCP tools
+│       ├── workflow/      # Pipeline: orchestration, checkpoints, handoffs, metrics, re-routing
+│       ├── planner/       # Task analysis, data flow, examples, checklist
+│       ├── coder/         # Implementation examples, checklist, troubleshooting
+│       ├── plan-review/   # Architecture checks, required sections, checklist
+│       └── code-review/   # Security checklist (OWASP), examples, checklist
+├── templates/             # Templates for creating new artifacts
+├── prompts/               # Generated implementation plans
+├── scripts/               # Utility scripts (sync-to-github)
+├── settings.json          # Claude Code project settings + hooks
+└── PROJECT-KNOWLEDGE.md   # Auto-generated project knowledge base
 ```
 
-## Соглашения
+## Hooks
 
-- Артефакты используют YAML-first формат (>80% YAML, минимум прозы)
-- Язык: английский для кода, YAML-ключей и спецификаций артефактов
-- Лимиты размера контролируются хуками (`check-artifact-size.sh`)
+The kit includes hooks (configured in `.claude/settings.json`) that enforce quality automatically:
+
+| Hook | Trigger | Purpose |
+| ------ | --------- | --------- |
+| `check-artifact-size.sh` | Before Write | Block writes exceeding size thresholds |
+| `yaml-lint.sh` | After Edit | Validate YAML structure |
+| `check-references.sh` | After Write | Validate all file references |
+| `verify-phase-completion.sh` | On Stop | Ensure all meta-agent phases completed |
+| `gofmt` | After Go file edit/write | Auto-format Go code |
+
+## Conventions
+
+- Artifacts use YAML-first format (>80% YAML, minimal prose)
+- Language: English for code, YAML keys, and artifact specs
+- Size limits enforced by hooks (`check-artifact-size.sh`)
+- Examples use grep/glob patterns to find current code, not hardcoded snippets

@@ -1,6 +1,6 @@
-# claude-go-kit
+# claude-kit
 
-A reusable Claude Code configuration kit for Go projects.
+A reusable Claude Code configuration kit for any project.
 Provides a set of agents, commands, and templates for AI-assisted development.
 
 ## What's included
