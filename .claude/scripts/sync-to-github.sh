@@ -47,6 +47,11 @@ fi
 # Force-add .claude/ (global gitignore may exclude it)
 git add -f .claude/ 2>/dev/null || true
 
+# Add root-level kit files
+for f in README.md CLAUDE.md .gitignore; do
+    [ -f "$f" ] && git add "$f" 2>/dev/null || true
+done
+
 # Add .beads/ if exists
 if [ -d ".beads" ]; then
     git add -f .beads/ 2>/dev/null || true
