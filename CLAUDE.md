@@ -9,14 +9,15 @@ agents:
   - meta-agent: Manage Claude Code artifacts (create/enhance/audit commands, skills, rules, agents)
   - project-researcher: Deep project analysis → generates PROJECT-KNOWLEDGE.md
   - db-explorer: Explore PostgreSQL schema via MCP
+  - plan-reviewer: Validates implementation plan (replaces /plan-review command)
+  - code-reviewer: Code review of changes (replaces /code-review command)
+  - code-researcher: Codebase exploration for planning/implementation
 
 commands:
   - /meta-agent: Artifact lifecycle management (onboard, create, enhance, audit, delete, rollback)
-  - /workflow: Full dev cycle (task-analysis → planner → plan-review → coder → code-review)
+  - /workflow: Full dev cycle (task-analysis → planner → plan-review (agent) → coder → code-review (agent))
   - /planner: Research codebase → detailed implementation plan
-  - /plan-review: Validate plan before coding starts
   - /coder: Implement code strictly per approved plan
-  - /code-review: Code review before merge
   - /db-explorer: Explore database schema and data
   - /review-checklist: Code review checklist reference
 
@@ -26,6 +27,7 @@ templates:
   - .claude/templates/skill.md
   - .claude/templates/rule.md
   - .claude/templates/plan-template.md
+  - .claude/templates/project-claude-md.md
 
 ## Using this kit in a project
 

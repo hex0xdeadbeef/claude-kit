@@ -6,22 +6,22 @@ meta:
   updated: 2026-02-24
   changelog: "SEE: deps/changelog.md"
 description: |
-  Автономный агент-оркестратор для глубокого исследования любого проекта и генерации .claude/ конфигурации.
+  Autonomous orchestrator agent for deep analysis of any project and generation of .claude/ configuration.
 
-  Архитектура v4.3: orchestrator + 7 specialized subagents + 1 inline phase.
-  Orchestrator управляет state, маршрутизирует фазы, контролирует blocking gates.
-  Subagents работают в изолированных контекстах через Task tool.
+  Architecture v4.3: orchestrator + 7 specialized subagents + 1 inline phase.
+  Orchestrator manages state, routes phases, controls blocking gates.
+  Subagents operate in isolated contexts via Task tool.
 
-  Поддерживает:
+  Supports:
   - Go, Python, TypeScript, Rust, Java projects (31 language via tree-sitter)
-  - Monorepos и multi-module projects (параллельный анализ)
-  - Legacy и greenfield кодбазы
-  - Open source и enterprise проекты
-  - PostgreSQL schema analysis (через MCP)
+  - Monorepos and multi-module projects (parallel analysis)
+  - Legacy and greenfield codebases
+  - Open source and enterprise projects
+  - PostgreSQL schema analysis (via MCP)
   - Tree-sitter MCP code analysis (symbols, deps, repo-map)
   - Fallback: ast-grep CLI → grep (graceful degradation)
 
-  Keywords: project-researcher, исследование проекта, analyze project, bootstrap claude
+  Keywords: project-researcher, project analysis, analyze project, bootstrap claude
 tools:
   - Task
   - Read
@@ -43,17 +43,17 @@ triggers:
 # ROLE & I/O
 # ════════════════════════════════════════════════════════════════════════════════
 
-role: "Project Research Orchestrator — координирует subagents для глубокого анализа проекта и генерации .claude/ конфигурации"
+role: "Project Research Orchestrator — coordinates subagents for deep project analysis and generation of .claude/ configuration"
 
 input:
   format: "$ARGUMENTS = [path] [--dry-run]"
   arguments:
     - name: "path"
       default: "."
-      description: "Путь к проекту для анализа"
+      description: "Path to the project for analysis"
     - name: "--dry-run"
       default: false
-      description: "Только анализ, без записи файлов"
+      description: "Analysis only, no file writing"
 
 output:
   format: "Full analysis report + generated .claude/ artifacts"
@@ -188,14 +188,14 @@ orchestration:
 
 modes:
   - mode: "CREATE"
-    condition: ".claude/ не существует"
-    behavior: "Создаёт всю конфигурацию с нуля"
+    condition: ".claude/ does not exist"
+    behavior: "Creates the entire configuration from scratch"
   - mode: "AUGMENT"
-    condition: ".claude/ существует, но нет PROJECT-KNOWLEDGE.md"
-    behavior: "Дополняет недостающее, сохраняет существующее"
+    condition: ".claude/ exists but no PROJECT-KNOWLEDGE.md"
+    behavior: "Adds missing parts, preserves existing ones"
   - mode: "UPDATE"
-    condition: "PROJECT-KNOWLEDGE.md существует + git repo"
-    behavior: "Обновляет исследование incrementally"
+    condition: "PROJECT-KNOWLEDGE.md exists + git repo"
+    behavior: "Updates the research incrementally"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # ERROR HANDLING

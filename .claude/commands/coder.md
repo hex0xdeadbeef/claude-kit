@@ -4,8 +4,6 @@ description: Implements code strictly per approved plan
 model: opus
 ---
 
-# Language & aliases: SEE .claude/PROJECT-KNOWLEDGE.md
-
 # CODER
 
 role:
@@ -16,9 +14,7 @@ role:
   success_criteria: "All Parts implemented, tests pass, evaluate output written, handoff formed"
   constraint: "No deviations from plan without documenting in evaluate_output"
 
-# ════════════════════════════════════════════════════════════════════════════════
-# INPUT
-# ════════════════════════════════════════════════════════════════════════════════
+## INPUT
 input:
   arguments:
     - name: plan-name
@@ -40,9 +36,7 @@ input:
     plan_not_found: "ERROR: Plan not found at {path}. Create with /planner first."
     plan_not_approved: "ERROR: Plan not approved. Run /plan-review first."
 
-# ════════════════════════════════════════════════════════════════════════════════
-# OUTPUT
-# ════════════════════════════════════════════════════════════════════════════════
+## OUTPUT
 output:
   description: "Working code passing VERIFY (adapt to project — SEE .claude/PROJECT-KNOWLEDGE.md)"
 
@@ -64,7 +58,7 @@ output:
   handoff_output:
     severity: CRITICAL
     description: "MUST generate on completion — passed to /code-review"
-    # SEE: deps/workflow/handoff-protocol.md → coder_to_code_review (canonical field schema)
+    # For handoff contract see [handoff-protocol.md] in workflow-protocols skill → coder_to_code_review
     narrative_for_reviewer: |
       [Context from coder]:
       - Coder implemented {N} Parts per plan {feature}.md
@@ -81,9 +75,7 @@ output:
           - "N+1 query in Part 2 — optimized with batch query"
         deviations_from_plan: []
 
-# ════════════════════════════════════════════════════════════════════════════════
-# TRIGGERS
-# ════════════════════════════════════════════════════════════════════════════════
+## TRIGGERS
 triggers:
   - if: "Complex logic (3+ conditions, state machines)"
     then: "Use mcp__sequential-thinking__sequentialthinking before implementing"
@@ -100,9 +92,7 @@ triggers:
   - if: "Implementing database/repository code"
     then: "Check generated code exists, run code generation if needed"
 
-# ════════════════════════════════════════════════════════════════════════════════
-# AUTONOMY RULE
-# ════════════════════════════════════════════════════════════════════════════════
+## AUTONOMY
 autonomy:
   modes:
     - name: DEFAULT
@@ -136,17 +126,14 @@ autonomy:
     - condition: Single test fails
       action: "Fix → retry"
 
-# ════════════════════════════════════════════════════════════════════════════════
-# STARTUP
-# ════════════════════════════════════════════════════════════════════════════════
+## STARTUP
 startup:
   immediate_actions:
-    - action: "Read role-specific core deps"
+    - action: "Load MCP patterns and coder-rules skill"
       files:
-        - ".claude/commands/deps/core/mcp-tools.md"
-        - ".claude/commands/deps/core/project-knowledge.md"
-        - ".claude/commands/deps/core/error-handling.md"
-      purpose: "Load MCP patterns, language profile, error handling"
+        - ".claude/skills/coder-rules/mcp-tools.md"
+        - ".claude/skills/coder-rules/SKILL.md"
+      purpose: "Load MCP patterns (language profile + error handling → auto-loaded via CLAUDE.md). Load coder-rules skill for 5 CRITICAL rules and evaluate protocol."
 
     - action: "Read .claude/prompts/{feature-name}.md"
       purpose: "Load plan"
@@ -160,14 +147,12 @@ startup:
       note: "NON_CRITICAL — if Memory unavailable, warn and continue"
 
     - action: "bd update <id> --status=in_progress"
-      purpose: "Pick up task (if beads issue exists)"
+      purpose: "Pick up task (if beads issue exists). Beads is NON_CRITICAL."
 
     - action: "git checkout -b feature/<name>"
       purpose: "Create feature branch (if needed)"
 
-# ════════════════════════════════════════════════════════════════════════════════
-# WORKFLOW
-# ════════════════════════════════════════════════════════════════════════════════
+## WORKFLOW
 workflow:
   summary: "STARTUP → READ PLAN → EVALUATE → IMPLEMENT PARTS → VERIFY → DONE"
 
@@ -291,28 +276,9 @@ workflow:
           2. Implement core logic
           3. Add edge cases and error handling
 
-      context7_usage:
-        required_when:
-          - "New external dependency added"
-          - "Unfamiliar library API"
-          - "Integration tests requiring external services"
-
-        not_needed_when:
-          - "Standard library of the language"
-          - "Already familiar API"
-
-        workflow: |
-          # Step 1: Find library
-          mcp__plugin_context7_context7__resolve-library-id:
-            libraryName: "{library-name}"
-            query: "how to setup {library}"
-
-          # Step 2: Get documentation
-          mcp__plugin_context7_context7__query-docs:
-            libraryId: "/{org}/{library}"
-            query: "{specific usage question}"
-
-        warning: "If used external library WITHOUT Context7 — explain why"
+      context7:
+        when: "New external dependency or unfamiliar library API"
+        reference: "Resolve library → query docs (SEE [mcp-tools.md] in coder-rules skill — Context7 workflow)"
 
       config_changes:
         when: "Config added"
@@ -362,16 +328,7 @@ workflow:
 
         Ready for code review → /code-review
 
-# ════════════════════════════════════════════════════════════════════════════════
-# BEADS INTEGRATION (if available)
-# ════════════════════════════════════════════════════════════════════════════════
-beads_integration:
-  rule: "If beads issue exists → task already claimed in startup. No auto-close (wait for review)."
-  note: "Beads is NON_CRITICAL. If bd unavailable → skip."
-
-# ════════════════════════════════════════════════════════════════════════════════
-# RULES
-# ════════════════════════════════════════════════════════════════════════════════
+## RULES
 rules:
   - id: RULE_1
     title: "Plan Only"
@@ -398,18 +355,9 @@ rules:
     description: "Code NOT ready until tests pass."
     severity: CRITICAL
 
-# ════════════════════════════════════════════════════════════════════════════════
-# EXAMPLES
-# ════════════════════════════════════════════════════════════════════════════════
-examples:
-  reference: ".claude/commands/deps/coder/examples.md"
-  description: "Full bad/good/why patterns"
-
-# ════════════════════════════════════════════════════════════════════════════════
-# ERROR HANDLING
-# ════════════════════════════════════════════════════════════════════════════════
+## ERROR HANDLING
 error_handling:
-  # Common MCP errors: SEE deps/core/error-handling.md
+  # Common MCP errors → auto-loaded via CLAUDE.md (error handling section)
   command_specific:
     - situation: Plan not found
       action: "ERROR: Plan not found. Create with /planner first."
@@ -421,24 +369,3 @@ error_handling:
       action: "Run FMT, retry"
     - situation: Hook blocks edit
       action: "Show blocked file, explain reason"
-
-# ════════════════════════════════════════════════════════════════════════════════
-# TROUBLESHOOTING
-# ════════════════════════════════════════════════════════════════════════════════
-troubleshooting:
-  reference: ".claude/commands/deps/coder/troubleshooting.md"
-  description: "Common problems and fixes"
-
-# ════════════════════════════════════════════════════════════════════════════════
-# LAYER IMPORTS
-# ════════════════════════════════════════════════════════════════════════════════
-layer_imports:
-  reference: "SEE: .claude/PROJECT-KNOWLEDGE.md"
-  description: "Import matrix and layer dependency rules from project analysis"
-
-# ════════════════════════════════════════════════════════════════════════════════
-# CHECKLIST
-# ════════════════════════════════════════════════════════════════════════════════
-checklist:
-  reference: "SEE: deps/coder/checklist.md"
-  when: "Read at completion of each phase for self-verification"

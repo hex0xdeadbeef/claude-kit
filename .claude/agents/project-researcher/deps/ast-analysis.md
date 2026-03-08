@@ -1,31 +1,31 @@
 # AST-Based Analysis Patterns
 
-**Purpose:** Структурный анализ кода через ast-grep вместо текстового grep. Устраняет false positives от комментариев, строк и неточных regex-совпадений.
+**Purpose:** Structural code analysis via ast-grep instead of text-based grep. Eliminates false positives from comments, strings, and imprecise regex matches.
 
-**Principle:** AST видит семантику кода, grep видит текст. AST-анализ даёт точные результаты с первого прохода.
+**Principle:** AST sees code semantics, grep sees text. AST analysis yields accurate results on the first pass.
 
-**Load when:** Фазы DETECT и ANALYZE — как primary метод анализа кода.
+**Load when:** DETECT and ANALYZE phases — as the primary code analysis method.
 
 ---
 
 ## AVAILABILITY CHECK
 
 ```bash
-# Проверить доступность ast-grep
+# Check ast-grep availability
 if command -v ast-grep &>/dev/null || command -v sg &>/dev/null; then
     AST_AVAILABLE=true
     AST_CMD=$(command -v ast-grep || command -v sg)
 else
     AST_AVAILABLE=false
-    # Попробовать установить
+    # Try to install
     npm install -g @ast-grep/cli 2>/dev/null && AST_AVAILABLE=true && AST_CMD="ast-grep"
 fi
 
-# Записать в state
+# Record in state
 # state.detect.ast_available = $AST_AVAILABLE
 ```
 
-**Fallback:** Если `AST_AVAILABLE=false`, все паттерны ниже имеют grep-fallback. Результаты grep помечаются `detection_method: "grep"` в state (ниже confidence).
+**Fallback:** If `AST_AVAILABLE=false`, all patterns below have a grep fallback. Grep results are marked with `detection_method: "grep"` in state (lower confidence).
 
 ---
 
@@ -34,7 +34,7 @@ fi
 ### Interfaces
 
 ```bash
-# AST: Найти все интерфейсы с методами
+# AST: Find all interfaces with methods
 ast-grep --pattern 'type $NAME interface { $$$ }' --lang go
 
 # Fallback grep:
@@ -44,17 +44,17 @@ grep -rn "type [A-Z][a-zA-Z]* interface {" --include="*.go"
 ### Structs
 
 ```bash
-# AST: Найти все структуры
+# AST: Find all structs
 ast-grep --pattern 'type $NAME struct { $$$ }' --lang go
 
-# AST: Структуры с определёнными тегами (json, db)
+# AST: Structs with specific tags (json, db)
 ast-grep --pattern '$FIELD $TYPE `json:"$TAG"`' --lang go
 ```
 
 ### Error Patterns
 
 ```bash
-# AST: fmt.Errorf с %w (error wrapping)
+# AST: fmt.Errorf with %w (error wrapping)
 ast-grep --pattern 'fmt.Errorf($FMT, $$$)' --lang go
 
 # AST: errors.New
@@ -74,16 +74,16 @@ grep -rn 'errors.New' --include="*.go" | wc -l
 ### Function Signatures
 
 ```bash
-# AST: Функции, принимающие context.Context первым аргументом
+# AST: Functions accepting context.Context as the first argument
 ast-grep --pattern 'func $NAME(ctx context.Context, $$$) $$$' --lang go
 ast-grep --pattern 'func ($RECV $TYPE) $NAME(ctx context.Context, $$$) $$$' --lang go
 
-# AST: Функции, возвращающие error
+# AST: Functions returning error
 ast-grep --pattern 'func $NAME($$$) ($$$, error) { $$$ }' --lang go
 
-# AST: Exported функции (PascalCase — начинается с заглавной)
+# AST: Exported functions (PascalCase — starts with uppercase)
 ast-grep --pattern 'func $NAME($$$) $$$' --lang go
-# Фильтровать: $NAME начинается с [A-Z]
+# Filter: $NAME starts with [A-Z]
 ```
 
 ### Dependency Injection
@@ -103,16 +103,16 @@ ast-grep --pattern 'var _ $IFACE = &$IMPL{}' --lang go
 ### Import Analysis
 
 ```bash
-# AST: Все import блоки
+# AST: All import blocks
 ast-grep --pattern 'import ($$$)' --lang go
 
-# AST: Конкретный import
+# AST: Specific import
 ast-grep --pattern 'import ($$$ "$PACKAGE" $$$)' --lang go
 
-# Для dependency violation detection — проверить что domain не импортирует infrastructure:
-# 1. Найти все imports в domain/
+# For dependency violation detection — verify that domain does not import infrastructure:
+# 1. Find all imports in domain/
 ast-grep --pattern 'import ($$$)' --lang go internal/domain/
-# 2. Проверить наличие запрещённых путей в результатах
+# 2. Check for forbidden paths in results
 ```
 
 ### Testing Patterns
@@ -145,7 +145,7 @@ ast-grep --pattern 'func $NAME(w http.ResponseWriter, r *http.Request) { $$$ }' 
 
 # AST: Chi/Echo/Gin handler patterns (context-based)
 ast-grep --pattern 'func $NAME(c $CTX) $$$' --lang go
-# Фильтровать по типу $CTX: echo.Context, *gin.Context, chi context etc.
+# Filter by $CTX type: echo.Context, *gin.Context, chi context etc.
 
 # AST: Middleware pattern
 ast-grep --pattern 'func $NAME(next http.Handler) http.Handler { $$$ }' --lang go
@@ -285,7 +285,7 @@ ast-grep --pattern '$EXPR?' --lang rust
 
 # AST: Custom error enums
 ast-grep --pattern 'enum $NAME { $$$ }' --lang rust
-# Фильтровать по имени *Error
+# Filter by name *Error
 ```
 
 ### Async
@@ -382,5 +382,5 @@ $TYPE $NAME' --lang java
 | grep match (complex regex) | -0.10 |
 | Heuristic (directory name only) | -0.15 |
 
-Пример: Если архитектура определена через AST (interfaces in domain/, no external imports) → confidence 0.90.
-Если через grep (directory names only) → confidence 0.75.
+Example: If architecture is determined via AST (interfaces in domain/, no external imports) → confidence 0.90.
+If via grep (directory names only) → confidence 0.75.

@@ -75,7 +75,7 @@ library_usage:
     - "Patterns are current (not deprecated)"
 
 severity_classification:
-  # SEE: deps/shared-review.md#review-verdict — severity levels, decision matrix, auto-escalation
+  # SEE: skills/code-review-rules/SKILL.md — severity levels, decision matrix, auto-escalation
 
 verdict_template: |
   ## Code Review: {branch}

@@ -5,16 +5,16 @@
 **Input:** state.validate (path, mode), state.discover.*, state.detect.*
 **Output:** state.graph
 
-**New in v4.2:** Построение repo-map — ранжированной символьной карты проекта через tree-sitter. Результат используется как входной контекст для ANALYSIS subagent, значительно повышая точность архитектурного анализа.
+**New in v4.2:** Building a repo-map — a ranked symbol map of the project via tree-sitter. The result is used as input context for the ANALYSIS subagent, significantly improving architecture analysis accuracy.
 
 ---
 
 ## OVERVIEW
 
-GRAPH фаза строит три связанных артефакта:
-1. **Symbol Table** — все определения (функции, типы, интерфейсы) с метаданными
-2. **Dependency Graph** — граф зависимостей между файлами/пакетами
-3. **Repo-Map** — ранжированный (PageRank) список символов, сжатый до token budget
+The GRAPH phase builds three related artifacts:
+1. **Symbol Table** — all definitions (functions, types, interfaces) with metadata
+2. **Dependency Graph** — dependency graph between files/packages
+3. **Repo-Map** — ranked (PageRank) list of symbols, compressed to fit token budget
 
 ```
 Inputs:                           GRAPH Subagent                        Output:
@@ -32,7 +32,7 @@ project files (via tools)    │  4. Token Budget     │
 
 ### Step 1: Analysis Method Selection
 
-Определить доступный метод анализа из `state.detect.analysis_method`:
+Determine the available analysis method from `state.detect.analysis_method`:
 
 ```yaml
 method_selection:
@@ -280,10 +280,10 @@ for file, rank in sorted(ranks.items(), key=lambda x: -x[1]):
         ranked_symbols.append((symbol, symbol_rank))
 ```
 
-**Practical Note:** Subagent не обязан запускать Python с networkx. Можно:
-1. Использовать tree-sitter MCP `analyze_project` (если доступен)
-2. Реализовать упрощённый PageRank через bash + jq
-3. Или просто ранжировать по fan-in (количество файлов, импортирующих данный файл)
+**Practical Note:** The subagent is not required to run Python with networkx. Alternatives:
+1. Use tree-sitter MCP `analyze_project` (if available)
+2. Implement a simplified PageRank via bash + jq
+3. Or simply rank by fan-in (number of files importing a given file)
 
 **Simplified Ranking (fallback, no Python):**
 

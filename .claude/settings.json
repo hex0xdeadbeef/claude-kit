@@ -1,8 +1,15 @@
 {
   "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/main/config-schema.json",
   "model": "sonnet",
-  "thinking": { "type": "adaptive" },
-  "enabledMcpjsonServers": ["memory", "sequential-thinking", "context7", "tree_sitter"],
+  "thinking": {
+    "type": "adaptive"
+  },
+  "enabledMcpjsonServers": [
+    "memory",
+    "sequential-thinking",
+    "context7",
+    "tree_sitter"
+  ],
   "permissions": {
     "allow": [
       "Bash(make:*)",
@@ -16,38 +23,77 @@
     "PreToolUse": [
       {
         "matcher": "Write",
-        "command": ".claude/agents/meta-agent/scripts/check-artifact-size.sh",
-        "description": "SIZE_GATE: Block writes exceeding artifact size thresholds"
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/agents/meta-agent/scripts/check-artifact-size.sh"
+          }
+        ]
       }
     ],
     "PostToolUse": [
       {
         "matcher": "Edit",
-        "command": ".claude/agents/meta-agent/scripts/yaml-lint.sh",
-        "description": "YAML_LINT: Validate YAML structure after edits"
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/agents/meta-agent/scripts/yaml-lint.sh"
+          },
+          {
+            "type": "command",
+            "command": "if echo \"$TOOL_INPUT\" | jq -r '.file_path' 2>/dev/null | grep -q '\\.go$'; then gofmt -w \"$(echo \"$TOOL_INPUT\" | jq -r '.file_path')\"; fi"
+          }
+        ]
       },
       {
         "matcher": "Write",
-        "command": ".claude/agents/meta-agent/scripts/check-references.sh",
-        "description": "REF_CHECK: Validate all file references after writes"
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/agents/meta-agent/scripts/check-references.sh"
+          },
+          {
+            "type": "command",
+            "command": "if echo \"$TOOL_INPUT\" | jq -r '.file_path' 2>/dev/null | grep -q '\\.go$'; then gofmt -w \"$(echo \"$TOOL_INPUT\" | jq -r '.file_path')\"; fi"
+          }
+        ]
       }
     ],
     "Stop": [
       {
-        "command": ".claude/agents/meta-agent/scripts/verify-phase-completion.sh",
-        "description": "PHASE_CHECK: Ensure all meta-agent phases completed"
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/agents/meta-agent/scripts/verify-phase-completion.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/scripts/check-uncommitted.sh"
+          }
+        ]
       }
     ],
-    "PostFileEdit": [
+    "PreCompact": [
       {
-        "glob": "**/*.go",
-        "command": "gofmt -w ${FILE}"
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/scripts/save-progress-before-compact.sh"
+          }
+        ]
       }
     ],
-    "PostFileWrite": [
+    "SubagentStop": [
       {
-        "glob": "**/*.go",
-        "command": "gofmt -w ${FILE}"
+        "matcher": "plan-reviewer|code-reviewer",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/scripts/save-review-checkpoint.sh"
+          }
+        ]
       }
     ]
   }

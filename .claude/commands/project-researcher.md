@@ -1,5 +1,5 @@
 ---
-description: "Автономный агент для глубокого исследования проекта и генерации .claude/ конфигурации"
+description: "Autonomous agent for deep project analysis and .claude/ configuration generation"
 model: opus
 version: 1.0.0
 updated: 2026-02-23

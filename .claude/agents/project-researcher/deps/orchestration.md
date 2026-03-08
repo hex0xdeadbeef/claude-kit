@@ -1,8 +1,8 @@
 # Orchestration Protocol
 
-**Purpose:** Определяет протокол взаимодействия между orchestrator (AGENT.md) и subagents. Каждый subagent — изолированный контекст, вызываемый через Task tool.
+**Purpose:** Defines the interaction protocol between the orchestrator (AGENT.md) and subagents. Each subagent is an isolated context invoked via the Task tool.
 
-**Load when:** Orchestrator читает этот файл при инициализации.
+**Load when:** Orchestrator reads this file during initialization.
 
 ---
 
@@ -18,18 +18,18 @@
 | verification | `subagents/verification.md` | sonnet | VERIFY | No |
 | report | `subagents/report.md` | haiku | REPORT | No |
 
-**Inline (не subagent):**
+**Inline (not a subagent):**
 | Phase | File | Model | Note |
 |-------|------|-------|------|
-| CRITIQUE | `phases/critique.md` | opus | Blocking gate — загружается inline в orchestrator |
+| CRITIQUE | `phases/critique.md` | opus | Blocking gate — loaded inline in the orchestrator |
 
-**New in v4.2:** GRAPH subagent строит символьный граф (symbol table + dependency graph + PageRank repo-map) между DETECTION и ANALYSIS. Использует tree-sitter MCP как primary инструмент.
+**New in v4.2:** GRAPH subagent builds a symbol graph (symbol table + dependency graph + PageRank repo-map) between DETECTION and ANALYSIS. Uses tree-sitter MCP as the primary tool.
 
 ---
 
 ## SUBAGENT CALL PROTOCOL
 
-### Вызов subagent через Task tool
+### Calling a subagent via Task tool
 
 ```
 Task tool call:
@@ -68,26 +68,26 @@ Task tool call:
     ```
 ```
 
-### Получение результата
+### Receiving the result
 
 Orchestrator:
-1. Парсит `subagent_result` из ответа subagent
-2. Валидирует `state_updates` против state contract (SEE: deps/state-contract.md)
-3. Мержит state по правилам (SEE: State Merging Rules)
-4. Логирует `progress_summary`
-5. При `status: "failure"` → retry или halt
+1. Parses `subagent_result` from the subagent response
+2. Validates `state_updates` against the state contract (SEE: deps/state-contract.md)
+3. Merges state according to the rules (SEE: State Merging Rules)
+4. Logs `progress_summary`
+5. On `status: "failure"` → retry or halt
 
 ---
 
 ## STATE SERIALIZATION
 
-### Что передавать subagent
+### What to pass to a subagent
 
-Каждый subagent получает **только те поля state, которые ему нужны** (определено в state contract required fields).
+Each subagent receives **only the state fields it needs** (defined in the state contract required fields).
 
-**Пример для detection subagent:**
+**Example for detection subagent:**
 ```yaml
-# Передаём только required fields
+# Pass only required fields
 validate:
   path: "/Users/dev/my-project"
   mode: "CREATE"
@@ -97,13 +97,13 @@ discover:
   is_monorepo: false
 ```
 
-**НЕ передаём** поля от других фаз, которые detection не использует.
+**Do NOT pass** fields from other phases that detection does not use.
 
-### Что получаем от subagent
+### What we receive from a subagent
 
-Subagent возвращает **только свою секцию state** (delta, не полный state).
+A subagent returns **only its state section** (delta, not the full state).
 
-**Пример ответа detection subagent:**
+**Example detection subagent response:**
 ```yaml
 subagent_result:
   status: "success"
@@ -136,7 +136,7 @@ subagent_result:
 
 ### Single Project (`strategy: "single"`)
 
-Каждый subagent пишет в свою секцию state. Мерж = прямая замена:
+Each subagent writes to its own state section. Merge = direct replacement:
 
 ```
 state.{phase_name} ← subagent_result.state_updates.{phase_name}
@@ -144,10 +144,10 @@ state.{phase_name} ← subagent_result.state_updates.{phase_name}
 
 ### Monorepo (`strategy: "per-module" | "per-module-with-shared-context"`)
 
-При запуске N subagents для N модулей — результаты агрегируются:
+When running N subagents for N modules — results are aggregated:
 
 ```yaml
-# Orchestrator создаёт per-module state:
+# Orchestrator creates per-module state:
 detect:
   modules:
     - target: "services/api"
@@ -181,7 +181,7 @@ detect:
 
 ### Execution Strategies
 
-Стратегия параллелизации определяется по `state.discover.strategy` и количеству модулей.
+The parallelization strategy is determined by `state.discover.strategy` and the number of modules.
 
 ```
 IF state.discover.strategy == "single":
@@ -199,14 +199,14 @@ ELSE IF state.discover.strategy IN ("per-module", "per-module-with-shared-contex
 
   ELSE IF state.discover.modules.length <= 3:
     # Pipeline parallelism: per-module compound subagents
-    # Каждый модуль проходит DETECTION+GRAPH+ANALYSIS в одном Task-call
+    # Each module goes through DETECTION+GRAPH+ANALYSIS in a single Task call
     SEE: PIPELINE PARALLELISM section below
 
   ELSE:
-    # Batch parallelism (4+ modules): classic approach для контроля concurrency
-    # Batch 1: все DETECTION параллельно → merge
-    # Batch 2: все GRAPH параллельно → merge
-    # Batch 3: все ANALYSIS параллельно → merge
+    # Batch parallelism (4+ modules): classic approach for concurrency control
+    # Batch 1: all DETECTION in parallel → merge
+    # Batch 2: all GRAPH in parallel → merge
+    # Batch 3: all ANALYSIS in parallel → merge
     FOR EACH target IN state.discover.analysis_targets:
       Launch subagent(detection, module_path=target) IN PARALLEL
     WAIT ALL
@@ -226,22 +226,22 @@ ELSE IF state.discover.strategy IN ("per-module", "per-module-with-shared-contex
 ### Task tool parallel calls
 
 ```
-# В orchestrator — запускать несколько Task tool calls в одном сообщении:
-# Task 1: detection для services/api
-# Task 2: detection для services/auth
-# Task 3: detection для pkg/shared
-# → все запускаются параллельно
+# In the orchestrator — launch multiple Task tool calls in a single message:
+# Task 1: detection for services/api
+# Task 2: detection for services/auth
+# Task 3: detection for pkg/shared
+# → all launched in parallel
 ```
 
 ---
 
 ## PIPELINE PARALLELISM
 
-### Концепция
+### Concept
 
-При batch parallelism (v4.0) все модули проходят DETECTION → ждём все → все ANALYSIS → ждём все.
-Pipeline parallelism устраняет этот барьер: каждый модуль проходит полный цикл DETECTION → GRAPH → ANALYSIS
-в одном compound subagent call. Модули запускаются параллельно, merge происходит по мере готовности.
+With batch parallelism (v4.0), all modules go through DETECTION → wait for all → all ANALYSIS → wait for all.
+Pipeline parallelism eliminates this barrier: each module goes through the full cycle DETECTION → GRAPH → ANALYSIS
+in a single compound subagent call. Modules are launched in parallel, merging happens as results become ready.
 
 ```
 v4.0 (batch):                              v4.2 (pipeline):
@@ -250,27 +250,27 @@ v4.0 (batch):                              v4.2 (pipeline):
   DETECT-B ─┤→ wait → merge                  ├─ DETECT-B → GRAPH-B → ANALYZE-B ─→ ready ─┤→ merge all
   DETECT-C ─┘                           │    └─ DETECT-C → GRAPH-C → ANALYZE-C ─→ ready ─┘
   ANALYZE-A ─┐                          │
-  ANALYZE-B ─┤→ wait → merge            │  Выигрыш: нет barrier между фазами.
+  ANALYZE-B ─┤→ wait → merge            │  Benefit: no barrier between phases.
   ANALYZE-C ─┘                          │  GRAPH runs inline between DETECT and ANALYZE.
-                                        │  Bottleneck = самый медленный модуль.
+                                        │  Bottleneck = the slowest module.
 ```
 
-### Когда использовать
+### When to use
 
 ```
-Pipeline parallelism активируется когда:
+Pipeline parallelism is activated when:
   1. state.discover.strategy IN ("per-module", "per-module-with-shared-context")
   2. state.discover.modules.length >= 2
   3. state.discover.modules.length <= 3  # ≤3 concurrent compound subagents
 
-Для 4+ модулей используется batch parallelism (classic v4.0 подход)
-для контроля concurrency и предсказуемости token consumption.
+For 4+ modules, batch parallelism is used (classic v4.0 approach)
+for concurrency control and predictable token consumption.
 ```
 
 ### Compound Subagent Protocol
 
-Compound subagent = один Task-call, который выполняет DETECTION + GRAPH + ANALYSIS для одного модуля последовательно.
-Orchestrator запускает N compound subagents параллельно.
+A compound subagent is a single Task call that performs DETECTION + GRAPH + ANALYSIS for one module sequentially.
+The orchestrator launches N compound subagents in parallel.
 
 ```
 Task tool call (compound):
@@ -361,7 +361,7 @@ FUNCTION orchestrate_pipeline_parallel(state):
   N ← modules.length
 
   # ── Step 1: Launch N compound subagents in parallel ──
-  # Один Task tool message с N параллельными Task calls
+  # A single Task tool message with N parallel Task calls
 
   compound_results ← []
 
@@ -493,7 +493,7 @@ MAX_RETRIES = 1
 
 IF subagent_result.status == "failure":
   IF retry_count < MAX_RETRIES:
-    # Retry с уменьшенным scope
+    # Retry with reduced scope
     retry_count += 1
     reduced_input = reduce_scope(original_input)
     result = call_subagent(subagent, reduced_input)
@@ -508,10 +508,10 @@ IF subagent_result.status == "failure":
 
 ### Scope Reduction
 
-При retry:
-- `detection`: исключить secondary languages, фокус на primary
-- `analysis`: исключить violation detection, фокус на architecture + layers
-- `generation`: уменьшить количество artifacts (только CLAUDE.md + PROJECT-KNOWLEDGE.md)
+On retry:
+- `detection`: exclude secondary languages, focus on primary
+- `analysis`: exclude violation detection, focus on architecture + layers
+- `generation`: reduce the number of artifacts (only CLAUDE.md + PROJECT-KNOWLEDGE.md)
 
 ---
 
@@ -520,7 +520,7 @@ IF subagent_result.status == "failure":
 ### CRITIQUE Gate (inline in orchestrator)
 
 ```
-# Orchestrator загружает critique.md и выполняет inline:
+# Orchestrator loads critique.md and executes inline:
 1. Read phases/critique.md
 2. Execute with full accumulated state
 3. Check: state.critique.gate_passed == true
@@ -536,7 +536,7 @@ IF subagent_result.status == "failure":
 ### VERIFY Gate (via verification subagent)
 
 ```
-# Orchestrator вызывает verification subagent:
+# Orchestrator calls the verification subagent:
 1. Call verification subagent
 2. Check: state.verify.gate_passed == true
 3. IF false:
@@ -554,7 +554,7 @@ IF subagent_result.status == "failure":
 
 ### Format
 
-Orchestrator выводит progress после каждого subagent call:
+Orchestrator outputs progress after each subagent call:
 
 ```
 [ORCHESTRATOR] Calling subagent: discovery (model: haiku)

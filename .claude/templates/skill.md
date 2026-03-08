@@ -1,31 +1,31 @@
 meta:
   type: "skill"
-  purpose: "Template для создания skill артефактов в формате Claude Skills"
+  purpose: "Template for creating skill artifacts in Claude Skills format"
   source: "The Complete Guide to Building Skills for Claude (Anthropic, 2026)"
   note: |
-    ВАЖНО: Skills — это стандартный формат Anthropic. В отличие от commands/agents,
-    здесь НЕЛЬЗЯ использовать AI-first YAML-only подход. Claude ожидает:
-      1. YAML frontmatter в `---` делимитерах (загружается в system prompt)
-      2. Markdown body с инструкциями (загружается когда skill активен)
-      3. Опционально: scripts/, references/, assets/ подпапки
+    IMPORTANT: Skills are a standard Anthropic format. Unlike commands/agents,
+    the AI-first YAML-only approach CANNOT be used here. Claude expects:
+      1. YAML frontmatter in `---` delimiters (loaded into system prompt)
+      2. Markdown body with instructions (loaded when skill is active)
+      3. Optionally: scripts/, references/, assets/ subfolders
 
 # ════════════════════════════════════════════════════════════════════════════════
-# OUTPUT FORMAT — что meta-agent должен генерировать
+# OUTPUT FORMAT — what meta-agent should generate
 # ════════════════════════════════════════════════════════════════════════════════
 
 template:
-  # Skill — это ПАПКА, не просто файл
+  # Skill is a FOLDER, not just a file
   folder_path: ".claude/skills/<name>/"
   main_file: ".claude/skills/<name>/SKILL.md"
   optional_dirs:
-    scripts: "Executable code (Python, Bash, etc.) — вызывается из инструкций"
-    references: "Detailed documentation — загружается по ссылке из SKILL.md"
-    assets: "Templates, fonts, icons — используется в output"
+    scripts: "Executable code (Python, Bash, etc.) — called from instructions"
+    references: "Detailed documentation — loaded by reference from SKILL.md"
+    assets: "Templates, fonts, icons — used in output"
 
-  # ── Структура SKILL.md ──
-  # Level 1: YAML Frontmatter (всегда в system prompt Claude)
-  # Level 2: Markdown Body (загружается когда skill активен)
-  # Level 3: Linked files (подгружаются по необходимости)
+  # ── SKILL.md structure ──
+  # Level 1: YAML Frontmatter (always in Claude's system prompt)
+  # Level 2: Markdown Body (loaded when skill is active)
+  # Level 3: Linked files (loaded as needed)
 
   output_format: |
     ---
@@ -70,20 +70,20 @@ template:
     **Fix:** <how to resolve>
 
 # ════════════════════════════════════════════════════════════════════════════════
-# FRONTMATTER — правила заполнения полей
+# FRONTMATTER — field filling rules
 # ════════════════════════════════════════════════════════════════════════════════
 
 frontmatter:
-  delimiters: "--- (три дефиса, отдельная строка, сверху и снизу)"
+  delimiters: "--- (three dashes, separate line, top and bottom)"
 
   fields:
     name:
       required: true
       format: "kebab-case only"
       constraints:
-        - "Без пробелов, без заглавных букв, без подчёркиваний"
-        - "Должен совпадать с именем папки"
-        - "Без 'claude' или 'anthropic' в имени"
+        - "No spaces, no capital letters, no underscores"
+        - "Must match the folder name"
+        - "No 'claude' or 'anthropic' in the name"
       valid: ["error-patterns", "api-design", "go-testing"]
       invalid: ["Error Patterns", "error_patterns", "ErrorPatterns", "claude-helper"]
 
@@ -94,12 +94,12 @@ frontmatter:
       constraints:
         - "MUST include WHAT the skill does"
         - "MUST include WHEN to use (trigger conditions / user phrases)"
-        - "Без XML тегов (< или >)"
-        - "Упоминать конкретные задачи, которые пользователь может попросить"
-        - "Упоминать file types если применимо"
+        - "No XML tags (< or >)"
+        - "Mention specific tasks that the user may request"
+        - "Mention file types if applicable"
       good_examples:
         - |
-          # Конкретный + trigger phrases
+          # Specific + trigger phrases
           description: Analyzes Figma design files and generates developer handoff
             documentation. Use when user uploads .fig files, asks for "design specs",
             "component documentation", or "design-to-code handoff".
@@ -114,44 +114,44 @@ frontmatter:
             online payment workflows, not for general financial queries.
       bad_examples:
         - value: "Helps with projects."
-          why: "Слишком абстрактно — Claude не поймёт когда загружать"
+          why: "Too abstract — Claude will not understand when to load"
         - value: "Creates sophisticated multi-page documentation systems."
-          why: "Нет trigger phrases — пользователь не знает что сказать"
+          why: "No trigger phrases — user does not know what to say"
         - value: "Implements the Project entity model with hierarchical relationships."
-          why: "Техническое описание без user-facing triggers"
+          why: "Technical description without user-facing triggers"
 
     license:
       required: false
-      note: "Указать если skill будет open source"
+      note: "Specify if the skill will be open source"
       values: ["MIT", "Apache-2.0"]
 
     compatibility:
       required: false
       max_length: 500
-      note: "Среда выполнения: intended product, required packages, network access"
+      note: "Runtime environment: intended product, required packages, network access"
 
     metadata:
       required: false
-      note: "Произвольные key-value пары"
+      note: "Arbitrary key-value pairs"
       suggested: ["author", "version", "mcp-server"]
 
   forbidden:
-    - "XML angle brackets (< >) в frontmatter"
-    - "'claude' или 'anthropic' в name"
-    - "Многострочные значения без proper YAML quoting"
+    - "XML angle brackets (< >) in frontmatter"
+    - "'claude' or 'anthropic' in name"
+    - "Multiline values without proper YAML quoting"
 
 # ════════════════════════════════════════════════════════════════════════════════
-# MARKDOWN BODY — правила написания инструкций
+# MARKDOWN BODY — instruction writing rules
 # ════════════════════════════════════════════════════════════════════════════════
 
 body_guidelines:
   structure:
     required_sections:
       - "# <Skill Name>"
-      - "## Instructions (пошаговые шаги)"
+      - "## Instructions (step-by-step steps)"
     recommended_sections:
       - "## Rules (MUST-DO / MUST-NOT-DO)"
-      - "## Examples (good/bad pairs с объяснением)"
+      - "## Examples (good/bad pairs with explanation)"
       - "## Common Issues (troubleshooting)"
     optional_sections:
       - "## Performance Notes (encourage thoroughness)"
@@ -165,7 +165,7 @@ body_guidelines:
         - Missing required fields (add them to the CSV)
         - Invalid date formats (use YYYY-MM-DD)
       bad: "Validate the data before proceeding."
-      why: "Конкретные команды и error cases vs абстрактное указание"
+      why: "Specific commands and error cases vs abstract instruction"
 
     reference_bundled_files:
       good: |
@@ -174,7 +174,7 @@ body_guidelines:
         - Pagination patterns
         - Error codes and handling
       bad: "Check the documentation for details."
-      why: "Явная ссылка на bundled file vs неопределённая отсылка"
+      why: "Explicit reference to bundled file vs vague reference"
 
     include_error_handling:
       good: |
@@ -186,14 +186,14 @@ body_guidelines:
         2. Confirm API key is valid
         3. Try reconnecting: Settings > Extensions > [Service] > Reconnect
       bad: "Handle errors appropriately."
-      why: "Конкретные шаги recovery vs пустое указание"
+      why: "Specific recovery steps vs empty instruction"
 
     progressive_disclosure:
-      principle: "SKILL.md — core instructions. Детали в references/"
+      principle: "SKILL.md — core instructions. Details in references/"
       example: |
-        Если инструкции по одному разделу > 50 строк:
-        1. Вынести детали в references/<section>.md
-        2. В SKILL.md сослаться: "For detailed API patterns, see `references/api-patterns.md`"
+        If instructions for a single section exceed 50 lines:
+        1. Move details to references/<section>.md
+        2. Reference from SKILL.md: "For detailed API patterns, see `references/api-patterns.md`"
       max_skill_md_size: "~5000 words recommended"
 
     avoid_ambiguity:
@@ -203,15 +203,15 @@ body_guidelines:
         - At least one team member assigned
         - Start date is not in the past
       bad: "Make sure to validate things properly."
-      why: "CRITICAL + checklist vs размытое указание"
+      why: "CRITICAL + checklist vs vague instruction"
 
 # ════════════════════════════════════════════════════════════════════════════════
-# QUALITY GATES — проверки после генерации
+# QUALITY GATES — post-generation checks
 # ════════════════════════════════════════════════════════════════════════════════
 
 quality_gates:
   structural:
-    - "Папка named in kebab-case"
+    - "Folder named in kebab-case"
     - "SKILL.md exists (exact case-sensitive spelling)"
     - "YAML frontmatter has --- delimiters (top and bottom)"
     - "name field: kebab-case, no spaces, no capitals, matches folder name"
@@ -234,7 +234,7 @@ quality_gates:
       - "Similar-sounding but different domain"
 
 # ════════════════════════════════════════════════════════════════════════════════
-# ПРИМЕРЫ — good vs bad
+# EXAMPLES — good vs bad
 # ════════════════════════════════════════════════════════════════════════════════
 
 examples:
@@ -372,14 +372,14 @@ examples:
           good: "return fmt.Errorf('op: %w', err)"
           why: "log AND return = duplicate"
     problems:
-      - "Нет --- frontmatter делимитеров → Claude не загрузит как skill"
-      - "Чистый YAML вместо Markdown body → не соответствует формату Skills"
-      - "Нет секции Instructions → Claude не знает пошаговый workflow"
-      - "Нет секции Common Issues → нет error handling guidance"
-      - "description в meta: вместо frontmatter → невалидная структура"
+      - "No --- frontmatter delimiters -> Claude will not load as skill"
+      - "Pure YAML instead of Markdown body -> does not match Skills format"
+      - "No Instructions section -> Claude does not know the step-by-step workflow"
+      - "No Common Issues section -> no error handling guidance"
+      - "description in meta: instead of frontmatter -> invalid structure"
 
   bad_2:
-    description: "Prose-only без структуры — другая крайность"
+    description: "Prose-only without structure — the other extreme"
     content: |
       ---
       name: errors
@@ -391,27 +391,27 @@ examples:
       Also, avoid logging and returning at the same time because
       it creates duplicate entries in the logs...
     problems:
-      - "description слишком короткий — нет trigger phrases, нет keywords"
-      - "Prose без ## headers → трудно парсить, нет структуры"
-      - "Нет конкретных примеров кода (good/bad)"
-      - "Нет Rules секции — нет чётких do/don't"
-      - "Нет Common Issues — нет troubleshooting"
+      - "description too short — no trigger phrases, no keywords"
+      - "Prose without ## headers -> hard to parse, no structure"
+      - "No specific code examples (good/bad)"
+      - "No Rules section — no clear do/don't"
+      - "No Common Issues — no troubleshooting"
 
 # ════════════════════════════════════════════════════════════════════════════════
-# DIFF: что изменилось vs старый шаблон
+# DIFF: what changed vs old template
 # ════════════════════════════════════════════════════════════════════════════════
 
 changelog:
   version: "2.0.0"
   date: "2026-02-26"
   breaking_changes:
-    - "Output format: pure YAML → YAML frontmatter + Markdown body"
+    - "Output format: pure YAML -> YAML frontmatter + Markdown body"
     - "Good/bad examples inverted: old 'good' (YAML-only) now 'bad'"
-    - "folder_path вместо file_path: skill = папка, не файл"
+    - "folder_path instead of file_path: skill = folder, not file"
   additions:
     - "frontmatter field requirements (name, description format)"
-    - "body_guidelines с best practices из Anthropic guide"
-    - "quality_gates для валидации после генерации"
-    - "description_guide с good/bad примерами"
-    - "folder_structure с optional dirs (scripts/, references/, assets/)"
+    - "body_guidelines with best practices from Anthropic guide"
+    - "quality_gates for post-generation validation"
+    - "description_guide with good/bad examples"
+    - "folder_structure with optional dirs (scripts/, references/, assets/)"
   source: "The Complete Guide to Building Skills for Claude, Chapters 1-2, 5"

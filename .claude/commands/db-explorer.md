@@ -1,5 +1,5 @@
 ---
-description: "Исследование {database} схемы и данных через MCP"
+description: "Explore {database} schema and data via MCP"
 model: sonnet
 version: 1.1.0
 updated: 2026-01-20

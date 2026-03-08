@@ -1,13 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git add README.md)",
-      "Bash(bash /Users/dmitriym/Desktop/claude-kit/.claude/scripts/sync-to-github.sh \"Add README.md\")",
-      "Bash(bash .claude/scripts/sync-to-github.sh \"Update README.md: rewrite with architecture docs, translate to English\")",
-      "Bash(git add README.md CLAUDE.md)",
-      "Bash(git commit -m \"Update README.md: rewrite with architecture docs, translate to English\")",
-      "Bash(git push origin sync/initial)",
-      "Bash(bash /Users/dmitriym/Desktop/claude-kit/.claude/scripts/sync-to-github.sh \"Fix sync script: add README.md, CLAUDE.md, .gitignore to auto-sync\")"
+      "Bash(bash .claude/scripts/sync-to-github.sh \"Update README.md: fix outdated structure, remove deleted commands, update hooks\")"
     ]
   }
 }

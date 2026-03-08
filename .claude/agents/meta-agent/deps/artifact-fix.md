@@ -1,10 +1,10 @@
 meta:
   name: artifact-fix
   description: |
-    Исправление Claude Code артефакта по результатам ревью.
-    Линейный workflow с inline reference секциями.
-  input: "Issues из /artifact-review или code review"
-  output: "Исправленный артефакт + changelog"
+    Fix a Claude Code artifact based on review results.
+    Linear workflow with inline reference sections.
+  input: "Issues from /artifact-review or code review"
+  output: "Fixed artifact + changelog"
   see: "artifact-quality.md"
 
 workflow: "LOAD → PRIORITIZE → FIX → VERIFY → OUTPUT → INTEGRATE → MEMORY → LESSONS → FINAL"
@@ -13,7 +13,7 @@ workflow: "LOAD → PRIORITIZE → FIX → VERIFY → OUTPUT → INTEGRATE → M
 # PHASE 1: LOAD ISSUES
 # ════════════════════════════════════════════════════════════════════════════════
 phase_1_load:
-  purpose: "Загрузить список issues из источника"
+  purpose: "Load the list of issues from the source"
 
   steps:
     - step: "1.1 Parse Issues"
@@ -41,13 +41,13 @@ phase_1_load:
 
     - Total: [N] issues
 
-  exit_criteria: "Все issues извлечены и записаны в таблицу"
+  exit_criteria: "All issues extracted and recorded in the table"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # PHASE 2: PRIORITIZE
 # ════════════════════════════════════════════════════════════════════════════════
 phase_2_prioritize:
-  purpose: "Определить порядок исправления"
+  purpose: "Determine the order of fixes"
 
   steps:
     - step: "2.1 Sort by Severity"
@@ -55,7 +55,7 @@ phase_2_prioritize:
       order: "CRITICAL → HIGH → MEDIUM → LOW"
 
     - step: "2.2 Check Stop Conditions"
-      rule: "Если CRITICAL/HIGH не могут быть исправлены → STOP"
+      rule: "If CRITICAL/HIGH cannot be fixed → STOP"
       output: "can_proceed: true/false"
 
   output_format: |
@@ -68,20 +68,20 @@ phase_2_prioritize:
 
     - Can proceed: [YES/NO]
 
-  exit_criteria: "Порядок определён, stop conditions проверены"
+  exit_criteria: "Order determined, stop conditions checked"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # PHASE 3: FIX
 # ════════════════════════════════════════════════════════════════════════════════
 phase_3_fix:
-  purpose: "Применить исправления к артефакту"
+  purpose: "Apply fixes to the artifact"
 
   steps:
     - step: "3.1 For Each Issue (by priority)"
       actions:
-        - "Найти location в файле"
-        - "Применить fix (use Edit tool)"
-        - "Записать в changelog"
+        - "Find location in the file"
+        - "Apply fix (use Edit tool)"
+        - "Record in changelog"
 
     - step: "3.2 Apply Fix Patterns"
       use_reference: "fix_patterns"
@@ -103,17 +103,17 @@ phase_3_fix:
     + new content
     ```
 
-  exit_criteria: "Все HIGH/CRITICAL исправлены, changelog записан"
+  exit_criteria: "All HIGH/CRITICAL fixed, changelog recorded"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # PHASE 4: VERIFY
 # ════════════════════════════════════════════════════════════════════════════════
 phase_4_verify:
-  purpose: "Проверить что исправления работают"
+  purpose: "Verify that the fixes work"
 
   steps:
     - step: "4.1 Re-check Quality"
-      action: "Прогнать чеклист из artifact-quality.md"
+      action: "Run the checklist from artifact-quality.md"
       format:
         columns: ["Criterion", "Before", "After"]
       output: "quality_delta"
@@ -121,7 +121,7 @@ phase_4_verify:
     - step: "4.2 Verify Each Fix"
       format:
         columns: ["#", "Issue", "Fixed", "Verified"]
-      action: "Проверить что каждый fix действительно решает issue"
+      action: "Verify that each fix actually resolves the issue"
 
   output_format: |
     ## Phase 4: VERIFY — DONE
@@ -134,13 +134,13 @@ phase_4_verify:
     |---|-------|-------|----------|
     | 1 | ...   | ✅    | ✅       |
 
-  exit_criteria: "Quality score улучшился, все fixes verified"
+  exit_criteria: "Quality score improved, all fixes verified"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # PHASE 5: OUTPUT
 # ════════════════════════════════════════════════════════════════════════════════
 phase_5_output:
-  purpose: "Сформировать отчёт об исправлениях"
+  purpose: "Generate the fix report"
 
   steps:
     - step: "5.1 Generate Report"
@@ -163,18 +163,18 @@ phase_5_output:
     - Quality: [before] → [after]
     - Status: [FIXED/PARTIAL/BLOCKED]
 
-  exit_criteria: "Отчёт сформирован, next action определён"
+  exit_criteria: "Report generated, next action determined"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # PHASE 6: INTEGRATE
 # ════════════════════════════════════════════════════════════════════════════════
 phase_6_integrate:
-  purpose: "Автоматически выполнить интеграцию после FIXED статуса"
-  rule: "Выполняется автоматически, без подтверждения пользователя"
+  purpose: "Automatically perform integration after FIXED status"
+  rule: "Executed automatically, without user confirmation"
 
   steps:
     - step: "6.1 Update CLAUDE.md"
-      action: "Добавить/обновить запись в соответствующей секции"
+      action: "Add/update entry in the corresponding section"
       sections:
         command: "commands section"
         skill: "skills section"
@@ -182,14 +182,14 @@ phase_6_integrate:
         agent: "agents section"
 
     - step: "6.2 Update settings.json"
-      when: "артефакт требует permissions"
+      when: "artifact requires permissions"
       format: "permissions.allow: [Skill(<name>)]"
 
     - step: "6.3 Update Related Artifacts"
       actions:
-        - "Добавить @<name> ссылку в связанные skills"
-        - "Добавить в pipeline description если часть pipeline"
-        - "Обновить triggers в description связанных артефактов"
+        - "Add @<name> reference in related skills"
+        - "Add to pipeline description if part of a pipeline"
+        - "Update triggers in description of related artifacts"
 
     - step: "6.4 Integration Checklist"
       verify:
@@ -203,14 +203,14 @@ phase_6_integrate:
     - settings.json: ✅/➖
     - Related: ✅ [list]
 
-  exit_criteria: "Все integration steps выполнены и проверены"
+  exit_criteria: "All integration steps completed and verified"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # PHASE 7: SAVE TO MEMORY
 # ════════════════════════════════════════════════════════════════════════════════
 phase_7_memory:
-  purpose: "Сохранить информацию об артефакте в MCP memory"
-  rule: "Персистентность знаний между сессиями"
+  purpose: "Save artifact information to MCP memory"
+  rule: "Knowledge persistence between sessions"
 
   steps:
     - step: "7.1 Create Entity"
@@ -221,31 +221,31 @@ phase_7_memory:
         observations:
           - "Type: command|skill|rule|agent"
           - "File: .claude/<type>s/<name>.md"
-          - "Purpose: <краткое описание>"
+          - "Purpose: <brief description>"
           - "Created: <YYYY-MM-DD>"
-          - "Triggers: <когда использовать>"
-          - "Related: <связанные артефакты>"
+          - "Triggers: <when to use>"
+          - "Related: <related artifacts>"
 
     - step: "7.2 Create Relations"
       tool: "mcp__memory__create_relations"
       relation_types:
-        uses: "Артефакт использует другой (@skill reference)"
-        triggers: "Артефакт вызывает другой (NEXT: /command)"
-        extends: "Артефакт расширяет функционал другого"
-        part_of: "Артефакт часть pipeline"
+        uses: "Artifact uses another (@skill reference)"
+        triggers: "Artifact invokes another (NEXT: /command)"
+        extends: "Artifact extends functionality of another"
+        part_of: "Artifact is part of a pipeline"
 
   output_format: |
     ## Phase 7: MEMORY — DONE
     - Entity: ✅ <name>
     - Relations: ✅ [N] created
 
-  exit_criteria: "Entity и relations созданы в MCP memory"
+  exit_criteria: "Entity and relations created in MCP memory"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # PHASE 8: LESSONS LEARNED
 # ════════════════════════════════════════════════════════════════════════════════
 phase_8_lessons:
-  purpose: "Сохранить уроки для self-improvement"
+  purpose: "Save lessons for self-improvement"
   integration: "→ meta-agent.md#self_improvement — self-improvement integration"
 
   capture_when:
@@ -269,13 +269,13 @@ phase_8_lessons:
     - Lessons captured: {N}
     - Saved to MCP memory: ✅
 
-  exit_criteria: "Уроки сохранены в MCP memory"
+  exit_criteria: "Lessons saved to MCP memory"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # PHASE 9: FINAL OUTPUT
 # ════════════════════════════════════════════════════════════════════════════════
 phase_9_final:
-  purpose: "Финальный вывод результата"
+  purpose: "Final result output"
 
   format: |
     # Artifact Fix Complete: [Name]
@@ -304,14 +304,14 @@ phase_9_final:
     - Test invocation: `/<command>` or load `@<skill>`
     - Verify in new session
 
-  exit_criteria: "Финальный отчёт выведен"
+  exit_criteria: "Final report output"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # REFERENCE: Severity Levels
 # ════════════════════════════════════════════════════════════════════════════════
 severity_levels:
   - level: "CRITICAL"
-    description: "Блокирует использование артефакта"
+    description: "Blocks artifact usage"
     must_fix: true
     examples:
       - "Missing required YAML field"
@@ -319,7 +319,7 @@ severity_levels:
       - "No workflow defined"
 
   - level: "HIGH"
-    description: "Нарушает quality criteria"
+    description: "Violates quality criteria"
     must_fix: true
     examples:
       - "No examples section"
@@ -327,7 +327,7 @@ severity_levels:
       - "Missing autonomy rule (for agent)"
 
   - level: "MEDIUM"
-    description: "Улучшение качества"
+    description: "Quality improvement"
     must_fix: false
     examples:
       - "Too long (>500 lines)"
@@ -423,37 +423,37 @@ fix_patterns:
 # ════════════════════════════════════════════════════════════════════════════════
 principles:
   - id: 1
-    name: "Точечные правки"
-    rule: "Только то, что указано в issues — не рефакторить весь файл"
+    name: "Targeted edits"
+    rule: "Only what is specified in issues — do not refactor the entire file"
 
   - id: 2
     name: "Verify after fix"
-    rule: "Проверить что fix работает прежде чем двигаться дальше"
+    rule: "Verify that the fix works before moving on"
 
   - id: 3
     name: "Document all"
-    rule: "Всё записывать в changelog для аудита"
+    rule: "Record everything in changelog for audit"
 
   - id: 4
     name: "Escalate blockers"
-    rule: "Если не можешь исправить — сообщи, не молчи"
+    rule: "If you cannot fix it — report it, do not stay silent"
 
   - id: 5
     name: "Linear workflow"
-    rule: "Фазы последовательные, не пропускать"
+    rule: "Phases are sequential, do not skip"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # FORBIDDEN
 # ════════════════════════════════════════════════════════════════════════════════
 forbidden:
-  - action: "Добавлять новый функционал"
-    why: "Только то, что указано в issues"
+  - action: "Adding new functionality"
+    why: "Only what is specified in issues"
 
-  - action: "Рефакторить не связанный код"
-    why: "Точечные правки, минимальный scope"
+  - action: "Refactoring unrelated code"
+    why: "Targeted edits, minimal scope"
 
-  - action: "Менять structure если не requested"
-    why: "Минимальные изменения для fix"
+  - action: "Changing structure if not requested"
+    why: "Minimal changes for the fix"
 
-  - action: "Удалять существующий контент без причины"
-    why: "Сохранять всё что работает"
+  - action: "Deleting existing content without reason"
+    why: "Preserve everything that works"

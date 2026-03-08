@@ -1,22 +1,19 @@
 ---
 name: workflow
-description: "Полный цикл разработки: task-analysis → planner → plan-review → coder → code-review"
+description: "Full development cycle: task-analysis → planner → plan-review (agent) → coder → code-review (agent)"
 model: opus
 ---
 
-# Language & aliases: SEE .claude/PROJECT-KNOWLEDGE.md
-
 role:
   identity: "Orchestrator"
-  owns: "Координация полного цикла разработки: task-analysis → planner → plan-review → coder → code-review"
-  does_not_own: "Планирование, имплементация, review — делегирует sub-commands"
-  output_contract: "Реализованный, протестированный и отревьюенный код с коммитом + pipeline metrics"
-  success_criteria: "Все фазы пройдены, handoff контракты соблюдены, checkpoint сохранён, метрики записаны"
+  owns: "Coordination of full development cycle: task-analysis → planner → plan-review (agent) → coder → code-review (agent)"
+  does_not_own: "Planning, implementation, review — delegates to sub-commands and agents"
+  output_contract: "Implemented, tested, and reviewed code with commit + pipeline metrics"
+  success_criteria: "All phases passed, handoff contracts fulfilled, checkpoint saved, metrics recorded"
   style: "Sequential phases with user confirmation between each phase"
 
-# ════════════════════════════════════════════════════════════════════════════════
-# TRIGGERS
-# ════════════════════════════════════════════════════════════════════════════════
+## TRIGGERS
+
 triggers:
   - if: "Task requires full development cycle (planning + implementation + review)"
     then: "Use /workflow instead of individual commands"
@@ -33,35 +30,33 @@ triggers:
   - if: "Review cycle exceeds 3 iterations (plan-review or code-review)"
     then: "STOP immediately, show iteration summary, request user help"
 
-# ════════════════════════════════════════════════════════════════════════════════
-# INPUT
-# ════════════════════════════════════════════════════════════════════════════════
+## INPUT
+
 input:
   arguments:
     - name: task
       required: true
-      format: "Текст или beads ID"
-      example: "Добавить новую функциональность"
+      format: "Text or beads ID"
+      example: "Add new functionality"
 
     - name: --auto
       required: false
       format: flag
-      description: "Автономный режим без подтверждений"
+      description: "Autonomous mode without confirmations"
 
     - name: --from-phase
       required: false
       format: "1-4"
-      description: "Продолжить с указанной фазы"
+      description: "Resume from specified phase"
 
   examples:
-    - "/workflow Добавить новый endpoint"
-    - "/workflow --auto Реализовать обновление ресурса"
+    - "/workflow Add new endpoint"
+    - "/workflow --auto Implement resource update"
     - "/workflow --from-phase 3"
     - "/workflow beads-abc123"
 
-# ════════════════════════════════════════════════════════════════════════════════
-# OUTPUT
-# ════════════════════════════════════════════════════════════════════════════════
+## OUTPUT
+
 output:
   phases:
     - phase: Planning
@@ -70,7 +65,7 @@ output:
 
     - phase: Plan Review
       produces: Verdict + issues
-      location: Console
+      location: Console (via plan-reviewer agent)
 
     - phase: Implementation
       produces: Working code + tests
@@ -78,138 +73,99 @@ output:
 
     - phase: Code Review
       produces: Verdict + comments
-      location: Console
+      location: Console (via code-reviewer agent)
 
     - phase: Completion
       produces: Git commit + lessons_learned in Memory (if non-trivial)
       location: Repository + Memory MCP
 
-  final_output: "Реализованный, протестированный и отревьюенный код с коммитом."
+  final_output: "Implemented, tested, and reviewed code with commit."
 
-# ════════════════════════════════════════════════════════════════════════════════
-# AUTONOMY RULE
-# ════════════════════════════════════════════════════════════════════════════════
-autonomy_rule:
-  # Common autonomy patterns: SEE deps/core/autonomy.md
-  modes:
-    - INTERACTIVE (default): Ask before each phase
-    - AUTONOMOUS (--auto): Execute all phases automatically
-    - RESUME (--from-phase N): Skip to specified phase (or checkpoint-based)
-    - MINIMAL (--minimal): Minimal research, only critical checks
+## AUTONOMY
 
-  stop_conditions:
-    - Plan REJECTED → Stop, request new requirements
-    - Tests FAIL 3x → Stop, request manual intervention
-    - Loop limit exceeded (3 iterations) → Stop, show summary
+autonomy:
+  modes: "INTERACTIVE (default) | AUTONOMOUS (--auto) | RESUME (--from-phase N) | MINIMAL (--minimal)"
+  stop: "REJECTED → stop | Tests 3x → stop | Loop 3x → stop"
+  continue: "Phase completed → next | NEEDS_CHANGES → previous phase"
+  details: "SEE [autonomy.md] in workflow-protocols skill"
 
-  continue_conditions:  # autonomous mode only
-    - Phase completed → Next phase
-    - NEEDS_CHANGES → Return to previous phase
+## MCP TOOLS
 
-# ════════════════════════════════════════════════════════════════════════════════
-# RELATED TOOLS
-# ════════════════════════════════════════════════════════════════════════════════
-related_tools:
-
-  - tool: "mcp__memory (MCP server)"
-    when: "Saving lessons learned"
-    priority: HIGH
-
-# ════════════════════════════════════════════════════════════════════════════════
-# MCP TOOLS
-# ════════════════════════════════════════════════════════════════════════════════
 mcp_tools:
-  # Common MCP patterns: SEE deps/core/mcp-tools.md
-  - tool: "Sequential Thinking"
-    usage: "Complex multi-phase orchestration"
-    when:
-      - "Task spans 4+ phases with complex dependencies"
-      - "Multiple sub-commands need coordination"
-      - "Recovery from failed phase requires analysis"
+  reference: "SEE [mcp-tools.md] in planner-rules / coder-rules skill"
+  workflow_usage: "Sequential Thinking (complex orchestration), Memory (startup search + completion save)"
 
-  - tool: "Memory"
-    usage: "STARTUP: search_nodes; ЗАВЕРШЕНИЕ: save lessons_learned + pipeline_metrics"
+## STARTUP
 
-# ════════════════════════════════════════════════════════════════════════════════
-# STARTUP
-# ════════════════════════════════════════════════════════════════════════════════
 startup:
-  critical: "При запуске агента СРАЗУ выполнить ВСЕ шаги"
+  critical: "On agent startup, IMMEDIATELY execute ALL steps"
 
   steps:
     - step: 0
-      action: "Task Analysis — классификация задачи"
-      reference: "SEE: .claude/commands/deps/planner/task-analysis.md"
-      purpose: "Определить complexity (S/M/L/XL) и маршрут ПЕРЕД планированием"
+      action: "Task Analysis — task classification"
+      reference: "For details see [task-analysis.md] in planner-rules skill"
+      purpose: "Determine complexity (S/M/L/XL) and route BEFORE planning"
       decisions:
-        S: "/planner --minimal → skip Phase 2 → /coder → /code-review"
-        M: "standard flow (все фазы)"
-        L: "full flow + Sequential Thinking рекомендован"
-        XL: "full flow + Sequential Thinking ОБЯЗАТЕЛЕН"
-      after_classification: "Применить CONDITIONAL DEPS LOADING (секция ниже) — НЕ ЧИТАЙ deps, помеченные SKIP для этой complexity"
-      warning: "ОБЯЗАТЕЛЬНО! Неправильная классификация = лишняя работа"
+        S: "/planner --minimal → skip Phase 2 → /coder → code-reviewer (agent)"
+        M: "standard flow (all phases)"
+        L: "full flow + Sequential Thinking recommended"
+        XL: "full flow + Sequential Thinking REQUIRED"
+      warning: "MANDATORY! Wrong classification = wasted work"
+
+    - step: 0.1
+      action: "Load workflow-protocols skill"
+      files:
+        - ".claude/skills/workflow-protocols/SKILL.md"
+      purpose: "Overview of handoff, checkpoint, re-routing, and metrics protocols. Supporting files loaded on-demand per event triggers."
 
     - step: 1
-      action: "TodoWrite — создать список фаз (с учётом route из Task Analysis)"
+      action: "TodoWrite — create phase list (accounting for route from Task Analysis)"
       items:
         - "Phase 0: Get Task (pending)"
-        - "Phase 0.5: Task Analysis (completed — уже выполнен в step 0)"
+        - "Phase 0.5: Task Analysis (completed — already done in step 0)"
         - "Phase 1: Planning (pending)"
-        - "Phase 2: Plan Review (pending — или skip если S-complexity)"
+        - "Phase 2: Plan Review → plan-reviewer agent (pending — or skip if S-complexity)"
         - "Phase 3: Implementation (pending)"
-        - "Phase 4: Code Review (pending)"
+        - "Phase 4: Code Review → code-reviewer agent (pending)"
 
     - step: 2
-      action: "mcp__memory__search_nodes — query: '{ключевые слова задачи}'"
-      note: "ОБЯЗАТЕЛЬНО! Проверить нет ли похожих решений"
+      action: "mcp__memory__search_nodes — query: '{task keywords}'"
+      note: "MANDATORY! Check for similar past solutions"
 
     - step: 3
-      action: "Проверить beads"
+      action: "Check beads"
       checks:
-        - "bd list --status=open → есть ли связанная задача?"
-        - "bd list --status=in_progress → есть ли незавершённая работа?"
+        - "bd list --status=open → is there a related task?"
+        - "bd list --status=in_progress → is there unfinished work?"
+      note: "Beads is NON_CRITICAL. If bd unavailable → skip."
 
     - step: 4
-      action: "Проверить session recovery"
+      action: "Check session recovery"
       checks:
-        - "Есть ли `.claude/prompts/{feature}.md`? → можно пропустить Phase 1"
-        - "Есть ли beads issue in_progress? → bd show <id>"
+        - "Does `.claude/prompts/{feature}.md` exist? → can skip Phase 1"
+        - "Is there a beads issue in_progress? → bd show <id>"
 
-  beads_integration:
-    # SEE: deps/core/beads.md
+## PIPELINE
 
-# ════════════════════════════════════════════════════════════════════════════════
-# SESSION RECOVERY
-# ════════════════════════════════════════════════════════════════════════════════
-session_recovery:
-  reference: "SEE: .claude/commands/deps/workflow/orchestration-core.md#session-recovery"
-  contains: "Auto-detect algorithm, decision table, quick check commands"
-
-# ════════════════════════════════════════════════════════════════════════════════
-# PIPELINE
-# ════════════════════════════════════════════════════════════════════════════════
 pipeline:
   mandatory: |
-    🔴 MANDATORY: Read role-specific core deps BEFORE executing any phase:
-    - Workflow: deps/core/autonomy.md + deps/core/beads.md + deps/core/error-handling.md
-    - Planner: deps/core/mcp-tools.md + deps/core/project-knowledge.md + deps/core/error-handling.md
-    - Plan Review: deps/core/context-isolation.md + deps/core/error-handling.md
-    - Coder: deps/core/mcp-tools.md + deps/core/project-knowledge.md + deps/core/error-handling.md
-    - Code Review: deps/core/context-isolation.md + deps/core/error-handling.md
+    MANDATORY: Load skills BEFORE executing any phase:
+    - Workflow: workflow-protocols skill (step 0.1) — includes autonomy, beads, orchestration-core
+    - Planner: planner-rules skill (step 0) — includes mcp-tools, sequential-thinking-guide
+    - Coder: coder-rules skill (step 0) — includes mcp-tools
+    NOTE: Plan Review and Code Review → agents/ with skills preloading (plan-review-rules, code-review-rules)
+    NOTE: Language profile + error handling → auto-loaded via CLAUDE.md
 
-  flow: "task-analysis → /planner → /plan-review → /coder → /code-review"
+  flow: "task-analysis → /planner → plan-reviewer (agent) → /coder → code-reviewer (agent)"
 
   load_phases:
-    - action: "Read .claude/commands/deps/core/autonomy.md"
+    - action: "Read .claude/skills/workflow-protocols/autonomy.md"
       when: "BEFORE starting Phase 0"
       required: true
-    - action: "Read .claude/commands/deps/core/beads.md"
+    - action: "Read .claude/skills/workflow-protocols/beads.md"
       when: "BEFORE starting Phase 0"
       required: true
-    - action: "Read .claude/commands/deps/core/error-handling.md"
-      when: "BEFORE starting Phase 0"
-      required: true
-    - action: "Read .claude/commands/deps/workflow/orchestration-core.md"
+    - action: "Read .claude/skills/workflow-protocols/orchestration-core.md"
       when: "ALWAYS — contains pipeline phases, loop limits, session recovery"
       required: true
       contains:
@@ -217,177 +173,107 @@ pipeline:
         - Loop limits (max 3 iterations per review cycle, tracking protocol)
         - Session recovery (checkpoint-first, heuristic fallback)
 
-# ════════════════════════════════════════════════════════════════════════════════
-# CONDITIONAL DEPS LOADING
-# ════════════════════════════════════════════════════════════════════════════════
-conditional_deps:
-  purpose: "Не загружать тяжёлые deps для простых задач. Complexity определяется в Phase 0.5 (task-analysis)."
-  severity: HIGH
+  completion_notes:
+    - "Git commit created (MANDATORY)"
+    - "bd sync executed (MANDATORY if beads)"
+    - "Save lessons_learned → SEE orchestration-core.md + mcp-tools.md (if non-trivial)"
 
-  rule: |
-    ПОСЛЕ task-analysis определена complexity (S/M/L/XL).
-    Используй таблицу ниже — НЕ ЧИТАЙ файлы, помеченные SKIP для текущей complexity.
+## DELEGATION PROTOCOL
 
-  matrix: |
-    | Dep file                                  | S    | M    | L/XL | Reason (S skip)                     |
-    |-------------------------------------------|------|------|------|-------------------------------------|
-    | sequential-thinking-guide.md (120)          | SKIP | SKIP | LOAD | Нет 3+ альтернатив при S/M          |
-    | plan-review/architecture-checks.md (171)  | SKIP | LOAD | LOAD | Phase 2 скипнута при S               |
-    | plan-review/required-sections.md (136)    | SKIP | LOAD | LOAD | Phase 2 скипнута при S               |
-    | planner/data-flow.md (42)                 | SKIP | LOAD | LOAD | Простые задачи — один слой           |
-    | code-review/security-checklist.md (72)    | SKIP | LOAD | LOAD | Простые задачи — низкий security risk |
-    | workflow/pipeline-metrics.md (97)         | SKIP | SKIP | SKIP | Load только в completion фазе         |
-    | workflow/examples-troubleshooting.md (90) | SKIP | SKIP | SKIP | Load on-demand при проблемах           |
-    | workflow/handoff-protocol.md (NEW)        | SKIP | SKIP | SKIP | Load при формировании handoff           |
-    | workflow/checkpoint-protocol.md (NEW)      | SKIP | SKIP | SKIP | Load при записи checkpoint              |
-    | workflow/re-routing.md (NEW)               | SKIP | SKIP | SKIP | Load при re-routing event               |
+delegation_protocol:
+  purpose: "How workflow delegates review phases to native agents/"
+  mechanism: "Claude auto-delegates based on agent description. Orchestrator forms delegation prompt with handoff context."
+  isolation_guarantee: "Agents launch in clean context. CLAUDE.md auto-loaded from project root. Parent conversation history is NOT passed."
+  reference: "SEE: pipeline.flow for quick route overview"
 
-    Savings: S = ~784 строк (~6 300 токенов), M = ~363 строк (~2 900 токенов), L/XL = ~187 строк (~1 500 токенов).
-    Note: workflow/* файлы имеют SKIP для всех complexity — загружаются по event trigger, а не по complexity.
+  plan_review_delegation:
+    agent: "plan-reviewer"
+    when: "Phase 2 — after /planner completion"
+    skip_when: "S-complexity route"
+    context_to_pass:
+      - "Artifact path: .claude/prompts/{feature}.md"
+      - "Planner handoff narrative (SEE: handoff_protocol)"
+      - "Complexity: S/M/L/XL"
+      - "Iteration: N/3"
+    delegation_prompt_template: |
+      Review the implementation plan at .claude/prompts/{feature}.md
 
-  always_load:
-    - "deps/core/error-handling.md — всегда нужен (все агенты)"
-    - "deps/core/autonomy.md — workflow only"
-    - "deps/core/beads.md — workflow only"
-    - "deps/core/mcp-tools.md — planner, coder"
-    - "deps/core/project-knowledge.md — planner, coder"
-    - "deps/core/context-isolation.md — plan-review, code-review"
-    - "deps/workflow/orchestration-core.md — pipeline, loop limits, session recovery (workflow only)"
-    - "deps/shared-review.md — severity classification, decision matrix (plan-review, code-review only)"
-    - "deps/planner/task-analysis.md — нужен для классификации"
-    - "deps/coder/examples.md — нужен при имплементации"
-    - "deps/code-review/examples.md — нужен при ревью"
-    - "deps/*/troubleshooting.md — загружать только при ошибках"
+      [Context from planner]:
+      - Planner completed: {task type and complexity}
+      - Key decisions: {list from handoff.key_decisions}
+      - Known risks: {list from handoff.known_risks}
+      - Recommendations: focus on {handoff.areas_needing_attention}
 
-# ════════════════════════════════════════════════════════════════════════════════
-# HANDOFF PROTOCOL
-# ════════════════════════════════════════════════════════════════════════════════
-handoff_protocol:
-  reference: "SEE: deps/workflow/handoff-protocol.md"
-  when: "Read BEFORE forming handoff between phases"
-  contains: "4 contracts (planner→plan-review, plan-review→coder, coder→code-review, code-review→completion) + narrative_casting template"
+      Iteration: {N}/3
+    returns: "Verdict (APPROVED/NEEDS_CHANGES/REJECTED) + issues + handoff for coder"
 
-# ════════════════════════════════════════════════════════════════════════════════
-# RULES
-# ════════════════════════════════════════════════════════════════════════════════
+  code_review_delegation:
+    agent: "code-reviewer"
+    when: "Phase 4 — after /coder completion"
+    context_to_pass:
+      - "Branch: current branch (code-reviewer runs git diff internally)"
+      - "Coder handoff narrative (SEE: handoff_protocol)"
+      - "Complexity: S/M/L/XL"
+      - "Iteration: N/3"
+    delegation_prompt_template: |
+      Review code changes on the current branch.
+
+      [Context from coder]:
+      - Coder implemented: {N Parts per plan}
+      - Evaluate adjustments: {list from handoff.evaluate_adjustments}
+      - Deviations from plan: {list from handoff.deviations_from_plan}
+      - Mitigated risks: {list from handoff.risks_mitigated}
+
+      Iteration: {N}/3
+    returns: "Verdict (APPROVED/APPROVED_WITH_COMMENTS/CHANGES_REQUESTED) + issues + handoff for completion"
+
+  fallback: "If agent delegation unavailable → fallback: re-read diff/plan in parent context (degraded mode, isolation loss)"
+
+## RULES
+
 rules:
-  - rule: "Sequential execution"
-    description: "Фазы выполнять последовательно, не параллельно"
+  - "Sequential execution — phases run sequentially, not in parallel"
+  - "No skip phases (except Phase 2 for S-complexity)"
+  - "Context isolation — review via agents/ (clean context, handoff via delegation)"
+  - "Loop limits → SEE orchestration-core.md (max 3 iterations per cycle)"
 
-  - rule: "No Skip phases"
-    description: "НИКОГДА не пропускать фазы (кроме Phase 2 при S-complexity route)"
+## ERROR HANDLING
 
-  - rule: "User Confirmation"
-    description: "Спрашивать подтверждение перед каждой фазой"
-
-  - rule: "Handle Failures"
-    description: "При REJECTED/CHANGES REQUESTED возвращаться к предыдущей фазе"
-
-  - rule: "Loop Limits"
-    description: "Максимум 3 итерации для каждого цикла ревью (plan-review, code-review)"
-    reference: "SEE: deps/workflow/orchestration-core.md#loop-limits"
-    severity: CRITICAL
-
-  - rule: "Context Isolation"
-    description: "Review-фазы ОБЯЗАНЫ запускаться как Task subagent (REQUIRED, не preferred)"
-    enforcement: "REQUIRED — subagent saves 67% context. Exception: Task tool unavailable → fallback re-read"
-    reference: "SEE: deps/core/context-isolation.md"
-    severity: CRITICAL
-
-# ════════════════════════════════════════════════════════════════════════════════
-# CHECKPOINT PROTOCOL
-# ════════════════════════════════════════════════════════════════════════════════
-checkpoint_protocol:
-  reference: "SEE: deps/workflow/checkpoint-protocol.md"
-  when: "Read BEFORE writing checkpoint after each phase"
-  contains: "format (12 YAML fields), recovery (5 steps), example"
-
-# ════════════════════════════════════════════════════════════════════════════════
-# RE-ROUTING
-# ════════════════════════════════════════════════════════════════════════════════
-re_routing:
-  reference: "SEE: deps/workflow/re-routing.md"
-  when: "Read when re-routing event detected (plan-review or coder signals complexity mismatch)"
-  contains: "3 triggers (downgrade, upgrade, hidden complexity) + tracking fields + learning"
-
-# ════════════════════════════════════════════════════════════════════════════════
-# PIPELINE METRICS
-# ════════════════════════════════════════════════════════════════════════════════
-pipeline_metrics:
-  # SEE: deps/workflow/pipeline-metrics.md (load at completion phase only)
-  trigger: "В completion-фазе workflow — read full metrics guide before saving"
-  contains: "format (12 fields), storage (MCP Memory entity), analysis (4 benefits), aggregation (query + report + anomaly detection)"
-
-# ════════════════════════════════════════════════════════════════════════════════
-# ERROR HANDLING
-# ════════════════════════════════════════════════════════════════════════════════
 error_handling:
-  # Common error patterns: SEE deps/core/error-handling.md
-  - error: "Plan review REJECTED"
-    action: "Request new requirements, return to Phase 1"
+  common: "SEE CLAUDE.md (MCP unavailable, beads, tests 3x fail)"
+  workflow_specific:
+    - "Loop limit exceeded (3 iterations) → STOP, show summary, request user help"
+    - "User says 'stop' → Stop immediately, await instructions"
+    - "REJECTED/NEEDS_CHANGES → return to previous phase (SEE pipeline)"
 
-  - error: "Plan review NEEDS_CHANGES"
-    action: "Pass issues to /planner, retry Phase 1"
+## SKILL REFERENCES
 
-  - error: "Code review CHANGES_REQUESTED"
-    action: "Pass issues to /coder, retry Phase 3"
+skill_references:
+  workflow-protocols:
+    - "session-recovery → orchestration-core.md (auto-detect, decision table)"
+    - "checkpoint → checkpoint-protocol.md (12 YAML fields, recovery)"
+    - "re-routing → re-routing.md (3 triggers, tracking, learning)"
+    - "pipeline-metrics → pipeline-metrics.md (load at completion phase)"
+    - "examples → examples-troubleshooting.md (on-demand when issues arise)"
+    - "handoff → handoff-protocol.md (4 contracts, narrative casting)"
 
-  - error: "Tests failing"
-    action: "Fix in Phase 3"
+## HOOKS
 
-  - error: "User says 'stop'"
-    action: "Stop immediately, await instructions"
+hooks:
+  note: "Configured in .claude/settings.json. Deterministic — fires automatically, no need to remember."
 
-  - error: "Loop limit exceeded (3 iterations in plan-review or code-review cycle)"
-    action: "STOP. Show: what was requested in each iteration, what issues persisted. Request user to either simplify task or provide specific guidance."
-    reference: "SEE: deps/workflow/orchestration-core.md#loop-limits"
+  - event: PreCompact
+    script: ".claude/scripts/save-progress-before-compact.sh"
+    behavior: "Saves checkpoint + review completions to additionalContext before compaction"
+    blocking: false
 
-# ════════════════════════════════════════════════════════════════════════════════
-# EXAMPLES & TROUBLESHOOTING
-# ════════════════════════════════════════════════════════════════════════════════
-# SEE: deps/workflow/examples-troubleshooting.md
-# Load on-demand: при первом запуске workflow или при возникновении проблем.
-# Содержит: execution examples (good/bad), troubleshooting (5 problems), common_mistakes (3 items).
+  - event: SubagentStop
+    script: ".claude/scripts/save-review-checkpoint.sh"
+    matcher: "plan-reviewer|code-reviewer"
+    behavior: "Appends review completion marker to .claude/workflow-state/review-completions.jsonl"
+    blocking: true
 
-# ════════════════════════════════════════════════════════════════════════════════
-# CHECKLIST
-# ════════════════════════════════════════════════════════════════════════════════
-checklist:
-  startup:
-    - "Task Analysis выполнен (complexity + route)"
-    - "TodoWrite создан со всеми фазами (с учётом route)"
-    - "Session recovery проверен"
-
-  phases:
-    - "Phase 0: Задача из beads взята (если применимо)"
-    - "Phase 0.5: Task Analysis выполнен (S/M/L/XL)"
-    - "Phase 1: План создан в `prompts/`"
-    - "Phase 2: План APPROVED (или skipped для S-complexity)"
-    - "Phase 3: Код реализован, tests pass"
-    - "Phase 4: Code review APPROVED"
-    - "Loop limits не превышены (max 3 итерации per cycle)"
-
-  completion:
-    - step: "Save lessons learned to Memory"
-      condition: "Sequential Thinking used OR review iterations > 1 OR re-routing occurred OR non-trivial decision made"
-      action: |
-        1. mcp__memory__search_nodes — query: '{feature name} {domain}'
-        2. If 0 results → mcp__memory__create_entities:
-           entities: [{
-             name: "{Feature Name}",
-             entityType: "lessons_learned",
-             observations: [
-               "PROBLEM: {problem encountered}",
-               "SOLUTION: {how resolved}",
-               "CONTEXT: {when applicable}",
-               "COMPLEXITY: estimated={X} actual={Y}",
-               "ITERATIONS: plan_review={N} code_review={N}",
-               "CREATED: {ISO date}"
-             ]
-           }]
-        3. If 1 result → mcp__memory__add_observations (merge new findings)
-        4. If 2+ results → show to user, ask which to update
-      note: "Follow Memory sequence from deps/core/mcp-tools.md (Memory sequence section). NON_CRITICAL."
-    - "Если задача из beads → напомнить о закрытии (`bd close <id>`)"
-    - "Git commit создан"
-    - "**`bd sync` выполнен** (ОБЯЗАТЕЛЬНО)"
+  - event: Stop
+    script: ".claude/scripts/check-uncommitted.sh"
+    behavior: "Blocks stop if uncommitted changes exist"
+    blocking: true

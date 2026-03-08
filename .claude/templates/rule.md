@@ -1,25 +1,25 @@
 meta:
   type: "rule"
-  purpose: "Template для создания rule артефактов в формате Claude Code"
+  purpose: "Template for creating rule artifacts in Claude Code format"
   source: "Claude Code docs: https://code.claude.com/docs/en/memory"
   note: |
-    ВАЖНО: Rules — это стандартный формат Claude Code. Как и skills, они используют
-    YAML frontmatter (---) + Markdown body. НЕ YAML-only.
-    Claude загружает rules автоматически:
-      - Без paths: → глобально (для всех файлов)
-      - С paths: → условно (только когда Claude работает с matching файлами)
+    IMPORTANT: Rules are a standard Claude Code format. Like skills, they use
+    YAML frontmatter (---) + Markdown body. NOT YAML-only.
+    Claude loads rules automatically:
+      - Without paths: -> globally (for all files)
+      - With paths: -> conditionally (only when Claude works with matching files)
 
 # ════════════════════════════════════════════════════════════════════════════════
-# OUTPUT FORMAT — что meta-agent должен генерировать
+# OUTPUT FORMAT — what meta-agent should generate
 # ════════════════════════════════════════════════════════════════════════════════
 
 template:
   file_path: ".claude/rules/<name>.md"
-  naming: "kebab-case, описательное имя — testing.md, api-design.md, error-handling.md"
+  naming: "kebab-case, descriptive name — testing.md, api-design.md, error-handling.md"
 
-  # ── Структура rule .md файла ──
-  # Level 1: YAML Frontmatter (paths: для conditional loading)
-  # Level 2: Markdown Body (инструкции, чеклисты, примеры)
+  # ── Rule .md file structure ──
+  # Level 1: YAML Frontmatter (paths: for conditional loading)
+  # Level 2: Markdown Body (instructions, checklists, examples)
 
   output_format: |
     ---
@@ -30,18 +30,18 @@ template:
 
     # <Rule Name>
 
-    <Краткое описание: что это за правила и когда они применяются.>
+    <Brief description: what these rules are and when they apply.>
 
     ## Checklist
 
-    - <Конкретный, actionable check item 1>
+    - <Specific, actionable check item 1>
     - <Check item 2>
     - <Check item 3>
 
     ## Forbidden
 
     ### <What not to do>
-    **Why:** <причина>
+    **Why:** <reason>
 
     **Bad:**
     ```<lang>
@@ -60,7 +60,7 @@ template:
   output_format_global: |
     # <Rule Name>
 
-    <Краткое описание. Этот rule загружается глобально (без paths:).>
+    <Brief description. This rule is loaded globally (without paths:).>
 
     ## Checklist
 
@@ -68,27 +68,27 @@ template:
     - <Check item 2>
 
   note_on_global: |
-    Rules без frontmatter загружаются для ВСЕХ файлов.
-    Используй осторожно — каждый global rule расходует контекст.
+    Rules without frontmatter are loaded for ALL files.
+    Use sparingly — each global rule consumes context.
 
 # ════════════════════════════════════════════════════════════════════════════════
-# FRONTMATTER — правила заполнения полей
+# FRONTMATTER — field filling rules
 # ════════════════════════════════════════════════════════════════════════════════
 
 frontmatter:
-  delimiters: "--- (три дефиса, отдельная строка, сверху и снизу)"
-  optional: "Frontmatter можно не указывать — тогда rule будет глобальным"
+  delimiters: "--- (three dashes, separate line, top and bottom)"
+  optional: "Frontmatter can be omitted — then the rule will be global"
 
   fields:
     paths:
       required: false
-      note: "Если указано — rule загружается условно. Если НЕ указано — глобально."
-      format: "YAML list с glob-паттернами в КАВЫЧКАХ"
+      note: "If specified — rule is loaded conditionally. If NOT specified — globally."
+      format: "YAML list with glob patterns in QUOTES"
       constraints:
-        - "Glob-паттерны ОБЯЗАТЕЛЬНО в кавычках (YAML parsing issue)"
-        - "Поддерживается brace expansion: {ts,tsx}, {src,lib}"
-        - "Стандартные glob: ** (рекурсивно), * (один уровень)"
-        - "Можно указать несколько паттернов как YAML list"
+        - "Glob patterns MUST be in quotes (YAML parsing issue)"
+        - "Brace expansion is supported: {ts,tsx}, {src,lib}"
+        - "Standard globs: ** (recursive), * (single level)"
+        - "Multiple patterns can be specified as a YAML list"
       valid:
         - |
           paths:
@@ -103,45 +103,45 @@ frontmatter:
       invalid:
         - |
           paths: src/api/**/*.ts
-          # ❌ Не в кавычках — YAML parsing error для паттернов с * и {}
+          # ❌ Not in quotes — YAML parsing error for patterns with * and {}
         - |
           paths: ["src/**/*.ts"]
-          # ⚠️ Inline list — работает, но менее читаемый
+          # ⚠️ Inline list — works, but less readable
         - |
           globs:
             - "src/**/*.ts"
-          # ❌ globs — это формат Cursor, не Claude Code
+          # ❌ globs — this is a Cursor format, not Claude Code
 
   known_issues:
-    - issue: "paths: иногда не работает (GitHub issue #17204)"
-      workaround: "Некоторые пользователи используют globs: вместо paths:"
-      recommendation: "Придерживаться paths: — это официальный формат"
+    - issue: "paths: sometimes does not work (GitHub issue #17204)"
+      workaround: "Some users use globs: instead of paths:"
+      recommendation: "Stick to paths: — this is the official format"
     - issue: "Unquoted glob patterns break YAML parsing (issue #13905)"
-      fix: "ВСЕГДА оборачивать glob-паттерны в кавычки"
+      fix: "ALWAYS wrap glob patterns in quotes"
 
 # ════════════════════════════════════════════════════════════════════════════════
-# MARKDOWN BODY — правила написания содержимого
+# MARKDOWN BODY — content writing rules
 # ════════════════════════════════════════════════════════════════════════════════
 
 body_guidelines:
-  format: "Markdown — НЕ YAML"
+  format: "Markdown — NOT YAML"
   structure:
     required_sections:
-      - "# <Rule Name> — заголовок"
-      - "Краткое описание (1-2 предложения)"
-      - "## Checklist (3-7 конкретных пунктов)"
+      - "# <Rule Name> — heading"
+      - "Brief description (1-2 sentences)"
+      - "## Checklist (3-7 specific items)"
     recommended_sections:
-      - "## Forbidden (что НЕ делать + Bad/Good примеры)"
-      - "## References (@skill ссылки)"
+      - "## Forbidden (what NOT to do + Bad/Good examples)"
+      - "## References (@skill references)"
     optional_sections:
-      - "## Exceptions (когда правило НЕ применяется)"
-      - "## Examples (дополнительные code examples)"
+      - "## Exceptions (when the rule does NOT apply)"
+      - "## Examples (additional code examples)"
 
   best_practices:
     be_specific:
       good: "Use 2-space indentation for all YAML files"
       bad: "Format code properly"
-      why: "Конкретные правила vs абстрактные указания"
+      why: "Specific rules vs abstract instructions"
 
     actionable_checklist:
       good: |
@@ -156,14 +156,14 @@ body_guidelines:
         - Write good code
         - Handle errors
         - Document things
-      why: "Проверяемые пункты vs размытые указания"
+      why: "Verifiable items vs vague instructions"
 
     forbidden_with_examples:
       good: |
         ## Forbidden
 
         ### Direct database access from handlers
-        **Why:** Нарушает layered architecture, невозможно тестировать.
+        **Why:** Violates layered architecture, impossible to test.
 
         **Bad:**
         ```go
@@ -186,35 +186,35 @@ body_guidelines:
       why: "Markdown + code blocks > YAML one-liners"
 
     keep_focused:
-      principle: "Один rule файл = одна тема"
-      good: "testing.md — только про тесты, api-design.md — только про API"
-      bad: "all-rules.md — всё в одном файле"
+      principle: "One rule file = one topic"
+      good: "testing.md — only about tests, api-design.md — only about API"
+      bad: "all-rules.md — everything in one file"
 
 # ════════════════════════════════════════════════════════════════════════════════
-# QUALITY GATES — проверки после генерации
+# QUALITY GATES — post-generation checks
 # ════════════════════════════════════════════════════════════════════════════════
 
 quality_gates:
   structural:
-    - "Файл .md в .claude/rules/ (или подпапке)"
-    - "Если path-scoped: YAML frontmatter с --- делимитерами"
-    - "paths: значения в КАВЫЧКАХ (YAML safety)"
-    - "Body в Markdown формате (НЕ YAML)"
-    - "Имя файла в kebab-case, описательное"
+    - ".md file in .claude/rules/ (or subfolder)"
+    - "If path-scoped: YAML frontmatter with --- delimiters"
+    - "paths: values in QUOTES (YAML safety)"
+    - "Body in Markdown format (NOT YAML)"
+    - "File name in kebab-case, descriptive"
 
   content:
-    - "Checklist: 3-7 конкретных, проверяемых пунктов"
-    - "Каждый пункт — actionable (можно проверить: да/нет)"
-    - "Forbidden section с Bad/Good code примерами"
-    - "References на @skills если есть связанные patterns"
+    - "Checklist: 3-7 specific, verifiable items"
+    - "Each item is actionable (can be verified: yes/no)"
+    - "Forbidden section with Bad/Good code examples"
+    - "References to @skills if there are related patterns"
 
   scope:
-    - "paths: паттерны точные (не **/*.go для всего)"
-    - "Нет пересечения paths: с другими rules"
-    - "Global rules используются осторожно (расходуют контекст)"
+    - "paths: patterns are precise (not **/*.go for everything)"
+    - "No overlap of paths: with other rules"
+    - "Global rules used sparingly (they consume context)"
 
 # ════════════════════════════════════════════════════════════════════════════════
-# ПРИМЕРЫ — good vs bad
+# EXAMPLES — good vs bad
 # ════════════════════════════════════════════════════════════════════════════════
 
 examples:
@@ -281,7 +281,7 @@ examples:
       - See `@testutil` for available test builder functions
 
   good_global:
-    description: "Valid global rule (без frontmatter) — загружается для всех файлов"
+    description: "Valid global rule (without frontmatter) — loaded for all files"
     file_name: ".claude/rules/code-style.md"
     content: |
       # Code Style
@@ -296,7 +296,7 @@ examples:
       - Files end with a single newline
 
   bad:
-    description: "Невалидный rule — YAML body вместо Markdown"
+    description: "Invalid rule — YAML body instead of Markdown"
     content: |
       meta:
         paths: "internal/**/*_test.go"
@@ -311,13 +311,13 @@ examples:
         - action: "hardcoded test data"
           why: "tests should be maintainable"
     problems:
-      - "Нет --- frontmatter делимитеров → paths не работает"
-      - "YAML body вместо Markdown → Claude не парсит как rule instructions"
-      - "paths: внутри meta: вместо frontmatter → Claude не видит scope"
-      - "Нет конкретных code examples в forbidden"
+      - "No --- frontmatter delimiters -> paths does not work"
+      - "YAML body instead of Markdown -> Claude does not parse as rule instructions"
+      - "paths: inside meta: instead of frontmatter -> Claude does not see scope"
+      - "No specific code examples in forbidden"
 
   bad_2:
-    description: "Prose-only без структуры"
+    description: "Prose-only without structure"
     content: |
       ---
       paths:
@@ -328,10 +328,10 @@ examples:
       You should use table-driven tests when possible.
       Don't hardcode test data.
     problems:
-      - "Нет заголовков (##) — трудно парсить"
-      - "Prose вместо checklist — не actionable"
-      - "Нет code examples — абстрактные указания"
-      - "'best practices' — что именно?"
+      - "No headings (##) — hard to parse"
+      - "Prose instead of checklist — not actionable"
+      - "No code examples — abstract instructions"
+      - "'best practices' — what exactly?"
 
   bad_3:
     description: "Unquoted glob patterns"
@@ -345,26 +345,26 @@ examples:
       # Rules
       ...
     problems:
-      - "Glob-паттерны без кавычек → YAML parsing error"
-      - "{ и * — reserved YAML characters, требуют кавычки"
+      - "Glob patterns without quotes -> YAML parsing error"
+      - "{ and * — reserved YAML characters, require quotes"
 
 # ════════════════════════════════════════════════════════════════════════════════
-# DIFF: что изменилось vs старый шаблон
+# DIFF: what changed vs old template
 # ════════════════════════════════════════════════════════════════════════════════
 
 changelog:
   version: "2.0.0"
   date: "2026-02-26"
   breaking_changes:
-    - "Output format: YAML body → Markdown body"
-    - "paths: из meta: YAML → в --- frontmatter"
-    - "Good/bad examples инвертированы: старый 'good' (YAML-only) теперь 'bad'"
-    - "checklist:/forbidden: YAML → ## Checklist / ## Forbidden Markdown"
+    - "Output format: YAML body -> Markdown body"
+    - "paths: from meta: YAML -> into --- frontmatter"
+    - "Good/bad examples inverted: old 'good' (YAML-only) is now 'bad'"
+    - "checklist:/forbidden: YAML -> ## Checklist / ## Forbidden Markdown"
   additions:
     - "frontmatter field requirements (paths: format, quoting rules)"
-    - "body_guidelines с best practices"
-    - "quality_gates для валидации"
-    - "Global rule формат (без frontmatter)"
+    - "body_guidelines with best practices"
+    - "quality_gates for validation"
+    - "Global rule format (without frontmatter)"
     - "Known issues (GitHub #17204, #13905)"
-    - "bad_3 example для unquoted globs"
+    - "bad_3 example for unquoted globs"
   source: "Claude Code docs: https://code.claude.com/docs/en/memory"

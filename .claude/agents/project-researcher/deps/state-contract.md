@@ -1,21 +1,21 @@
 # Inter-Phase State Contract
 
-**Purpose:** Typed state object, передаваемый между фазами и subagents. Orchestrator хранит глобальный state, subagents получают только required fields и возвращают свою секцию.
+**Purpose:** Typed state object passed between phases and subagents. The orchestrator maintains the global state; subagents receive only required fields and return their own section.
 
-**Principle:** Формальный контракт данных устраняет хрупкую передачу через markdown и позволяет программную валидацию.
+**Principle:** A formal data contract eliminates fragile transfer via markdown and enables programmatic validation.
 
-**Load when:** Orchestrator — при инициализации. Subagents — получают relevant subset в промпте.
+**Load when:** Orchestrator — during initialization. Subagents — receive a relevant subset in the prompt.
 
-**SEE:** `deps/orchestration.md` для протокола subagent вызовов.
+**SEE:** `deps/orchestration.md` for the subagent call protocol.
 
 ---
 
 ## STATE SCHEMA
 
-Стейт — виртуальный YAML-объект. Orchestrator поддерживает полный state в памяти. Каждый subagent:
-1. Получает от orchestrator required fields из предыдущих фаз
-2. Заполняет свою секцию полностью
-3. Возвращает `subagent_result` с `state_updates` (только своя секция)
+The state is a virtual YAML object. The orchestrator maintains the full state in memory. Each subagent:
+1. Receives required fields from previous phases from the orchestrator
+2. Populates its own section completely
+3. Returns `subagent_result` with `state_updates` (only its own section)
 
 ---
 
@@ -23,15 +23,15 @@
 
 ```yaml
 validate:
-  path: string              # REQUIRED — абсолютный путь к проекту
+  path: string              # REQUIRED — absolute path to the project
   mode: "CREATE" | "AUGMENT" | "UPDATE"  # REQUIRED
   git: bool                 # REQUIRED
   has_claude_dir: bool      # REQUIRED
-  source_file_count: int    # REQUIRED — количество исходных файлов
+  source_file_count: int    # REQUIRED — number of source files
   existing_artifacts:       # REQUIRED if mode != CREATE
     claude_md: bool
-    skills: string[]        # имена существующих skills
-    rules: string[]         # имена существующих rules
+    skills: string[]        # names of existing skills
+    rules: string[]         # names of existing rules
     commands: string[]
   git_analysis:             # REQUIRED if mode == UPDATE
     commits_since: int
@@ -44,18 +44,18 @@ validate:
 discover:
   is_monorepo: bool         # REQUIRED
   modules:                  # REQUIRED if is_monorepo
-    - path: string          # относительный путь к модулю
-      language: string      # primary language модуля
+    - path: string          # relative path to the module
+      language: string      # primary language of the module
       type: "service" | "library" | "app" | "shared" | "tool"
       manifest: string      # go.mod | package.json | Cargo.toml | pom.xml
-      depends_on: string[]  # пути к другим модулям (internal deps)
+      depends_on: string[]  # paths to other modules (internal deps)
   strategy: "single" | "per-module" | "per-module-with-shared-context"
-  root_module: string       # путь к "главному" модулю (если определён)
-  analysis_targets: string[] # REQUIRED — список путей для анализа
+  root_module: string       # path to the "main" module (if identified)
+  analysis_targets: string[] # REQUIRED — list of paths to analyze
 ```
 
-**FATAL if:** `path` не существует, `source_file_count == 0`
-**Логика:** Если `is_monorepo == false`, то `analysis_targets = [state.validate.path]`.
+**FATAL if:** `path` does not exist, `source_file_count == 0`
+**Logic:** If `is_monorepo == false`, then `analysis_targets = [state.validate.path]`.
 
 ---
 
@@ -71,12 +71,12 @@ detect:
     - language: string
       file_count: int
       role: string           # "frontend" | "scripts" | "tools" | "tests"
-  frameworks:                # REQUIRED — хотя бы []
+  frameworks:                # REQUIRED — at least []
     - name: string           # "chi" | "gin" | "echo" | ...
       version: string        # "v5.1.0"
       category: "http" | "orm" | "grpc" | "cli" | "testing" | "logging" | "di"
       confidence: float
-      detection_method: "manifest" | "import" | "ast"  # как обнаружено
+      detection_method: "manifest" | "import" | "ast"  # how it was detected
   build_tools:               # REQUIRED
     - name: string           # "make" | "docker" | "github-actions"
       config_file: string    # "Makefile" | "Dockerfile"
@@ -89,7 +89,7 @@ detect:
   analysis_method: string     # REQUIRED — "tree-sitter-mcp" | "ast-grep" | "grep"
 ```
 
-**FATAL if:** `primary_language` не определён, `primary_confidence < 0.3`
+**FATAL if:** `primary_language` is not determined, `primary_confidence < 0.3`
 
 ---
 
@@ -178,7 +178,7 @@ graph:
 analyze:
   architecture: string       # REQUIRED — "clean" | "hexagonal" | "mvc" | "layered" | "ddd" | ...
   architecture_confidence: float  # REQUIRED
-  architecture_evidence:     # REQUIRED — что именно подтверждает паттерн
+  architecture_evidence:     # REQUIRED — what exactly confirms the pattern
     - indicator: string      # "internal/domain/ exists"
       weight: float          # 0.0-1.0
   layers:                    # REQUIRED
@@ -187,7 +187,7 @@ analyze:
       packages: string[]     # ["entity", "valueobject", "repository"]
       interface_count: int
       struct_count: int
-      external_deps: string[] # пакеты вне проекта (нарушения?)
+      external_deps: string[] # packages outside the project (violations?)
   violations:                # dependency rule violations
     - from_layer: string
       to_layer: string
@@ -227,7 +227,7 @@ map:
       - name: string
         path: string
         methods: string[]
-        implementations: string[]  # пути к реализациям
+        implementations: string[]  # paths to implementations
   design_patterns:
     - pattern: string        # "Repository" | "Factory" | "Strategy" | ...
       location: string
@@ -288,7 +288,7 @@ critique:
   gate_passed: bool          # REQUIRED
 ```
 
-**BLOCKING:** Не продолжать если `gate_passed == false`
+**BLOCKING:** Do not continue if `gate_passed == false`
 
 ---
 
@@ -329,7 +329,7 @@ verify:
   gate_passed: bool          # REQUIRED
 ```
 
-**BLOCKING:** Не продолжать если `gate_passed == false`
+**BLOCKING:** Do not continue if `gate_passed == false`
 
 ---
 
@@ -339,16 +339,16 @@ verify:
 
 ```yaml
 subagent_input:
-  project_path: string       # абсолютный путь к проекту
-  agent_root: string         # путь к директории project-researcher
+  project_path: string       # absolute path to the project
+  agent_root: string         # path to the project-researcher directory
   config:
-    dry_run: bool            # только анализ, без записи файлов
+    dry_run: bool            # analysis only, no file writing
     mode: string             # CREATE | AUGMENT | UPDATE
-    module_target: string    # конкретный модуль (для monorepo parallelization)
-  state:                     # только required fields для данного subagent
+    module_target: string    # specific module (for monorepo parallelization)
+  state:                     # only required fields for this subagent
     validate: { ... }
     discover: { ... }
-    # ... только то, что нужно
+    # ... only what is needed
 ```
 
 ### Output Format (from subagent to orchestrator)
@@ -383,7 +383,7 @@ subagent_result:
 | verification | `state.generate.artifacts`, `state.validate.path` |
 | report | `state.verify.gate_passed == true`, all state |
 
-**On missing required field:** FATAL — orchestrator должен re-run предыдущий subagent.
+**On missing required field:** FATAL — the orchestrator must re-run the previous subagent.
 
 ---
 
@@ -391,7 +391,7 @@ subagent_result:
 
 ### Execution Modes
 
-Merge protocol зависит от execution mode:
+The merge protocol depends on the execution mode:
 
 | Mode | Condition | Subagent Shape | Merge Timing |
 |------|-----------|---------------|--------------|
@@ -401,13 +401,13 @@ Merge protocol зависит от execution mode:
 
 ### Compound Subagent Result Format (Pipeline Mode)
 
-Compound subagents возвращают результаты DETECTION + GRAPH + ANALYSIS в одном `subagent_result`:
+Compound subagents return DETECTION + GRAPH + ANALYSIS results in a single `subagent_result`:
 
 ```yaml
 subagent_result:
   status: "success" | "failure" | "partial"
-  compound: true                          # флаг compound subagent
-  module_target: "services/api"           # какой модуль обработан
+  compound: true                          # compound subagent flag
+  module_target: "services/api"           # which module was processed
   state_updates:
     detect:
       primary_language: "go"
@@ -445,14 +445,14 @@ subagent_result:
 ```
 
 **Compound partial failure:**
-- `error.phase == "detection"` → вся `state_updates` пуста, модуль исключается из merge
-- `error.phase == "graph"` → `state_updates.detect` валиден (мержится), `state_updates.graph/analyze/map/database` пусты. Analysis runs without repo-map context.
-- `error.phase == "analysis"` → `state_updates.detect` и `state_updates.graph` валидны (мержатся), `state_updates.analyze/map/database` пусты
+- `error.phase == "detection"` → the entire `state_updates` is empty, the module is excluded from merge
+- `error.phase == "graph"` → `state_updates.detect` is valid (merged), `state_updates.graph/analyze/map/database` are empty. Analysis runs without repo-map context.
+- `error.phase == "analysis"` → `state_updates.detect` and `state_updates.graph` are valid (merged), `state_updates.analyze/map/database` are empty
 
 ### Per-Module State Lifecycle
 
 ```
-Per-module results хранятся в промежуточном формате до агрегации:
+Per-module results are stored in an intermediate format until aggregation:
 
 state.detect.modules[]:
   - target: "services/api"           # module path
@@ -471,7 +471,7 @@ state.map.modules[]:
   - target: "services/api"
     ...map fields...
 
-После merge всех модулей → агрегация в top-level fields.
+After merging all modules → aggregation into top-level fields.
 ```
 
 ### Per-Module Merge (from compound results)
@@ -511,11 +511,11 @@ detect:
 | `entry_points` | Concatenate | Each tagged with module_target |
 | `dependency_graph` (map) | Merge graphs + add inter-module edges | From `state.discover.internal_dependencies` |
 | `conventions` | From root_module or majority | If root_module failed → fallback to majority |
-| `architecture` | Per-module (не агрегируется) | Каждый модуль может иметь свою архитектуру |
+| `architecture` | Per-module (not aggregated) | Each module can have its own architecture |
 
 ### Merge Validation
 
-После merge orchestrator проверяет:
+After merge, the orchestrator verifies:
 
 ```yaml
 merge_validation:
@@ -534,11 +534,11 @@ merge_validation:
 
 ## COMPACT OUTPUT FORMAT
 
-После каждого subagent call orchestrator выводит:
+After each subagent call, the orchestrator outputs:
 
 ```
 [PHASE {n}/10] {NAME} — DONE
 State: {key_field=value, ...}
 ```
 
-Полный стейт доступен через `state.*` для следующих subagents, но не дублируется в output.
+The full state is available via `state.*` for subsequent subagents but is not duplicated in the output.

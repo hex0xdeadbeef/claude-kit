@@ -2,7 +2,7 @@
 
 ## 7.1 PURPOSE
 
-**Goal:** Adversarial review planned artifacts BEFORE generation. Не просто ставить галочки — активно искать контраргументы и слабые места.
+**Goal:** Adversarial review planned artifacts BEFORE generation. Not just checking boxes — actively looking for counterarguments and weak spots.
 
 **When:** After MAP/DATABASE, before GENERATE
 
@@ -10,9 +10,9 @@
 
 **Outputs:** `state.critique`
 
-**SEE:** `deps/state-contract.md` для полной схемы state.
+**SEE:** `deps/state-contract.md` for the full state schema.
 
-**Principle:** Checklist ловит очевидные проблемы. Adversarial review ловит то, что checklist пропускает — overcalibration, confirmation bias, ложную уверенность.
+**Principle:** A checklist catches obvious problems. Adversarial review catches what the checklist misses — overcalibration, confirmation bias, false confidence.
 
 ---
 
@@ -55,41 +55,41 @@ Review the planned artifact generation against these criteria:
 
 ## 7.3 ADVERSARIAL REVIEW (NEW v3.0)
 
-**Principle:** Заставить себя аргументировать *против* собственных выводов. Если не можешь найти контраргументы — выводы, вероятно, корректны. Если можешь — нужно уточнить.
+**Principle:** Force yourself to argue *against* your own conclusions. If you cannot find counterarguments — the conclusions are likely correct. If you can — they need refinement.
 
 ### 7.3.1 Devil's Advocate Questions
 
-Ответить на каждый вопрос **развёрнуто**, не отделываясь "нет проблем":
+Answer each question **in detail**, do not dismiss with "no issues":
 
-1. **"Назови 3 вещи, которые senior-разработчик этого проекта счёл бы неточными в моём анализе."**
-   - Подумай о domain knowledge, которого у тебя нет
-   - Подумай о неявных конвенциях, которые не выражены в коде
-   - Подумай о решениях, контекст которых ты не знаешь (legacy constraints, бизнес-требования)
+1. **"Name 3 things that a senior developer on this project would consider inaccurate in my analysis."**
+   - Think about domain knowledge you do not have
+   - Think about implicit conventions not expressed in code
+   - Think about decisions whose context you do not know (legacy constraints, business requirements)
 
-2. **"Какой самый важный аспект проекта я мог упустить?"**
-   - Проверь: есть ли в проекте `.env.example`, `docker-compose.yml`, `Makefile` — они часто содержат ключевую information о workflows
-   - Проверь: README.md, CONTRIBUTING.md — описывают ли они паттерны, которые ты не нашёл?
-   - Проверь: CI/CD конфиги — какие шаги тестирования/деплоя используются?
+2. **"What is the most important aspect of the project I may have missed?"**
+   - Check: does the project have `.env.example`, `docker-compose.yml`, `Makefile` — they often contain key information about workflows
+   - Check: README.md, CONTRIBUTING.md — do they describe patterns you did not find?
+   - Check: CI/CD configs — what testing/deployment steps are used?
 
-3. **"Если бы моя детекция архитектуры была неправильной — какая альтернатива наиболее вероятна?"**
-   - Для `state.analyze.architecture`:
-     - Если определил Clean Architecture → мог ли это быть Layered с хорошей организацией?
-     - Если определил Layered → мог ли это быть Clean Architecture с нестандартными именами?
-     - Если определил DDD → есть ли реальные aggregates или просто CRUD с красивыми именами?
-   - Привести конкретные evidence за альтернативу
+3. **"If my architecture detection were wrong — what alternative is most likely?"**
+   - For `state.analyze.architecture`:
+     - If detected Clean Architecture → could it be Layered with good organization?
+     - If detected Layered → could it be Clean Architecture with non-standard names?
+     - If detected DDD → are there real aggregates or just CRUD with pretty names?
+   - Provide specific evidence for the alternative
 
-4. **"Какие conventions я мог принять за стандарт проекта, хотя они встречаются <5 раз?"**
-   - Для каждой convention из `state.analyze.conventions` — сколько раз она реально встречается?
-   - Пример: "fmt.Errorf %w" — если встретился 3 раза из 50 error handling мест, это не конвенция
+4. **"Which conventions did I assume to be a project standard even though they occur <5 times?"**
+   - For each convention in `state.analyze.conventions` — how many times does it actually occur?
+   - Example: "fmt.Errorf %w" — if found 3 times out of 50 error handling sites, this is not a convention
 
-5. **"Какие артефакты я генерирую по инерции, а не по необходимости?"**
-   - Нужен ли skill @logging для проекта с 10 файлами?
-   - Нужны ли rules для каждого слоя, если слоёв всего 2?
-   - Нужен ли memory.json, если проект trivial?
+5. **"Which artifacts am I generating out of inertia rather than necessity?"**
+   - Is a @logging skill needed for a project with 10 files?
+   - Are rules needed for every layer if there are only 2 layers?
+   - Is memory.json needed if the project is trivial?
 
 ### 7.3.2 Alternative Architecture Analysis
 
-Для текущей `state.analyze.architecture` провести контрпроверку:
+For the current `state.analyze.architecture`, perform a counter-check:
 
 ```
 DETECTED: Clean Architecture (confidence: 0.88)
@@ -108,7 +108,7 @@ COUNTER-CHECK:
 CONCLUSION: Clean Architecture confirmed. Alternatives lack evidence.
 ```
 
-**Если альтернатива имеет ≥40% evidence → понизить confidence основного варианта.**
+**If an alternative has ≥40% evidence → lower the confidence of the primary variant.**
 
 ---
 
@@ -116,7 +116,7 @@ CONCLUSION: Clean Architecture confirmed. Alternatives lack evidence.
 
 ### 7.4.1 Overcalibration Detection
 
-Сравнить заявленную уверенность с количеством подтверждающих данных:
+Compare claimed confidence with the amount of supporting data:
 
 ```
 FOR each finding in [architecture, conventions, patterns]:

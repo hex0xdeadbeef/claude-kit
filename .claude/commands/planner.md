@@ -4,8 +4,6 @@ description: Researches codebase and creates detailed implementation plan
 model: opus
 ---
 
-# Language & aliases: SEE .claude/PROJECT-KNOWLEDGE.md
-
 # PLANNER
 
 role:
@@ -15,9 +13,7 @@ role:
   output_contract: "File .claude/prompts/{feature}.md + handoff_output payload for plan-review"
   success_criteria: "Plan contains all required sections, full code examples, clear acceptance criteria, handoff formed"
 
-# ════════════════════════════════════════════════════════════════════════════════
-# INPUT
-# ════════════════════════════════════════════════════════════════════════════════
+## INPUT
 input:
   arguments:
     - name: task
@@ -43,9 +39,7 @@ input:
     - cmd: "/planner --minimal Add field to model"
       description: "Minimal plan for simple task"
 
-# ════════════════════════════════════════════════════════════════════════════════
-# OUTPUT
-# ════════════════════════════════════════════════════════════════════════════════
+## OUTPUT
 output:
   file: ".claude/prompts/{feature-name}.md"
   format: |
@@ -67,7 +61,7 @@ output:
   handoff_output:
     severity: CRITICAL
     description: "MUST be formed on completion — passed to /plan-review"
-    # SEE: deps/workflow/handoff-protocol.md → planner_to_plan_review (canonical field schema)
+    # For handoff contract see [handoff-protocol.md] in workflow-protocols skill → planner_to_plan_review
     example: |
       Handoff → /plan-review:
         artifact: .claude/prompts/{feature}.md
@@ -79,9 +73,7 @@ output:
         areas_needing_attention:
           - "Part 3: Controller — complex state transition logic"
 
-# ════════════════════════════════════════════════════════════════════════════════
-# AUTONOMY RULE
-# ════════════════════════════════════════════════════════════════════════════════
+## AUTONOMY
 autonomy:
   modes:
     - name: INTERACTIVE
@@ -103,9 +95,7 @@ autonomy:
     - condition: MCP critically unavailable
       action: "Warn, continue with limitations"
 
-# ════════════════════════════════════════════════════════════════════════════════
-# MCP TOOLS
-# ════════════════════════════════════════════════════════════════════════════════
+## MCP TOOLS
 mcp_tools:
   - tool: "Sequential Thinking"
     when: "for complex architectural decisions (MANDATORY for tasks with 3+ alternatives)"
@@ -119,29 +109,24 @@ mcp_tools:
       - "mcp__postgres__list_tables"
       - "mcp__postgres__describe_table"
 
-# ════════════════════════════════════════════════════════════════════════════════
-# CONTEXT
-# ════════════════════════════════════════════════════════════════════════════════
+## CONTEXT
 context:
   tracking: "bd for beads integration"
   template: ".claude/templates/plan-template.md"
 
-# ════════════════════════════════════════════════════════════════════════════════
-# STARTUP
-# ════════════════════════════════════════════════════════════════════════════════
+## STARTUP
 startup:
   critical: true
   mandatory_steps:
     - step: 0
-      action: "Read role-specific core deps"
+      action: "Load MCP patterns and planner-rules skill"
       files:
-        - ".claude/commands/deps/core/mcp-tools.md"
-        - ".claude/commands/deps/core/project-knowledge.md"
-        - ".claude/commands/deps/core/error-handling.md"
-      purpose: "Load MCP patterns, language profile, error handling"
+        - ".claude/skills/planner-rules/mcp-tools.md"
+        - ".claude/skills/planner-rules/SKILL.md"
+      purpose: "Load MCP patterns (language profile + error handling → auto-loaded via CLAUDE.md). Load planner-rules skill for task classification and routing overview."
 
     - step: 0.5
-      action: "Read .claude/commands/deps/planner/task-analysis.md and perform classification"
+      action: "For full classification matrix, see task-analysis.md in planner-rules skill. Perform classification."
       purpose: "Determine complexity (S/M/L/XL) and route BEFORE research"
       output: "Type + Complexity + Route + Sequential Thinking requirement"
       warning: "MANDATORY! Wrong classification = wasted work or insufficient planning"
@@ -166,22 +151,18 @@ startup:
     found: "Multi-Operation Plugin Architecture"
     action: "Use observations as context for new plan"
 
-# ════════════════════════════════════════════════════════════════════════════════
-# WORKFLOW
-# ════════════════════════════════════════════════════════════════════════════════
+## WORKFLOW
 workflow:
   summary: "STARTUP (task_analysis) → UNDERSTAND → DATA_FLOW → RESEARCH → DESIGN → DOCUMENT → SAVE TO MEMORY"
   phases: ["task_analysis", "understand", "data_flow", "research", "design", "document", "save_to_memory"]
   note: "task_analysis is step 0 of startup, determines complexity and route"
 
-# ════════════════════════════════════════════════════════════════════════════════
-# PHASES
-# ════════════════════════════════════════════════════════════════════════════════
+## PHASES
 
 phases:
   phase_0_task_analysis:
     name: "TASK ANALYSIS"
-    reference: ".claude/commands/deps/planner/task-analysis.md"
+    reference: "For details see [task-analysis.md] in planner-rules skill"
     critical: true
     output: "Complexity: S/M/L/XL, Route: minimal/standard/full"
     routing:
@@ -194,27 +175,16 @@ phases:
   phase_1_understand:
     name: "UNDERSTAND"
     steps:
-      - action: "Classify task type"
-        note: "SEE: .claude/PROJECT-KNOWLEDGE.md for project-specific domains"
-        task_types:
-          - type: "API endpoint"
-            keywords: "endpoint, handler, HTTP, REST"
-          - type: "Database"
-            keywords: "DB operations, queries, migration"
-          - type: "Domain logic"
-            keywords: "business logic, controller, usecase"
-          - type: "Integration"
-            keywords: "external service, client, API call"
-
       - action: "Ask clarifying questions (MANDATORY)"
         required:
           - "Scope: what is IN, what is OUT?"
           - "Priorities: what is critical?"
           - "Constraints: specific requirements?"
+        note: "Task types and keywords → SEE [task-analysis.md] in planner-rules skill"
 
   phase_2_data_flow:
     name: "DATA_FLOW"
-    reference: ".claude/commands/deps/planner/data-flow.md"
+    reference: "For details see [data-flow.md] in planner-rules skill"
     condition: "SKIP if complexity S. LOAD for M/L/XL."
     critical_for: "M/L/XL — wrong layer selection = wasted refactoring time"
 
@@ -261,7 +231,7 @@ phases:
   phase_4_design:
     name: "DESIGN"
     sequential_thinking:
-      reference: ".claude/commands/deps/sequential-thinking-guide.md"
+      reference: ".claude/skills/planner-rules/sequential-thinking-guide.md"
       condition: "ONLY read this guide if complexity L/XL. SKIP for S/M — simple tasks don't need structured analysis."
       use_when:
         - "Alternatives >= 3"
@@ -309,52 +279,11 @@ phases:
   phase_6_save_to_memory:
     name: "SAVE TO MEMORY"
     criteria:
-      save_when:
-        - "Sequential Thinking was used"
-        - "New architectural pattern"
-        - "Choice from 3+ alternatives"
-        - "Integration with external system"
-        - "Plan > 200 lines"
-      skip_when:
-        - "Standard CRUD"
-        - "Trivial changes"
+      save_when: ["Sequential Thinking used", "New pattern", "3+ alternatives", "External integration", "Plan > 200 lines"]
+      skip_when: ["Standard CRUD", "Trivial changes"]
+    reference: "Entity format + relations → SEE [mcp-tools.md] in planner-rules skill (Memory entity templates)"
 
-    workflow:
-      - step: "Check duplicates"
-        action: "mcp__memory__search_nodes — query: '{decision name}'"
-      - step: "If found similar"
-        action: "mcp__memory__add_observations (add to existing)"
-      - step: "If NOT found"
-        action: "mcp__memory__create_entities (create new)"
-      - step: "Sync beads"
-        action: "bd sync"
-        when: "if beads available"
-
-    entity_format:
-      name: "{Feature Name}"
-      entityType: "architectural_decision"
-      observations:
-        - "Decision: {what was chosen}"
-        - "Reason: {why}"
-        - "Alternatives: {what was rejected and why}"
-        - "Patterns: {patterns used}"
-        - "Files: {key files}"
-
-    relations:
-      when: "Relation with existing decisions"
-      action: "mcp__memory__create_relations"
-      example: '{"from": "New Feature", "to": "Existing Decision", "relationType": "extends"}'
-
-# ════════════════════════════════════════════════════════════════════════════════
-# BEADS INTEGRATION
-# ════════════════════════════════════════════════════════════════════════════════
-beads_integration:
-  rule: "If beads task → bd show <id> at start. No beads action at end (wait for review)."
-  note: "Beads is NON_CRITICAL. If bd unavailable → skip."
-
-# ════════════════════════════════════════════════════════════════════════════════
-# RULES
-# ════════════════════════════════════════════════════════════════════════════════
+## RULES
 rules:
   - rule: "No Code"
     description: "research and planning only, do NOT write code"
@@ -372,34 +301,11 @@ rules:
     description: "check dependencies between layers (SEE: PROJECT-KNOWLEDGE.md, if available)"
     severity: HIGH
 
-# ════════════════════════════════════════════════════════════════════════════════
-# ERROR HANDLING
-# ════════════════════════════════════════════════════════════════════════════════
+## ERROR HANDLING
 error_handling:
-  # Common MCP/beads errors: SEE deps/core/error-handling.md
+  # Common MCP/beads errors → auto-loaded via CLAUDE.md (error handling section)
   command_specific:
     - situation: Template missing
       action: "Use minimal format from PHASE 4: DOCUMENT"
     - situation: User not responding
       action: "Wait for response, do not continue without scope clarification"
-
-# ════════════════════════════════════════════════════════════════════════════════
-# EXAMPLES
-# ════════════════════════════════════════════════════════════════════════════════
-examples:
-  reference: "SEE: deps/planner/examples.md"
-  when: "Reference when writing code examples in plan"
-
-# ════════════════════════════════════════════════════════════════════════════════
-# TROUBLESHOOTING
-# ════════════════════════════════════════════════════════════════════════════════
-troubleshooting:
-  reference: ".claude/commands/deps/planner/troubleshooting.md"
-  description: "common problems and fixes"
-
-# ════════════════════════════════════════════════════════════════════════════════
-# CHECKLIST
-# ════════════════════════════════════════════════════════════════════════════════
-checklist:
-  reference: "SEE: deps/planner/checklist.md"
-  when: "Read at completion of each phase for self-verification"

@@ -72,20 +72,6 @@ Researches the codebase and creates a detailed implementation plan with code exa
 
 ---
 
-### `/plan-review` — Plan Validation
-
-Checks the implementation plan for architecture compliance, completeness, and security before coding begins.
-
-```bash
-/plan-review                                # interactive plan selection from list
-/plan-review my-feature                     # review specific plan by name
-/plan-review .claude/prompts/custom.md      # review by full file path
-```
-
-**Verdicts:** `APPROVED` | `NEEDS_CHANGES` | `REJECTED`
-
----
-
 ### `/coder` — Code Implementation
 
 Implements code strictly per approved plan. Runs formatting, linting, and tests after implementation.
@@ -96,19 +82,6 @@ Implements code strictly per approved plan. Runs formatting, linting, and tests 
 ```
 
 **Result:** working code with passing tests + evaluate output with deviation documentation.
-
----
-
-### `/code-review` — Code Review
-
-Reviews code changes: architecture, security, error handling, test coverage, code style.
-
-```bash
-/code-review                            # review current branch vs main
-/code-review feature/add-endpoint       # review specific branch
-```
-
-**Verdicts:** `APPROVED` | `APPROVED_WITH_COMMENTS` | `CHANGES_REQUESTED`
 
 ---
 
@@ -185,9 +158,7 @@ Explores PostgreSQL schema and data via MCP. Requires configured `postgres` MCP 
 | Quick implementation of a simple task | `/workflow --minimal` |
 | Autonomous implementation without confirmations | `/workflow --auto` |
 | Need a plan before writing code | `/planner` |
-| Have a plan, need validation | `/plan-review` |
 | Plan approved, need implementation | `/coder` |
-| Code written, need review | `/code-review` |
 | Setting up kit in a new project | `/meta-agent onboard` |
 | Creating new commands/skills/agents | `/meta-agent create` |
 | Preview artifact changes | `/meta-agent enhance --dry-run` |
@@ -243,20 +214,23 @@ Configure in `~/.claude/mcp.json`:
 ```
 .claude/
 ├── agents/                # Autonomous agents
-│   ├── meta-agent/        # Artifact lifecycle management (20+ deps, 5 scripts, templates)
+│   ├── meta-agent/        # Artifact lifecycle management (deps, scripts, templates)
 │   ├── project-researcher/# Codebase analysis (7 subagents, AST analysis, scoring)
-│   └── db-explorer/       # PostgreSQL exploration
+│   ├── db-explorer/       # PostgreSQL exploration
+│   ├── plan-reviewer.md   # Plan validation agent (invoked by /workflow)
+│   ├── code-reviewer.md   # Code review agent (invoked by /workflow)
+│   └── code-researcher.md # Codebase exploration agent
 ├── commands/              # Slash commands (/workflow, /planner, /coder, etc.)
-│   └── deps/              # Shared dependencies
-│       ├── core/          # Cross-cutting: autonomy, beads, context-isolation, error-handling, MCP tools
-│       ├── workflow/      # Pipeline: orchestration, checkpoints, handoffs, metrics, re-routing
-│       ├── planner/       # Task analysis, data flow, examples, checklist
-│       ├── coder/         # Implementation examples, checklist, troubleshooting
-│       ├── plan-review/   # Architecture checks, required sections, checklist
-│       └── code-review/   # Security checklist (OWASP), examples, checklist
+├── skills/                # Reusable domain knowledge
+│   ├── workflow-protocols/# Orchestration, handoff, checkpoints, re-routing
+│   ├── planner-rules/     # Planning methodology, task analysis, data flow
+│   ├── coder-rules/       # Implementation rules, MCP tools
+│   ├── plan-review-rules/ # Architecture checks, required sections
+│   └── code-review-rules/ # Security checklist (OWASP), review checklists
 ├── templates/             # Templates for creating new artifacts
 ├── prompts/               # Generated implementation plans
-├── scripts/               # Utility scripts (sync-to-github)
+├── scripts/               # Lifecycle hooks (check-uncommitted, save-progress, etc.)
+├── rules/                 # Cross-cutting constraints (architecture rules)
 ├── settings.json          # Claude Code project settings + hooks
 └── PROJECT-KNOWLEDGE.md   # Auto-generated project knowledge base
 ```
@@ -267,11 +241,14 @@ The kit includes hooks (configured in `.claude/settings.json`) that enforce qual
 
 | Hook | Trigger | Purpose |
 | ------ | --------- | --------- |
-| `check-artifact-size.sh` | Before Write | Block writes exceeding size thresholds |
-| `yaml-lint.sh` | After Edit | Validate YAML structure |
-| `check-references.sh` | After Write | Validate all file references |
-| `verify-phase-completion.sh` | On Stop | Ensure all meta-agent phases completed |
-| `gofmt` | After Go file edit/write | Auto-format Go code |
+| `check-artifact-size.sh` | PreToolUse (Write) | Block writes exceeding size thresholds |
+| `yaml-lint.sh` | PostToolUse (Edit) | Validate YAML structure |
+| `check-references.sh` | PostToolUse (Write) | Validate all file references |
+| `gofmt` | PostToolUse (Edit/Write) | Auto-format Go code |
+| `verify-phase-completion.sh` | Stop | Ensure all meta-agent phases completed |
+| `check-uncommitted.sh` | Stop | Warn on uncommitted changes |
+| `save-progress-before-compact.sh` | PreCompact | Save checkpoint before context compaction |
+| `save-review-checkpoint.sh` | SubagentStop | Persist review completion state |
 
 ## Conventions
 

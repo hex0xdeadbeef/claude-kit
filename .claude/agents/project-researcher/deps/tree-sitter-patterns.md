@@ -1,12 +1,12 @@
 # Tree-Sitter Analysis Patterns (v4.2)
 
-**Purpose:** Структурный анализ кода через tree-sitter MCP вместо ast-grep CLI. Tree-sitter — инкрементальный парсер, де-факто стандарт для AI coding agents (Aider, Cline, Cursor).
+**Purpose:** Structural code analysis via tree-sitter MCP instead of ast-grep CLI. Tree-sitter is an incremental parser, the de facto standard for AI coding agents (Aider, Cline, Cursor).
 
-**Principle:** Tree-sitter даёт полное AST дерево с типизированными узлами. В отличие от ast-grep (pattern matching), tree-sitter поддерживает запросы с предикатами, wildcard-узлами и multi-capture. Через MCP сервер — доступ к symbol extraction, usage search и dependency analysis без CLI зависимостей.
+**Principle:** Tree-sitter provides a complete AST with typed nodes. Unlike ast-grep (pattern matching), tree-sitter supports queries with predicates, wildcard nodes, and multi-capture. Via an MCP server — access to symbol extraction, usage search, and dependency analysis without CLI dependencies.
 
 **Replaces:** `deps/ast-analysis.md` (ast-grep patterns). ast-grep patterns retained as legacy fallback.
 
-**Load when:** Фазы DETECT, GRAPH, ANALYZE — как primary метод анализа кода.
+**Load when:** DETECT, GRAPH, ANALYZE phases — as the primary code analysis method.
 
 ---
 
@@ -15,11 +15,11 @@
 ### Availability Check
 
 ```yaml
-# Проверка: tree-sitter MCP доступен?
+# Check: is tree-sitter MCP available?
 tree_sitter_check:
   method: "Check if mcp__tree_sitter tools exist in available tools"
   fallback_chain:
-    1: "tree-sitter MCP server"     # primary — полный API
+    1: "tree-sitter MCP server"     # primary — full API
     2: "ast-grep CLI"               # fallback — pattern matching only
     3: "grep"                       # last resort — text search
 
@@ -47,7 +47,7 @@ tree_sitter_check:
 ### Project Registration
 
 ```yaml
-# При старте detection subagent:
+# At detection subagent startup:
 register_project:
   path: "{state.validate.path}"
   name: "{project_name}"
@@ -70,13 +70,13 @@ config:
 
 ### Notation
 
-Все паттерны — S-expression queries для tree-sitter. Формат:
+All patterns are S-expression queries for tree-sitter. Format:
 ```
 (node_type field: (child_type) @capture_name) @parent_capture
 ```
 
-Предикаты:
-- `#match?` — regex match на capture
+Predicates:
+- `#match?` — regex match on capture
 - `#eq?` — exact match
 - `#any-of?` — match against set
 
@@ -677,21 +677,21 @@ fallback_chain:
 
 ### ast-grep Legacy Patterns
 
-Если tree-sitter MCP недоступен, но ast-grep установлен — использовать паттерны из legacy формата:
+If tree-sitter MCP is unavailable but ast-grep is installed — use patterns in legacy format:
 
 ```bash
-# ast-grep pattern syntax (для fallback):
+# ast-grep pattern syntax (for fallback):
 ast-grep --pattern 'type $NAME interface { $$$ }' --lang go
 ast-grep --pattern 'func $NAME($$$) $$$' --lang go
 ast-grep --pattern 'import ($$$)' --lang go
 ```
 
-Полный каталог legacy ast-grep patterns сохранён в `deps/ast-analysis.md` (deprecated, read-only).
+The full catalog of legacy ast-grep patterns is preserved in `deps/ast-analysis.md` (deprecated, read-only).
 
 ### Grep Fallback Patterns
 
 ```bash
-# Самый примитивный уровень — text search:
+# The most primitive level — text search:
 grep -rn "type [A-Z][a-zA-Z]* interface {" --include="*.go"
 grep -rn "func [A-Z][a-zA-Z]*(" --include="*.go"
 grep -rn "^import" --include="*.go"

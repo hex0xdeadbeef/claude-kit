@@ -1,6 +1,6 @@
 meta:
   type: "command"
-  purpose: "Template для создания command артефактов"
+  purpose: "Template for creating command artifacts"
 
 template:
   file_path: ".claude/commands/<name>.md"
