@@ -4,13 +4,7 @@ description: "Полный цикл разработки: task-analysis → plan
 model: opus
 ---
 
-# Language defaults (from PROJECT-KNOWLEDGE.md, Go fallback):
-#   VERIFY = make fmt && make lint && make test
-#   FMT = make fmt | LINT = make lint | TEST = make test
-#   EXT = .go | ERROR_WRAP = %w | DOMAIN_PROHIBIT = encoding/json tags
-#   GENERATED = *_gen.go | MOCKS = */mocks/*.go | SOURCE_GLOB = internal/**/*.go
-#   CONFIG_EXAMPLE = config.yaml.example | CONFIG_DOCS = README.md
-# Override: define language_profile in PROJECT-KNOWLEDGE.md for non-Go projects.
+# Language & aliases: SEE .claude/PROJECT-KNOWLEDGE.md
 
 role:
   identity: "Orchestrator"
@@ -96,7 +90,7 @@ output:
 # AUTONOMY RULE
 # ════════════════════════════════════════════════════════════════════════════════
 autonomy_rule:
-  # Common autonomy patterns: SEE deps/shared-core.md#autonomy
+  # Common autonomy patterns: SEE deps/core/autonomy.md
   modes:
     - INTERACTIVE (default): Ask before each phase
     - AUTONOMOUS (--auto): Execute all phases automatically
@@ -125,7 +119,7 @@ related_tools:
 # MCP TOOLS
 # ════════════════════════════════════════════════════════════════════════════════
 mcp_tools:
-  # Common MCP patterns: SEE deps/shared-core.md#mcp-tools
+  # Common MCP patterns: SEE deps/core/mcp-tools.md
   - tool: "Sequential Thinking"
     usage: "Complex multi-phase orchestration"
     when:
@@ -182,7 +176,7 @@ startup:
         - "Есть ли beads issue in_progress? → bd show <id>"
 
   beads_integration:
-    # SEE: deps/shared-core.md#beads-integration
+    # SEE: deps/core/beads.md
 
 # ════════════════════════════════════════════════════════════════════════════════
 # SESSION RECOVERY
@@ -195,18 +189,26 @@ session_recovery:
 # PIPELINE
 # ════════════════════════════════════════════════════════════════════════════════
 pipeline:
-  mandatory: "🔴 MANDATORY: Read .claude/commands/deps/shared-core.md BEFORE executing any phase"
+  mandatory: |
+    🔴 MANDATORY: Read role-specific core deps BEFORE executing any phase:
+    - Workflow: deps/core/autonomy.md + deps/core/beads.md + deps/core/error-handling.md
+    - Planner: deps/core/mcp-tools.md + deps/core/project-knowledge.md + deps/core/error-handling.md
+    - Plan Review: deps/core/context-isolation.md + deps/core/error-handling.md
+    - Coder: deps/core/mcp-tools.md + deps/core/project-knowledge.md + deps/core/error-handling.md
+    - Code Review: deps/core/context-isolation.md + deps/core/error-handling.md
 
   flow: "task-analysis → /planner → /plan-review → /coder → /code-review"
 
   load_phases:
-    - action: "Read .claude/commands/deps/shared-core.md"
+    - action: "Read .claude/commands/deps/core/autonomy.md"
       when: "BEFORE starting Phase 0"
       required: true
-      contains:
-        - MCP Tools, Autonomy, Beads Integration, Error Handling
-        - Context isolation rules for review phases
-        - Project Knowledge fallback protocol
+    - action: "Read .claude/commands/deps/core/beads.md"
+      when: "BEFORE starting Phase 0"
+      required: true
+    - action: "Read .claude/commands/deps/core/error-handling.md"
+      when: "BEFORE starting Phase 0"
+      required: true
     - action: "Read .claude/commands/deps/workflow/orchestration-core.md"
       when: "ALWAYS — contains pipeline phases, loop limits, session recovery"
       required: true
@@ -236,12 +238,20 @@ conditional_deps:
     | code-review/security-checklist.md (72)    | SKIP | LOAD | LOAD | Простые задачи — низкий security risk |
     | workflow/pipeline-metrics.md (97)         | SKIP | SKIP | SKIP | Load только в completion фазе         |
     | workflow/examples-troubleshooting.md (90) | SKIP | SKIP | SKIP | Load on-demand при проблемах           |
+    | workflow/handoff-protocol.md (NEW)        | SKIP | SKIP | SKIP | Load при формировании handoff           |
+    | workflow/checkpoint-protocol.md (NEW)      | SKIP | SKIP | SKIP | Load при записи checkpoint              |
+    | workflow/re-routing.md (NEW)               | SKIP | SKIP | SKIP | Load при re-routing event               |
 
     Savings: S = ~784 строк (~6 300 токенов), M = ~363 строк (~2 900 токенов), L/XL = ~187 строк (~1 500 токенов).
     Note: workflow/* файлы имеют SKIP для всех complexity — загружаются по event trigger, а не по complexity.
 
   always_load:
-    - "deps/shared-core.md — всегда нужен (все агенты)"
+    - "deps/core/error-handling.md — всегда нужен (все агенты)"
+    - "deps/core/autonomy.md — workflow only"
+    - "deps/core/beads.md — workflow only"
+    - "deps/core/mcp-tools.md — planner, coder"
+    - "deps/core/project-knowledge.md — planner, coder"
+    - "deps/core/context-isolation.md — plan-review, code-review"
     - "deps/workflow/orchestration-core.md — pipeline, loop limits, session recovery (workflow only)"
     - "deps/shared-review.md — severity classification, decision matrix (plan-review, code-review only)"
     - "deps/planner/task-analysis.md — нужен для классификации"
@@ -253,88 +263,9 @@ conditional_deps:
 # HANDOFF PROTOCOL
 # ════════════════════════════════════════════════════════════════════════════════
 handoff_protocol:
-  purpose: "Структурированная передача контекста между фазами pipeline"
-  severity: CRITICAL
-  rule: "Каждая фаза ОБЯЗАНА создать handoff payload для следующей фазы"
-
-  contract:
-    planner_to_plan_review:
-      producer: "/planner"
-      consumer: "/plan-review"
-      payload:
-        artifact: ".claude/prompts/{feature}.md"
-        metadata:
-          task_type: "{new_feature|bug_fix|refactoring|...}"
-          complexity: "{S|M|L|XL}"
-          sequential_thinking_used: true|false
-          alternatives_considered: N
-        key_decisions:
-          - "Описание ключевого решения + обоснование"
-        known_risks:
-          - "Описание известного риска"
-        areas_needing_attention:
-          - "Part N: почему требует внимания"
-
-    plan_review_to_coder:
-      producer: "/plan-review"
-      consumer: "/coder"
-      payload:
-        artifact: ".claude/prompts/{feature}.md"
-        verdict: "APPROVED|NEEDS_CHANGES|REJECTED"
-        issues_summary:
-          blocker: 0
-          major: 0
-          minor: 0
-        approved_with_notes:
-          - "Note about Part N"
-        iteration: "N/3"
-
-    coder_to_code_review:
-      producer: "/coder"
-      consumer: "/code-review"
-      payload:
-        branch: "feature/{name}"
-        parts_implemented: ["Part 1: DB", "Part 2: Domain"]
-        evaluate_adjustments:
-          - "Part N: описание adjustment"
-        risks_mitigated:
-          - "Risk + как решён"
-        deviations_from_plan:
-          - "Описание + обоснование"
-
-    code_review_to_completion:
-      producer: "/code-review"
-      consumer: "workflow/completion"
-      payload:
-        verdict: "APPROVED|APPROVED_WITH_COMMENTS|CHANGES_REQUESTED"
-        issues:
-          - id: "CR-001"
-            severity: "BLOCKER|MAJOR|MINOR|NIT"
-            category: "architecture|security|error_handling|completeness|style"
-            location: "path/file{EXT}:line"
-            problem: "..."
-            suggestion: "..."
-        iteration: "N/3"
-
-  narrative_casting:
-    purpose: "Context handoff to review phases without creation-process bias"
-    rule: "Review phases receive narrative context + artifact, NOT creation history"
-    template_fields:
-      - field: "context_source"
-        value: "{agent_name}"
-        description: "Which agent produced the artifact"
-      - field: "work_performed"
-        value: "{brief_description}"
-        description: "What the agent did"
-      - field: "key_decisions"
-        value: "[list]"
-        description: "Architectural/design decisions with rationale"
-      - field: "known_risks"
-        value: "[list]"
-        description: "Identified risks and their status"
-      - field: "reviewer_recommendations"
-        value: "[list]"
-        description: "Specific areas for reviewer attention"
+  reference: "SEE: deps/workflow/handoff-protocol.md"
+  when: "Read BEFORE forming handoff between phases"
+  contains: "4 contracts (planner→plan-review, plan-review→coder, coder→code-review, code-review→completion) + narrative_casting template"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # RULES
@@ -358,117 +289,26 @@ rules:
     severity: CRITICAL
 
   - rule: "Context Isolation"
-    description: "Review-фазы ДОЛЖНЫ работать с чистым контекстом (subagent или перечитывание с нуля)"
-    reference: "SEE: deps/shared-core.md#context-isolation"
+    description: "Review-фазы ОБЯЗАНЫ запускаться как Task subagent (REQUIRED, не preferred)"
+    enforcement: "REQUIRED — subagent saves 67% context. Exception: Task tool unavailable → fallback re-read"
+    reference: "SEE: deps/core/context-isolation.md"
     severity: CRITICAL
 
 # ════════════════════════════════════════════════════════════════════════════════
 # CHECKPOINT PROTOCOL
 # ════════════════════════════════════════════════════════════════════════════════
 checkpoint_protocol:
-  purpose: "Proactive сохранение состояния pipeline для мгновенного восстановления"
-  severity: HIGH
-
-  when: "После завершения КАЖДОЙ фазы (включая iteration loops)"
-  file: ".claude/workflow-state/{feature}-checkpoint.yaml"
-
-  format:
-    feature: "{feature-name}"
-    phase_completed: "0.5|1|2|3|4"
-    phase_name: "task-analysis|planning|plan-review|implementation|code-review"
-    iteration:
-      plan_review: "N/3"
-      code_review: "N/3"
-    verdict: "APPROVED|NEEDS_CHANGES|REJECTED|null"
-    timestamp: "ISO 8601"
-    complexity: "S|M|L|XL"
-    route: "minimal|standard|full"
-    re_routing:
-      occurred: false
-      original_route: "null|minimal|standard|full"
-      new_route: "null|minimal|standard|full"
-      reason: "null|string"
-      phase: "null|plan-review|implementation"
-    handoff_payload: "{ ... содержимое последнего handoff_output ... }"
-    issues_history:
-      - phase: 2
-        iteration: 1
-        issues: ["PR-001: MAJOR — missing tests section"]
-
-  recovery:
-    action: "Read checkpoint → resume from next phase"
-    steps:
-      - "Read .claude/workflow-state/{feature}-checkpoint.yaml"
-      - "Verify checkpoint integrity (все поля заполнены)"
-      - "Skip all completed phases"
-      - "Resume from phase_completed + 1"
-      - "Load handoff_payload как input для текущей фазы"
-    advantage: "Не нужно re-evaluate состояние по косвенным признакам (plan exists? changes exist?)"
-
-  example:
-    file: ".claude/workflow-state/{feature}-checkpoint.yaml"
-    fields:
-      feature: "{feature-name}"
-      phase_completed: 2
-      phase_name: "plan-review"
-      iteration:
-        plan_review: "1/3"
-        code_review: "0/3"
-      verdict: "APPROVED"
-      timestamp: "2026-02-20T14:30:00Z"
-      complexity: "L"
-      route: "standard"
-      re_routing:
-        occurred: false
-        original_route: null
-        new_route: null
-        reason: null
-        phase: null
-      handoff_payload:
-        to: "coder"
-        artifact: ".claude/prompts/{feature}.md"
-        verdict: "APPROVED"
-        issues_summary: { blocker: 0, major: 0, minor: 1 }
-        approved_with_notes:
-          - "Part 3: minor — add error context in helper"
-        iteration: "1/3"
+  reference: "SEE: deps/workflow/checkpoint-protocol.md"
+  when: "Read BEFORE writing checkpoint after each phase"
+  contains: "format (12 YAML fields), recovery (5 steps), example"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # RE-ROUTING
 # ════════════════════════════════════════════════════════════════════════════════
 re_routing:
-  purpose: "Самокорректирующийся pipeline — изменение route при неверной классификации"
-  severity: MEDIUM
-
-  triggers:
-    - trigger: "plan-review находит что план слишком простой для текущего route"
-      action: "Downgrade route"
-      examples:
-        - "L→M: план оказался < 3 Parts, убрать обязательный Sequential Thinking"
-        - "M→S: только 1 Part, 1 layer — skip plan-review в следующей итерации"
-
-    - trigger: "plan-review находит что план слишком сложный для текущего route"
-      action: "Upgrade route"
-      examples:
-        - "S→M: обнаружены cross-layer зависимости — добавить full plan-review"
-        - "M→L: 4+ Parts, 3+ layers — добавить Sequential Thinking"
-
-    - trigger: "coder evaluate находит hidden complexity"
-      action: "Upgrade route или RETURN to planner"
-      examples:
-        - "M→L: evaluate обнаружил что нужна миграция БД (не учтена в плане)"
-
-  tracking:
-    when: "Immediately when re-routing decision is made (before continuing pipeline)"
-    action: "Update checkpoint re_routing fields"
-    fields:
-      occurred: true
-      original_route: "{route from task-analysis}"
-      new_route: "{new route after re-routing}"
-      reason: "{1-sentence: trigger + evidence}"
-      phase: "{phase that triggered re-routing}"
-    note: "pipeline_metrics reads re_routing data from checkpoint at completion"
-  learning: "Сохранить в MCP Memory: original_route → actual_route + причина для улучшения heuristics"
+  reference: "SEE: deps/workflow/re-routing.md"
+  when: "Read when re-routing event detected (plan-review or coder signals complexity mismatch)"
+  contains: "3 triggers (downgrade, upgrade, hidden complexity) + tracking fields + learning"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # PIPELINE METRICS
@@ -482,7 +322,7 @@ pipeline_metrics:
 # ERROR HANDLING
 # ════════════════════════════════════════════════════════════════════════════════
 error_handling:
-  # Common error patterns: SEE deps/shared-core.md#error-handling
+  # Common error patterns: SEE deps/core/error-handling.md
   - error: "Plan review REJECTED"
     action: "Request new requirements, return to Phase 1"
 
@@ -547,7 +387,7 @@ checklist:
            }]
         3. If 1 result → mcp__memory__add_observations (merge new findings)
         4. If 2+ results → show to user, ask which to update
-      note: "Follow Memory sequence from shared-core.md. NON_CRITICAL."
+      note: "Follow Memory sequence from deps/core/mcp-tools.md (Memory sequence section). NON_CRITICAL."
     - "Если задача из beads → напомнить о закрытии (`bd close <id>`)"
     - "Git commit создан"
     - "**`bd sync` выполнен** (ОБЯЗАТЕЛЬНО)"

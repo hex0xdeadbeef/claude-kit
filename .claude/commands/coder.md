@@ -4,13 +4,7 @@ description: Implements code strictly per approved plan
 model: opus
 ---
 
-# Language defaults (from PROJECT-KNOWLEDGE.md, Go fallback):
-#   VERIFY = make fmt && make lint && make test
-#   FMT = make fmt | LINT = make lint | TEST = make test
-#   EXT = .go | ERROR_WRAP = %w | DOMAIN_PROHIBIT = encoding/json tags
-#   GENERATED = *_gen.go | MOCKS = */mocks/*.go | SOURCE_GLOB = internal/**/*.go
-#   CONFIG_EXAMPLE = config.yaml.example | CONFIG_DOCS = README.md
-# Override: define language_profile in PROJECT-KNOWLEDGE.md for non-Go projects.
+# Language & aliases: SEE .claude/PROJECT-KNOWLEDGE.md
 
 # CODER
 
@@ -50,7 +44,7 @@ input:
 # OUTPUT
 # ════════════════════════════════════════════════════════════════════════════════
 output:
-  description: "Working code passing VERIFY (adapt to project — SEE Language Header)"
+  description: "Working code passing VERIFY (adapt to project — SEE .claude/PROJECT-KNOWLEDGE.md)"
 
   final_format: |
     Implementation complete.
@@ -70,7 +64,7 @@ output:
   handoff_output:
     severity: CRITICAL
     description: "MUST generate on completion — passed to /code-review"
-    # SEE: workflow.md#handoff_protocol → coder_to_code_review (canonical field schema)
+    # SEE: deps/workflow/handoff-protocol.md → coder_to_code_review (canonical field schema)
     narrative_for_reviewer: |
       [Context from coder]:
       - Coder implemented {N} Parts per plan {feature}.md
@@ -147,6 +141,13 @@ autonomy:
 # ════════════════════════════════════════════════════════════════════════════════
 startup:
   immediate_actions:
+    - action: "Read role-specific core deps"
+      files:
+        - ".claude/commands/deps/core/mcp-tools.md"
+        - ".claude/commands/deps/core/project-knowledge.md"
+        - ".claude/commands/deps/core/error-handling.md"
+      purpose: "Load MCP patterns, language profile, error handling"
+
     - action: "Read .claude/prompts/{feature-name}.md"
       purpose: "Load plan"
 
@@ -365,7 +366,8 @@ workflow:
 # BEADS INTEGRATION (if available)
 # ════════════════════════════════════════════════════════════════════════════════
 beads_integration:
-  # SEE: deps/shared-core.md#beads-integration
+  rule: "If beads issue exists → task already claimed in startup. No auto-close (wait for review)."
+  note: "Beads is NON_CRITICAL. If bd unavailable → skip."
 
 # ════════════════════════════════════════════════════════════════════════════════
 # RULES
@@ -407,7 +409,7 @@ examples:
 # ERROR HANDLING
 # ════════════════════════════════════════════════════════════════════════════════
 error_handling:
-  # Common MCP errors: SEE deps/shared-core.md#error-handling
+  # Common MCP errors: SEE deps/core/error-handling.md
   command_specific:
     - situation: Plan not found
       action: "ERROR: Plan not found. Create with /planner first."
@@ -431,36 +433,12 @@ troubleshooting:
 # LAYER IMPORTS
 # ════════════════════════════════════════════════════════════════════════════════
 layer_imports:
-  reference: "SEE: PROJECT-KNOWLEDGE.md (if available)"
-  fallback: "SEE: deps/shared-core.md#project-knowledge — heuristic discovery when PK missing"
+  reference: "SEE: .claude/PROJECT-KNOWLEDGE.md"
   description: "Import matrix and layer dependency rules from project analysis"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # CHECKLIST
 # ════════════════════════════════════════════════════════════════════════════════
 checklist:
-  startup:
-    - "Plan loaded from .claude/prompts/"
-    - "TodoWrite created with Parts"
-    - "Memory checked: search_nodes for lessons/decisions (NON_CRITICAL)"
-    - "Feature branch created (if needed)"
-    - "If beads used → status updated to in_progress"
-
-  evaluate:
-    - "Plan feasibility assessed"
-    - "Hidden complexities identified"
-    - "Decision made: PROCEED / REVISE / RETURN"
-
-  implementation:
-    - "Code matches plan"
-    - "All Parts implemented (TodoWrite updated)"
-    - "Import matrix followed"
-    - "Error context pattern followed per project conventions (SEE: PROJECT-KNOWLEDGE.md)"
-    - "Sequential Thinking used (if complex logic)"
-
-  verification:
-    - "VERIFY passes (adapt commands to project — SEE Language Header)"
-    - "If config changed → CONFIG_EXAMPLE and CONFIG_DOCS updated"
-
-  completion:
-    - "bd sync completed"
+  reference: "SEE: deps/coder/checklist.md"
+  when: "Read at completion of each phase for self-verification"

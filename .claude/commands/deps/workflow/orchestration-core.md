@@ -117,4 +117,4 @@ TEST                                         # Tests pass? (Go default: make tes
 
 **Warning:** Heuristic fallback loses iteration counters — assume iteration 1/3.
 
-**Checkpoint format:** `{feature}-checkpoint.yaml` with fields: feature, phase_completed, phase_name, iteration (plan_review N/3, code_review N/3), verdict, timestamp, complexity, route, handoff_payload, issues_history.
+**Checkpoint format:** `{feature}-checkpoint.yaml` with fields: feature, phase_completed, phase_name, iteration (plan_review N/3, code_review N/3), verdict, timestamp, complexity, route, handoff_payload, issues_history. Full specification: SEE deps/workflow/checkpoint-protocol.md.

@@ -4,13 +4,7 @@ description: Researches codebase and creates detailed implementation plan
 model: opus
 ---
 
-# Language defaults (from PROJECT-KNOWLEDGE.md, Go fallback):
-#   VERIFY = make fmt && make lint && make test
-#   FMT = make fmt | LINT = make lint | TEST = make test
-#   EXT = .go | ERROR_WRAP = %w | DOMAIN_PROHIBIT = encoding/json tags
-#   GENERATED = *_gen.go | MOCKS = */mocks/*.go | SOURCE_GLOB = internal/**/*.go
-#   CONFIG_EXAMPLE = config.yaml.example | CONFIG_DOCS = README.md
-# Override: define language_profile in PROJECT-KNOWLEDGE.md for non-Go projects.
+# Language & aliases: SEE .claude/PROJECT-KNOWLEDGE.md
 
 # PLANNER
 
@@ -73,7 +67,7 @@ output:
   handoff_output:
     severity: CRITICAL
     description: "MUST be formed on completion — passed to /plan-review"
-    # SEE: workflow.md#handoff_protocol → planner_to_plan_review (canonical field schema)
+    # SEE: deps/workflow/handoff-protocol.md → planner_to_plan_review (canonical field schema)
     example: |
       Handoff → /plan-review:
         artifact: .claude/prompts/{feature}.md
@@ -139,6 +133,14 @@ startup:
   critical: true
   mandatory_steps:
     - step: 0
+      action: "Read role-specific core deps"
+      files:
+        - ".claude/commands/deps/core/mcp-tools.md"
+        - ".claude/commands/deps/core/project-knowledge.md"
+        - ".claude/commands/deps/core/error-handling.md"
+      purpose: "Load MCP patterns, language profile, error handling"
+
+    - step: 0.5
       action: "Read .claude/commands/deps/planner/task-analysis.md and perform classification"
       purpose: "Determine complexity (S/M/L/XL) and route BEFORE research"
       output: "Type + Complexity + Route + Sequential Thinking requirement"
@@ -193,7 +195,7 @@ phases:
     name: "UNDERSTAND"
     steps:
       - action: "Classify task type"
-        note: "SEE: PROJECT-KNOWLEDGE.md for project-specific domains (if available). Fallback: SEE deps/shared-core.md#project-knowledge"
+        note: "SEE: .claude/PROJECT-KNOWLEDGE.md for project-specific domains"
         task_types:
           - type: "API endpoint"
             keywords: "endpoint, handler, HTTP, REST"
@@ -347,7 +349,8 @@ phases:
 # BEADS INTEGRATION
 # ════════════════════════════════════════════════════════════════════════════════
 beads_integration:
-  # SEE: deps/shared-core.md#beads-integration
+  rule: "If beads task → bd show <id> at start. No beads action at end (wait for review)."
+  note: "Beads is NON_CRITICAL. If bd unavailable → skip."
 
 # ════════════════════════════════════════════════════════════════════════════════
 # RULES
@@ -373,7 +376,7 @@ rules:
 # ERROR HANDLING
 # ════════════════════════════════════════════════════════════════════════════════
 error_handling:
-  # Common MCP/beads errors: SEE deps/shared-core.md#error-handling
+  # Common MCP/beads errors: SEE deps/core/error-handling.md
   command_specific:
     - situation: Template missing
       action: "Use minimal format from PHASE 4: DOCUMENT"
@@ -384,21 +387,8 @@ error_handling:
 # EXAMPLES
 # ════════════════════════════════════════════════════════════════════════════════
 examples:
-  code_completeness:
-    bad:
-      code: "func (uc *UseCase) Do(ctx context.Context) error"
-      why: "Incomplete example — only signature without body"
-
-    good:
-      code: |
-        func (s *Service) Do(ctx context.Context, id string) error {
-            result, err := s.repo.Get(ctx, id)
-            if err != nil {
-                return fmt.Errorf("get item: %w", err)
-            }
-            return nil
-        }
-      why: "Full example with function body, error wrapping, context propagation"
+  reference: "SEE: deps/planner/examples.md"
+  when: "Reference when writing code examples in plan"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # TROUBLESHOOTING
@@ -411,40 +401,5 @@ troubleshooting:
 # CHECKLIST
 # ════════════════════════════════════════════════════════════════════════════════
 checklist:
-  phase_0_task_analysis:
-    - "Task type classified (new_feature/bug_fix/refactoring/...)"
-    - "Complexity estimated (S/M/L/XL)"
-    - "Route determined (minimal/standard/full)"
-    - "Preconditions checked"
-
-  phase_1_understand:
-    - "Task type classified"
-    - "Clarifying questions asked"
-    - "Scope defined (IN/OUT)"
-
-  phase_2_data_flow:
-    - "Data source identified (HTTP/Worker/CLI)"
-    - "Data path traced through layers"
-    - "Implementation layer selected with rationale"
-    - "Entry and exit points documented"
-
-  phase_3_research:
-    - "Memory checked (search_nodes)"
-    - "Code investigated (Grep/Glob or code-searcher)"
-    - "External libraries checked (Context7 if needed)"
-    - "Imports between packages verified"
-
-  phase_4_design:
-    - "Sequential Thinking used (if 3+ alternatives)"
-    - "Parts defined in order: DB -> Domain -> Contract -> ..."
-    - "Code examples are FULL"
-
-  phase_5_document:
-    - "Plan saved to `.claude/prompts/`"
-    - "Config changes documented (if any)"
-
-  phase_6_save_to_memory:
-    - "Save criteria checked"
-    - "If non-trivial decision -> saved to memory"
-    - "`bd sync` executed"
-    - "If beads in use -> remind about task closure"
+  reference: "SEE: deps/planner/checklist.md"
+  when: "Read at completion of each phase for self-verification"

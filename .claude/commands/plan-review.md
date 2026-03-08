@@ -4,13 +4,7 @@ description: Validates implementation plan before coding starts
 model: sonnet
 ---
 
-# Language defaults (from PROJECT-KNOWLEDGE.md, Go fallback):
-#   VERIFY = make fmt && make lint && make test
-#   FMT = make fmt | LINT = make lint | TEST = make test
-#   EXT = .go | ERROR_WRAP = %w | DOMAIN_PROHIBIT = encoding/json tags
-#   GENERATED = *_gen.go | MOCKS = */mocks/*.go | SOURCE_GLOB = internal/**/*.go
-#   CONFIG_EXAMPLE = config.yaml.example | CONFIG_DOCS = README.md
-# Override: define language_profile in PROJECT-KNOWLEDGE.md for non-Go projects.
+# Language & aliases: SEE .claude/PROJECT-KNOWLEDGE.md
 
 # PLAN REVIEWER
 
@@ -94,7 +88,7 @@ output:
   handoff_output:
     severity: CRITICAL
     description: "MUST be formed on completion — passed to /coder"
-    # SEE: workflow.md#handoff_protocol → plan_review_to_coder (canonical field schema)
+    # SEE: deps/workflow/handoff-protocol.md → plan_review_to_coder (canonical field schema)
     narrative_for_coder: |
       [Context from plan-review]:
       - Reviewer validated plan {feature}.md
@@ -155,19 +149,27 @@ startup:
 
   context_isolation:
     severity: CRITICAL
-    rule: "If launched within /workflow context — start with a CLEAN read of the plan + narrative context"
-    action: "Re-read .claude/prompts/{feature}.md from scratch + read narrative block from handoff"
-    preferred: "Launch via Task tool (subagent) for full context isolation"
+    rule: "MUST be launched as Task subagent for full context isolation"
+    action: "Subagent reads .claude/prompts/{feature}.md from scratch + narrative block from handoff"
+    enforcement: REQUIRED
+    exception: "ONLY if Task tool unavailable — fallback to re-read from file in same context"
     what_reviewer_receives:
       - ".claude/prompts/{feature}.md — the plan"
       - "Narrative context block from planner handoff (key decisions, risks, focus areas)"
       - "NOT the plan creation history, NOT intermediate drafts"
-    reference: "SEE: deps/shared-core.md#context-isolation"
+    reference: "SEE: deps/core/context-isolation.md"
 
   steps:
     - step: 1
       action: "TodoWrite — create review checklist"
       tool: "TodoWrite"
+
+    - step: 1.1
+      action: "Read role-specific core deps"
+      files:
+        - ".claude/commands/deps/core/context-isolation.md"
+        - ".claude/commands/deps/core/error-handling.md"
+      purpose: "Load context isolation rules and error handling patterns"
 
     - step: 1.5
       action: "Read .claude/commands/deps/shared-review.md"
@@ -298,7 +300,8 @@ phases:
 # BEADS INTEGRATION
 # ════════════════════════════════════════════════════════════════════════════════
 beads:
-  # SEE: deps/shared-core.md#beads-integration
+  rule: "No beads action in plan-review phase."
+  note: "Beads is NON_CRITICAL."
 
 # ════════════════════════════════════════════════════════════════════════════════
 # RULES
@@ -321,7 +324,7 @@ rules:
 # ERROR HANDLING
 # ════════════════════════════════════════════════════════════════════════════════
 error_handling:
-  # Common MCP errors: SEE deps/shared-core.md#error-handling
+  # Common MCP errors: SEE deps/core/error-handling.md
   command_specific:
     - situation: "Plan file not found"
       action: "ERROR: Plan not found. Create with /planner first."
@@ -342,25 +345,8 @@ examples:
 # TROUBLESHOOTING
 # ════════════════════════════════════════════════════════════════════════════════
 troubleshooting:
-  - problem: "APPROVED plan with import violations"
-    cause: "Manual check missed Handler → Repository import"
-    fix: "Use arch-checker agent for complex plans (4+ Parts)"
-    lesson: "Automation catches what humans miss"
-
-  - problem: "MINOR issues escalated incorrectly"
-    cause: "5+ MINOR in same Part should be MAJOR"
-    fix: "Apply auto-escalation rules from Decision Matrix"
-    lesson: "Many small issues = systemic problem"
-
-  - problem: "Approved plan without Sequential Thinking check"
-    cause: "Didn't verify if plan needed Sequential Thinking"
-    fix: "Check sequential_thinking_criteria in PHASE 2"
-    lesson: "Complex plans need structured analysis"
-
-  - problem: "Security issue marked as MAJOR"
-    cause: "Didn't apply auto-escalation rule"
-    fix: "Security issues are ALWAYS BLOCKER"
-    lesson: "Security cannot be compromised"
+  reference: "SEE: deps/plan-review/troubleshooting.md"
+  when: "Read when encountering issues during plan review"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # SEVERITY LEVELS
@@ -372,30 +358,5 @@ severity_levels:
 # CHECKLIST
 # ════════════════════════════════════════════════════════════════════════════════
 checklist:
-  phase_1_startup:
-    - item: "TodoWrite created"
-    - item: "Memory checked (search_nodes)"
-    - item: "Plan loaded from .claude/prompts/"
-
-  phase_2_read_plan:
-    - item: "All required sections present"
-    - item: "Format matches plan-template.md"
-
-  phase_3_validate_architecture:
-    - item: "Package imports verified (SEE: PROJECT-KNOWLEDGE.md#Dependency Matrix)"
-    - item: "Models have no extra tags (domain entities pure)"
-    - item: "API layer does not import data access directly (uses service/controller layer)"
-    - item: "Protected files not edited"
-    - item: "Sequential Thinking used (if 4+ Parts)"
-
-  phase_4_validate_completeness:
-    - item: "All layers described"
-    - item: "Code examples are COMPLETE"
-    - item: "Tests planned"
-    - item: "Security checklist passed (if API)"
-
-  phase_5_verdict:
-    - item: "All issues classified (BLOCKER/MAJOR/MINOR)"
-    - item: "Decision matrix applied"
-    - item: "Verdict justified"
-    - item: "bd sync executed"
+  reference: "SEE: deps/plan-review/checklist.md"
+  when: "Read at completion of each phase for self-verification"

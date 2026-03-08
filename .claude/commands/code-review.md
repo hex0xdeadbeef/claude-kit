@@ -4,13 +4,7 @@ description: Code review of changes before merge
 model: sonnet
 ---
 
-# Language defaults (from PROJECT-KNOWLEDGE.md, Go fallback):
-#   VERIFY = make fmt && make lint && make test
-#   FMT = make fmt | LINT = make lint | TEST = make test
-#   EXT = .go | ERROR_WRAP = %w | DOMAIN_PROHIBIT = encoding/json tags
-#   GENERATED = *_gen.go | MOCKS = */mocks/*.go | SOURCE_GLOB = internal/**/*.go
-#   CONFIG_EXAMPLE = config.yaml.example | CONFIG_DOCS = README.md
-# Override: define language_profile in PROJECT-KNOWLEDGE.md for non-Go projects.
+# Language & aliases: SEE .claude/PROJECT-KNOWLEDGE.md
 
 # CODE REVIEWER
 
@@ -96,7 +90,7 @@ output:
   handoff_output:
     severity: CRITICAL
     description: "MUST be formed on completion — passed to workflow/completion or /coder"
-    # SEE: workflow.md#handoff_protocol → code_review_to_completion (canonical field schema)
+    # SEE: deps/workflow/handoff-protocol.md → code_review_to_completion (canonical field schema)
 
 # ════════════════════════════════════════════════════════════════════════════════
 # TRIGGERS
@@ -118,7 +112,6 @@ triggers:
 # AUTONOMY RULE
 # ════════════════════════════════════════════════════════════════════════════════
 autonomy:
-  reference: "SEE: deps/shared-core.md#autonomy"
   command_specific:
     stop: ["LINT/TEST fails → STOP", "Blocker found → CHANGES REQUESTED", "No changes → exit"]
     continue: ["QUICK CHECK passed → REVIEW", "Minor issues only → APPROVED WITH COMMENTS"]
@@ -133,14 +126,15 @@ startup:
 
   context_isolation:
     severity: CRITICAL
-    rule: "If launched within /workflow context — start with a CLEAN read of the diff + narrative context"
-    action: "git diff master...HEAD + read narrative block from coder handoff"
-    preferred: "Launch via Task tool (subagent) for full context isolation"
+    rule: "MUST be launched as Task subagent for full context isolation"
+    action: "Subagent runs git diff master...HEAD + reads narrative block from coder handoff"
+    enforcement: REQUIRED
+    exception: "ONLY if Task tool unavailable — fallback to re-read diff in same context"
     what_reviewer_receives:
       - "git diff master...HEAD — the diff"
       - "Narrative context block from coder handoff (adjustments, deviations, mitigated risks)"
       - "NOT the implementation process, NOT debug sessions"
-    reference: "SEE: deps/shared-core.md#context-isolation"
+    reference: "SEE: deps/core/context-isolation.md"
 
   steps:
     - step: 1
@@ -152,6 +146,13 @@ startup:
         - "Security checklist"
         - "Test coverage check"
         - "Verdict"
+
+    - step: 1.1
+      action: "Read role-specific core deps"
+      files:
+        - ".claude/commands/deps/core/context-isolation.md"
+        - ".claude/commands/deps/core/error-handling.md"
+      purpose: "Load context isolation rules and error handling patterns"
 
     - step: 1.2
       action: "Read .claude/commands/deps/shared-review.md"
@@ -265,8 +266,7 @@ workflow:
           warning: "If new library but Context7 NOT used — explain why"
 
       architecture_checks:
-        reference: "SEE: PROJECT-KNOWLEDGE.md → Dependency Matrix (if available)"
-        fallback: "SEE: deps/shared-core.md#project-knowledge — heuristic discovery when PK missing"
+        reference: "SEE: .claude/PROJECT-KNOWLEDGE.md → Dependency Matrix"
         note: "Import violations are project-specific, check actual matrix"
         quick_check: "Grep for cross-layer imports that violate matrix"
 
@@ -302,7 +302,7 @@ workflow:
 # BEADS INTEGRATION (if available)
 # ════════════════════════════════════════════════════════════════════════════════
 beads_integration:
-  reference: "SEE: deps/shared-core.md#beads-integration"
+  rule: "If APPROVED → remind user to run `bd close <id>`. NON_CRITICAL."
   auto_close: false
 
 ---
@@ -337,7 +337,7 @@ rules:
 # ERROR HANDLING
 # ════════════════════════════════════════════════════════════════════════════════
 error_handling:
-  reference: "SEE: deps/shared-core.md#error-handling"
+  reference: "SEE: deps/core/error-handling.md"
   command_specific:
     - "git diff fails → check branch, suggest git status"
     - "No changes to review → INFO message, exit"
@@ -378,27 +378,7 @@ severity_levels:
 # CHECKLIST
 # ════════════════════════════════════════════════════════════════════════════════
 checklist:
-  quick_check:
-    - "LINT && TEST passes"
-    - "Memory checked: search_nodes for past review issues (NON_CRITICAL)"
-
-  review:
-    - "Architecture: imports follow matrix (PROJECT-KNOWLEDGE.md, if available)"
-    - "Code: functions <= 30 lines, errors wrapped, no log+return"
-    - "Security: OWASP checklist passed"
-    - "Tests: coverage >= 70%"
-    - "Project-specific: domain rules per PROJECT-KNOWLEDGE.md (if available)"
-    - "MCP: Sequential Thinking (100+ lines), Context7 (new libraries)"
-
-  verdict:
-    - "Issues classified by severity"
-    - "Recommendations are concrete and actionable"
-
-  config_changes:
-    - "config changed → CONFIG_EXAMPLE updated"
-    - "config changed → CONFIG_DOCS updated"
-
-  completion:
-    - "bd sync executed (if beads)"
+  reference: "SEE: deps/code-review/checklist.md"
+  when: "Read at completion of each phase for self-verification"
 
 ---

@@ -302,5 +302,5 @@ Plan classified as S → plan-review finds 4 Parts + 3 layers → upgrade to M/L
 
 ## SEE ALSO
 
-- `shared-core.md` — Autonomy modes, pipeline phases, error handling
+- `deps/core/` — Autonomy modes (autonomy.md), error handling (error-handling.md)
 - `planner.md` — Receives classification as input context
