@@ -251,20 +251,20 @@ flowchart TB
         SAVE --> FINAL
     end
 
-    style STARTUP fill:#f5f5f5,color:#333
-    style PHASE1 fill:#e8f0fe,color:#333
-    style PHASE2 fill:#f0e8fe,color:#333
-    style PHASE3 fill:#e8f0fe,color:#333
-    style PHASE4 fill:#f0e8fe,color:#333
-    style PHASE5 fill:#e8fee8,color:#333
-    style STOP1 fill:#ff6b6b,color:#fff
-    style STOP2 fill:#ff6b6b,color:#fff
-    style STOP3 fill:#ff6b6b,color:#fff
-    style STOP4 fill:#ff6b6b,color:#fff
-    style CRES fill:#20b2aa,color:#fff
+    style STARTUP fill:#e0e0e0,color:#333,stroke:#999
+    style PHASE1 fill:#1a73e8,color:#fff,stroke:#1557b0
+    style PHASE2 fill:#9334e6,color:#fff,stroke:#7627bb
+    style PHASE3 fill:#1a73e8,color:#fff,stroke:#1557b0
+    style PHASE4 fill:#9334e6,color:#fff,stroke:#7627bb
+    style PHASE5 fill:#0d904f,color:#fff,stroke:#0a7040
+    style STOP1 fill:#d93025,color:#fff,stroke:#b3261e
+    style STOP2 fill:#d93025,color:#fff,stroke:#b3261e
+    style STOP3 fill:#d93025,color:#fff,stroke:#b3261e
+    style STOP4 fill:#d93025,color:#fff,stroke:#b3261e
+    style CRES fill:#00897b,color:#fff,stroke:#00695c
 ```
 
-**Color legend:** blue background = commands (opus/sonnet), purple background = review agents, green = completion, red = stop conditions, teal = haiku agent
+**Legend:** blue = opus commands, purple = sonnet review agents, green = completion, red = stop conditions, teal = haiku agent
 
 ### Handoff Data Flow
 
@@ -277,6 +277,12 @@ flowchart LR
     CO2 -->|"branch<br/>parts_implemented<br/>evaluate_adjustments<br/>deviations_from_plan<br/>risks_mitigated"| CR2["code-reviewer"]
 
     CR2 -->|"verdict<br/>issues[]: id, severity,<br/>category, location,<br/>problem, suggestion<br/>iteration N/3"| DONE2["completion"]
+
+    style PL2 fill:#1a73e8,color:#fff,stroke:#1557b0
+    style PR2 fill:#9334e6,color:#fff,stroke:#7627bb
+    style CO2 fill:#1a73e8,color:#fff,stroke:#1557b0
+    style CR2 fill:#9334e6,color:#fff,stroke:#7627bb
+    style DONE2 fill:#0d904f,color:#fff,stroke:#0a7040
 ```
 
 ### Standalone Commands
@@ -299,6 +305,10 @@ flowchart LR
         DB_TOOLS["MCP postgres:<br/>list_tables, describe, query"]
     end
     DBE --> SCH["Schema Report"]
+
+    style META fill:#1a73e8,color:#fff,stroke:#1557b0
+    style PROJ fill:#1a73e8,color:#fff,stroke:#1557b0
+    style DBE fill:#9334e6,color:#fff,stroke:#7627bb
 ```
 
 ### Skill Loading
@@ -327,6 +337,13 @@ flowchart LR
     PLR -->|startup| B1["mcp-tools.md"]
     PLR -->|"L/XL only"| B2["sequential-thinking-guide.md"]
     PLR -->|"M+ only"| B3["data-flow.md"]
+
+    style SKILLS fill:#f9ab00,color:#333,stroke:#e69500
+    style WF2 fill:#1a73e8,color:#fff,stroke:#1557b0
+    style PL2 fill:#1a73e8,color:#fff,stroke:#1557b0
+    style CO2 fill:#1a73e8,color:#fff,stroke:#1557b0
+    style PREV fill:#9334e6,color:#fff,stroke:#7627bb
+    style CREV fill:#9334e6,color:#fff,stroke:#7627bb
 ```
 
 ### Hook Lifecycle
@@ -359,6 +376,22 @@ flowchart TB
 
     STOP --> SESS["SessionEnd:<br/>session-analytics.sh"]
     SESS --> NOTIFY["Notification:<br/>notify-user.sh"]
+
+    style UP fill:#1a73e8,color:#fff,stroke:#1557b0
+    style ENR fill:#f9ab00,color:#333,stroke:#e69500
+    style CMD fill:#e0e0e0,color:#333,stroke:#999
+    style PRE1 fill:#d93025,color:#fff,stroke:#b3261e
+    style PRE2 fill:#d93025,color:#fff,stroke:#b3261e
+    style PRE3 fill:#d93025,color:#fff,stroke:#b3261e
+    style EXEC fill:#e0e0e0,color:#333,stroke:#999
+    style POST1 fill:#0d904f,color:#fff,stroke:#0a7040
+    style POST2 fill:#0d904f,color:#fff,stroke:#0a7040
+    style POST3 fill:#0d904f,color:#fff,stroke:#0a7040
+    style COMPACT fill:#9334e6,color:#fff,stroke:#7627bb
+    style SUBSTOP fill:#9334e6,color:#fff,stroke:#7627bb
+    style STOP fill:#d93025,color:#fff,stroke:#b3261e
+    style SESS fill:#00897b,color:#fff,stroke:#00695c
+    style NOTIFY fill:#00897b,color:#fff,stroke:#00695c
 ```
 
 ### Model Routing
