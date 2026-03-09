@@ -9,11 +9,10 @@ role:
   owns: "Coordination of full development cycle: task-analysis → planner → plan-review (agent) → coder → code-review (agent)"
   does_not_own: "Planning, implementation, review — delegates to sub-commands and agents"
   output_contract: "Implemented, tested, and reviewed code with commit + pipeline metrics"
-  success_criteria: "All phases passed, handoff contracts fulfilled, checkpoint saved, metrics recorded"
+  success_criteria: "All phases completed, handoff contracts fulfilled, checkpoint saved, metrics recorded"
   style: "Sequential phases with user confirmation between each phase"
 
 ## TRIGGERS
-
 triggers:
   - if: "Task requires full development cycle (planning + implementation + review)"
     then: "Use /workflow instead of individual commands"
@@ -31,7 +30,6 @@ triggers:
     then: "STOP immediately, show iteration summary, request user help"
 
 ## INPUT
-
 input:
   arguments:
     - name: task
@@ -56,7 +54,6 @@ input:
     - "/workflow beads-abc123"
 
 ## OUTPUT
-
 output:
   phases:
     - phase: Planning
@@ -82,7 +79,6 @@ output:
   final_output: "Implemented, tested, and reviewed code with commit."
 
 ## AUTONOMY
-
 autonomy:
   modes: "INTERACTIVE (default) | AUTONOMOUS (--auto) | RESUME (--from-phase N) | MINIMAL (--minimal)"
   stop: "REJECTED → stop | Tests 3x → stop | Loop 3x → stop"
@@ -90,13 +86,11 @@ autonomy:
   details: "SEE [autonomy.md] in workflow-protocols skill"
 
 ## MCP TOOLS
-
 mcp_tools:
   reference: "SEE [mcp-tools.md] in planner-rules / coder-rules skill"
   workflow_usage: "Sequential Thinking (complex orchestration), Memory (startup search + completion save)"
 
 ## STARTUP
-
 startup:
   critical: "On agent startup, IMMEDIATELY execute ALL steps"
 
@@ -119,7 +113,7 @@ startup:
       purpose: "Overview of handoff, checkpoint, re-routing, and metrics protocols. Supporting files loaded on-demand per event triggers."
 
     - step: 1
-      action: "TodoWrite — create phase list (accounting for route from Task Analysis)"
+      action: "TodoWrite — create phase list (based on route from Task Analysis)"
       items:
         - "Phase 0: Get Task (pending)"
         - "Phase 0.5: Task Analysis (completed — already done in step 0)"
@@ -130,7 +124,7 @@ startup:
 
     - step: 2
       action: "mcp__memory__search_nodes — query: '{task keywords}'"
-      note: "MANDATORY! Check for similar past solutions"
+      note: "MANDATORY! Check for similar solutions"
 
     - step: 3
       action: "Check beads"
@@ -146,17 +140,17 @@ startup:
         - "Is there a beads issue in_progress? → bd show <id>"
 
 ## PIPELINE
-
 pipeline:
   mandatory: |
-    MANDATORY: Load skills BEFORE executing any phase:
+    🔴 MANDATORY: Load skills BEFORE executing any phase:
     - Workflow: workflow-protocols skill (step 0.1) — includes autonomy, beads, orchestration-core
     - Planner: planner-rules skill (step 0) — includes mcp-tools, sequential-thinking-guide
     - Coder: coder-rules skill (step 0) — includes mcp-tools
     NOTE: Plan Review and Code Review → agents/ with skills preloading (plan-review-rules, code-review-rules)
     NOTE: Language profile + error handling → auto-loaded via CLAUDE.md
 
-  flow: "task-analysis → /planner → plan-reviewer (agent) → /coder → code-reviewer (agent)"
+  flow: "task-analysis → /planner [→ code-researcher*] → plan-reviewer (agent) → /coder [→ code-researcher*] → code-reviewer (agent)"
+  flow_note: "* code-researcher is optional tool-assist via Task tool, triggered by planner/coder for L/XL tasks. Not a pipeline phase."
 
   load_phases:
     - action: "Read .claude/skills/workflow-protocols/autonomy.md"
@@ -175,15 +169,14 @@ pipeline:
 
   completion_notes:
     - "Git commit created (MANDATORY)"
-    - "bd sync executed (MANDATORY if beads)"
+    - "bd sync executed (MANDATORY, if beads)"
     - "Save lessons_learned → SEE orchestration-core.md + mcp-tools.md (if non-trivial)"
 
 ## DELEGATION PROTOCOL
-
 delegation_protocol:
   purpose: "How workflow delegates review phases to native agents/"
   mechanism: "Claude auto-delegates based on agent description. Orchestrator forms delegation prompt with handoff context."
-  isolation_guarantee: "Agents launch in clean context. CLAUDE.md auto-loaded from project root. Parent conversation history is NOT passed."
+  isolation_guarantee: "Agents run in clean context. CLAUDE.md auto-loaded from project root. Parent conversation history is NOT passed."
   reference: "SEE: pipeline.flow for quick route overview"
 
   plan_review_delegation:
@@ -227,18 +220,27 @@ delegation_protocol:
       Iteration: {N}/3
     returns: "Verdict (APPROVED/APPROVED_WITH_COMMENTS/CHANGES_REQUESTED) + issues + handoff for completion"
 
-  fallback: "If agent delegation unavailable → fallback: re-read diff/plan in parent context (degraded mode, isolation loss)"
+  fallback: "If agent delegation unavailable → fallback: re-read diff/plan in parent context (degraded mode, loss of isolation)"
+
+  code_researcher_usage:
+    agent: "code-researcher"
+    mechanism: "Task tool (NOT native agent delegation — code-researcher is tool-assist, not pipeline phase)"
+    invoked_by: "planner (Phase 3) and coder (Phase 1.5) — NOT by orchestrator"
+    when: "Multi-package codebase research needed, complexity L/XL"
+    skip_when: "S/M complexity, --minimal mode"
+    returns: "Structured summary ≤2000 tokens (patterns, files, imports, key snippets)"
+    checkpoint_impact: "None — research is part of Phase 1/3, not a separate phase"
+    hook_impact: "None — SubagentStop does NOT fire for Task tool subagents"
+    note: "Differs from plan-reviewer/code-reviewer: those are pipeline-phase agents invoked by orchestrator via native delegation. code-researcher is a tool-agent invoked by sub-commands via Task tool."
 
 ## RULES
-
 rules:
-  - "Sequential execution — phases run sequentially, not in parallel"
+  - "Sequential execution — phases sequentially, not in parallel"
   - "No skip phases (except Phase 2 for S-complexity)"
   - "Context isolation — review via agents/ (clean context, handoff via delegation)"
   - "Loop limits → SEE orchestration-core.md (max 3 iterations per cycle)"
 
 ## ERROR HANDLING
-
 error_handling:
   common: "SEE CLAUDE.md (MCP unavailable, beads, tests 3x fail)"
   workflow_specific:
@@ -247,7 +249,6 @@ error_handling:
     - "REJECTED/NEEDS_CHANGES → return to previous phase (SEE pipeline)"
 
 ## SKILL REFERENCES
-
 skill_references:
   workflow-protocols:
     - "session-recovery → orchestration-core.md (auto-detect, decision table)"
@@ -258,7 +259,6 @@ skill_references:
     - "handoff → handoff-protocol.md (4 contracts, narrative casting)"
 
 ## HOOKS
-
 hooks:
   note: "Configured in .claude/settings.json. Deterministic — fires automatically, no need to remember."
 

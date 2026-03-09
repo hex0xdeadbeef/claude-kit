@@ -6,7 +6,7 @@ purpose: "Structured context transfer between pipeline phases"
 
 handoff_protocol:
   severity: CRITICAL
-  rule: "Each phase MUST create a handoff payload for the next phase"
+  rule: "Every phase MUST create a handoff payload for the next phase"
 
   contract:
     planner_to_plan_review:
@@ -86,3 +86,21 @@ handoff_protocol:
       - field: "reviewer_recommendations"
         value: "[list]"
         description: "Specific areas for reviewer attention"
+
+  code_researcher_contract:
+    note: "Lightweight contract — code-researcher is a tool-agent, not a pipeline phase. No verdict, no iteration tracking."
+    producer: "code-researcher (via Task tool)"
+    consumer: "/planner (Phase 3) or /coder (Phase 1.5)"
+    request_payload:
+      research_question: "Specific question to investigate"
+      focus_areas: ["package/pattern 1", "package/pattern 2"]
+      context: "Task type + complexity + what caller needs"
+    response_payload:
+      format: "Structured summary ≤2000 tokens"
+      sections:
+        existing_patterns: "{name} — {files} — {description}"
+        relevant_files: "table (file, role, lines)"
+        import_graph: "package_a → package_b (if multi-layer)"
+        key_snippets: "max 3, each ≤15 lines"
+        summary: "1-3 sentences"
+      isolation: "Full — code-researcher runs in clean context via Task tool"

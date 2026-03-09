@@ -1,6 +1,6 @@
 # Plan Review Troubleshooting
 
-purpose: "Common plan review mistakes and their solutions"
+purpose: "Common mistakes during plan review and their solutions"
 
 ---
 

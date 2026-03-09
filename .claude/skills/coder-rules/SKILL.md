@@ -1,6 +1,6 @@
 ---
 name: coder-rules
-description: 5 CRITICAL implementation rules, evaluate protocol, and coding patterns for coder command
+description: Implementation rules and patterns for /coder command. Load at /coder startup (step 0) or when /workflow enters Phase 3. Covers: 5 CRITICAL rules (plan-only, import matrix, clean domain, no log+return, tests pass), evaluate protocol (PROCEED/REVISE/RETURN), dependency-ordered implementation.
 disable-model-invocation: true
 ---
 
@@ -24,6 +24,62 @@ Before implementation, critically evaluate plan (Phase 1.5):
 Evaluate checks: feasibility, hidden complexities, edge cases, performance, dependencies.
 Output: `.claude/prompts/{feature}-evaluate.md`
 
+## Instructions
+
+### Step 1: Load plan and verify approval
+Read `.claude/prompts/{feature}.md`. Verify plan passed plan-review.
+If plan not found → ERROR, exit. If not approved → ERROR, exit.
+
+### Step 2: Run Evaluate Protocol
+Before writing ANY code, evaluate the plan critically.
+Decision: PROCEED / REVISE / RETURN (see Evaluate Protocol above).
+Write output to `.claude/prompts/{feature}-evaluate.md`.
+
+### Step 3: Implement parts in dependency order
+Follow lower-layers-first: data access → models → domain → API → tests → wiring.
+After each Part: run FMT + LINT. Check 5 CRITICAL Rules above continuously.
+
+### Step 4: Verify and form handoff
+Run full VERIFY: `make fmt && make lint && make test`.
+If tests fail 3x → STOP, request help. On success → form handoff payload for code-review.
+
+## Example
+
+### Clean Domain — no json tags in entities (RULE_3)
+
+**Good:**
+```go
+type Service struct {
+    ID string
+}
+```
+
+**Bad:**
+```go
+type Service struct {
+    ID string `json:"id"`
+}
+```
+**Why:** RULE_3 — Domain entities must be pure. No encoding/json tags. Tags belong in DTOs at the handler/API layer.
+
+For more examples, see [Examples](examples.md).
+
+## Common Issues
+
+### Tests fail 3x in a row — stuck
+**Cause:** Bug in implementation logic or wrong approach.
+**Fix:** Use Sequential Thinking for root cause analysis. Compare with plan examples. If still stuck → STOP, request manual help.
+
+### Import matrix violation detected
+**Cause:** Didn't check architecture rules before implementation.
+**Fix:** Review import matrix (handler → service → repository → models). Refactor imports. This is ALWAYS a BLOCKER.
+
+### New library used without Context7
+**Cause:** Assumed familiarity with library API.
+**Fix:** ALWAYS use Context7 for external dependencies: resolve-library-id → query-docs.
+
+For all troubleshooting cases, see [Troubleshooting](troubleshooting.md).
+
 ## Core Deps (loaded at startup)
 - [MCP Tools](mcp-tools.md) — Memory, Sequential Thinking, Context7, PostgreSQL patterns and fallbacks
 
@@ -32,3 +88,4 @@ For detailed checks, read the supporting files in this skill directory:
 - [Examples](examples.md) — bad/good code patterns, layer import rules
 - [Checklist](checklist.md) — self-verification at each coder phase
 - [Troubleshooting](troubleshooting.md) — common coder issues and fixes
+- [code-researcher agent](../../agents/code-researcher.md) — available via Task tool for codebase investigation during evaluate phase (L/XL complexity)

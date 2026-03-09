@@ -1,6 +1,6 @@
 #!/bin/bash
 # Hook: Stop
-# Purpose: Verify no uncommitted changes before stopping
+# Purpose: Check that there are no uncommitted changes before stopping
 # Blocking: exit 0 + decision:block (NOT exit 2 — otherwise JSON is ignored)
 
 set -euo pipefail

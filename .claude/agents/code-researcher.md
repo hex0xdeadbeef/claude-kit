@@ -25,6 +25,19 @@ role:
 - RULE_3 Facts Only: Report what EXISTS in the codebase. Do NOT recommend or suggest changes.
 - RULE_4 Key Snippets: Include only critical code (interfaces, signatures, patterns). Max 3 snippets, each ≤15 lines.
 
+## Pipeline Integration
+- **Invoked via:** Task tool from /planner (Phase 3: RESEARCH) and /coder (Phase 1.5: EVALUATE)
+- **NOT invoked by:** /workflow orchestrator directly (unlike plan-reviewer/code-reviewer)
+- **Trigger:** Multi-package research (3+ packages) OR complexity L/XL
+- **Skip:** S/M complexity, --minimal mode, patterns already clear
+- **Autonomy modes:**
+  - INTERACTIVE/AUTONOMOUS → delegate when trigger fires
+  - MINIMAL → always skip, use Grep/Glob
+  - RESUME → skip unless new gap found in evaluate
+- **Contract:** Receive research question + focus areas → Return structured summary ≤2000 tokens
+- **Checkpoint:** None — code-researcher is tool-assist inside Phase 1/3, not a pipeline phase
+- **Hooks:** SubagentStop does NOT fire — code-researcher is Task tool subagent, not native agent
+
 ## Autonomy
 - Stop: No files found for any search → report "No matches found" with searched paths
 - Stop: Results too broad (>50 files in first search) → narrow scope, show top 10 by relevance

@@ -1,7 +1,7 @@
 # Sequential Thinking Guide
 
 purpose: "When and how to use Sequential Thinking MCP tool during planning and plan review"
-loaded_when: "complexity L/XL only (SEE: workflow.md conditional loading matrix)"
+loaded_when: "complexity L/XL only (SEE: .claude/commands/workflow.md conditional loading matrix)"
 
 # ─────────────────────────────────────────────────────
 # WHEN REQUIRED

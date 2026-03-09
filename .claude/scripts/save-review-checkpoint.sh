@@ -1,6 +1,6 @@
 #!/bin/bash
 # Hook: SubagentStop (matcher: plan-reviewer|code-reviewer)
-# Purpose: Write completion marker for review agent
+# Purpose: Write marker about review agent completion
 # Blocking: exit 2 if write fails (blocks agent completion)
 
 set -euo pipefail

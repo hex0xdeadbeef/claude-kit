@@ -101,6 +101,10 @@ mcp_tools:
     when: "for complex architectural decisions (MANDATORY for tasks with 3+ alternatives)"
   - tool: "Memory"
     usage: "search_nodes to find similar decisions"
+  - tool: "code-researcher (via Task tool)"
+    when: "Research scope > 3 packages OR complexity L/XL (and not --minimal)"
+    usage: "Delegate codebase exploration to haiku agent instead of inline Grep/Glob"
+    skip_when: "S/M complexity, --minimal mode"
   - tool: "Context7"
     usage: "for external library documentation"
   - tool: "PostgreSQL"
@@ -206,13 +210,22 @@ phases:
           note: "Check imports between packages (SEE: PROJECT-KNOWLEDGE.md, if available)"
 
         complex_search:
-          when: "Multi-layer patterns"
-          tool: "Task (subagent_type='code-searcher', model='haiku')"
+          when: "Multi-layer patterns (3+ packages, complexity L/XL)"
+          tool: "Task (code-researcher agent, model='haiku')"
+          skip_when: "S/M complexity OR --minimal mode — use Grep/Glob directly"
           use_for:
             - "Search patterns across entire project"
             - "Analyze existing implementations"
             - "Collect examples from multiple layers"
-          example: "Find all API handlers implementation patterns including error handling, logging, and response formatting"
+            - "Map import graph between packages"
+          delegation_prompt_example: |
+            Research the codebase for: API handler implementation patterns
+            Focus areas:
+            - error handling and response formatting in internal/handler/
+            - middleware usage patterns
+            - input validation approach
+            Context: Planning new_feature task, complexity L
+          note: "code-researcher returns structured summary ≤2000 tokens. See .claude/agents/code-researcher.md for output format."
 
       - step: "External libraries"
         tool: "context7"

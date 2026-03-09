@@ -303,4 +303,4 @@ Plan classified as S → plan-review finds 4 Parts + 3 layers → upgrade to M/L
 ## SEE ALSO
 
 - Autonomy modes → [autonomy.md] in workflow-protocols skill. Error handling → auto-loaded via CLAUDE.md
-- `planner.md` — Receives classification as input context
+- `.claude/commands/planner.md` — Receives classification as input context

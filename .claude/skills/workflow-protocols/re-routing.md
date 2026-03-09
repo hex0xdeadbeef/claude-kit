@@ -1,6 +1,6 @@
 # Re-Routing Protocol
 
-purpose: "Self-correcting pipeline — route change on misclassification"
+purpose: "Self-correcting pipeline — route change on incorrect classification"
 
 ---
 
@@ -11,7 +11,7 @@ re_routing:
     - trigger: "plan-review finds the plan is too simple for the current route"
       action: "Downgrade route"
       examples:
-        - "L→M: plan turned out to be < 3 Parts, remove mandatory Sequential Thinking"
+        - "L→M: plan turned out < 3 Parts, remove mandatory Sequential Thinking"
         - "M→S: only 1 Part, 1 layer — skip plan-review in next iteration"
 
     - trigger: "plan-review finds the plan is too complex for the current route"
@@ -23,7 +23,7 @@ re_routing:
     - trigger: "coder evaluate finds hidden complexity"
       action: "Upgrade route or RETURN to planner"
       examples:
-        - "M→L: evaluate discovered that a DB migration is needed (not accounted for in plan)"
+        - "M→L: evaluate discovered DB migration needed (not accounted for in plan)"
 
   tracking:
     when: "Immediately when re-routing decision is made (before continuing pipeline)"

@@ -92,6 +92,9 @@ triggers:
   - if: "Implementing database/repository code"
     then: "Check generated code exists, run code generation if needed"
 
+  - if: "Evaluate phase finds unfamiliar pattern or unclear existing implementation"
+    then: "Use code-researcher agent via Task tool for investigation before implementing"
+
 ## AUTONOMY
 autonomy:
   modes:
@@ -184,6 +187,18 @@ workflow:
           - "All imports available?"
           - "External services ready?"
           - "Database schema compatible?"
+
+      research_assist:
+        tool: "Task (code-researcher agent, model='haiku')"
+        when: "Evaluate finds gap: unfamiliar pattern, unknown package structure, unclear existing implementation"
+        skip_when: "S/M complexity OR --minimal mode OR all patterns already clear from plan"
+        delegation_prompt_example: |
+          Investigate codebase for: {specific question from evaluate}
+          Focus areas:
+          - {relevant packages}
+          - {specific patterns needed}
+          Context: Implementing {feature}, evaluating plan feasibility
+        note: "NON_CRITICAL — if Task tool unavailable, proceed with inline Grep/Glob"
 
       decisions:
         - decision: PROCEED

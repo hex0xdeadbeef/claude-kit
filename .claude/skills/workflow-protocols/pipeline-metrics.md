@@ -50,7 +50,7 @@ pipeline_metrics:
   analysis:
     purpose: "Over time enables:"
     benefits:
-      - "Assess task-analysis accuracy (estimated vs actual complexity)"
+      - "Evaluate task-analysis accuracy (estimated vs actual complexity)"
       - "Find patterns (which task types generate more issues)"
       - "Optimize pipeline based on data"
       - "Identify bottlenecks (which phase generates more iterations)"

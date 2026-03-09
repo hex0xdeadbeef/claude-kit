@@ -1,7 +1,7 @@
 #!/bin/bash
 # Hook: PreCompact
 # Purpose: Save workflow state to stdout → additionalContext after compaction
-# Non-blocking: compaction proceeds regardless
+# Non-blocking: compaction continues regardless
 
 set -euo pipefail
 

@@ -7,7 +7,7 @@
 ```
 task-analysis → /planner → plan-reviewer (agent) → /coder → code-reviewer (agent)
      ↓              ↓              ↓                  ↓              ↓
-  Classify        Plan        Validate              Code          Review
+  Classify        Plan       Validation             Code         Review
   S → skip PR              ↓ FAIL         ↓ FAIL
                           ← back ←       ← back ←
                           (max 3x)       (max 3x)

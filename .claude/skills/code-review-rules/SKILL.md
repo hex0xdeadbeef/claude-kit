@@ -1,6 +1,6 @@
 ---
 name: code-review-rules
-description: Code review severity classification, decision matrix, security checklist, and review patterns for code review
+description: Review standards for code-reviewer agent. Auto-loaded via agent frontmatter when code-reviewer runs (Phase 4). Covers: severity classification (BLOCKER/MAJOR/MINOR/NIT), decision matrix (APPROVED/APPROVED_WITH_COMMENTS/CHANGES_REQUESTED), auto-escalation rules, grep search patterns for automated checks.
 disable-model-invocation: true
 ---
 
@@ -21,6 +21,65 @@ disable-model-invocation: true
 - 5+ MINOR in same file → escalate to MAJOR
 - Security issue (any severity) → always BLOCKER
 - Import matrix violation → always BLOCKER
+
+## Instructions
+
+### Step 1: Run Quick Check — lint + test (blocking)
+Run `make lint` and `make test`. If EITHER fails → STOP, return to coder.
+Do NOT proceed to review if Quick Check fails.
+
+### Step 2: Get changes and assess scope
+Run `git diff master...HEAD`. Assess: files changed, lines changed, layers affected.
+If >100 lines or >5 files or 3+ layers → use Sequential Thinking.
+
+### Step 3: Review all concern areas
+Check each area using grep search patterns from [Examples](examples.md):
+- Architecture: import matrix compliance
+- Error handling: no log+return, proper wrapping
+- Security: no hardcoded secrets, no token leaks (see [Security Checklist](security-checklist.md))
+- Test coverage: new code has tests
+
+### Step 4: Apply Decision Matrix and form verdict
+Count issues by severity. Apply Decision Matrix and Auto-Escalation rules above.
+CRITICAL: NEVER approve with BLOCKER issues. Form handoff for completion.
+
+## Example
+
+### Log AND return — most common blocker
+
+**Bad:**
+```go
+if err != nil {
+    log.Error("failed", "err", err)
+    return err  // duplicate log in error chain
+}
+```
+
+**Good:**
+```go
+if err != nil {
+    return fmt.Errorf("context: %w", err)
+}
+```
+**Why:** [BLOCKER] Log AND return creates duplicate logs in error chain. Choose one: return with wrap (domain/service) or log (handler).
+
+For more examples (incl. grep search patterns), see [Examples](examples.md).
+
+## Common Issues
+
+### Approved with blocker issues
+**Cause:** Rushed review, missed severity classification.
+**Fix:** NEVER approve with blockers — RULE is absolute. Re-check all findings against Severity Classification above before verdict.
+
+### Log AND return pattern not caught
+**Cause:** Trusted visual review instead of grep.
+**Fix:** ALWAYS run `Grep 'log\.(Error|Warn|Info).*\n.*return'` on changed files. Automated checks catch what eyes miss.
+
+### Sequential Thinking skipped on large diff
+**Cause:** Changes seemed straightforward at first glance.
+**Fix:** ALWAYS use Sequential Thinking for 100+ lines, 5+ files, or 3+ layers. No exceptions.
+
+For all troubleshooting cases, see [Troubleshooting](troubleshooting.md).
 
 ## References
 For detailed checks, read the supporting files in this skill directory:

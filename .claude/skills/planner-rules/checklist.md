@@ -24,7 +24,7 @@ checklist:
 
   phase_3_research:
     - "Memory checked (search_nodes)"
-    - "Code investigated (Grep/Glob or code-searcher)"
+    - "Code investigated (Grep/Glob or code-researcher agent via Task tool)"
     - "External libraries checked (Context7 if needed)"
     - "Imports between packages verified"
 

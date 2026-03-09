@@ -1,13 +1,13 @@
 # Checkpoint Protocol
 
-purpose: "Proactive pipeline state persistence for instant recovery"
+purpose: "Proactive pipeline state saving for instant recovery"
 
 ---
 
 checkpoint_protocol:
   severity: HIGH
 
-  when: "After completing EACH phase (including iteration loops)"
+  when: "After completing EVERY phase (including iteration loops)"
   file: ".claude/workflow-state/{feature}-checkpoint.yaml"
 
   format:
@@ -41,7 +41,7 @@ checkpoint_protocol:
       - "Skip all completed phases"
       - "Resume from phase_completed + 1"
       - "Load handoff_payload as input for current phase"
-    advantage: "No need to re-evaluate state from indirect signals (plan exists? changes exist?)"
+    advantage: "No need to re-evaluate state by indirect signals (plan exists? changes exist?)"
 
   example:
     file: ".claude/workflow-state/{feature}-checkpoint.yaml"
