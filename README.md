@@ -13,6 +13,10 @@ Copy the kit into your project:
 ```bash
 cp -r .claude/ /path/to/your/project/
 cp CLAUDE.md /path/to/your/project/
+cp .gitignore /path/to/your/project/   # or merge with existing
+
+# Optional: create personal settings overrides
+cp .claude/settings.local.json.example /path/to/your/project/.claude/settings.local.json
 ```
 
 ### First Steps
@@ -231,7 +235,9 @@ Configure in `~/.claude/mcp.json`:
 ├── prompts/               # Generated implementation plans
 ├── scripts/               # Lifecycle hooks (check-uncommitted, save-progress, etc.)
 ├── rules/                 # Cross-cutting constraints (architecture rules)
-├── settings.json          # Claude Code project settings + hooks
+├── workflow-state/        # Runtime state (gitignored, generated during workflow)
+├── settings.json          # Claude Code project settings + hooks (git-committed)
+├── settings.local.json.example  # Template for personal overrides
 └── PROJECT-KNOWLEDGE.md   # Auto-generated project knowledge base
 ```
 
@@ -241,14 +247,19 @@ The kit includes hooks (configured in `.claude/settings.json`) that enforce qual
 
 | Hook | Trigger | Purpose |
 | ------ | --------- | --------- |
+| `protect-files.sh` | PreToolUse (Write/Edit) | Protect critical config files from agent modification |
 | `check-artifact-size.sh` | PreToolUse (Write) | Block writes exceeding size thresholds |
+| `block-dangerous-commands.sh` | PreToolUse (Bash) | Block destructive shell commands |
+| `auto-fmt-go.sh` | PostToolUse (Write/Edit) | Auto-format Go code |
 | `yaml-lint.sh` | PostToolUse (Edit) | Validate YAML structure |
 | `check-references.sh` | PostToolUse (Write) | Validate all file references |
-| `gofmt` | PostToolUse (Edit/Write) | Auto-format Go code |
-| `verify-phase-completion.sh` | Stop | Ensure all meta-agent phases completed |
-| `check-uncommitted.sh` | Stop | Warn on uncommitted changes |
+| `enrich-context.sh` | UserPromptSubmit | Enrich prompt with project context |
 | `save-progress-before-compact.sh` | PreCompact | Save checkpoint before context compaction |
 | `save-review-checkpoint.sh` | SubagentStop | Persist review completion state |
+| `verify-phase-completion.sh` | Stop | Ensure all meta-agent phases completed |
+| `check-uncommitted.sh` | Stop | Warn on uncommitted changes |
+| `session-analytics.sh` | SessionEnd | Record session analytics |
+| `notify-user.sh` | Notification | Desktop notifications for agent events |
 
 ## Conventions
 

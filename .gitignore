@@ -1,6 +1,37 @@
-# meta-agent session state (ephemeral, not for VCS)
+# Claude Code local settings (personal dev overrides)
+.claude/settings.local.json
+.claude/*.local.*
+
+# Runtime state (generated during workflow)
+.claude/workflow-state/
+.claude/prompts/
+
+# Meta-agent session state (ephemeral)
 .meta-agent/runs/
 !.meta-agent/runs/.gitkeep
 
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+go.work.sum
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
 # OS
 .DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local

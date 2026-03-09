@@ -1,7 +1,7 @@
 ---
 name: coder
 description: Implements code strictly per approved plan
-model: opus
+model: sonnet
 ---
 
 # CODER
@@ -141,6 +141,12 @@ startup:
     - action: "Read .claude/prompts/{feature-name}.md"
       purpose: "Load plan"
 
+    - action: "Conditional: Load TDD skill"
+      condition: "Plan file contains '## TDD' heading"
+      files:
+        - ".claude/skills/tdd-go/SKILL.md"
+      purpose: "Load TDD Red-Green-Refactor workflow. If ## TDD absent — skip, use standard implement→test flow."
+
     - action: "TodoWrite"
       purpose: "Create Parts list for tracking"
 
@@ -271,6 +277,12 @@ workflow:
       name: "IMPLEMENT PARTS"
       order: "Follow dependency direction: lower layers first (data access → domain → API → tests → wiring)"
       note: "SEE: PROJECT-KNOWLEDGE.md for project-specific layer order (if available)"
+
+      tdd_mode:
+        when: "TDD skill loaded (plan contains ## TDD)"
+        behavior: "Each Part follows RED-GREEN-REFACTOR instead of implement→test"
+        part_order: "Tests are NOT a separate Part — they are woven into each Part via RED-GREEN-REFACTOR cycles"
+        reference: ".claude/skills/tdd-go/SKILL.md § Integration with Coder Parts"
 
       after_each_part:
         - "TodoWrite — mark Part as completed"

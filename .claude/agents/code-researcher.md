@@ -7,6 +7,7 @@ tools:
   - Grep
   - Glob
   - Bash
+memory: project
 maxTurns: 20
 ---
 
@@ -116,6 +117,14 @@ NOT allowed:
 - Any command that modifies files (go generate, make, etc.)
 - Running tests or builds
 - Git operations that change state (commit, checkout, etc.)
+
+## Memory
+- On startup: read your agent memory for codebase topology (package locations, key files, patterns)
+- On completion: save newly discovered codebase structure to memory
+  - Package locations, key interfaces, important file paths
+  - Patterns found: how existing features are structured
+- Keep MEMORY.md under 200 lines — move detailed findings to topic files
+- On first run (empty memory): save brief summary of project package structure and key entry points
 
 ## Error Handling
 - No matching files found → report: "No files matching '{pattern}' found. Searched in: {paths}"

@@ -30,6 +30,11 @@ Run `mcp__memory__search_nodes — query: 'health_check'`.
 - By decision: `'{pattern name} architecture decision'` — e.g. `'caching strategy architecture decision'`
 - Tips: use 2-4 keywords, include domain/package for precision, add `lesson` or `decision` suffix for entity type filtering.
 
+**Memory boundary (MCP Memory vs Auto-memory):**
+- MCP Memory: architectural decisions, lessons learned, pipeline metrics (structured, cross-project, explicit save/search)
+- Auto-memory: build commands, debugging insights, preferences (free-form, per-project, auto-saved)
+- Rule: Do NOT duplicate. If saving architectural decision → use MCP Memory. If noting "this build flag is needed" → let auto-memory handle it.
+
 **Memory entity templates:**
 
 Architectural decision:

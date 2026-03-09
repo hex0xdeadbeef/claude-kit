@@ -160,6 +160,14 @@ For handoff contract see [handoff-protocol.md] in workflow-protocols skill → p
 - **Sequential Thinking:** Use for complex plans (4+ Parts, 3+ layers, >150 lines). SKIP for S/M complexity.
 - **Memory:** STARTUP — search_nodes for similar past solutions. On completion — create_entities for recurring issues found.
 
+## Memory
+- On startup: read your agent memory for patterns from past reviews (recurring issues, common plan mistakes)
+- On completion (any verdict): save newly discovered patterns to memory
+  - APPROVED: save successful patterns, good plan structures
+  - NEEDS_CHANGES/REJECTED: save issues found and common mistakes for future reference
+- Keep MEMORY.md under 200 lines — move detailed issue catalogs to topic files
+- On first run (empty memory): save brief summary of project layer structure and review checklist priorities
+
 ## Error Handling
 - Plan file not found → ERROR: "Plan not found. Create with /planner first."
 - Plan incomplete → NEEDS_CHANGES, list missing sections

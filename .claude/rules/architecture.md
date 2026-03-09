@@ -12,4 +12,3 @@ Import Matrix (STRICT):
 
 Domain Purity:
 - NO encoding/json tags in domain entities (tags belong in DTOs)
-- Error wrapping: fmt.Errorf("context: %w", err) — NEVER log AND return

@@ -12,6 +12,7 @@ skills:
   - code-review-rules
 memory: project
 maxTurns: 30
+isolation: worktree
 ---
 
 # Code Reviewer
@@ -195,6 +196,14 @@ For handoff contract see [handoff-protocol.md] in workflow-protocols skill → c
 - **Sequential Thinking:** Use for large diffs (>100 lines, >5 files, 3+ layers). SKIP for simple changes.
 - **Context7:** Use when new external library found in diff. Verify correct usage patterns.
 - **Memory:** STARTUP — search_nodes for past similar review issues. On completion — create_entities for recurring patterns found.
+
+## Memory
+- On startup: read your agent memory for patterns from past reviews (recurring code issues, security findings)
+- On completion (any verdict): save newly discovered patterns to memory
+  - APPROVED/APPROVED_WITH_COMMENTS: save good code patterns, successful architecture
+  - CHANGES_REQUESTED: save issues found and anti-patterns for future reference
+- Keep MEMORY.md under 200 lines — move detailed findings to topic files
+- On first run (empty memory): save brief summary of project code conventions and common anti-patterns
 
 ## Error Handling
 - git diff fails → check branch name, suggest `git status`
