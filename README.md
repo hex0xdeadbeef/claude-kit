@@ -463,7 +463,28 @@ Configure in `~/.claude/mcp.json`:
 **Optional:**
 
 - `postgres` (@anthropic/mcp-postgres) — required for `/db-explorer`
-- `tree_sitter` — code analysis (symbols, dependencies, repo-map)
+- `tree_sitter` — code analysis (symbols, dependencies, repo-map), used by `/project-researcher`
+
+### Installing `tree_sitter` MCP Server
+
+The original `mcp-server-tree-sitter` v0.5.1 is incompatible with `py-tree-sitter >= 0.24` (removed `Query.captures()` API). Use the patched fork:
+
+```bash
+pipx install git+ssh://git@github.com/hex0xdeadbeef/mcp-server-tree-sitter.git
+```
+
+Then add to `~/.claude/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "tree_sitter": {
+      "command": "mcp-server-tree-sitter",
+      "args": ["--stdio"]
+    }
+  }
+}
+```
 
 ## Project Structure
 
