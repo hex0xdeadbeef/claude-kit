@@ -177,31 +177,31 @@ The system is a **5-phase development pipeline** managed by the orchestrator (`/
 
 ```mermaid
 flowchart TB
-    USER((User)) -->|"/workflow task"| WF
+    USER((User)) -->|/workflow task| WF
 
     subgraph WF ["/workflow — Orchestrator · opus"]
         direction TB
-        TA["Phase 0.5 · Task Analysis\nClassify: S / M / L / XL\nRoute selection"]
+        TA[Phase 0.5 · Task Analysis<br/>Classify S / M / L / XL]
 
-        subgraph PLAN ["Phase 1 · Planning"]
-            PL["/planner · opus\nResearch + plan creation"]
+        subgraph PLAN [Phase 1 · Planning]
+            PL["/planner · opus<br/>Research + plan creation"]
         end
 
-        subgraph REVIEW1 ["Phase 2 · Plan Review"]
-            PR["plan-reviewer · sonnet\nArchitecture compliance\nClean context isolation"]
+        subgraph REVIEW1 [Phase 2 · Plan Review]
+            PR["plan-reviewer · sonnet<br/>Architecture compliance"]
         end
 
-        subgraph IMPL ["Phase 3 · Implementation"]
-            EV["Phase 1.5 · Evaluate\nPROCEED / REVISE / RETURN"]
-            CO["/coder · sonnet\nImplement per plan\nfmt → lint → test"]
+        subgraph IMPL [Phase 3 · Implementation]
+            EV[Evaluate gate<br/>PROCEED / REVISE / RETURN]
+            CO["/coder · sonnet<br/>Implement per plan<br/>fmt, lint, test"]
             EV --> CO
         end
 
-        subgraph REVIEW2 ["Phase 4 · Code Review"]
-            CR["code-reviewer · sonnet\nSecurity, tests, style\nWorktree isolation"]
+        subgraph REVIEW2 [Phase 4 · Code Review]
+            CR["code-reviewer · sonnet<br/>Security, tests, style<br/>Worktree isolation"]
         end
 
-        DONE["Phase 5 · Commit\n+ save lessons to Memory"]
+        DONE[Phase 5 · Commit]
 
         TA --> PLAN
         PLAN --> REVIEW1
@@ -209,12 +209,12 @@ flowchart TB
         IMPL --> REVIEW2
         REVIEW2 -->|APPROVED| DONE
 
-        REVIEW1 -->|"NEEDS_CHANGES (max 3x)"| PLAN
-        REVIEW2 -->|"CHANGES_REQUESTED (max 3x)"| IMPL
+        REVIEW1 -->|NEEDS_CHANGES<br/>max 3x| PLAN
+        REVIEW2 -->|CHANGES_REQUESTED<br/>max 3x| IMPL
     end
 
-    PL -.->|"Task tool · L/XL only"| RES["code-researcher\nhaiku · ≤2000 tokens"]
-    CO -.->|"Task tool · L/XL only"| RES
+    PL -.->|Task tool<br/>L/XL only| RES[code-researcher<br/>haiku]
+    CO -.->|Task tool<br/>L/XL only| RES
 
     classDef opus fill:#4a90d9,color:#fff
     classDef sonnet fill:#7b68ee,color:#fff
@@ -230,81 +230,87 @@ flowchart TB
 ```mermaid
 flowchart LR
     subgraph META ["/meta-agent · opus"]
-        MA_PHASES["9 phases: INIT → EXPLORE → ANALYZE\n→ PLAN → CONSTITUTE → DRAFT\n→ APPLY → VERIFY → CLOSE"]
+        direction TB
+        MA1[INIT → EXPLORE → ANALYZE]
+        MA2[PLAN → CONSTITUTE → DRAFT]
+        MA3[APPLY → VERIFY → CLOSE]
+        MA1 --> MA2 --> MA3
     end
-    META -->|"create / enhance\naudit / delete"| ART["Artifacts\ncommands · skills\nrules · agents"]
+    META -->|create / enhance<br/>audit / delete| ART[Artifacts<br/>commands, skills<br/>rules, agents]
 
     subgraph PROJ ["/project-researcher · opus"]
-        PR_PHASES["10 phases · 7 subagents\ndiscovery → detection → graph\n→ analysis → critique → generation\n→ verification → report"]
+        direction TB
+        PR1[discovery → detection → graph]
+        PR2[analysis → critique → generation]
+        PR3[verification → report]
+        PR1 --> PR2 --> PR3
     end
-    PROJ --> PK["PROJECT-\nKNOWLEDGE.md\n+ .claude/ artifacts"]
+    PROJ --> PK[PROJECT-KNOWLEDGE.md<br/>+ .claude/ artifacts]
 
     subgraph DBE ["/db-explorer · sonnet"]
-        DB_TOOLS["MCP postgres\nlist_tables · describe\nSELECT queries"]
+        DB_TOOLS[MCP postgres<br/>list_tables, describe, query]
     end
-    DBE --> SCH["Schema Report\n+ entity alignment"]
+    DBE --> SCH[Schema Report]
 ```
 
 ### Skill Loading
 
 ```mermaid
 flowchart LR
-    subgraph SKILLS ["Skills (on-demand loading)"]
-        WP["workflow-protocols\n9 files"]
-        PLR["planner-rules\n8 files"]
-        CDR["coder-rules\n5 files"]
-        PRR["plan-review-rules\n5 files"]
-        CRR["code-review-rules\n5 files"]
-        TDD["tdd-go\n3 files"]
+    subgraph SKILLS [Skills — on-demand loading]
+        WP[workflow-protocols<br/>9 files]
+        PLR[planner-rules<br/>8 files]
+        CDR[coder-rules<br/>5 files]
+        PRR[plan-review-rules<br/>5 files]
+        CRR[code-review-rules<br/>5 files]
+        TDD[tdd-go<br/>3 files]
     end
 
-    WF2["/workflow"] --> WP
-    PL2["/planner"] --> PLR
-    CO2["/coder"] --> CDR
-    CO2 -->|"if ## TDD in plan"| TDD
-    PREV["plan-reviewer"] --> PRR
-    CREV["code-reviewer"] --> CRR
+    WF2[/workflow] --> WP
+    PL2[/planner] --> PLR
+    CO2[/coder] --> CDR
+    CO2 -->|if TDD section in plan| TDD
+    PREV[plan-reviewer] --> PRR
+    CREV[code-reviewer] --> CRR
 
-    WP -->|startup| A1["autonomy.md\nbeads.md\norchestration-core.md"]
-    WP -->|on-demand| A2["handoff-protocol.md\ncheckpoint-protocol.md\nre-routing.md\npipeline-metrics.md"]
+    WP -->|startup| A1[autonomy.md<br/>beads.md<br/>orchestration-core.md]
+    WP -->|on-demand| A2[handoff-protocol.md<br/>checkpoint-protocol.md<br/>re-routing.md<br/>pipeline-metrics.md]
 
-    PLR -->|startup| B1["mcp-tools.md"]
-    PLR -->|"L/XL only"| B2["sequential-thinking-guide.md"]
-    PLR -->|"M+ only"| B3["data-flow.md"]
+    PLR -->|startup| B1[mcp-tools.md]
+    PLR -->|L/XL only| B2[sequential-thinking-guide.md]
+    PLR -->|M+ only| B3[data-flow.md]
 ```
 
 ### Hook Lifecycle
 
 ```mermaid
 flowchart TB
-    UP["User Prompt"] -->|UserPromptSubmit| ENR["enrich-context.sh"]
-    ENR --> CMD["Command Execution"]
+    UP[User Prompt] -->|UserPromptSubmit| ENR[enrich-context.sh]
+    ENR --> CMD[Command Execution]
 
-    CMD --> TOOL{"Tool Call?"}
-    TOOL -->|Write/Edit| PRE1["protect-files.sh ⛔"]
-    TOOL -->|Write| PRE2["check-artifact-size.sh ⛔"]
-    TOOL -->|Bash| PRE3["block-dangerous-commands.sh ⛔"]
+    CMD --> TOOL{Tool Call?}
+    TOOL -->|Write / Edit| PRE1[protect-files.sh — blocking]
+    TOOL -->|Write| PRE2[check-artifact-size.sh — blocking]
+    TOOL -->|Bash| PRE3[block-dangerous-commands.sh — blocking]
 
-    PRE1 --> EXEC["Tool Executes"]
+    PRE1 --> EXEC[Tool Executes]
     PRE2 --> EXEC
     PRE3 --> EXEC
 
-    EXEC -->|Write/Edit| POST1["auto-fmt-go.sh"]
-    EXEC -->|Edit| POST2["yaml-lint.sh"]
-    EXEC -->|Write| POST3["check-references.sh"]
+    EXEC -->|Write / Edit| POST1[auto-fmt-go.sh]
+    EXEC -->|Edit| POST2[yaml-lint.sh]
+    EXEC -->|Write| POST3[check-references.sh]
 
-    POST1 --> CONT["Continue..."]
+    POST1 --> CONT[Continue]
     POST2 --> CONT
     POST3 --> CONT
 
-    CONT -->|"context limit"| COMPACT["PreCompact\nsave-progress-before-compact.sh"]
+    CONT -->|context limit| COMPACT[PreCompact<br/>save-progress-before-compact.sh]
+    CONT -->|subagent exits| SUBSTOP[SubagentStop<br/>save-review-checkpoint.sh]
+    CONT --> STOP[Stop<br/>1. verify-phase-completion.sh<br/>2. check-uncommitted.sh]
 
-    CONT -->|"subagent exits"| SUBSTOP["SubagentStop\nsave-review-checkpoint.sh"]
-
-    CONT --> STOP["Stop\n1. verify-phase-completion.sh ⛔\n2. check-uncommitted.sh ⛔"]
-
-    STOP --> SESS["SessionEnd\nsession-analytics.sh"]
-    SESS --> NOTIFY["Notification\nnotify-user.sh"]
+    STOP --> SESS[SessionEnd<br/>session-analytics.sh]
+    SESS --> NOTIFY[Notification<br/>notify-user.sh]
 ```
 
 ### Model Routing
