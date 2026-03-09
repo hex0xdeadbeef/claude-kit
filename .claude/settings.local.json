@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(bash .claude/scripts/sync-to-github.sh \"Update README.md: fix outdated structure, remove deleted commands, update hooks\")"
+      "Bash(bash .claude/scripts/sync-to-github.sh \"Update README.md: fix outdated structure, remove deleted commands, update hooks\")",
+      "Bash(xargs ls -la)"
     ]
   }
 }

@@ -1,17 +1,17 @@
-# Project Knowledge: claude-kit
+# Project Knowledge: Claude Kit
 
-**Last Updated:** 2026-03-09T00:00:00Z
-**Version:** 8c491e0 (sync/initial)
-**Researcher:** project-researcher agent v3.0
-**Analysis Method:** grep-based (Tier 3)
+**Last Updated:** 2026-03-09
+**Version:** 8c77a7c (sync/initial)
+**Researcher:** project-researcher agent v4.2
+**Analysis Method:** grep-based (no Go source code; Markdown/Shell project)
 
 ---
 
 ## Executive Summary
 
-claude-kit is a reusable Claude Code configuration kit that provides a complete AI-assisted development infrastructure for any project. It ships a layered artifact system consisting of commands (user-facing entry points), agents (autonomous executors), skills (reusable domain knowledge), templates (scaffolding), scripts (deterministic hooks), and rules (cross-cutting constraints). The project is written entirely in Markdown and Shell (bash), with no application code — its sole purpose is to orchestrate Claude Code's behavior through structured configuration.
+Claude Kit is a reusable configuration kit for Claude Code that provides a structured multi-agent development workflow. The project itself contains no application source code -- it is a framework of Markdown specifications, Shell hook scripts, and JSON configuration that, when copied into a target project, enables a 5-phase development pipeline (task-analysis, planning, plan-review, implementation, code-review) with autonomous agents, checkpoint recovery, and quality gates.
 
-The architecture follows an orchestrated artifact system pattern where commands delegate to agents, agents consume skills, and templates/scripts/rules provide cross-cutting support. Three orchestrators (workflow, meta-agent, project-researcher) coordinate multi-phase workflows with quality gates, model routing (opus for judgment, sonnet for generation, haiku for exploration), and progressive context loading.
+The kit is language-agnostic by design. The default Language Profile in CLAUDE.md targets Go >= 1.24, but this is a template default intended to be overridden per target project via this PROJECT-KNOWLEDGE.md file or direct customization.
 
 ---
 
@@ -24,145 +24,125 @@ The architecture follows an orchestrated artifact system pattern where commands 
 
 | Module | Language | Type | Dependencies |
 |--------|----------|------|-------------|
-| . (root) | Markdown/Shell | configuration kit | MCP servers (memory, sequential-thinking, context7, tree_sitter) |
+| . (root) | Markdown / Shell (Bash) | configuration-kit | git, python3, bash, osascript (optional) |
 
-### Directory Tree
+### Directory Layout (depth 3)
 
 ```
 claude-kit/
-├── CLAUDE.md                          # Project-level instructions for Claude Code
-├── README.md                          # Usage documentation
+├── CLAUDE.md                          # Root project instructions (loaded every session)
+├── README.md                          # User-facing documentation
 ├── .gitignore
 └── .claude/
-    ├── settings.json                  # Model config, MCP servers, hooks, permissions
-    ├── agents/                        # Autonomous executors (6 agents)
-    │   ├── meta-agent/                # Artifact CRUD lifecycle (9-phase workflow)
-    │   │   ├── deps/                  # 18 dependency files (phases, gates, protocols)
-    │   │   ├── scripts/               # 5 validation hooks (size, lint, references, drift)
-    │   │   └── templates/onboarding/  # Bootstrap templates (mcp.json, settings.json)
-    │   ├── project-researcher/        # Deep codebase analysis → PROJECT-KNOWLEDGE.md
-    │   │   ├── AGENT.md               # Main agent definition
-    │   │   ├── deps/                  # 7 dependency files (AST, state contract, etc.)
-    │   │   ├── subagents/             # 7 subagents (discovery, detection, graph, etc.)
-    │   │   ├── phases/                # Phase definitions (critique)
-    │   │   ├── reference/             # Scoring, language patterns
-    │   │   ├── examples/              # Sample reports, confidence scoring
-    │   │   └── templates/             # project-knowledge.md template
-    │   ├── db-explorer/               # PostgreSQL schema exploration via MCP
-    │   │   ├── AGENT.md
-    │   │   └── deps/queries.md
-    │   ├── plan-reviewer.md           # Validates implementation plans
-    │   ├── code-reviewer.md           # Code review of changes
-    │   └── code-researcher.md         # Codebase exploration for planning
-    ├── commands/                       # User-facing slash commands (7 commands)
-    │   ├── workflow.md                # Full dev cycle orchestrator (opus)
-    │   ├── meta-agent.md              # Artifact lifecycle management (opus)
-    │   ├── planner.md                 # Research → implementation plan
-    │   ├── coder.md                   # Implement per approved plan
-    │   ├── project-researcher.md      # Trigger project analysis
-    │   ├── db-explorer.md             # Database schema exploration
-    │   └── review-checklist.md        # Code review checklist reference
-    ├── skills/                        # Reusable domain knowledge (5 skills)
-    │   ├── workflow-protocols/        # Orchestration, handoff, checkpoints (9 files)
-    │   ├── planner-rules/             # Planning methodology, task analysis (8 files)
-    │   ├── coder-rules/               # Implementation rules, MCP tools (5 files)
-    │   ├── code-review-rules/         # Review checklists, security (5 files)
-    │   └── plan-review-rules/         # Architecture checks, required sections (5 files)
-    ├── templates/                     # Scaffolding for new artifacts (6 templates)
-    │   ├── agent.md
-    │   ├── command.md
-    │   ├── skill.md
-    │   ├── rule.md
-    │   ├── plan-template.md
-    │   └── project-claude-md.md
-    ├── scripts/                       # Lifecycle hooks (4 scripts)
-    │   ├── sync-to-github.sh          # Sync configuration to remote
-    │   ├── check-uncommitted.sh       # Warn on uncommitted changes
-    │   ├── save-progress-before-compact.sh  # Pre-compact state save
-    │   └── save-review-checkpoint.sh  # Review state persistence
-    ├── rules/                         # Cross-cutting constraints
-    │   └── architecture.md            # Go architecture rules (template for target projects)
-    ├── prompts/                       # Reusable prompt fragments
-    │   └── workflow-migration.md
-    ├── agent-memory/                  # Persistent agent state
-    │   └── code-reviewer/
-    └── archive/                       # Archived/rolled-back artifacts
-        └── .gitkeep
+    ├── settings.json                  # Permissions, hooks, MCP servers (git-committed)
+    ├── settings.local.json.example    # Personal overrides template
+    ├── PROJECT-KNOWLEDGE.md           # This file (auto-generated research)
+    ├── agents/                        # Autonomous agents (6)
+    │   ├── plan-reviewer.md           # Plan validation (sonnet, clean context)
+    │   ├── code-reviewer.md           # Code review (sonnet, clean context)
+    │   ├── code-researcher.md         # Read-only exploration (haiku)
+    │   ├── meta-agent/                # Artifact lifecycle (24 deps, 5 scripts)
+    │   ├── project-researcher/        # Codebase analysis (7 subagents)
+    │   └── db-explorer/               # PostgreSQL exploration
+    ├── commands/                       # Slash commands (7)
+    │   ├── workflow.md                # /workflow — 5-phase orchestrator (opus)
+    │   ├── planner.md                 # /planner — research + plan creation (opus)
+    │   ├── coder.md                   # /coder — implementation per plan (sonnet)
+    │   ├── meta-agent.md              # /meta-agent — artifact CRUD
+    │   ├── project-researcher.md      # /project-researcher — this analysis
+    │   ├── db-explorer.md             # /db-explorer — PostgreSQL via MCP
+    │   └── review-checklist.md        # /review-checklist — reference display
+    ├── skills/                        # Reusable domain knowledge (6 packages)
+    │   ├── workflow-protocols/        # 9 files: orchestration, handoff, checkpoint, re-routing
+    │   ├── planner-rules/             # 8 files: task analysis, data flow, sequential thinking
+    │   ├── coder-rules/               # 5 files: implementation rules, MCP tools
+    │   ├── plan-review-rules/         # 5 files: architecture checks, required sections
+    │   ├── code-review-rules/         # 5 files: security (OWASP), review checklists
+    │   └── tdd-go/                    # 3 files: TDD workflow for Go projects
+    ├── rules/                         # Path-triggered constraints (8 rules)
+    ├── templates/                     # Artifact creation templates (6)
+    ├── scripts/                       # Lifecycle hook scripts (10)
+    ├── prompts/                       # Generated implementation plans (runtime)
+    ├── workflow-state/                # Runtime state (gitignored)
+    ├── agent-memory/                  # Agent-specific persistent memory
+    ├── archive/                       # Archived artifacts
+    └── worktrees/                     # Git worktree management
 ```
 
 ---
 
 ## Architecture Deep-Dive
 
-### Pattern: Orchestrated Artifact System
+### Pattern: Multi-Agent Orchestrator Pipeline
 
-**Confidence:** 0.85 (grep-based analysis)
+Claude Kit implements a **multi-agent orchestrator** pattern where a central command (`/workflow`) drives a sequential 5-phase pipeline, delegating each phase to specialized agents or sub-commands. Review phases run as isolated subagents (clean context) to prevent authorship bias.
 
-The project implements a layered artifact hierarchy where each layer has a clear responsibility boundary. Three orchestrators (workflow, meta-agent, project-researcher) coordinate multi-phase workflows that delegate to lower layers. The dependency flow is strictly acyclic: commands invoke agents, agents consume skills, and all layers may reference templates, scripts, and rules.
+**Confidence:** 0.88 (HIGH, calibrated)
 
 ### Evidence
 
 | Indicator | Weight | Method |
 |-----------|--------|--------|
-| 6 distinct artifact types with clear separation | HIGH | directory structure |
-| 3 orchestrators with multi-phase workflows | HIGH | grep (phase definitions) |
-| Acyclic dependency graph (78 edges, 0 cycles) | HIGH | reference analysis |
-| Model routing (opus/sonnet/haiku) in commands | MEDIUM | grep (model: field) |
-| Progressive loading via deps/ directories | MEDIUM | directory structure |
+| /workflow command with sequential phase execution | HIGH | grep (commands/workflow.md) |
+| Handoff protocol with typed payload contracts | HIGH | grep (skills/workflow-protocols/) |
+| Context isolation for review agents (plan-reviewer, code-reviewer) | HIGH | grep (agents/*.md) |
+| Checkpoint protocol for session recovery | MEDIUM | grep (skills/workflow-protocols/checkpoint-protocol.md) |
+| Re-routing on complexity mismatch | MEDIUM | grep (skills/workflow-protocols/re-routing.md) |
+| Pipeline metrics and analytics | MEDIUM | grep (skills/workflow-protocols/pipeline-metrics.md) |
 
 ### Layers
 
-| Layer | Path | Files | Role | External Deps |
-|-------|------|-------|------|--------------|
-| Commands | .claude/commands/ | 7 | User-facing entry points (slash commands) | none |
-| Agents | .claude/agents/ | 6 (+ subfiles) | Autonomous executors with isolated contexts | MCP servers |
-| Skills | .claude/skills/ | 5 (+ subfiles) | Reusable domain knowledge units | none |
-| Templates | .claude/templates/ | 6 | Scaffolding for new artifacts | none |
-| Scripts | .claude/scripts/ + agents/*/scripts/ | 9 | Deterministic validation hooks | bash |
-| Rules | .claude/rules/ | 1 | Cross-cutting constraints | none |
+| Layer | Path | Files | Purpose |
+|-------|------|-------|---------|
+| Orchestration | .claude/commands/ | 7 | Slash commands: entry points for user interaction |
+| Agents | .claude/agents/ | 6 | Autonomous execution units with isolated context |
+| Skills | .claude/skills/ | 6 packages (35 files) | Reusable domain knowledge loaded on-demand |
+| Rules | .claude/rules/ | 8 | Path-triggered constraints for code quality |
+| Hooks | .claude/scripts/ | 15 (10 + 5 meta-agent) | Lifecycle hooks enforcing quality gates |
+| Templates | .claude/templates/ | 6 | Scaffolding for new artifact creation |
 
 ### Dependency Flow
 
 ```
-User invokes slash command
-        │
-        ▼
-  ┌─────────────┐
-  │  Commands    │  (workflow, meta-agent, planner, coder, ...)
-  │  model:opus  │
-  └──────┬───────┘
-         │ delegates to
-         ▼
-  ┌─────────────┐
-  │   Agents     │  (plan-reviewer, code-reviewer, code-researcher, ...)
-  │  model:sonnet│
-  └──────┬───────┘
-         │ reads
-         ▼
-  ┌─────────────┐
-  │   Skills     │  (workflow-protocols, planner-rules, coder-rules, ...)
-  └──────┬───────┘
-         │ uses
-         ▼
-  ┌──────────────────────────────────┐
-  │  Templates │ Scripts │ Rules     │
-  │  (scaffolding, hooks, constraints)│
-  └──────────────────────────────────┘
+User
+  │
+  ▼
+/workflow (orchestrator, opus)
+  │
+  ├──▶ Phase 0.5: Task Analysis (inline, complexity S/M/L/XL)
+  │
+  ├──▶ Phase 1: /planner (sub-command, opus)
+  │         └── uses: code-researcher agent (haiku)
+  │
+  ├──▶ Phase 2: plan-reviewer agent (sonnet, isolated)
+  │         └── verdict: APPROVED | NEEDS_CHANGES (max 3x loop)
+  │
+  ├──▶ Phase 3: /coder (sub-command, sonnet)
+  │         └── runs: fmt → lint → test
+  │
+  └──▶ Phase 4: code-reviewer agent (sonnet, isolated)
+            └── verdict: APPROVED | CHANGES_REQUIRED (max 3x loop)
+
+Standalone commands:
+  /meta-agent ──▶ artifact CRUD (create/enhance/audit/delete)
+  /project-researcher ──▶ codebase analysis (7 subagents)
+  /db-explorer ──▶ PostgreSQL exploration via MCP
 ```
 
 ### Dependency Violations
 
-*(None detected — clean acyclic graph with 0 circular dependencies)*
+*(None detected -- the kit enforces strict layering via rules and hook scripts.)*
 
 ### Architectural Decisions
 
 | Decision | Rationale | Confidence |
 |----------|-----------|------------|
-| YAML-first format for commands/agents | Maximizes information density, reduces prose overhead | HIGH |
-| Model routing (opus for judgment, sonnet for generation) | Cost/quality optimization per task type | HIGH |
-| Progressive context loading via deps/ directories | Avoids context window overflow on large artifacts | HIGH |
-| Gate-based quality control (advisory + deterministic) | Dual enforcement: shell scripts catch deterministic issues, agents catch semantic issues | MEDIUM |
-| Severity classification (FATAL/CRITICAL/HIGH/MEDIUM/NON_CRITICAL) | Graduated response to issues, avoids false-positive blocking | MEDIUM |
+| Commands vs Agents split | Commands share orchestrator context; agents run in clean context for unbiased review | HIGH |
+| Model routing (opus/sonnet/haiku) | opus for deep reasoning (planning), sonnet for execution (coding/review), haiku for fast read-only search | HIGH |
+| YAML-first artifact format | >80% YAML for machine-parseable specifications, minimal prose | HIGH |
+| Event-driven skill loading | Load protocols on-demand per event triggers, not all upfront, to save context tokens | HIGH |
+| Conditional deps for S-complexity | Skip heavy skill loading for simple tasks, saves ~6,300 tokens | MEDIUM |
+| Go as default Language Profile | Template default for target projects, not the kit's own language | MEDIUM |
 
 ---
 
@@ -172,48 +152,36 @@ User invokes slash command
 
 | Metric | Value |
 |--------|-------|
-| Total files analyzed | 114 |
-| Total symbols | 82 |
-| Total dependency edges | 78 |
-| Circular dependencies | 0 |
+| Total files | 140 |
+| Total symbols (cross-references) | 132 |
+| Total edges (dependency links) | 281 |
+| Circular dependencies | none detected |
 
-### Hub Files (highest fan-out)
+### Hub Files (highest fan-in)
 
-| File | Fan-Out | Role |
-|------|---------|------|
-| workflow.md | 12 | Primary orchestrator — coordinates full dev cycle |
-| project-researcher/AGENT.md | 11 | Research orchestrator — delegates to 7 subagents |
-| meta-agent.md | 10 | Artifact lifecycle orchestrator — 9-phase workflow |
-| planner.md | 8 | Planning command — research + plan generation |
-| coder.md | 7 | Implementation command — executes approved plans |
+| File | Fan-In | Fan-Out | Role |
+|------|--------|---------|------|
+| CLAUDE.md | 27 | - | Central project instructions, loaded every session |
+| README.md | 12 | - | User-facing documentation, installation guide |
+| settings.json | 7 | - | Permissions, hooks, MCP server configuration |
+
+### PageRank (relative importance)
+
+```
+1.00  CLAUDE.md               — root configuration, referenced by all agents
+0.44  README.md               — user documentation
+0.39  settings.json           — runtime configuration (hooks, permissions)
+```
 
 ### Depth Map
 
 ```
-Level 0 (foundation):  templates/, rules/, scripts/
-Level 1 (knowledge):   skills/ (workflow-protocols, planner-rules, coder-rules, ...)
-Level 2 (execution):   agents/ (plan-reviewer, code-reviewer, code-researcher, db-explorer)
-Level 3 (orchestration): agents/ (meta-agent, project-researcher)
-Level 4 (entry):       commands/ (workflow, meta-agent, planner, coder, ...)
+Level 0 (core):      CLAUDE.md, settings.json, rules/*
+Level 1 (skills):    skills/workflow-protocols/, skills/planner-rules/, skills/coder-rules/
+Level 2 (commands):  commands/workflow.md, commands/planner.md, commands/coder.md
+Level 3 (agents):    agents/plan-reviewer.md, agents/code-reviewer.md, agents/code-researcher.md
+Level 4 (complex):   agents/meta-agent/, agents/project-researcher/ (multi-file agents with deps)
 ```
-
-### God Packages (high fan-out)
-
-| File | Fan-Out | Recommendation |
-|------|---------|---------------|
-| workflow.md | 12 | Expected for top-level orchestrator |
-| project-researcher/AGENT.md | 11 | Expected — manages 7 subagents |
-| meta-agent.md | 10 | Expected — 9-phase workflow with many deps |
-
-### Circular Dependencies
-
-None detected.
-
-### Isolated Packages (0 fan-in)
-
-- `archive/` — storage for rolled-back artifacts, no incoming references
-- `agent-memory/` — runtime state, not referenced by other artifacts
-- `prompts/workflow-migration.md` — standalone migration prompt
 
 ---
 
@@ -221,81 +189,66 @@ None detected.
 
 ### Primary Language: Markdown
 
-- Format: YAML-first (>80% YAML, minimal prose) for commands and agents
-- Anthropic Skills format for skill files
-- Standard Markdown for documentation
+The kit is written entirely in Markdown (specifications) and Shell (hooks). There is no application source code -- it is a configuration framework.
 
-### Secondary Language: Shell (bash)
+- Markdown files: 112 (specifications, protocols, skills, rules)
+- Shell scripts: 16 (lifecycle hooks, automation)
+- JSON files: 4 (settings, schemas)
+- Total lines of content: ~25,000
 
-- 10 shell scripts total (5 agent hooks + 1 sync + 4 lifecycle hooks)
-- Used for deterministic validation and automation
+### Primary Scripting: Shell (Bash)
+
+- Standard: `set -euo pipefail` in all scripts
+- Python3 used for JSON processing within shell scripts
+- No external shell dependencies beyond coreutils + git
 
 ### Frameworks
 
 | Framework | Category | Purpose | Detection |
 |-----------|----------|---------|-----------|
-| Claude Code | AI agent framework | Core execution runtime | manifest (settings.json) |
-| MCP (Model Context Protocol) | Tool integration | Server-based tool access | manifest (settings.json) |
+| Claude Code | AI development tool | Runtime platform for the kit | manifest (settings.json) |
+| MCP (Model Context Protocol) | Integration | Memory, sequential-thinking, context7, tree-sitter, postgres | manifest (settings.json) |
 
 ### MCP Server Integrations
 
-| Server | Package | Category | Required |
-|--------|---------|----------|----------|
-| memory | @modelcontextprotocol/server-memory | Persistent agent memory | Yes |
-| sequential-thinking | (built-in) | Structured reasoning | Yes |
-| context7 | @upstash/context7-mcp | Library documentation lookup | Yes |
-| tree_sitter | (built-in) | AST-based code analysis | Yes |
-| postgres | @anthropic/mcp-postgres | Database exploration | Optional |
+| Server | Required | Purpose |
+|--------|----------|---------|
+| memory (@modelcontextprotocol/server-memory) | Required | Persistent agent memory across sessions |
+| context7 (@upstash/context7-mcp) | Required | Library documentation lookup |
+| sequential-thinking | Required | Structured reasoning for complex tasks |
+| tree_sitter | Optional | Code analysis (symbols, dependencies, repo-map) |
+| postgres (@anthropic/mcp-postgres) | Optional | Required only for /db-explorer |
 
 ---
 
 ## Core Domain
 
-### Entities (Artifact Types)
+### Entities
 
-| Entity | Location | Type | Key Fields | Relations |
-|--------|----------|------|------------|-----------|
-| Command | .claude/commands/*.md | entry_point | name, description, model, triggers | invokes Agents, reads Skills |
-| Agent | .claude/agents/*/ | executor | AGENT.md, deps/, scripts/ | consumes Skills, uses Templates |
-| Skill | .claude/skills/*/ | knowledge_unit | SKILL.md, subfiles | consumed by Agents/Commands |
-| Template | .claude/templates/*.md | scaffolding | Markdown with placeholders | used by meta-agent for creation |
-| Rule | .claude/rules/*.md | constraint | paths, triggers | applied globally by Claude Code |
-| Script/Hook | .claude/scripts/*.sh | validator | bash script | triggered by settings.json hooks |
+| Entity | Location | Type | Purpose |
+|--------|----------|------|---------|
+| Artifact | agents/meta-agent/ | aggregate_root | Commands, skills, rules, agents -- managed by /meta-agent |
+| WorkflowPipeline | commands/workflow.md | aggregate_root | 5-phase development pipeline with state transitions |
+| Checkpoint | skills/workflow-protocols/checkpoint-protocol.md | entity | Session recovery state (12 YAML fields) |
+| Plan | prompts/*.md (runtime) | entity | Implementation plan generated by /planner |
+| HandoffPayload | skills/workflow-protocols/handoff-protocol.md | value_object | Typed contract between pipeline phases (4 contracts) |
 
-### Key Interfaces (Contracts)
+### Value Objects
 
-| Interface | Location | Purpose |
-|-----------|----------|---------|
-| Handoff Protocol | skills/workflow-protocols/handoff-protocol.md | Contract for phase-to-phase data transfer |
-| State Contract | agents/project-researcher/deps/state-contract.md | Schema for inter-subagent state passing |
-| Phase Contract | agents/meta-agent/deps/phase-contracts.md | Requirements for each meta-agent phase |
-| Blocking Gates | agents/meta-agent/deps/blocking-gates.md | Conditions that halt workflow progress |
+| Value Object | Purpose | Values |
+|--------------|---------|--------|
+| Complexity | Task sizing for route selection | S, M, L, XL |
+| Verdict | Review phase outcome | APPROVED, NEEDS_CHANGES, CHANGES_REQUIRED, REJECTED, SKIP |
+| Severity | Error classification | FATAL, STOP_AND_WAIT, STOP_AND_FIX, STOP, NON_CRITICAL |
 
-### Workflows
+### Key Interfaces (Protocol Contracts)
 
-**1. Full Development Cycle (/workflow)**
-```
-task-analysis → /planner → plan-review (agent) → /coder → code-review (agent)
-```
-- Orchestrated by workflow.md (opus model)
-- User confirmation between phases (unless --auto)
-- Max 3 review iterations before halt
-
-**2. Artifact Lifecycle (/meta-agent)**
-```
-INIT → EXPLORE → ANALYZE → PLAN(ToT) → CONSTITUTE → DRAFT(+eval+reflect) → APPLY → VERIFY → CLOSE(+archive)
-```
-- 9-phase workflow with embedded sub-phases
-- Tree of Thought exploration in PLAN phase (conditional)
-- Constitutional evaluation in CONSTITUTE phase
-
-**3. Project Research (/project-researcher)**
-```
-VALIDATE → DISCOVER → DETECT → GRAPH → ANALYZE → MAP → CRITIQUE → GENERATE
-```
-- 8-phase deep analysis pipeline
-- Delegates to 7 specialized subagents
-- Produces PROJECT-KNOWLEDGE.md as output
+| Protocol | Location | Methods/Phases | Purpose |
+|----------|----------|----------------|---------|
+| Handoff Protocol | skills/workflow-protocols/handoff-protocol.md | 4 contracts | Phase-to-phase data transfer |
+| Checkpoint Protocol | skills/workflow-protocols/checkpoint-protocol.md | save/restore | Session recovery |
+| Re-routing Protocol | skills/workflow-protocols/re-routing.md | downgrade/upgrade | Complexity mismatch handling |
+| Pipeline Metrics | skills/workflow-protocols/pipeline-metrics.md | record/analyze | Completion tracking |
 
 ---
 
@@ -305,111 +258,89 @@ VALIDATE → DISCOVER → DETECT → GRAPH → ANALYZE → MAP → CRITIQUE → 
 
 ```
 # File naming: kebab-case
-workflow.md, meta-agent.md, code-review-rules/
+commands/workflow.md, skills/workflow-protocols/, agents/plan-reviewer.md
 
-# Entry point files: PascalCase
-AGENT.md, SKILL.md, CLAUDE.md
+# Skill packages: kebab-case directories with SKILL.md entry point
+skills/coder-rules/SKILL.md, skills/workflow-protocols/SKILL.md
 
-# Skill directories: kebab-case matching skill name
-code-review-rules/, workflow-protocols/, planner-rules/
-
-# Template files: kebab-case
-plan-template.md, project-claude-md.md
+# Agent naming: kebab-case with .md or directory
+agents/code-reviewer.md (simple), agents/meta-agent/ (complex with deps/)
 ```
 
-### Format Conventions
+### Content Format
 
-```yaml
-# Commands and Agents: YAML-first format
-# - YAML frontmatter with name, description, model
-# - Body content is >80% YAML blocks
-# - Minimal prose between YAML sections
+```
+# YAML-first format (>80% YAML, minimal prose)
+# Frontmatter required on all artifacts:
+---
+name: artifact-name
+description: "What this artifact does"
+model: sonnet | opus | haiku    # (commands/agents only)
+---
+```
 
-# Skills: Anthropic Skills format
-# - SKILL.md as entry point
-# - Supporting files in same directory
-# - No YAML frontmatter requirement
+### Scripting Conventions
 
-# Rules: Markdown with optional YAML frontmatter
-# - paths: glob patterns for activation
-# - Content as imperative rules
+```bash
+# All scripts use strict mode
+set -euo pipefail
+
+# JSON processing via python3 (not jq)
+python3 -c "import json; ..."
+
+# Exit codes: 0 (success/allow), 2 (block/deny with STDERR message)
 ```
 
 ### Error Handling Conventions
 
-```
-# Severity classification (4 levels):
-FATAL       — Abort immediately, no recovery
-CRITICAL    — Stop current phase, escalate to user
-HIGH        — Block phase completion, require fix
-MEDIUM      — Warn, allow continuation with acknowledgment
-NON_CRITICAL — Log only, do not block (e.g., beads tool unavailable)
-```
+| Error | Severity | Action |
+|-------|----------|--------|
+| MCP server unavailable | NON_CRITICAL | Warn, proceed without |
+| Plan not found | FATAL | EXIT |
+| Tests fail 3x | STOP_AND_WAIT | Show errors, request manual fix |
+| Import violation | STOP_AND_FIX | Fix before proceeding |
+| Loop limit exceeded (3x) | STOP | Show iteration summary, request user help |
 
-### Model Routing
-
-```
-# Model assignment by task type:
-opus   — Judgment, orchestration, final decisions (workflow, meta-agent)
-sonnet — Generation, review, analysis (agents, subagents)
-haiku  — Search, exploration, fast lookups (code-researcher)
-```
-
-### Hook System
+### Review Conventions
 
 ```
-# settings.json hooks:
-PreToolUse:    Write → check-artifact-size.sh
-PostToolUse:   Edit → yaml-lint.sh + gofmt (conditional)
-               Write → check-references.sh + gofmt (conditional)
-Stop:          → verify-phase-completion.sh + check-uncommitted.sh
-PreCompact:    → save-progress-before-compact.sh
-SubagentStop:  plan-reviewer|code-reviewer → save-review-checkpoint.sh
+# Verdicts: 5 types
+APPROVED        — pass, proceed to next phase
+NEEDS_CHANGES   — return to author with feedback (plan-review)
+CHANGES_REQUIRED— return to author with feedback (code-review)
+REJECTED        — fundamental issues, restart phase
+SKIP            — phase not applicable (e.g., S-complexity skips plan-review)
+
+# Loop limit: 3 iterations max per review cycle
+# On loop limit exceeded: STOP, show summary, request user help
 ```
 
 ---
 
 ## Entry Points Map
 
-### Slash Commands
+### Slash Commands (User-Facing)
 
-| Command | Model | Purpose | Delegates To |
-|---------|-------|---------|-------------|
-| /workflow | opus | Full dev cycle orchestrator | planner, coder, plan-reviewer, code-reviewer |
-| /meta-agent | opus | Artifact CRUD lifecycle | Internal 9-phase workflow |
-| /planner | sonnet | Research + implementation plan | code-researcher agent |
-| /coder | sonnet | Implement per approved plan | Direct implementation |
-| /project-researcher | sonnet | Deep project analysis | 7 subagents |
-| /db-explorer | sonnet | Database schema exploration | db-explorer agent |
-| /review-checklist | — | Code review checklist reference | None (reference doc) |
+| Command | Location | Model | Purpose |
+|---------|----------|-------|---------|
+| /workflow | commands/workflow.md | opus | Full 5-phase development cycle |
+| /planner | commands/planner.md | opus | Codebase research + plan creation |
+| /coder | commands/coder.md | sonnet | Implementation per approved plan |
+| /meta-agent | commands/meta-agent.md | sonnet | Artifact lifecycle management |
+| /project-researcher | commands/project-researcher.md | - | Codebase analysis (delegates to agent) |
+| /db-explorer | commands/db-explorer.md | - | PostgreSQL exploration via MCP |
+| /review-checklist | commands/review-checklist.md | - | Review checklist reference display |
 
-### Agent Entry Points
+### Agents (Programmatic)
 
-| Agent | Entry File | Type | Invoked By |
-|-------|-----------|------|-----------|
-| meta-agent | agents/meta-agent/ (via command) | orchestrator | /meta-agent command |
-| project-researcher | agents/project-researcher/AGENT.md | orchestrator | /project-researcher command |
-| db-explorer | agents/db-explorer/AGENT.md | executor | /db-explorer command |
-| plan-reviewer | agents/plan-reviewer.md | reviewer | /workflow Phase 2 |
-| code-reviewer | agents/code-reviewer.md | reviewer | /workflow Phase 4 |
-| code-researcher | agents/code-researcher.md | explorer | /planner, /coder |
-
----
-
-## Pattern Catalog
-
-### Design Patterns Detected
-
-| Pattern | Instances | Locations | Purpose |
-|---------|-----------|-----------|---------|
-| Orchestrator | 3 | workflow.md, meta-agent.md, project-researcher/AGENT.md | Multi-phase workflow coordination |
-| Delegation with Isolation | 5 | All agent invocations | Context isolation between phases |
-| Progressive Loading | 2 | meta-agent deps/, project-researcher deps/ | Load context incrementally to manage token budget |
-| Gate-Based Quality Control | 3 | workflow, meta-agent, project-researcher | Dual: advisory (agent review) + deterministic (shell hooks) |
-| Severity Classification | 4 | Error handling across commands/agents | Graduated response to issues |
-| Template Method | 4 | templates/ directory | Consistent scaffolding for new artifacts |
-| Reflexion / Self-Improvement | 2 | meta-agent (DRAFT eval+reflect), project-researcher (CRITIQUE) | Iterative quality improvement loops |
-| Model Routing | 3 | workflow, meta-agent, project-researcher | Task-appropriate model selection |
+| Agent | Location | Model | Invoked By |
+|-------|----------|-------|------------|
+| plan-reviewer | agents/plan-reviewer.md | sonnet | /workflow (Phase 2) |
+| code-reviewer | agents/code-reviewer.md | sonnet | /workflow (Phase 4) |
+| code-researcher | agents/code-researcher.md | haiku | /planner (exploration) |
+| meta-agent | agents/meta-agent/ | sonnet | /meta-agent command |
+| project-researcher | agents/project-researcher/ | multi-model | /project-researcher command |
+| db-explorer | agents/db-explorer/ | - | /db-explorer command |
 
 ---
 
@@ -417,21 +348,52 @@ SubagentStop:  plan-reviewer|code-reviewer → save-review-checkpoint.sh
 
 ### MCP Servers
 
-| Server | Purpose | Usage Pattern |
-|--------|---------|---------------|
-| memory | Persistent agent memory across sessions | Read/write entity-relation graph |
-| sequential-thinking | Structured reasoning for complex decisions | Called during planning and analysis |
-| context7 | Library documentation lookup | Called when working with external libraries |
-| tree_sitter | AST-based code analysis | Used by project-researcher for code structure analysis |
-| postgres (optional) | Database exploration | Used by db-explorer agent for schema inspection |
+| Server | Driver | Purpose | Auth Method |
+|--------|--------|---------|-------------|
+| memory | @modelcontextprotocol/server-memory | Persistent memory across sessions | Local (no auth) |
+| sequential-thinking | built-in | Structured reasoning | Local |
+| context7 | @upstash/context7-mcp | Library documentation lookup | API key |
+| tree_sitter | MCP server | Code analysis (symbols, deps) | Local |
+| postgres | @anthropic/mcp-postgres | Database exploration | Connection string |
 
-### External Tools
+### System Tools
 
-| Tool | Category | Required | Usage |
-|------|----------|----------|-------|
-| beads | Task tracking | NON_CRITICAL | Optional task tracking in workflow |
-| gofmt | Code formatting | Conditional | Auto-format .go files on Edit/Write (via hooks) |
-| jq | JSON processing | Yes | Used in hook scripts for TOOL_INPUT parsing |
+| Tool | Purpose | Required |
+|------|---------|----------|
+| git | Version control, commit history analysis | Yes |
+| python3 | JSON processing in hook scripts | Yes |
+| bash | Hook script execution | Yes |
+| osascript / notify-send | Desktop notifications | No (optional) |
+| gofmt | Go code formatting (target project) | No (optional) |
+
+---
+
+## Pattern Catalog
+
+### Design Patterns Used
+
+| Pattern | Location | Purpose |
+|---------|----------|---------|
+| Orchestrator | commands/workflow.md | Central coordinator for 5-phase pipeline |
+| Strategy | skills/workflow-protocols/re-routing.md | Route selection based on complexity |
+| Hook Chain | settings.json (hooks section) | 8 lifecycle hook types with script chains |
+| Template Method | templates/*.md | Artifact scaffolding with fill-in sections |
+| Checkpoint Recovery | skills/workflow-protocols/checkpoint-protocol.md | Session state persistence and resume |
+| Context Isolation | agents/ (review agents) | Clean context for unbiased review |
+| Event-Driven Loading | skills/workflow-protocols/SKILL.md | On-demand protocol loading per event triggers |
+
+### Hook System Architecture
+
+| Hook Type | Trigger | Scripts |
+|-----------|---------|---------|
+| UserPromptSubmit | Every user prompt | enrich-context.sh |
+| PreToolUse | Before Write/Edit/Bash | protect-files.sh, check-artifact-size.sh, block-dangerous-commands.sh |
+| PostToolUse | After Write/Edit | auto-fmt-go.sh, yaml-lint.sh, check-references.sh |
+| PreCompact | Before context compaction | save-progress-before-compact.sh |
+| SubagentStop | After plan-reviewer/code-reviewer | save-review-checkpoint.sh |
+| Stop | Session end | verify-phase-completion.sh, check-uncommitted.sh |
+| SessionEnd | Session termination | session-analytics.sh |
+| Notification | Agent events | notify-user.sh |
 
 ---
 
@@ -439,37 +401,45 @@ SubagentStop:  plan-reviewer|code-reviewer → save-review-checkpoint.sh
 
 | Area | Issue | Severity | Recommendation |
 |------|-------|----------|----------------|
-| Analysis confidence | Capped at 0.85 due to grep-based analysis (no AST) | LOW | Run with tree_sitter MCP available for higher confidence |
-| Unexplored directories | archive/ and agent-memory/ contents not analyzed | LOW | Manual review if these contain significant state |
-| Shell script count | Minor inconsistency in count (9 vs 10 across phases) | LOW | Reconcile: 5 agent hooks + 4 lifecycle scripts + 1 sync = 10 total |
-| Rules coverage | Only 1 rule file (architecture.md) — serves as template for target projects | LOW | Expected for a kit project; rules generated per target project |
-| Test coverage | No formal test suite; quality enforced via hooks + gates | MEDIUM | Consider adding integration tests for hook scripts |
+| Language Profile | CLAUDE.md defaults to Go, but kit is language-agnostic | LOW | Documented as template default; users override via PROJECT-KNOWLEDGE.md |
+| tdd-go skill | Go-specific TDD skill included in generic kit | LOW | Consider making language-specific skills optional or template-based |
+| No automated tests | Shell scripts lack unit tests | MEDIUM | Consider adding bats or shunit2 tests for critical hook scripts |
+
+---
+
+## Important Distinction: Kit vs Target Project
+
+This PROJECT-KNOWLEDGE.md describes **the kit itself** (Markdown/Shell configuration framework), not a target project where the kit is deployed.
+
+When the kit is copied into a target Go project:
+- The Language Profile in CLAUDE.md applies to that target project
+- The rules in `.claude/rules/` (architecture.md, go-conventions.md, etc.) activate for Go source files
+- This PROJECT-KNOWLEDGE.md should be regenerated via `/project-researcher` to reflect the target project
+
+**Kit identity:** Markdown specifications + Shell hooks (configuration framework)
+**Target project defaults:** Go >= 1.24 (template Language Profile, meant to be overridden)
 
 ---
 
 ## Change History
 
-### Current — 2026-03-09
+### 8c77a7c - 2026-03-09
 
-**Initial PROJECT-KNOWLEDGE.md generation (AUGMENT mode)**
-
-- Full analysis of 114 files across 6 artifact types
-- Identified 8 design patterns with 0.85 confidence
-- Mapped 78 dependency edges with 0 circular dependencies
-- Documented 3 orchestrator workflows with phase contracts
+**Initial analysis (AUGMENT mode):**
+- Generated PROJECT-KNOWLEDGE.md from existing .claude/ artifacts
+- All existing artifacts preserved (7 commands, 6 agents, 6 skill packages, 8 rules, 15 scripts, 6 templates)
+- Identified multi-agent orchestrator architecture pattern
+- Documented kit vs target project distinction per critique feedback
 
 ---
 
 ## Metadata
 
 - **Analysis Mode:** AUGMENT
-- **Analysis Method:** grep-based (Tier 3)
-- **AST Available:** No (tree_sitter MCP listed but not used during analysis)
-- **Confidence Score:** MEDIUM (0.85 — grep-based cap)
-- **Low Confidence Areas:** Pattern instance counts, shell script categorization
-- **Recommended Reviews:** Verify agent-memory/ and archive/ contents manually
-- **Monorepo:** No
+- **Analysis Method:** grep-based
+- **AST Available:** no (not applicable -- no source code)
+- **Confidence Score:** HIGH (0.85 calibrated)
+- **Low Confidence Areas:** none (kit structure is self-documenting via YAML frontmatter)
+- **Recommended Reviews:** Language Profile section in CLAUDE.md (verify Go defaults match target project)
+- **Monorepo:** no
 - **Modules Analyzed:** 1
-- **Total Files:** 114 (102 .md, 10 .sh, 4 .json, excluding .git)
-- **Total Symbols:** 82
-- **Total Dependency Edges:** 78
