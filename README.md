@@ -173,6 +173,27 @@ Explores PostgreSQL schema and data via MCP. Requires configured `postgres` MCP 
 
 The system is a **5-phase development pipeline** managed by the orchestrator (`/workflow`), which sequentially delegates work to specialized agents. Each agent has a strictly defined responsibility zone, model assignment, and skill set.
 
+### Color Legend
+
+```mermaid
+flowchart LR
+    L1["opus — planning,<br/>orchestration"]
+    L2["sonnet — review,<br/>implementation"]
+    L3["haiku — fast search,<br/>monitoring"]
+    L4["completion,<br/>post-processing"]
+    L5["blocking gate,<br/>stop condition"]
+    L6["skills,<br/>context enrichment"]
+    L7["neutral —<br/>infrastructure"]
+
+    style L1 fill:#1a73e8,color:#fff,stroke:#1557b0
+    style L2 fill:#9334e6,color:#fff,stroke:#7627bb
+    style L3 fill:#00897b,color:#fff,stroke:#00695c
+    style L4 fill:#0d904f,color:#fff,stroke:#0a7040
+    style L5 fill:#d93025,color:#fff,stroke:#b3261e
+    style L6 fill:#f9ab00,color:#333,stroke:#e69500
+    style L7 fill:#e0e0e0,color:#333,stroke:#999
+```
+
 ### Development Pipeline
 
 ```mermaid
