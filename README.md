@@ -282,7 +282,7 @@ flowchart TB
     style STARTUP fill:#e0e0e0,color:#333,stroke:#999
     style PHASE1 fill:#1a73e8,color:#fff,stroke:#1557b0
     style PHASE2 fill:#9334e6,color:#fff,stroke:#7627bb
-    style PHASE3 fill:#1a73e8,color:#fff,stroke:#1557b0
+    style PHASE3 fill:#9334e6,color:#fff,stroke:#7627bb
     style PHASE4 fill:#9334e6,color:#fff,stroke:#7627bb
     style PHASE5 fill:#0d904f,color:#fff,stroke:#0a7040
     style STOP1 fill:#d93025,color:#fff,stroke:#b3261e
@@ -308,7 +308,7 @@ flowchart LR
 
     style PL2 fill:#1a73e8,color:#fff,stroke:#1557b0
     style PR2 fill:#9334e6,color:#fff,stroke:#7627bb
-    style CO2 fill:#1a73e8,color:#fff,stroke:#1557b0
+    style CO2 fill:#9334e6,color:#fff,stroke:#7627bb
     style CR2 fill:#9334e6,color:#fff,stroke:#7627bb
     style DONE2 fill:#0d904f,color:#fff,stroke:#0a7040
 ```
@@ -369,7 +369,7 @@ flowchart LR
     style SKILLS fill:#f9ab00,color:#333,stroke:#e69500
     style WF2 fill:#1a73e8,color:#fff,stroke:#1557b0
     style PL2 fill:#1a73e8,color:#fff,stroke:#1557b0
-    style CO2 fill:#1a73e8,color:#fff,stroke:#1557b0
+    style CO2 fill:#9334e6,color:#fff,stroke:#7627bb
     style PREV fill:#9334e6,color:#fff,stroke:#7627bb
     style CREV fill:#9334e6,color:#fff,stroke:#7627bb
 ```
