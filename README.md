@@ -185,6 +185,9 @@ flowchart LR
     L6["skills,<br/>context enrichment"]
     L7["neutral —<br/>infrastructure"]
 
+    A1[ ] -->|"mandatory flow"| A2[ ]
+    B1[ ] -.->|"optional (L/XL only)"| B2[ ]
+
     style L1 fill:#1a73e8,color:#fff,stroke:#1557b0
     style L2 fill:#9334e6,color:#fff,stroke:#7627bb
     style L3 fill:#00897b,color:#fff,stroke:#00695c
@@ -192,6 +195,10 @@ flowchart LR
     style L5 fill:#d93025,color:#fff,stroke:#b3261e
     style L6 fill:#f9ab00,color:#333,stroke:#e69500
     style L7 fill:#e0e0e0,color:#333,stroke:#999
+    style A1 fill:none,stroke:none
+    style A2 fill:none,stroke:none
+    style B1 fill:none,stroke:none
+    style B2 fill:none,stroke:none
 ```
 
 ### Development Pipeline
@@ -285,19 +292,19 @@ flowchart TB
     style CRES fill:#00897b,color:#fff,stroke:#00695c
 ```
 
-**Legend:** blue = opus commands, purple = sonnet review agents, green = completion, red = stop conditions, teal = haiku agent
-
 ### Handoff Data Flow
 
 ```mermaid
 flowchart LR
     PL2["/planner"] -->|"artifact path<br/>key_decisions<br/>known_risks<br/>complexity"| PR2["plan-reviewer"]
 
-    PR2 -->|"verdict<br/>issues: blocker/major/minor<br/>approved_notes<br/>iteration N/3"| CO2["/coder"]
+    PR2 -->|"APPROVED:<br/>verdict, approved_notes,<br/>iteration N/3"| CO2["/coder"]
+    PR2 -.->|"NEEDS_CHANGES:<br/>issues list"| PL2
 
     CO2 -->|"branch<br/>parts_implemented<br/>evaluate_adjustments<br/>deviations_from_plan<br/>risks_mitigated"| CR2["code-reviewer"]
 
-    CR2 -->|"verdict<br/>issues[]: id, severity,<br/>category, location,<br/>problem, suggestion<br/>iteration N/3"| DONE2["completion"]
+    CR2 -->|"APPROVED:<br/>verdict, iteration N/3"| DONE2["completion"]
+    CR2 -.->|"CHANGES_REQUESTED:<br/>issues[]"| CO2
 
     style PL2 fill:#1a73e8,color:#fff,stroke:#1557b0
     style PR2 fill:#9334e6,color:#fff,stroke:#7627bb
@@ -383,17 +390,17 @@ flowchart TB
     PRE2 --> EXEC
     PRE3 --> EXEC
 
-    EXEC -->|"Write / Edit"| POST1["auto-fmt-go.sh"]
-    EXEC -->|Edit| POST2["yaml-lint.sh"]
-    EXEC -->|Write| POST3["check-references.sh"]
+    EXEC -->|"Write / Edit"| POST1["auto-fmt-go.sh<br/>(non-blocking)"]
+    EXEC -->|Edit| POST2["yaml-lint.sh<br/>(non-blocking)"]
+    EXEC -->|Write| POST3["check-references.sh<br/>(non-blocking)"]
 
     POST1 --> CONT["Continue"]
     POST2 --> CONT
     POST3 --> CONT
 
-    CONT -->|"context limit"| COMPACT["PreCompact:<br/>save-progress-before-compact.sh"]
-    CONT -->|"subagent exits"| SUBSTOP["SubagentStop:<br/>save-review-checkpoint.sh"]
-    CONT --> STOP["Stop:<br/>1. verify-phase-completion.sh<br/>2. check-uncommitted.sh"]
+    CONT -->|"context limit"| COMPACT["PreCompact (non-blocking):<br/>save-progress-before-compact.sh"]
+    CONT -->|"subagent exits"| SUBSTOP["SubagentStop (blocking):<br/>save-review-checkpoint.sh"]
+    CONT --> STOP["Stop (blocking):<br/>1. verify-phase-completion.sh<br/>2. check-uncommitted.sh"]
 
     STOP --> SESS["SessionEnd:<br/>session-analytics.sh"]
     SESS --> NOTIFY["Notification:<br/>notify-user.sh"]
