@@ -176,30 +176,108 @@ The system is a **5-phase development pipeline** managed by the orchestrator (`/
 ### Development Pipeline
 
 ```mermaid
-flowchart LR
-    TA["Task Analysis<br/>S / M / L / XL"] --> PL["/planner<br/>opus"]
-    PL --> PR["plan-reviewer<br/>sonnet"]
-    PR -->|APPROVED| EV["Evaluate<br/>PROCEED / REVISE / RETURN"]
-    EV --> CO["/coder<br/>sonnet"]
-    CO --> CR["code-reviewer<br/>sonnet"]
-    CR -->|APPROVED| DONE["Commit"]
+flowchart TB
+    subgraph STARTUP ["Startup"]
+        S1["Memory search"] --> S2["Beads check"]
+        S2 --> S3["Session recovery check"]
+    end
 
-    PR -->|"NEEDS_CHANGES (max 3x)"| PL
-    CR -->|"CHANGES_REQUESTED (max 3x)"| CO
+    S3 --> TA{"Task Analysis"}
+    TA -->|S| ROUTE_S["Minimal route:<br/>skip Plan Review"]
+    TA -->|M| ROUTE_M["Standard route"]
+    TA -->|L| ROUTE_L["Full route +<br/>Sequential Thinking"]
+    TA -->|XL| ROUTE_XL["Full route +<br/>ST required"]
 
-    PL -.->|"L/XL only"| RES["code-researcher<br/>haiku"]
-    CO -.->|"L/XL only"| RES
+    ROUTE_S --> PLANNER
+    ROUTE_M --> PLANNER
+    ROUTE_L --> PLANNER
+    ROUTE_XL --> PLANNER
 
-    style TA fill:#4a90d9,color:#fff
-    style PL fill:#4a90d9,color:#fff
-    style PR fill:#7b68ee,color:#fff
-    style EV fill:#7b68ee,color:#fff
-    style CO fill:#7b68ee,color:#fff
-    style CR fill:#7b68ee,color:#fff
-    style RES fill:#20b2aa,color:#fff
+    subgraph PHASE1 ["Phase 1: Planning — /planner (opus)"]
+        PLANNER["Understand scope"] --> RESEARCH["Research codebase"]
+        RESEARCH --> DESIGN["Design solution"]
+        DESIGN --> DOCUMENT["Write plan to<br/>prompts/feature.md"]
+    end
+
+    RESEARCH -.->|"L/XL: Task tool"| CRES["code-researcher<br/>(haiku)"]
+
+    DOCUMENT --> CHECK_S{"S-complexity?"}
+    CHECK_S -->|Yes| EVALUATE
+    CHECK_S -->|No| PLAN_REVIEW
+
+    subgraph PHASE2 ["Phase 2: Plan Review — plan-reviewer (sonnet)"]
+        PLAN_REVIEW["Read plan +<br/>check architecture"]
+        PLAN_REVIEW --> VERDICT1{"Verdict?"}
+    end
+
+    VERDICT1 -->|APPROVED| EVALUATE
+    VERDICT1 -->|NEEDS_CHANGES| LOOP1{"Iteration < 3?"}
+    VERDICT1 -->|REJECTED| STOP1["STOP pipeline"]
+
+    LOOP1 -->|Yes| PLANNER
+    LOOP1 -->|"No: limit reached"| STOP2["STOP: show summary,<br/>request user help"]
+
+    subgraph PHASE3 ["Phase 3: Implementation — /coder (sonnet)"]
+        EVALUATE{"Evaluate plan:<br/>PROCEED / REVISE / RETURN"}
+        EVALUATE -->|PROCEED| IMPLEMENT["Implement Parts<br/>in dependency order"]
+        EVALUATE -->|REVISE| ADJUST["Note adjustments"] --> IMPLEMENT
+        IMPLEMENT --> VERIFY{"fmt + lint + test"}
+        VERIFY -->|PASS| HANDOFF3["Form handoff"]
+        VERIFY -->|"FAIL (max 3x)"| STOP3["STOP: test failures,<br/>request manual fix"]
+    end
+
+    EVALUATE -->|RETURN| PLAN_REVIEW
+
+    IMPLEMENT -.->|"L/XL: Task tool"| CRES
+
+    HANDOFF3 --> CODE_REVIEW
+
+    subgraph PHASE4 ["Phase 4: Code Review — code-reviewer (sonnet, worktree)"]
+        CODE_REVIEW["Read diff +<br/>check architecture, security,<br/>tests, style"]
+        CODE_REVIEW --> VERDICT2{"Verdict?"}
+    end
+
+    VERDICT2 -->|APPROVED| COMPLETION
+    VERDICT2 -->|APPROVED_WITH_COMMENTS| COMPLETION
+    VERDICT2 -->|CHANGES_REQUESTED| LOOP2{"Iteration < 3?"}
+
+    LOOP2 -->|Yes| EVALUATE
+    LOOP2 -->|"No: limit reached"| STOP4["STOP: show summary,<br/>request user help"]
+
+    subgraph PHASE5 ["Phase 5: Completion"]
+        COMPLETION["Git commit"] --> LESSONS{"Non-trivial?"}
+        LESSONS -->|Yes| SAVE["Save lessons<br/>to Memory"]
+        LESSONS -->|No| FINAL["Done"]
+        SAVE --> FINAL
+    end
+
+    style STARTUP fill:#f5f5f5,color:#333
+    style PHASE1 fill:#e8f0fe,color:#333
+    style PHASE2 fill:#f0e8fe,color:#333
+    style PHASE3 fill:#e8f0fe,color:#333
+    style PHASE4 fill:#f0e8fe,color:#333
+    style PHASE5 fill:#e8fee8,color:#333
+    style STOP1 fill:#ff6b6b,color:#fff
+    style STOP2 fill:#ff6b6b,color:#fff
+    style STOP3 fill:#ff6b6b,color:#fff
+    style STOP4 fill:#ff6b6b,color:#fff
+    style CRES fill:#20b2aa,color:#fff
 ```
 
-**Legend:** blue = opus, purple = sonnet, teal = haiku
+**Color legend:** blue background = commands (opus/sonnet), purple background = review agents, green = completion, red = stop conditions, teal = haiku agent
+
+### Handoff Data Flow
+
+```mermaid
+flowchart LR
+    PL2["/planner"] -->|"artifact path<br/>key_decisions<br/>known_risks<br/>complexity"| PR2["plan-reviewer"]
+
+    PR2 -->|"verdict<br/>issues: blocker/major/minor<br/>approved_notes<br/>iteration N/3"| CO2["/coder"]
+
+    CO2 -->|"branch<br/>parts_implemented<br/>evaluate_adjustments<br/>deviations_from_plan<br/>risks_mitigated"| CR2["code-reviewer"]
+
+    CR2 -->|"verdict<br/>issues[]: id, severity,<br/>category, location,<br/>problem, suggestion<br/>iteration N/3"| DONE2["completion"]
+```
 
 ### Standalone Commands
 
@@ -290,17 +368,6 @@ flowchart TB
 | **opus** | /workflow, /planner, /project-researcher, /meta-agent | — | Deep reasoning, orchestration, planning |
 | **sonnet** | /coder, plan-reviewer, code-reviewer, /db-explorer | 30 | Implementation, review, execution |
 | **haiku** | code-researcher, PR subagents (discovery, report) | 20 | Fast read-only search |
-
-### Handoff Contracts
-
-Data flows between phases via typed handoff payloads:
-
-```
-/planner → plan-reviewer:  artifact path + key_decisions + known_risks + complexity
-plan-reviewer → /coder:    verdict + issues_summary (blocker/major/minor) + approved_notes
-/coder → code-reviewer:    branch + parts_implemented + deviations + risks_mitigated
-code-reviewer → completion: verdict + issues[] (id, severity, category, location, suggestion)
-```
 
 ### Complexity Routing
 
