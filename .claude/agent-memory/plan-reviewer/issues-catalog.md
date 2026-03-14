@@ -61,6 +61,22 @@ Key patterns for future reviews of this type:
 - Runtime change fixes (FIX-03, FIX-04) benefit from explicit rollback instructions; their absence is MINOR not MAJOR for doc-only plans
 - FIX-17 completeness claim "Last remaining CRITIQUE reference" is inaccurate — line 9 still exists in same file but is intentional
 
+## Cascade-miss in fix-mermaid-diagrams.md (2026-03-15)
+
+**Plan type:** XL documentation (README.md diagram + table fixes)
+**Verdict:** NEEDS_CHANGES (0 blocker, 1 major, 1 minor)
+
+Key findings:
+- Part 2+3 fix check-plan-drift.sh in README.md but MISS two locations in workflow.md:
+  1. `workflow.md` HOOKS note line 275: `"8 event types, 13 scripts"` → should be 14 scripts (MAJOR)
+  2. `workflow.md` also_active_during_workflow line 299: lists only 3 PostToolUse hooks, missing check-plan-drift.sh (MINOR)
+- STARTUP reorder in Part 1 is CORRECT — workflow.md confirms Task Analysis is step 0 (before memory search)
+- Hook count in plan (14 scripts) is correct per settings.json
+- scripts/ directory has 10 scripts (correct per scoped count), meta-agent/scripts/ has 5 scripts
+- Sequential Thinking not used but not required — XL complexity is in the subject (cross-referencing docs), not execution layers
+
+**How to apply:** When a plan fixes hook count/list in README.md, ALWAYS also check workflow.md HOOKS section (note + also_active_during_workflow).
+
 ## Final-review verification (2026-03-14): Groups G-L
 
 Fixes reviewed against actual files. Issues found:
