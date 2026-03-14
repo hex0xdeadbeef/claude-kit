@@ -132,6 +132,7 @@ phases_enhance:
       # Standard planning
       - "2. Define exact changes for each gap"
       - "3. Check SIZE threshold"
+      - "3a. If artifact_type = skill: define success_criteria per deps/artifact-analyst.md#step_4.4"
       # Unload (Pattern 3)
       - "4. UNLOAD: Tier 3 (artifact-review.md, plan-exploration.md)"
       # Phase Contract Output
@@ -283,6 +284,7 @@ phases_enhance:
       - "3. Check result matches approved plan"
       - "4. Verify size within thresholds"
       - "5. Confirm no regressions introduced"
+      - "5a. If skill: Run trigger testing (obvious + paraphrased + negative queries)"
       # Unload (Pattern 3)
       - "6. UNLOAD: Tier 3 (artifact-quality.md)"
       # Phase Contract Output
@@ -299,6 +301,28 @@ phases_enhance:
         - duplicates: "Semantic similarity check"
       gate: "EXTERNAL_VALIDATION_GATE"
       blocking: true
+    trigger_testing:
+      when: "artifact_type = skill"
+      purpose: "Verify skill triggers correctly — per 'The Complete Guide to Building Skills for Claude'"
+      steps:
+        - "1. Extract trigger phrases from description field (WHAT + WHEN + keywords)"
+        - "2. Generate 3 test queries: obvious match, paraphrased request, unrelated topic"
+        - "3. For each query: evaluate whether description would cause Claude to load this skill"
+        - "4. Report: should_trigger (2/2 pass?), should_not_trigger (1/1 pass?)"
+      test_categories:
+        should_trigger:
+          - type: "obvious"
+            example: "Direct match to trigger phrases in description"
+          - type: "paraphrased"
+            example: "Same intent, different wording"
+        should_not_trigger:
+          - type: "unrelated"
+            example: "Different domain entirely"
+          - type: "adjacent"
+            example: "Similar-sounding but different scope (if negative triggers present)"
+      on_fail: "WARN — suggest description improvements (add keywords, negative triggers)"
+      advisory: true
+      note: "Advisory, not blocking — trigger quality is hard to verify deterministically"
     checks:
       - "All planned changes applied?"
       - "Size: within limits?"
@@ -320,9 +344,9 @@ phases_enhance:
       - "3b. ARCHIVE: Extract reusable patterns from created/enhanced artifact"
       - "3c. Save patterns to .meta-agent/archive/ with quality_score"
       # Archive feedback
-      - "3e. FEEDBACK: If patterns_used non-empty in progress.json → update success_rate"
-      - "3f. FEEDBACK → deps/artifact-archive.md#feedback for EMA formula"
-      - "3d. UNLOAD: deps/artifact-archive.md"
+      - "3d. FEEDBACK: If patterns_used non-empty in progress.json → update success_rate"
+      - "3e. FEEDBACK → deps/artifact-archive.md#feedback for EMA formula"
+      - "3f. UNLOAD: deps/artifact-archive.md"
       # Original steps
       - "4. If --track: bd close"
       # Progress Tracking (Pattern 1) — Final

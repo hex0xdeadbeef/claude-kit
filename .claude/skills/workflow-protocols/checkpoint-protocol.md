@@ -12,8 +12,8 @@ checkpoint_protocol:
 
   format:
     feature: "{feature-name}"
-    phase_completed: "0.5|1|2|3|4"
-    phase_name: "task-analysis|planning|plan-review|implementation|code-review"
+    phase_completed: "0.5|1|2|3|4|5"
+    phase_name: "task-analysis|planning|plan-review|implementation|code-review|completion"
     iteration:
       plan_review: "N/3"
       code_review: "N/3"
@@ -32,6 +32,18 @@ checkpoint_protocol:
       - phase: 2
         iteration: 1
         issues: ["PR-001: MAJOR — missing tests section"]
+
+  sub_phase_mapping:
+    note: |
+      Coder-internal tracking concept (NOT a checkpoint format field).
+      Maps coder phases to descriptive labels for logging/debugging:
+    mapping:
+      - sub_phase: "evaluate"
+        coder_phase: "1.5"
+      - sub_phase: "implementing"
+        coder_phase: "2"
+      - sub_phase: "verify"
+        coder_phase: "3"
 
   recovery:
     action: "Read checkpoint → resume from next phase"

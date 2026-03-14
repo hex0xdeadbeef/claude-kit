@@ -29,4 +29,4 @@ checklist:
     - "If config changed → CONFIG_EXAMPLE and CONFIG_DOCS updated"
 
   completion:
-    - "bd sync completed"
+    - "Handoff payload formed for code-reviewer (SEE handoff-protocol.md)"

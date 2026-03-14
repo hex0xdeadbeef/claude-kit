@@ -94,6 +94,7 @@ frontmatter:
       constraints:
         - "MUST include WHAT the skill does"
         - "MUST include WHEN to use (trigger conditions / user phrases)"
+        - "SHOULD include negative triggers (when NOT to use) to prevent overtriggering"
         - "No XML tags (< or >)"
         - "Mention specific tasks that the user may request"
         - "Mention file types if applicable"
@@ -109,9 +110,14 @@ frontmatter:
             types. Use when working with error handling, asks about "wrap errors",
             "error types", or "error context". Keywords: error, wrap, sentinel, fmt.Errorf.
         - |
-          # Scope clarification
+          # Scope clarification + negative trigger
           description: PayFlow payment processing for e-commerce. Use specifically for
             online payment workflows, not for general financial queries.
+        - |
+          # Negative triggers to prevent overtriggering
+          description: Advanced data analysis for CSV files. Use for statistical modeling,
+            regression, clustering. Do NOT use for simple data exploration (use data-viz
+            skill instead).
       bad_examples:
         - value: "Helps with projects."
           why: "Too abstract — Claude will not understand when to load"
@@ -154,7 +160,16 @@ body_guidelines:
       - "## Examples (good/bad pairs with explanation)"
       - "## Common Issues (troubleshooting)"
     optional_sections:
-      - "## Performance Notes (encourage thoroughness)"
+      - section: "## Performance Notes"
+        when: "Skill involves multi-step validation, quality-sensitive output, or complex workflows where Claude may take shortcuts"
+        purpose: "Combat model laziness — explicit encouragement to be thorough"
+        example_content: |
+          ## Performance Notes
+          - Take your time to do this thoroughly
+          - Quality is more important than speed
+          - Do not skip validation steps
+          - Verify each output before proceeding to the next step
+        note: "Adding these prompts to user messages is more effective than in SKILL.md, but including them in the skill helps for automated/unattended workflows"
       - "## References (links to references/ files)"
 
   best_practices:
@@ -175,6 +190,22 @@ body_guidelines:
         - Error codes and handling
       bad: "Check the documentation for details."
       why: "Explicit reference to bundled file vs vague reference"
+
+    deterministic_validation:
+      principle: "For critical checks, prefer scripts over language instructions — code is deterministic, language interpretation isn't"
+      when_to_use_scripts:
+        - "Data format validation (CSV columns, JSON schema, date formats)"
+        - "Output quality checks (required sections, formatting rules)"
+        - "API response validation (status codes, required fields)"
+      when_language_is_fine:
+        - "Subjective quality assessment (tone, style, clarity)"
+        - "Context-dependent decisions (which template to use)"
+        - "User-facing explanations and guidance"
+      example: |
+        # In SKILL.md instructions:
+        Run `scripts/check_report.py` to validate the report before finalizing.
+        The script checks: required sections present, data formatting, no empty fields.
+      source: "The Complete Guide to Building Skills for Claude — Advanced Techniques"
 
     include_error_handling:
       good: |
@@ -232,6 +263,29 @@ quality_gates:
     should_not_trigger:
       - "Unrelated topic"
       - "Similar-sounding but different domain"
+
+# ════════════════════════════════════════════════════════════════════════════════
+# POST-DEPLOYMENT — iteration signals
+# Source: "The Complete Guide to Building Skills for Claude" (Anthropic, 2026)
+# ════════════════════════════════════════════════════════════════════════════════
+post_deployment:
+  purpose: "Guide skill iteration after deployment based on observed signals"
+  signals:
+    undertriggering:
+      symptoms: ["Skill doesn't load when it should", "Users manually enabling it", "Support questions about when to use it"]
+      fix: "Add more detail, keywords, and trigger phrases to description"
+    overtriggering:
+      symptoms: ["Skill loads for irrelevant queries", "Users disabling it", "Confusion about purpose"]
+      fix: "Add negative triggers ('Do NOT use for X'), narrow description scope"
+    execution_issues:
+      symptoms: ["Inconsistent results across sessions", "API/MCP call failures", "Users correcting output"]
+      fix: "Improve instructions specificity, add error handling, add validation steps"
+  iteration_approach: |
+    Skills are living documents. After encountering edge cases or failures:
+    1. Note the specific issue and context
+    2. Update SKILL.md instructions or description to handle the case
+    3. Re-test with the original failing query
+    4. Optionally: use skill-creator to review and suggest improvements
 
 # ════════════════════════════════════════════════════════════════════════════════
 # EXAMPLES — good vs bad

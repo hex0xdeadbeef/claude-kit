@@ -8,7 +8,7 @@ description: >-
   Features 9-phase workflow with quality gates, constitutional evaluation, and progress tracking.
   Do NOT use for writing application code, file operations, or general coding tasks.
 model: opus
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, mcp__memory__read_graph, mcp__memory__add_observations
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Task, Agent, WebSearch, mcp__memory__read_graph, mcp__memory__add_observations, mcp__memory__search_nodes, mcp__memory__create_entities, mcp__memory__create_relations
 ---
 
 meta:
@@ -550,7 +550,7 @@ eval_optimizer:
 load_order:
   purpose: "Explicit loading strategy with tiers and unloading"
   tiers:
-    1_always: "meta-agent.md (560 lines max)"
+    1_always: "meta-agent.md (650 lines max)"
     2_mode: "deps/ based on create/enhance/audit (150 lines)"
     3_phase: "deps/ per phase, UNLOAD when phase completes (400 lines)"
     4_on_demand: "reference files when needed, unload after (250 lines)"

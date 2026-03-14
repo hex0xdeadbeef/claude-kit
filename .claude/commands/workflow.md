@@ -17,7 +17,7 @@ triggers:
   - if: "Task requires full development cycle (planning + implementation + review)"
     then: "Use /workflow instead of individual commands"
 
-  - if: "Phase verdict is REJECTED or NEEDS_CHANGES"
+  - if: "Phase verdict is REJECTED, NEEDS_CHANGES, or CHANGES_REQUESTED"
     then: "Return to previous phase, do NOT skip ahead"
 
   - if: "User says 'stop' or 'pause'"
@@ -45,7 +45,7 @@ input:
     - name: --from-phase
       required: false
       format: "1-4"
-      description: "Resume from specified phase"
+      description: "Resume from specified phase (1=Planning, 2=Plan Review, 3=Implementation, 4=Code Review)"
 
   examples:
     - "/workflow Add new endpoint"
@@ -80,8 +80,9 @@ output:
 
 ## AUTONOMY
 autonomy:
-  modes: "INTERACTIVE (default) | AUTONOMOUS (--auto) | RESUME (--from-phase N) | MINIMAL (--minimal)"
-  stop: "REJECTED → stop | Tests 3x → stop | Loop 3x → stop"
+  modes: "INTERACTIVE (default) | AUTONOMOUS (--auto) | RESUME (--from-phase N)"
+  note: "MINIMAL mode (--minimal) is a /planner argument, not a /workflow argument. Use /planner --minimal directly for lightweight planning."
+  stop: "REJECTED → stop | NEEDS_CHANGES/CHANGES_REQUESTED → previous phase | Tests 3x → stop | Loop 3x → stop"
   continue: "Phase completed → next | NEEDS_CHANGES → previous phase"
   details: "SEE [autonomy.md] in workflow-protocols skill"
 
@@ -115,12 +116,13 @@ startup:
     - step: 1
       action: "TodoWrite — create phase list (based on route from Task Analysis)"
       items:
-        - "Phase 0: Get Task (pending)"
+        - "Phase 0: Get Task (completed — task received)"
         - "Phase 0.5: Task Analysis (completed — already done in step 0)"
         - "Phase 1: Planning (pending)"
         - "Phase 2: Plan Review → plan-reviewer agent (pending — or skip if S-complexity)"
         - "Phase 3: Implementation (pending)"
         - "Phase 4: Code Review → code-reviewer agent (pending)"
+        - "Phase 5: Completion — commit + metrics (pending)"
 
     - step: 2
       action: "mcp__memory__search_nodes — query: '{task keywords}'"
@@ -151,6 +153,14 @@ pipeline:
 
   flow: "task-analysis → /planner [→ code-researcher*] → plan-reviewer (agent) → /coder [→ code-researcher*] → code-reviewer (agent)"
   flow_note: "* code-researcher is optional tool-assist via Task tool, triggered by planner/coder for L/XL tasks. Not a pipeline phase."
+
+  evaluate_note: |
+    /coder runs internal EVALUATE sub-phase (Phase 1.5) before implementing.
+    Outcomes:
+      PROCEED: plan is implementable → start implementation
+      REVISE: minor gaps, inline fixes → proceed with adjustments noted
+      RETURN: major gaps → re-route to Phase 1 (counts toward plan_review iteration counter)
+    On RETURN: orchestrator increments plan_review counter, writes checkpoint, re-runs /planner with coder feedback.
 
   load_phases:
     - action: "Read .claude/skills/workflow-protocols/autonomy.md"
@@ -203,8 +213,9 @@ delegation_protocol:
   code_review_delegation:
     agent: "code-reviewer"
     when: "Phase 4 — after /coder completion"
+    isolation: "worktree — agent sees only committed changes. Ensure git commit before delegating."
     context_to_pass:
-      - "Branch: current branch (code-reviewer runs git diff internally)"
+      - "Branch: current branch (code-reviewer runs git diff internally in worktree)"
       - "Coder handoff narrative (SEE: handoff_protocol)"
       - "Complexity: S/M/L/XL"
       - "Iteration: N/3"
@@ -227,7 +238,7 @@ delegation_protocol:
     mechanism: "Task tool (NOT native agent delegation — code-researcher is tool-assist, not pipeline phase)"
     invoked_by: "planner (Phase 3) and coder (Phase 1.5) — NOT by orchestrator"
     when: "Multi-package codebase research needed, complexity L/XL"
-    skip_when: "S/M complexity, --minimal mode"
+    skip_when: "S/M complexity, --minimal planner mode"
     returns: "Structured summary ≤2000 tokens (patterns, files, imports, key snippets)"
     checkpoint_impact: "None — research is part of Phase 1/3, not a separate phase"
     hook_impact: "None — SubagentStop does NOT fire for Task tool subagents"
@@ -246,7 +257,7 @@ error_handling:
   workflow_specific:
     - "Loop limit exceeded (3 iterations) → STOP, show summary, request user help"
     - "User says 'stop' → Stop immediately, await instructions"
-    - "REJECTED/NEEDS_CHANGES → return to previous phase (SEE pipeline)"
+    - "REJECTED/NEEDS_CHANGES/CHANGES_REQUESTED → return to previous phase (SEE pipeline)"
 
 ## SKILL REFERENCES
 skill_references:
@@ -260,20 +271,31 @@ skill_references:
 
 ## HOOKS
 hooks:
-  note: "Configured in .claude/settings.json. Deterministic — fires automatically, no need to remember."
+  note: |
+    Configured in .claude/settings.json (authoritative source — 8 event types, 13 scripts).
+    This section lists only workflow-specific hooks. For complete list see settings.json.
+    Deterministic — fires automatically, no need to remember.
 
-  - event: PreCompact
-    script: ".claude/scripts/save-progress-before-compact.sh"
-    behavior: "Saves checkpoint + review completions to additionalContext before compaction"
-    blocking: false
+  workflow_specific:
+    - event: PreCompact
+      script: ".claude/scripts/save-progress-before-compact.sh"
+      behavior: "Saves checkpoint + review completions to additionalContext before compaction"
+      blocking: false
 
-  - event: SubagentStop
-    script: ".claude/scripts/save-review-checkpoint.sh"
-    matcher: "plan-reviewer|code-reviewer"
-    behavior: "Appends review completion marker to .claude/workflow-state/review-completions.jsonl"
-    blocking: true
+    - event: SubagentStop
+      script: ".claude/scripts/save-review-checkpoint.sh"
+      matcher: "plan-reviewer|code-reviewer"
+      behavior: "Appends review completion marker to .claude/workflow-state/review-completions.jsonl"
+      blocking: true
 
-  - event: Stop
-    script: ".claude/scripts/check-uncommitted.sh"
-    behavior: "Blocks stop if uncommitted changes exist"
-    blocking: true
+    - event: Stop
+      script: ".claude/scripts/check-uncommitted.sh"
+      behavior: "Blocks stop if uncommitted changes exist"
+      blocking: true
+
+  also_active_during_workflow:
+    - "UserPromptSubmit → enrich-context.sh (context enrichment on every prompt)"
+    - "PreToolUse → protect-files.sh, check-artifact-size.sh, block-dangerous-commands.sh"
+    - "PostToolUse → auto-fmt-go.sh, yaml-lint.sh, check-references.sh"
+    - "SessionEnd → session-analytics.sh"
+    - "Notification → notify-user.sh"

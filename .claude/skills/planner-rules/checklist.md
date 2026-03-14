@@ -40,5 +40,3 @@ checklist:
   phase_6_save_to_memory:
     - "Save criteria checked"
     - "If non-trivial decision -> saved to memory"
-    - "`bd sync` executed"
-    - "If beads in use -> remind about task closure"

@@ -41,7 +41,6 @@ The main command that orchestrates the entire development process. Executes all 
 /workflow Add new REST endpoint for profiles
 /workflow --auto Implement resource update         # autonomous mode, no confirmations
 /workflow --from-phase 3                            # resume from specified phase
-/workflow --minimal Add field to model              # minimal research, critical checks only
 ```
 
 **Modes:**
@@ -49,7 +48,6 @@ The main command that orchestrates the entire development process. Executes all 
 - **INTERACTIVE** (default) — confirmation before each phase
 - **AUTONOMOUS** (`--auto`) — all phases automatically, no confirmations
 - **RESUME** (`--from-phase N`) — resume from specified phase
-- **MINIMAL** (`--minimal`) — minimal research, critical checks only
 
 **Phases:**
 
@@ -58,6 +56,7 @@ The main command that orchestrates the entire development process. Executes all 
 3. **Plan Review** — plan validation against architecture (skipped for S-complexity)
 4. **Implementation** — code writing strictly per approved plan, running tests
 5. **Code Review** — change review: architecture, security, quality
+6. **Completion** — git commit + lessons learned (if non-trivial)
 
 **Result:** implemented, tested, and reviewed code with a git commit.
 
@@ -159,7 +158,7 @@ Explores PostgreSQL schema and data via MCP. Requires configured `postgres` MCP 
 | Scenario | Command |
 |---|---|
 | Full feature implementation from scratch | `/workflow` |
-| Quick implementation of a simple task | `/workflow --minimal` |
+
 | Autonomous implementation without confirmations | `/workflow --auto` |
 | Need a plan before writing code | `/planner` |
 | Plan approved, need implementation | `/coder` |

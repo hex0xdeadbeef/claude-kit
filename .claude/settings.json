@@ -126,6 +126,15 @@
             "command": ".claude/agents/meta-agent/scripts/check-references.sh"
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/agents/meta-agent/scripts/check-plan-drift.sh"
+          }
+        ]
       }
     ],
     "PreCompact": [

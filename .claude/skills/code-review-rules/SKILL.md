@@ -29,7 +29,7 @@ Run `make lint` and `make test`. If EITHER fails → STOP, return to coder.
 Do NOT proceed to review if Quick Check fails.
 
 ### Step 2: Get changes and assess scope
-Run `git diff master...HEAD`. Assess: files changed, lines changed, layers affected.
+Run `git diff $BASE...HEAD` (detect base branch first — see code-reviewer.md process). Assess: files changed, lines changed, layers affected.
 If >100 lines or >5 files or 3+ layers → use Sequential Thinking.
 
 ### Step 3: Review all concern areas

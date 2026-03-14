@@ -3,7 +3,7 @@ meta:
   description: |
     Review of a Claude Code artifact plan with automatic fixing.
     Linear workflow with inline reference sections.
-  input: "Plan from /artifact-analyst"
+  input: "Plan from deps/artifact-analyst.md analysis output"
   output: "Fixed and approved plan for implementation"
   see: "artifact-quality.md"
 

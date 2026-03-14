@@ -67,9 +67,10 @@ role:
      ```
 
 3. **GET CHANGES**
-   - Run: `git diff master...HEAD --stat` — assess change size
-   - Run: `git diff master...HEAD --name-only` — file list
-   - Run: `git diff master...HEAD` — full diff
+   - Detect base branch: `BASE=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||' || echo main)`
+   - Run: `git diff $BASE...HEAD --stat` — assess change size
+   - Run: `git diff $BASE...HEAD --name-only` — file list
+   - Run: `git diff $BASE...HEAD` — full diff
    - Read narrative context from coder handoff (if provided):
      ```
      [Context from coder]:
@@ -145,7 +146,7 @@ role:
    - CHANGES_REQUESTED: 1+ BLOCKER or 1+ MAJOR or 3+ MINOR (return to coder)
 
    Auto-escalation:
-   - 5+ MINOR in same file → escalate to MAJOR
+   - 5+ MINOR in same file → escalate to MAJOR (files are the natural unit for code review)
    - Security issue (any severity) → always BLOCKER
    - Import matrix violation → always BLOCKER
 
@@ -207,7 +208,7 @@ For handoff contract see [handoff-protocol.md] in workflow-protocols skill → c
 
 ## Error Handling
 - git diff fails → check branch name, suggest `git status`
-- No changes to review → INFO: "No changes to review. Branch is up to date with master."
+- No changes to review → INFO: "No changes to review. Branch is up to date with base branch."
 - Branch not found → ERROR: "Branch not found. Check branch name."
 - LINT/TEST fails → STOP: return to author, do NOT proceed to review
 - Sequential Thinking unavailable → manual analysis (NON_CRITICAL)

@@ -142,7 +142,7 @@ startup:
     - step: 2
       action: "mcp__memory__search_nodes"
       query: "{task keywords}"
-      warning: "MANDATORY! If relevant entries found → use as context"
+      note: "RECOMMENDED — if Memory MCP unavailable, warn and continue. If relevant entries found → use as context."
 
     - step: 3
       action: Read

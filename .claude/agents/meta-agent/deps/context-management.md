@@ -45,7 +45,7 @@ strategy:
 
 - user's original request
 - approved PLAN from CHECKPOINT
-- CRITIQUE issues found
+- CONSTITUTE issues found
 - VERIFY results
 - trace metrics
 

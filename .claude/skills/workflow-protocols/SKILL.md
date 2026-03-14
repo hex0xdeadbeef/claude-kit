@@ -10,7 +10,7 @@ disable-model-invocation: true
 
 | Protocol | When to Load | Purpose |
 |----------|-------------|---------|
-| Handoff | BEFORE forming handoff between phases | 4 contracts (planner→plan-review, plan-review→coder, coder→code-review, code-review→completion) + narrative casting |
+| Handoff | BEFORE forming handoff between phases | 4 pipeline contracts + 1 tool contract (code-researcher) + narrative casting |
 | Checkpoint | AFTER completing each phase | Format (12 YAML fields), recovery (5 steps), state persistence |
 | Re-routing | On complexity mismatch signal | Downgrade/upgrade route + tracking + learning |
 | Pipeline Metrics | At completion phase only | Format (12 fields), storage (MCP Memory), analysis, anomaly detection |
@@ -30,7 +30,7 @@ Do NOT load all protocols upfront. Load on-demand per Event Triggers below:
 
 ### Step 3: Always form handoff payload
 CRITICAL: Every phase MUST produce a structured handoff payload (context + artifact + metadata) for the next phase.
-Read [Handoff Protocol](handoff-protocol.md) for the 5 contracts before forming any handoff.
+Read [Handoff Protocol](handoff-protocol.md) for the 4 pipeline contracts (+ 1 tool contract for code-researcher) before forming any handoff.
 
 ## Example
 
@@ -83,7 +83,7 @@ For all troubleshooting cases, see [Examples & Troubleshooting](examples-trouble
 
 ## Core Deps (workflow-only, loaded at startup)
 These files define fundamental workflow behavior and are loaded at pipeline startup (step 0.1):
-- [Autonomy](autonomy.md) — 4 modes (INTERACTIVE/AUTONOMOUS/RESUME/MINIMAL), stop/continue conditions
+- [Autonomy](autonomy.md) — 3 modes (INTERACTIVE/AUTONOMOUS/RESUME), stop/continue conditions
 - [Beads Integration](beads.md) — core commands, priority values, per-command integration matrix
 - [Orchestration Core](orchestration-core.md) — pipeline phases, loop limits (max 3), session recovery
 

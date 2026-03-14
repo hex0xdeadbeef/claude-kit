@@ -46,6 +46,11 @@ phase_1_understand:
       use_reference: "research_strategies"
       output: "strategy_name + target_sources"
 
+    - step: "1.3 Determine Skill Framing (skill-type only)"
+      when: "artifact_type = skill"
+      use_reference: "skill_framing"
+      output: "framing: problem_first | tool_first"
+
   output_format: |
     ## Phase 1: UNDERSTAND — DONE
     - Mode: [create/enhance]
@@ -53,6 +58,7 @@ phase_1_understand:
     - Topic: [code_layer/library/workflow/meta]
     - Research Strategy: [strategy_name]
     - Target Sources: [list]
+    - Framing: [problem_first/tool_first] (skill-type only)
 
   exit_criteria: "All fields determined, strategy selected"
 
@@ -109,6 +115,11 @@ phase_2_research:
         trigger_pattern: "when the artifact should activate"
         related_artifacts: "[@artifact1, @artifact2]"
         claude_md_section: "where to add"
+        compatibility_hint: "auto-detected environment requirements"
+      compatibility_detection:
+        - if: "artifact references mcp__ tools → suggest compatibility: 'mcp-server: <name>'"
+        - if: "artifact references external CLI tools → suggest compatibility: 'requires: <tool>'"
+        - if: "artifact references http/https URLs or curl/wget → suggest compatibility: 'network: required'"
       exit_criteria: "integration point determined"
 
   research_budget:
@@ -134,6 +145,7 @@ phase_2_research:
     ### Integration
     - Trigger: [...]
     - Related: [...]
+    - Compatibility: [compatibility_hint or 'none']
 
 # ════════════════════════════════════════════════════════════════════════════════
 # PHASE 3: ANALYZE
@@ -246,6 +258,22 @@ phase_4_plan:
       source: "artifact-quality.md"
       output: "checklist for /artifact-review"
 
+    - step: "4.4 Success Criteria (skill-type only)"
+      when: "artifact_type = skill"
+      source: "The Complete Guide to Building Skills for Claude — Define Success Criteria"
+      output:
+        quantitative:
+          - trigger_rate: "Expected % of relevant queries that trigger the skill (target: 90%)"
+          - workflow_efficiency: "Expected tool calls to complete workflow (compare with/without)"
+          - error_rate: "Expected failed API/MCP calls per workflow (target: 0)"
+        qualitative:
+          - autonomy: "Users don't need to prompt about next steps"
+          - consistency: "Same request produces structurally consistent results across sessions"
+          - learnability: "New users can accomplish task on first try with minimal guidance"
+        test_queries:
+          should_trigger: "2-3 example queries (obvious + paraphrased)"
+          should_not_trigger: "1-2 example queries (unrelated + adjacent domain)"
+
   output_format: |
     ## Phase 4: PLAN — DONE
     ### Implementation
@@ -259,6 +287,10 @@ phase_4_plan:
     ### Quality Checklist
     - [ ] criterion1
     - [ ] criterion2
+
+    ### Success Criteria (skill-type)
+    - Trigger rate: [target %]
+    - Test queries: [should/shouldn't trigger]
 
 # ════════════════════════════════════════════════════════════════════════════════
 # PHASE 5: OUTPUT
@@ -287,7 +319,7 @@ phase_5_output:
     [from Phase 4.3]
 
     ---
-    **NEXT:** /artifact-review
+    **NEXT:** Load deps/artifact-review.md (review pipeline)
 
 # ════════════════════════════════════════════════════════════════════════════════
 # REFERENCE: Research Strategies
@@ -332,6 +364,26 @@ research_strategies:
       - Read: "best artifact examples" → structure, patterns
       - Read: "meta-agent.md, artifact-quality.md" → requirements
     find: ["Best practice structure", "Quality criteria", "Integration patterns"]
+
+# ════════════════════════════════════════════════════════════════════════════════
+# REFERENCE: Skill Framing (problem-first vs tool-first)
+# Source: "The Complete Guide to Building Skills for Claude" (Anthropic, 2026)
+# ════════════════════════════════════════════════════════════════════════════════
+skill_framing:
+  when: "artifact_type = skill (step 1.3)"
+  purpose: "Choose the right instruction pattern based on user interaction model"
+  options:
+    problem_first:
+      signal: "User describes desired outcome, skill orchestrates tools"
+      example: "'I need to set up a project workspace' → skill picks the right MCP calls"
+      pattern: "Sequential workflow orchestration (Pattern 1) or Multi-MCP coordination (Pattern 2)"
+    tool_first:
+      signal: "User already has tools connected, skill teaches optimal workflows"
+      example: "'I have Notion MCP connected' → skill teaches best practices for using it"
+      pattern: "Domain-specific intelligence (Pattern 5) or Context-aware tool selection (Pattern 4)"
+  impact_on_instructions: |
+    problem_first: Instructions focus on OUTCOMES — steps describe what to achieve, tools are implementation detail
+    tool_first: Instructions focus on TOOL USAGE — steps describe how to use specific tools effectively
 
 # ════════════════════════════════════════════════════════════════════════════════
 # REFERENCE: Quality Checklists by Type

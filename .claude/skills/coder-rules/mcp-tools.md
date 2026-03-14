@@ -1,5 +1,7 @@
 # MCP Tools
 
+<!-- SYNC: Core MCP patterns shared with planner-rules/mcp-tools.md. Update both on change. -->
+
 | Tool | Use When | Fallback |
 |------|----------|----------|
 | Memory (search_nodes, create_entities, create_relations) | Search before planning; save non-trivial decisions after | Skip — memory is enhancement |

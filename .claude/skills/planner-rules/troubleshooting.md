@@ -8,7 +8,7 @@ troubleshooting:
 
   - problem: "Memory not checked before planning"
     cause: "Rushed directly to research phase"
-    fix: "STARTUP phase is MANDATORY - search_nodes before any research"
+    fix: "STARTUP phase is RECOMMENDED - search_nodes before any research (NON_CRITICAL if unavailable)"
     lesson: "Existing solutions save hours of work"
 
   - problem: "Plan has incomplete code examples (signatures only)"

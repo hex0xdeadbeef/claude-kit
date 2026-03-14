@@ -31,4 +31,3 @@ checklist:
     - item: "All issues classified (BLOCKER/MAJOR/MINOR)"
     - item: "Decision matrix applied"
     - item: "Verdict justified"
-    - item: "bd sync executed"

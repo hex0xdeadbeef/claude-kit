@@ -10,7 +10,7 @@ tier_1:
   when: "Session start"
   files:
     - "meta-agent.md (core workflow)"
-  max_lines: 300
+  max_lines: 650
   unload: "Never"
 
 tier_2:

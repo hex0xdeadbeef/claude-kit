@@ -41,7 +41,8 @@ examples:
       trigger: "Phase 4: APPROVED"
       steps:
         - action: "Suggest commit command to user"
-          command: "git add . && git commit -m 'feat: ...' && bd sync"
+          command: "git add <specific-files> && git commit -m 'feat: ...' && bd sync"
+          note: "NEVER use git add . — always stage specific files to avoid committing secrets (.env, credentials)"
         - action: "Wait for user to decide when to commit"
     bad:
       trigger: "Phase 4: APPROVED"

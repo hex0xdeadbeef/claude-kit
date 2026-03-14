@@ -12,7 +12,7 @@ entity_type: "meta-agent-lesson"
 ### Capture When
 
 triggers:
-  - event: "CRITIQUE found issues"
+  - event: "CONSTITUTE found issues"
     severity: "medium"
     capture: "always"
   - event: "VERIFY failed"

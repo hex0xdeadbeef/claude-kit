@@ -180,13 +180,10 @@ feedback:
     - "Read patterns_used from progress.json → phases.DRAFT.archive_composition"
     - "Read final eval_score from progress.json → phases.DRAFT.eval_history"
     - "For each pattern_id in patterns_used:"
-    - "  If final_score >= 0.85: success_rate = (success_rate * usage_count + 1) / (usage_count + 1)"
-    - "  If final_score < 0.85: success_rate = (success_rate * usage_count + 0) / (usage_count + 1)"
+    - "  outcome = 1.0 if final_score >= 0.85 else 0.0"
+    - "  success_rate = alpha * outcome + (1 - alpha) * success_rate  # alpha=0.3 (EMA)"
     - "Update pattern in archive index"
-  decay:
-    note: "Old outcomes weighted less over time"
-    method: "EMA (exponential moving average) with alpha=0.3"
-    formula: "success_rate = alpha * new_outcome + (1 - alpha) * old_success_rate"
+  decay_note: "EMA with alpha=0.3 gives 30% weight to most recent outcome, naturally decaying old results"
   output: |
     🗃️ Archive: Updated success_rate for {N} patterns
     - {pattern_id}: {old_rate} → {new_rate} (outcome: {pass|fail})

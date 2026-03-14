@@ -52,6 +52,7 @@ handoff_protocol:
           - "Risk + how resolved"
         deviations_from_plan:
           - "Description + rationale"
+        iteration: "N/3"
 
     code_review_to_completion:
       producer: "/code-review"

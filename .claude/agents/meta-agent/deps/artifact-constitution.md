@@ -228,7 +228,7 @@ domain_principles:
         violation_action: "WARN — add output format per phase"
 
 # ════════════════════════════════════════════════════════════════════════════════
-# CRITIQUE PROTOCOL
+# CONSTITUTE PROTOCOL
 # ════════════════════════════════════════════════════════════════════════════════
 
 critique_protocol:

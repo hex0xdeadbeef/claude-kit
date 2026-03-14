@@ -108,7 +108,7 @@ role:
    - REJECTED: 1+ BLOCKER
 
    Auto-escalation:
-   - 5+ MINOR in same Part → escalate to MAJOR
+   - 5+ MINOR in same Part → escalate to MAJOR (Parts are the natural unit for plan review)
    - Security issue (any severity) → always BLOCKER
    - Import matrix violation → always BLOCKER
 

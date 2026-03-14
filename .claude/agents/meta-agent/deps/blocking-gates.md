@@ -20,15 +20,28 @@ EXPLORE_GATE:
   checks: ["PROJECT-KNOWLEDGE.md read", "current artifact read", "new findings documented"]
   on_fail: "STOP: Cannot enhance without exploring project first"
 
-CRITIQUE_GATE:
-  when: "after PLAN, before CHECKPOINT"
-  checks: ["self-review completed", "issues addressed or documented"]
-  on_fail: "STOP: Cannot ask for approval without self-critique"
+CONSTITUTE_GATE:
+  when: "after CONSTITUTE phase, before CHECKPOINT"
+  checks:
+    - "Constitutional evaluation completed (all P1-P5 scored)"
+    - "Aggregate score >= 0.85"
+    - "All BLOCK-level violations (P1 < 0.7) resolved"
+  on_fail: "Fix violations, re-evaluate"
 
 CHECKPOINT_GATE:
-  when: "after CRITIQUE, before APPLY"
+  when: "after CONSTITUTE, before DRAFT"
   checks: ["user approved plan"]
   on_fail: "STOP: User approval required"
+
+EVALUATE_GATE:
+  when: "after MAR EVALUATE sub-phase in DRAFT, before APPLY"
+  v10: "Multi-Agent Reflexion — 3 critics replace single evaluator"
+  checks:
+    - "All 3 MAR critics returned scores (correctness_critic, clarity_critic, efficiency_critic)"
+    - "Aggregate score >= 0.85 (weighted: 0.40/0.35/0.25)"
+    - "No critical issues remaining (cross-critic consensus)"
+  on_fail: "Trigger REFLECT (with all 3 critic reports) → OPTIMIZE loop"
+  fallback: "If MAR unavailable → single evaluator (v9 behavior)"
 
 QUALITY_GATE:
   when: "after APPLY, before VERIFY"
@@ -37,7 +50,7 @@ QUALITY_GATE:
 
 SIZE_GATE:
   enforcement: "deterministic (PreToolUse hook: check-artifact-size.sh blocks on critical)"
-  thresholds: {command: [300/500/800], skill: [300/600/700], rule: [100/200/400]}
+  thresholds: {command: [300/500/800], skill: [300/600/700], rule: [100/200/400], agent: [200/400/600]}
   format: "[recommended/warning/critical]"
   on_exceed: "Split → deps/artifact-quality.md#progressive_offloading"
 
@@ -52,9 +65,9 @@ STEP_QUALITY_GATE:
 EXTERNAL_VALIDATION_GATE:
   when: "VERIFY phase"
   enforcement: "partially deterministic (PostToolUse hooks: yaml-lint.sh + check-references.sh)"
-  checks: ["YAML syntax valid (inline parse)", "All references exist (Glob+Grep)", "Size within thresholds", "Required sections present", "No critical duplicates (mcp__memory)"]
+  checks: ["YAML syntax valid (inline parse)", "All references exist (Glob+Grep)", "Size within thresholds", "Required sections present", "No critical duplicates (mcp__memory)", "Trigger testing passed (skill-type only)"]
   deterministic_checks: ["YAML syntax (yaml-lint.sh)", "References exist (check-references.sh)"]
-  advisory_checks: ["Required sections present", "No critical duplicates"]
+  advisory_checks: ["Required sections present", "No critical duplicates", "Trigger testing (skill-type: obvious + paraphrased + negative)"]
   on_fail: "❌ Fix all errors before proceeding, acknowledge warnings to continue"
 
 OBSERVABILITY_GATE:
@@ -72,29 +85,6 @@ enforcement: |
   3. Check: quality_checked = true
   4. Check: step_quality passed for all prior phases
   If ANY check fails → ABORT with gate error message
-
-# ════════════════════════════════════════════════════════════════════════════════
-# ADDITIONAL GATES
-# ════════════════════════════════════════════════════════════════════════════════
-
-new_gates_v9:
-  CONSTITUTE_GATE:
-    position: "After CONSTITUTE phase, before CHECKPOINT"
-    checks:
-      - "Constitutional evaluation completed (all P1-P5 scored)"
-      - "Aggregate score >= 0.85"
-      - "All BLOCK-level violations (P1 < 0.7) resolved"
-    on_fail: "Fix violations, re-evaluate"
-
-  EVALUATE_GATE:
-    position: "After MAR EVALUATE sub-phase in DRAFT, before APPLY"
-    v10: "Multi-Agent Reflexion — 3 critics replace single evaluator"
-    checks:
-      - "All 3 MAR critics returned scores (correctness_critic, clarity_critic, efficiency_critic)"
-      - "Aggregate score >= 0.85 (weighted: 0.40/0.35/0.25)"
-      - "No critical issues remaining (cross-critic consensus)"
-    on_fail: "Trigger REFLECT (with all 3 critic reports) → OPTIMIZE loop"
-    fallback: "If MAR unavailable → single evaluator (v9 behavior)"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # GATE RECOVERY STRATEGIES

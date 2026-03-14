@@ -218,7 +218,7 @@ workflow:
 
         - decision: RETURN
           criteria: "Major gaps or feasibility issues"
-          action: "Return to /plan-review with feedback"
+          action: "Return to /planner with feedback (via workflow re-route to Phase 1)"
 
       evaluate_output:
         severity: CRITICAL

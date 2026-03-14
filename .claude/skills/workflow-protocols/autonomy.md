@@ -4,7 +4,6 @@
 - INTERACTIVE (default): Ask at checkpoints
 - AUTONOMOUS (--auto): Execute all phases without asking
 - RESUME: Continue from last checkpoint (session interrupted)
-- MINIMAL (--minimal): Minimal research, only critical checks
 
 **Stop conditions:**
 

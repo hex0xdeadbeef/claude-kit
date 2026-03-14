@@ -47,7 +47,7 @@ Output: task type + complexity + route + ST requirement.
 ### Step 3: Research with appropriate tools
 - S/M: use Grep/Glob directly for codebase research
 - L/XL: delegate to code-researcher agent via Task tool for multi-package research
-- ALWAYS check Memory (mcp__memory__search_nodes) before research
+- Check Memory (mcp__memory__search_nodes) before research (NON_CRITICAL — warn and continue if unavailable)
 
 ### Step 4: Document plan with full code examples
 Write plan to `.claude/prompts/{feature}.md` using plan template.
@@ -89,7 +89,7 @@ For more examples, see [Examples](examples.md).
 
 ### Memory not checked before planning
 **Cause:** Rushed directly to research phase.
-**Fix:** STARTUP step 2 is MANDATORY — run mcp__memory__search_nodes before any research.
+**Fix:** STARTUP step 2 is RECOMMENDED — run mcp__memory__search_nodes before any research (NON_CRITICAL if unavailable).
 
 For all troubleshooting cases, see [Troubleshooting](troubleshooting.md).
 

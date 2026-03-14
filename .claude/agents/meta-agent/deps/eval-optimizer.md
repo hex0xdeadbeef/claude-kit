@@ -35,6 +35,15 @@ scoring:
       weight: 0.2
       question: "Fits existing patterns?"
 
+  dimension_mapping:
+    note: "v9 single-evaluator dimensions → v10 MAR critic coverage"
+    mapping:
+      completeness: "→ correctness_critic (accuracy + completeness)"
+      accuracy: "→ correctness_critic (accuracy)"
+      clarity: "→ clarity_critic (clarity + integration)"
+      integration: "→ clarity_critic (integration)"
+    fallback: "When MAR unavailable, v9 dimensions + default_weights used as single evaluator"
+
 output_format:
   score: "0.0-1.0 (weighted average)"
   issues:
@@ -332,6 +341,7 @@ adaptive_weights:
   principle: "One-size-fits-all weights miss type-specific priorities"
 
   per_artifact_type:
+    note: "These weights apply to v9 single-evaluator fallback mode. In MAR mode, critic weights (0.40/0.35/0.25) are used instead."
     command:
       completeness: 0.25
       accuracy: 0.25

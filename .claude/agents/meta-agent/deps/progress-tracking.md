@@ -33,7 +33,7 @@ schema:
   target:
     type: "command | skill | rule | agent"
     name: "string"
-  current_phase: "INIT | RESEARCH | PLAN | DRAFT | APPLY | VERIFY | CLOSE"
+  current_phase: "INIT | EXPLORE | RESEARCH | ANALYZE | TEMPLATE | PLAN | CONSTITUTE | DRAFT | APPLY | VERIFY | CLOSE"
   phases:
     PHASE_NAME:
       status: "pending | in_progress | done | failed"

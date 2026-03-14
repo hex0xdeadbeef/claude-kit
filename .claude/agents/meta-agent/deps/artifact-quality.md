@@ -253,6 +253,8 @@ artifact_quality:
       - "## Rules section (MUST-DO / MUST-NOT-DO)"
       - "## Common Issues section (troubleshooting)"
       - "references/ dir for detailed docs (progressive disclosure)"
+      - "Negative triggers in description ('Do NOT use for X' / 'not for Y') to prevent overtriggering"
+      - "Scope boundary: clarify what adjacent topics this skill does NOT cover"
 
     domain_principles:
       P6: "trigger_coverage — all use-cases + negative triggers + overlap"

@@ -5,9 +5,9 @@
 ## Pipeline & Phases
 
 ```
-task-analysis → /planner → plan-reviewer (agent) → /coder → code-reviewer (agent)
-     ↓              ↓              ↓                  ↓              ↓
-  Classify        Plan       Validation             Code         Review
+task-analysis → /planner → plan-reviewer (agent) → /coder → code-reviewer (agent) → completion
+     ↓              ↓              ↓                  ↓              ↓                    ↓
+  Classify        Plan       Validation             Code         Review              Commit+Metrics
   S → skip PR              ↓ FAIL         ↓ FAIL
                           ← back ←       ← back ←
                           (max 3x)       (max 3x)
@@ -21,11 +21,19 @@ task-analysis → /planner → plan-reviewer (agent) → /coder → code-reviewe
 
 **Phase 3 — Implementation:** Execute /coder. Verify: `VERIFY` (Go default: make fmt && make lint && make test). PASS → Phase 4. FAIL → fix + retry.
 
-**Phase 4 — Code Review:** Delegate to code-reviewer agent. APPROVED → Done. CHANGES_REQUESTED → Phase 3 (iteration N/3).
+**Phase 4 — Code Review:** Delegate to code-reviewer agent. APPROVED → Done. APPROVED_WITH_COMMENTS → Done (log comments, proceed to completion). CHANGES_REQUESTED → Phase 3 (iteration N/3).
 
 **Phase 0 — Get Task (optional):** If beads task → `bd show <id>` + `bd update <id> --status=in_progress`. Skip if ad-hoc.
 
-**Completion:** git commit (required) → bd sync (if beads) → remind bd close → save lessons if non-trivial.
+**Phase 5 — Completion:** After code-review APPROVED/APPROVED_WITH_COMMENTS:
+1. Create git commit (MANDATORY)
+2. Run `bd sync` (if beads active)
+3. Remind user to run `bd close <id>` (do NOT auto-close)
+4. Collect pipeline metrics (SEE pipeline-metrics.md)
+5. Save lessons_learned to Memory (if non-trivial — SEE mcp-tools.md entity templates)
+6. Write final checkpoint: `phase_completed: 5, phase_name: "completion"`
+
+**Note:** Completion is orchestrator-owned (not delegated to agent or sub-command).
 
 **Lessons learned format (if saving):** create_entities with entityType="lessons_learned", observations: ["Problem: X → Solution: Y", "Pattern: Z works well for W"].
 
@@ -93,8 +101,9 @@ tracking_protocol:
 ```
 ls .claude/workflow-state/*-checkpoint.yaml  # Checkpoint?
 ls .claude/prompts/                          # Plan?
+ls .claude/prompts/*-evaluate.md              # Evaluate output?
 bd list --status=in_progress                 # Active beads?
-git diff master...HEAD --stat                # Code changes?
+git diff $(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||' || echo main)...HEAD --stat  # Code changes?
 TEST                                         # Tests pass? (Go default: make test)
 ```
 
@@ -104,13 +113,16 @@ TEST                                         # Tests pass? (Go default: make tes
 
 **Step 2B — No checkpoint (heuristic):**
 
-| Plan exists? | Code changes? | Tests pass? | Resume from |
-|-------------|---------------|-------------|-------------|
-| No | — | — | Phase 1: Planning |
-| Yes | No | — | Phase 3: Implementation |
-| Yes | Yes | No | Phase 3: Fix tests |
-| Yes | Yes | Yes | Phase 4: Code Review |
+| Plan exists? | Evaluate exists? | Code changes? | Tests pass? | Resume from                                          |
+| ------------ | ---------------- | ------------- | ----------- | ---------------------------------------------------- |
+| No           | —                | —             | —           | Phase 1: Planning                                    |
+| Yes          | No               | No            | —           | Phase 3: Implementation (start with evaluate)        |
+| Yes          | Yes              | No            | —           | Phase 3: Implementation (evaluate done, start coding)|
+| Yes          | Yes              | Yes           | No          | Phase 3: Fix tests                                   |
+| Yes          | Yes              | Yes           | Yes         | Phase 4: Code Review                                 |
 
 **Warning:** Heuristic fallback loses iteration counters — assume iteration 1/3.
+
+**Note:** If checkpoint shows `phase_completed: 4` with `verdict: APPROVED` → resume from Phase 5 (Completion).
 
 **Checkpoint format:** `{feature}-checkpoint.yaml` with fields: feature, phase_completed, phase_name, iteration (plan_review N/3, code_review N/3), verdict, timestamp, complexity, route, handoff_payload, issues_history. Full specification: SEE [checkpoint-protocol.md] in workflow-protocols skill.

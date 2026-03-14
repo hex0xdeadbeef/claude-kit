@@ -26,4 +26,4 @@ checklist:
     - "config changed → CONFIG_DOCS updated"
 
   completion:
-    - "bd sync executed (if beads)"
+    - "Handoff payload formed for workflow orchestrator (SEE handoff-protocol.md)"
