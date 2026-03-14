@@ -1,10 +1,35 @@
-# Claude Kit
+<p align="center">
+  <strong>Claude Kit</strong><br/>
+  Reusable configuration kit for <a href="https://docs.anthropic.com/en/docs/claude-code">Claude Code</a>
+</p>
 
-Reusable configuration kit for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) that provides a structured multi-agent development workflow with built-in planning, implementation, and code review phases.
+<p align="center">
+  <img src="https://img.shields.io/badge/Claude_Code-config_kit-5A45FF?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDJMMiAxOWgyMEwxMiAyeiIgZmlsbD0id2hpdGUiLz48L3N2Zz4=" alt="Claude Code Config Kit"/>
+  <img src="https://img.shields.io/badge/agents-5_pipeline-1a73e8?style=flat-square" alt="Agents"/>
+  <img src="https://img.shields.io/badge/skills-6_packages-f9ab00?style=flat-square" alt="Skills"/>
+  <img src="https://img.shields.io/badge/hooks-14_scripts-0d904f?style=flat-square" alt="Hooks"/>
+  <img src="https://img.shields.io/badge/languages-31_via_tree--sitter-00897b?style=flat-square" alt="Languages"/>
+</p>
 
-Supports any language and framework — Go, Python, TypeScript, Rust, Java, and 26 more via tree-sitter analysis.
+---
 
-## Quick Start
+Structured multi-agent development workflow with built-in planning, implementation, and code review phases. Supports any language and framework — Go, Python, TypeScript, Rust, Java, and 26 more via tree-sitter analysis.
+
+---
+
+## 📑 Table of Contents
+
+- [⚡ Quick Start](#-quick-start)
+- [🔧 Commands](#-commands)
+- [🏗 Architecture](#-architecture)
+- [🔌 MCP Servers](#-mcp-servers)
+- [📂 Project Structure](#-project-structure)
+- [🪝 Hooks](#-hooks)
+- [📐 Conventions](#-conventions)
+
+---
+
+## ⚡ Quick Start
 
 ### Installation
 
@@ -29,13 +54,15 @@ cp .claude/settings.local.json.example /path/to/your/project/.claude/settings.lo
 /project-researcher
 ```
 
-## Commands
+---
+
+## 🔧 Commands
 
 ### `/workflow` — Full Development Cycle
 
 The main command that orchestrates the entire development process. Executes all phases sequentially with user confirmation between steps.
 
-**Pipeline:** task-analysis → planner → plan-review → coder → code-review
+**Pipeline:** `task-analysis` → `planner` → `plan-review` → `coder` → `code-review`
 
 ```bash
 /workflow Add new REST endpoint for profiles
@@ -43,20 +70,29 @@ The main command that orchestrates the entire development process. Executes all 
 /workflow --from-phase 3                            # resume from specified phase
 ```
 
+<details>
+<summary>⚙️ Modes & Phases</summary>
+
 **Modes:**
 
-- **INTERACTIVE** (default) — confirmation before each phase
-- **AUTONOMOUS** (`--auto`) — all phases automatically, no confirmations
-- **RESUME** (`--from-phase N`) — resume from specified phase
+| Mode | Flag | Description |
+|------|------|-------------|
+| Interactive | *(default)* | Confirmation before each phase |
+| Autonomous | `--auto` | All phases automatically, no confirmations |
+| Resume | `--from-phase N` | Resume from specified phase |
 
 **Phases:**
 
-1. **Task Analysis** — task complexity classification (S/M/L/XL) and route selection
-2. **Planning** — codebase research, implementation plan creation
-3. **Plan Review** — plan validation against architecture (skipped for S-complexity)
-4. **Implementation** — code writing strictly per approved plan, running tests
-5. **Code Review** — change review: architecture, security, quality
-6. **Completion** — git commit + lessons learned (if non-trivial)
+| # | Phase | Description |
+|---|-------|-------------|
+| 1 | Task Analysis | Complexity classification (S/M/L/XL) and route selection |
+| 2 | Planning | Codebase research, implementation plan creation |
+| 3 | Plan Review | Plan validation against architecture *(skipped for S-complexity)* |
+| 4 | Implementation | Code writing strictly per approved plan, running tests |
+| 5 | Code Review | Change review: architecture, security, quality |
+| 6 | Completion | Git commit + lessons learned *(if non-trivial)* |
+
+</details>
 
 **Result:** implemented, tested, and reviewed code with a git commit.
 
@@ -88,19 +124,12 @@ Implements code strictly per approved plan. Runs formatting, linting, and tests 
 
 ---
 
-### `/review-checklist` — Review Checklist Reference
-
-Displays the code review checklist: architecture, security (OWASP), code quality, performance. Used as a reference for manual or automated reviews.
-
-```bash
-/review-checklist
-```
-
----
-
 ### `/meta-agent` — Artifact Lifecycle Manager
 
 Creates, enhances, audits, and manages Claude Code artifacts (commands, skills, rules, agents). 9-phase workflow with quality gates.
+
+<details>
+<summary>📋 Usage examples</summary>
 
 ```bash
 /meta-agent onboard                    # initialize .claude/ for a new project
@@ -122,13 +151,11 @@ Creates, enhances, audits, and manages Claude Code artifacts (commands, skills, 
 /meta-agent cleanup                    # remove runs older than 7 days
 ```
 
-**Flags:**
+**Flags:** `--dry-run` (preview) · `--track` (beads tracking) · `--explore` (Tree of Thought)
 
-- `--dry-run` — preview changes without applying
-- `--track` — enable task tracking via beads
-- `--explore` — force Tree of Thought in planning phase
+**Artifact types:** `command` · `skill` · `rule` · `agent`
 
-**Artifact types:** `command`, `skill`, `rule`, `agent`
+</details>
 
 ---
 
@@ -153,12 +180,23 @@ Explores PostgreSQL schema and data via MCP. Requires configured `postgres` MCP 
 /db-explorer users              # explore specific table
 ```
 
-## Which Command to Use
+---
+
+### `/review-checklist` — Review Checklist Reference
+
+Displays the code review checklist: architecture, security (OWASP), code quality, performance.
+
+```bash
+/review-checklist
+```
+
+---
+
+### 🗺 Command Selection Guide
 
 | Scenario | Command |
-|---|---|
+|----------|---------|
 | Full feature implementation from scratch | `/workflow` |
-
 | Autonomous implementation without confirmations | `/workflow --auto` |
 | Need a plan before writing code | `/planner` |
 | Plan approved, need implementation | `/coder` |
@@ -168,11 +206,14 @@ Explores PostgreSQL schema and data via MCP. Requires configured `postgres` MCP 
 | Understand project structure | `/project-researcher` |
 | Explore DB schema | `/db-explorer` |
 
-## Architecture
+---
+
+## 🏗 Architecture
 
 The system is a **5-phase development pipeline** managed by the orchestrator (`/workflow`), which sequentially delegates work to specialized agents. Each agent has a strictly defined responsibility zone, model assignment, and skill set.
 
-### Color Legend
+<details>
+<summary>🎨 Color Legend</summary>
 
 ```mermaid
 flowchart LR
@@ -200,7 +241,10 @@ flowchart LR
     style B2 fill:none,stroke:none
 ```
 
-### Development Pipeline
+</details>
+
+<details>
+<summary>🔄 Development Pipeline</summary>
 
 ```mermaid
 flowchart TB
@@ -291,7 +335,10 @@ flowchart TB
     style CRES fill:#00897b,color:#fff,stroke:#00695c
 ```
 
-### Handoff Data Flow
+</details>
+
+<details>
+<summary>📨 Handoff Data Flow</summary>
 
 ```mermaid
 flowchart LR
@@ -312,7 +359,10 @@ flowchart LR
     style DONE2 fill:#0d904f,color:#fff,stroke:#0a7040
 ```
 
-### Standalone Commands
+</details>
+
+<details>
+<summary>🧩 Standalone Commands</summary>
 
 ```mermaid
 flowchart LR
@@ -338,7 +388,10 @@ flowchart LR
     style DBE fill:#9334e6,color:#fff,stroke:#7627bb
 ```
 
-### Skill Loading
+</details>
+
+<details>
+<summary>📦 Skill Loading</summary>
 
 ```mermaid
 flowchart LR
@@ -373,7 +426,10 @@ flowchart LR
     style CREV fill:#9334e6,color:#fff,stroke:#7627bb
 ```
 
-### Hook Lifecycle
+</details>
+
+<details>
+<summary>🪝 Hook Lifecycle</summary>
 
 ```mermaid
 flowchart TB
@@ -424,24 +480,26 @@ flowchart TB
     style NOTIFY fill:#00897b,color:#fff,stroke:#00695c
 ```
 
-### Model Routing
+</details>
+
+### ⚙️ Model Routing
 
 | Model | Components | MaxTurns | Purpose |
-| ------- | --------- | ------- | ------- |
-| **opus** | /workflow, /planner, /project-researcher, /meta-agent | — | Deep reasoning, orchestration, planning |
-| **sonnet** | /coder, plan-reviewer, code-reviewer, /db-explorer | 30 | Implementation, review, execution |
-| **haiku** | code-researcher, PR subagents (discovery, report) | 20 | Fast read-only search |
+|-------|-----------|----------|---------|
+| **opus** | `/workflow`, `/planner`, `/project-researcher`, `/meta-agent` | — | Deep reasoning, orchestration, planning |
+| **sonnet** | `/coder`, `plan-reviewer`, `code-reviewer`, `/db-explorer` | 30 | Implementation, review, execution |
+| **haiku** | `code-researcher`, PR subagents (discovery, report) | 20 | Fast read-only search |
 
-### Complexity Routing
+### 📊 Complexity Routing
 
 | Complexity | Parts | Layers | Plan Review | Sequential Thinking | code-researcher |
-| ------- | ------- | ------- | ------- | ------- | ------- |
+|------------|-------|--------|-------------|--------------------|-----------------|
 | **S** | 1 | 1 | skip | not needed | skip |
 | **M** | 2–3 | 2 | standard | as needed | skip |
 | **L** | 4–6 | 3+ | standard | recommended | yes |
 | **XL** | 7+ | 4+ | standard | required | yes |
 
-### Key Principles
+### 🔑 Key Principles
 
 - **Sequential execution** — phases don't run in parallel
 - **Handoff Protocol** — 4 typed payload contracts between phases with narrative casting
@@ -452,22 +510,29 @@ flowchart TB
 - **Conditional Deps Loading** — S-complexity skips heavy skill loading, saves ~6,300 tokens
 - **Re-Routing** — pipeline adjusts route on complexity mismatch (downgrade/upgrade)
 
-## MCP Servers
+---
+
+## 🔌 MCP Servers
 
 Configure in `~/.claude/mcp.json`:
 
-**Required:**
+### Required
 
-- `memory` (@modelcontextprotocol/server-memory) — persistent agent memory across sessions
-- `context7` (@upstash/context7-mcp) — library documentation lookup
-- `sequential-thinking` — structured reasoning for complex tasks
+| Server | Package | Purpose |
+|--------|---------|---------|
+| `memory` | `@modelcontextprotocol/server-memory` | Persistent agent memory across sessions |
+| `context7` | `@upstash/context7-mcp` | Library documentation lookup |
+| `sequential-thinking` | — | Structured reasoning for complex tasks |
 
-**Optional:**
+### Optional
 
-- `postgres` (@anthropic/mcp-postgres) — required for `/db-explorer`
-- `tree_sitter` — code analysis (symbols, dependencies, repo-map), used by `/project-researcher`
+| Server | Package | Purpose |
+|--------|---------|---------|
+| `postgres` | `@anthropic/mcp-postgres` | Required for `/db-explorer` |
+| `tree_sitter` | `mcp-server-tree-sitter` | Code analysis (symbols, deps, repo-map) — used by `/project-researcher` |
 
-### Installing `tree_sitter` MCP Server
+<details>
+<summary>🔧 Installing tree_sitter MCP Server</summary>
 
 The original `mcp-server-tree-sitter` v0.5.1 is incompatible with `py-tree-sitter >= 0.24` (removed `Query.captures()` API). Use the patched fork:
 
@@ -488,7 +553,11 @@ Then add to `~/.claude/mcp.json`:
 }
 ```
 
-## Project Structure
+</details>
+
+---
+
+## 📂 Project Structure
 
 ```
 .claude/
@@ -520,28 +589,32 @@ Then add to `~/.claude/mcp.json`:
 └── PROJECT-KNOWLEDGE.md   # Auto-generated project knowledge base
 ```
 
-## Hooks
+---
 
-The kit includes hooks (configured in `.claude/settings.json`) that enforce quality automatically:
+## 🪝 Hooks
+
+Configured in `.claude/settings.json`. Enforce quality automatically:
 
 | Hook | Trigger | Purpose |
-| ------ | --------- | --------- |
-| `scripts/protect-files.sh` | PreToolUse (Write/Edit) | Protect critical config files from agent modification |
-| `agents/meta-agent/scripts/check-artifact-size.sh` | PreToolUse (Write) | Block writes exceeding size thresholds |
-| `scripts/block-dangerous-commands.sh` | PreToolUse (Bash) | Block destructive shell commands |
-| `scripts/auto-fmt-go.sh` | PostToolUse (Write/Edit) | Auto-format Go code |
-| `agents/meta-agent/scripts/yaml-lint.sh` | PostToolUse (Edit) | Validate YAML structure |
-| `agents/meta-agent/scripts/check-references.sh` | PostToolUse (Write) | Validate all file references |
-| `agents/meta-agent/scripts/check-plan-drift.sh` | PostToolUse (Write/Edit) | Detect plan drift during implementation |
-| `scripts/enrich-context.sh` | UserPromptSubmit | Enrich prompt with project context |
-| `scripts/save-progress-before-compact.sh` | PreCompact | Save checkpoint before context compaction |
-| `scripts/save-review-checkpoint.sh` | SubagentStop | Persist review completion state |
-| `agents/meta-agent/scripts/verify-phase-completion.sh` | Stop | Ensure all meta-agent phases completed |
-| `scripts/check-uncommitted.sh` | Stop | Warn on uncommitted changes |
-| `scripts/session-analytics.sh` | SessionEnd | Record session analytics |
-| `scripts/notify-user.sh` | Notification | Desktop notifications for agent events |
+|------|---------|---------|
+| `protect-files.sh` | PreToolUse (Write/Edit) | Protect critical config files from agent modification |
+| `check-artifact-size.sh` | PreToolUse (Write) | Block writes exceeding size thresholds |
+| `block-dangerous-commands.sh` | PreToolUse (Bash) | Block destructive shell commands |
+| `auto-fmt-go.sh` | PostToolUse (Write/Edit) | Auto-format Go code |
+| `yaml-lint.sh` | PostToolUse (Edit) | Validate YAML structure |
+| `check-references.sh` | PostToolUse (Write) | Validate all file references |
+| `check-plan-drift.sh` | PostToolUse (Write/Edit) | Detect plan drift during implementation |
+| `enrich-context.sh` | UserPromptSubmit | Enrich prompt with project context |
+| `save-progress-before-compact.sh` | PreCompact | Save checkpoint before context compaction |
+| `save-review-checkpoint.sh` | SubagentStop | Persist review completion state |
+| `verify-phase-completion.sh` | Stop | Ensure all meta-agent phases completed |
+| `check-uncommitted.sh` | Stop | Warn on uncommitted changes |
+| `session-analytics.sh` | SessionEnd | Record session analytics |
+| `notify-user.sh` | Notification | Desktop notifications for agent events |
 
-## Conventions
+---
+
+## 📐 Conventions
 
 - Artifacts use YAML-first format (>80% YAML, minimal prose)
 - Language: English for code, YAML keys, and artifact specs
