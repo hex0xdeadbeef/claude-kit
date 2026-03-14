@@ -205,20 +205,20 @@ flowchart LR
 ```mermaid
 flowchart TB
     subgraph STARTUP ["Startup"]
-        S1["Memory search"] --> S2["Beads check"]
+        TA{"Task Analysis"} -->|S| ROUTE_S["Minimal route:<br/>skip Plan Review"]
+        TA -->|M| ROUTE_M["Standard route"]
+        TA -->|L| ROUTE_L["Full route +<br/>Sequential Thinking"]
+        TA -->|XL| ROUTE_XL["Full route +<br/>ST required"]
+        TA --> S1["Memory search"]
+        S1 --> S2["Beads check"]
         S2 --> S3["Session recovery check"]
     end
-
-    S3 --> TA{"Task Analysis"}
-    TA -->|S| ROUTE_S["Minimal route:<br/>skip Plan Review"]
-    TA -->|M| ROUTE_M["Standard route"]
-    TA -->|L| ROUTE_L["Full route +<br/>Sequential Thinking"]
-    TA -->|XL| ROUTE_XL["Full route +<br/>ST required"]
 
     ROUTE_S --> PLANNER
     ROUTE_M --> PLANNER
     ROUTE_L --> PLANNER
     ROUTE_XL --> PLANNER
+    S3 --> PLANNER
 
     subgraph PHASE1 ["Phase 1: Planning — /planner (opus)"]
         PLANNER["Understand scope"] --> RESEARCH["Research codebase"]
@@ -392,10 +392,12 @@ flowchart TB
     EXEC -->|"Write / Edit"| POST1["auto-fmt-go.sh<br/>(non-blocking)"]
     EXEC -->|Edit| POST2["yaml-lint.sh<br/>(non-blocking)"]
     EXEC -->|Write| POST3["check-references.sh<br/>(non-blocking)"]
+    EXEC -->|"Write / Edit"| POST4["check-plan-drift.sh<br/>(non-blocking)"]
 
     POST1 --> CONT["Continue"]
     POST2 --> CONT
     POST3 --> CONT
+    POST4 --> CONT
 
     CONT -->|"context limit"| COMPACT["PreCompact (non-blocking):<br/>save-progress-before-compact.sh"]
     CONT -->|"subagent exits"| SUBSTOP["SubagentStop (blocking):<br/>save-review-checkpoint.sh"]
@@ -414,6 +416,7 @@ flowchart TB
     style POST1 fill:#0d904f,color:#fff,stroke:#0a7040
     style POST2 fill:#0d904f,color:#fff,stroke:#0a7040
     style POST3 fill:#0d904f,color:#fff,stroke:#0a7040
+    style POST4 fill:#0d904f,color:#fff,stroke:#0a7040
     style COMPACT fill:#9334e6,color:#fff,stroke:#7627bb
     style SUBSTOP fill:#9334e6,color:#fff,stroke:#7627bb
     style STOP fill:#d93025,color:#fff,stroke:#b3261e
@@ -529,6 +532,7 @@ The kit includes hooks (configured in `.claude/settings.json`) that enforce qual
 | `scripts/auto-fmt-go.sh` | PostToolUse (Write/Edit) | Auto-format Go code |
 | `agents/meta-agent/scripts/yaml-lint.sh` | PostToolUse (Edit) | Validate YAML structure |
 | `agents/meta-agent/scripts/check-references.sh` | PostToolUse (Write) | Validate all file references |
+| `agents/meta-agent/scripts/check-plan-drift.sh` | PostToolUse (Write/Edit) | Detect plan drift during implementation |
 | `scripts/enrich-context.sh` | UserPromptSubmit | Enrich prompt with project context |
 | `scripts/save-progress-before-compact.sh` | PreCompact | Save checkpoint before context compaction |
 | `scripts/save-review-checkpoint.sh` | SubagentStop | Persist review completion state |

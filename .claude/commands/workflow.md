@@ -272,7 +272,7 @@ skill_references:
 ## HOOKS
 hooks:
   note: |
-    Configured in .claude/settings.json (authoritative source — 8 event types, 13 scripts).
+    Configured in .claude/settings.json (authoritative source — 8 event types, 14 scripts).
     This section lists only workflow-specific hooks. For complete list see settings.json.
     Deterministic — fires automatically, no need to remember.
 
@@ -296,6 +296,6 @@ hooks:
   also_active_during_workflow:
     - "UserPromptSubmit → enrich-context.sh (context enrichment on every prompt)"
     - "PreToolUse → protect-files.sh, check-artifact-size.sh, block-dangerous-commands.sh"
-    - "PostToolUse → auto-fmt-go.sh, yaml-lint.sh, check-references.sh"
+    - "PostToolUse → auto-fmt-go.sh, yaml-lint.sh, check-references.sh, check-plan-drift.sh"
     - "SessionEnd → session-analytics.sh"
     - "Notification → notify-user.sh"
