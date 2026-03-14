@@ -205,20 +205,20 @@ flowchart LR
 ```mermaid
 flowchart TB
     subgraph STARTUP ["Startup"]
-        TA{"Task Analysis"} -->|S| ROUTE_S["Minimal route:<br/>skip Plan Review"]
-        TA -->|M| ROUTE_M["Standard route"]
-        TA -->|L| ROUTE_L["Full route +<br/>Sequential Thinking"]
-        TA -->|XL| ROUTE_XL["Full route +<br/>ST required"]
-        TA --> S1["Memory search"]
+        TA["Task Analysis<br/>(S/M/L/XL)"] --> S1["Memory search"]
         S1 --> S2["Beads check"]
         S2 --> S3["Session recovery check"]
     end
+
+    S3 -->|S| ROUTE_S["Minimal route:<br/>skip Plan Review"]
+    S3 -->|M| ROUTE_M["Standard route"]
+    S3 -->|L| ROUTE_L["Full route +<br/>Sequential Thinking"]
+    S3 -->|XL| ROUTE_XL["Full route +<br/>ST required"]
 
     ROUTE_S --> PLANNER
     ROUTE_M --> PLANNER
     ROUTE_L --> PLANNER
     ROUTE_XL --> PLANNER
-    S3 --> PLANNER
 
     subgraph PHASE1 ["Phase 1: Planning — /planner (opus)"]
         PLANNER["Understand scope"] --> RESEARCH["Research codebase"]
