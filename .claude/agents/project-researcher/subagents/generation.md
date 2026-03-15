@@ -23,7 +23,7 @@ Generate a comprehensive but concise project guide from the research state.
 [From state.analyze.project_role - what does this project do?]
 
 ## Architecture
-[Summary of state.analyze.architecture.pattern with ≤3 key layers]
+[Summary of state.analyze.architecture with ≤3 key layers]
 - Brief layer descriptions
 - Key responsibility separation
 
@@ -31,15 +31,15 @@ Generate a comprehensive but concise project guide from the research state.
 | Area | Rule |
 |------|------|
 | [Area from state.analyze.conventions] | [Convention/Pattern] |
-| Testing | [Testing approach from state.analyze.testing_style] |
-| Error Handling | [Error pattern from state.analyze.error_patterns] |
-| Logging | [Logging convention from state.analyze.logging_convention] |
+| Testing | [Testing approach from state.analyze.conventions.testing.style] |
+| Error Handling | [Error pattern from state.analyze.conventions.errors.pattern] |
+| Logging | [Logging convention from state.analyze.conventions.logging.library] |
 
 ## Project Structure
 [Show core directory tree from state.validate.structure, depth 2-3]
 
 ## Quick Start
-1. [Entry point from state.analyze.entry_points[0]]
+1. [Entry point from state.map.entry_points[0]]
 2. [Key package description]
 3. [Test execution command]
 
@@ -61,10 +61,10 @@ Generate a comprehensive but concise project guide from the research state.
 **Generation Logic:**
 - Extract project_name from state.analyze.project_name
 - Use project_role from state.analyze
-- Build architecture section from state.analyze.architecture (include pattern, layers, entry points)
+- Build architecture section from state.analyze.architecture + state.analyze.layers + state.map.entry_points
 - Populate Key Rules table from state.analyze (conventions, testing, errors, logging)
-- Generate project structure from state.validate.structure
-- Create quick start from state.analyze.entry_points and state.validate.main_files
+- Generate project structure from state.discover.analysis_targets (directory tree)
+- Create quick start from state.map.entry_points
 - List all generated skills with triggers
 - List all rule file paths by layer
 - Word count: target ≤200 lines; warn if ≥150

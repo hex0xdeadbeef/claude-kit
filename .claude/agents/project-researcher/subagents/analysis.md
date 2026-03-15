@@ -1,7 +1,7 @@
 # SUBAGENT: ANALYSIS
 **Model:** opus
 **Phases:** ANALYZE + MAP + DATABASE (optional)
-**Input:** state.validate (path, mode), state.discover.*, state.detect.*, **state.graph.*** (v4.2)
+**Input:** state.validate (path, mode), state.discover.*, state.detect.*, **state.graph.*** (v4.2, optional — fallback to AST/grep if unavailable)
 **Output:** state.analyze + state.map + state.database
 
 ---

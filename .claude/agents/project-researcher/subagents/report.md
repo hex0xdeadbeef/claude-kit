@@ -38,14 +38,14 @@ The report format differs based on execution mode (CREATE, AUGMENT, UPDATE). All
 ```markdown
 ## Executive Summary
 
-[2-3 sentence high-level overview from state.analyze.project_summary]
+[2-3 sentence high-level overview — generate from state.analyze.architecture + state.detect.primary_language]
 
 **Key Findings:**
-- **Architecture Pattern:** [from state.analyze.architecture.pattern]
+- **Architecture Pattern:** [from state.analyze.architecture]
 - **Language & Runtime:** [from state.analyze.language]
 - **Estimated Size:** [from state.validate.metrics] lines of code
-- **Core Purpose:** [from state.analyze.project_role]
-- **Test Coverage Style:** [from state.analyze.testing_style]
+- **Core Purpose:** [infer role from state.analyze.architecture + state.discover.manifests]
+- **Test Coverage Style:** [from state.analyze.conventions.testing.style]
 
 **This report documents:**
 1. Discovered architecture and layer structure

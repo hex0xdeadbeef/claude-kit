@@ -26,14 +26,23 @@ validate:
   path: string              # REQUIRED — absolute path to the project
   mode: "CREATE" | "AUGMENT" | "UPDATE"  # REQUIRED
   git: bool                 # REQUIRED
+  git_root: string          # path to .git or null
+  git_remote: string        # remote URL or null
+  commit_count: int
   has_claude_dir: bool      # REQUIRED
   source_file_count: int    # REQUIRED — number of source files
+  extension_distribution:   # file extension counts
+    ".go": int
+    ".ts": int
+  claude_artifacts:         # detailed .claude/ contents (if has_claude_dir)
+    files: string[]
+    dirs: string[]
   existing_artifacts:       # REQUIRED if mode != CREATE
     claude_md: bool
     skills: string[]        # names of existing skills
     rules: string[]         # names of existing rules
     commands: string[]
-  git_analysis:             # REQUIRED if mode == UPDATE
+  git_analysis:             # REQUIRED if mode == UPDATE; aka git_context in discovery.md output
     commits_since: int
     files_changed: int
     changed_layers: string[]
@@ -49,9 +58,26 @@ discover:
       type: "service" | "library" | "app" | "shared" | "tool"
       manifest: string      # go.mod | package.json | Cargo.toml | pom.xml
       depends_on: string[]  # paths to other modules (internal deps)
+  manifests:
+    - path: string
+      type: string          # "go.mod" | "package.json" | ...
+      language: string
+      version_info: object
+  internal_dependencies: object  # module → [dependent modules]
   strategy: "single" | "per-module" | "per-module-with-shared-context"
+  strategy_rationale: string # why this strategy was chosen
+  # NOTE: "per-module"/"per-module-with-shared-context" map to orchestrator
+  # execution modes: "pipeline" (≤3 modules) or "batch" (4+ modules).
+  # SEE: deps/orchestration.md → PARALLEL EXECUTION
   root_module: string       # path to the "main" module (if identified)
-  analysis_targets: string[] # REQUIRED — list of paths to analyze
+  analysis_targets:         # REQUIRED — targets for downstream subagents
+    - path: string
+      language: string
+      type: "root_module" | "service" | "library" | "app" | "shared" | "tool"
+  # NOTE: discovery.md ALREADY outputs objects (not strings).
+  # Orchestration pseudo-code in orchestration.md:200-224 iterates
+  # analysis_targets using `module_path=target` — this is LLM-interpreted
+  # pseudo-code, not executable code, so the type is safe.
 ```
 
 **FATAL if:** `path` does not exist, `source_file_count == 0`
@@ -65,28 +91,41 @@ discover:
 
 ```yaml
 detect:
-  primary_language: string   # REQUIRED — "go" | "python" | "typescript" | "rust" | "java" | ...
-  primary_confidence: float  # REQUIRED — 0.0-1.0
-  secondary_languages:       # optional
+  analysis_method: string       # REQUIRED — "tree-sitter-mcp" | "ast-grep" | "grep"
+  primary_language: string      # REQUIRED — "go" | "python" | "typescript" | "rust" | "java" | ...
+  primary_confidence: float     # REQUIRED — 0.0-1.0
+  secondary_languages:          # optional
     - language: string
       file_count: int
-      role: string           # "frontend" | "scripts" | "tools" | "tests"
-  frameworks:                # REQUIRED — at least []
-    - name: string           # "chi" | "gin" | "echo" | ...
-      version: string        # "v5.1.0"
+      role: string              # "frontend" | "scripts" | "tools" | "tests"
+  language_counts:              # raw file counts by extension
+    ".go": int
+    ".ts": int
+  frameworks:                   # REQUIRED — at least []
+    - name: string              # "chi" | "gin" | "echo" | ...
+      version: string           # "v5.1.0"
       category: "http" | "orm" | "grpc" | "cli" | "testing" | "logging" | "di"
       confidence: float
-      detection_method: "manifest" | "import" | "ast"  # how it was detected
-  build_tools:               # REQUIRED
-    - name: string           # "make" | "docker" | "github-actions"
-      config_file: string    # "Makefile" | "Dockerfile"
-  test_framework: string     # "testify" | "standard" | "gomock" | ...
-  test_patterns:
-    table_driven_count: int
-    mock_count: int
+      detection_method: "manifest" | "manifest + AST" | "manifest + grep" | "grep only"
+      match_count: int          # AST or grep match count
+  build_tools:                  # REQUIRED
+    files:
+      - name: string            # "Makefile" | "Dockerfile"
+        path: string            # "./Makefile"
+        details: object         # optional (multi_stage, has_docker, etc.)
+    ci_cd:
+      providers: string[]       # ["GitHub Actions", "GitLab CI"]
+      pipeline_count: int
+      stages: string[]          # ["test", "build", "deploy"]
+    linters: string[]           # ["golangci-lint", "prettier"]
+  testing:                      # REQUIRED
+    frameworks: string[]        # ["testing (builtin)", "testify"]
+    mock_tools: string[]        # ["gomock"]
     test_file_count: int
-  linters: string[]          # ["golangci-lint", "prettier"]
-  analysis_method: string     # REQUIRED — "tree-sitter-mcp" | "ast-grep" | "grep"
+    test_case_count: int
+    table_driven_tests: int     # for Go
+    assertion_style: string     # "testify/assert" | "require" | "expect"
+    detection_method: string    # "manifest + AST + grep"
 ```
 
 **FATAL if:** `primary_language` is not determined, `primary_confidence < 0.3`
@@ -172,7 +211,7 @@ graph:
 
 ### ANALYSIS Subagent → `state.analyze` + `state.map` + `state.database`
 
-**Receives:** `state.validate.path`, `state.validate.mode`, `state.discover.*`, `state.detect.*`, **`state.graph.*`** (v4.2)
+**Receives:** `state.validate.path`, `state.validate.mode`, `state.discover.*`, `state.detect.*`, **`state.graph.*`** (v4.2, OPTIONAL — analysis falls back to direct AST/grep if graph unavailable)
 
 ```yaml
 analyze:
@@ -271,7 +310,7 @@ database:
 
 ### CRITIQUE (Inline in Orchestrator) → `state.critique`
 
-**Reads:** `state.detect.*`, `state.analyze.*`, `state.map.*`
+**Reads:** `state.detect.*`, `state.analyze.*`, `state.map.*`, `state.graph.*` (OPTIONAL)
 
 ```yaml
 critique:
@@ -323,9 +362,18 @@ verify:
   structure_valid: bool
   duplicates_clean: bool
   issues:
-    - check: string
-      status: "pass" | "fail" | "warning"
-      details: string
+    - code: string            # "YAML_PARSE_ERROR" | "REFERENCE_UNRESOLVED" | "SIZE_WARNING" | ...
+      artifact: string        # file path of the affected artifact
+      severity: "error" | "warning" | "info"
+      message: string         # human-readable description
+      fix: string             # suggested correction
+  yaml_errors: int
+  reference_errors: int
+  size_warnings: int
+  size_errors: int
+  structure_issues: int
+  duplicate_issues: int
+  summary: string             # human-readable summary
   gate_passed: bool          # REQUIRED
 ```
 

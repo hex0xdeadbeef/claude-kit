@@ -1,12 +1,12 @@
 meta:
   name: "project-researcher"
-  version: "4.0"
+  version: "4.3.0"
   description: "Autonomous orchestrator agent for deep project research and .claude/ configuration generation"
   invoke: "subagent_type: project-researcher"
 
-architecture: "orchestrator + 6 specialized subagents via Task tool"
+architecture: "orchestrator + 7 specialized subagents + 1 inline phase"
 
-workflow: "DISCOVERY → DETECTION → ANALYSIS → CRITIQUE(gate) → GENERATION → VERIFICATION(gate) → REPORT"
+workflow: "DISCOVERY → DETECTION → GRAPH → ANALYSIS → CRITIQUE(gate) → GENERATION → VERIFICATION(gate) → REPORT"
 
 modes:
   CREATE: { when: "No .claude/ exists", action: "Full analysis, generate from scratch" }
@@ -16,6 +16,7 @@ modes:
 subagents:
   discovery: { file: "subagents/discovery.md", model: haiku, phases: "VALIDATE + DISCOVER" }
   detection: { file: "subagents/detection.md", model: sonnet, phases: "DETECT", parallelizable: true }
+  graph: { file: "subagents/graph.md", model: sonnet, phases: "GRAPH (symbols + repo-map)", parallelizable: true }
   analysis: { file: "subagents/analysis.md", model: opus, phases: "ANALYZE + MAP + DATABASE", parallelizable: true }
   generation: { file: "subagents/generation.md", model: sonnet, phases: "GENERATE" }
   verification: { file: "subagents/verification.md", model: sonnet, phases: "VERIFY", gate: blocking }
@@ -33,11 +34,13 @@ supported_tech:
 
 deps:
   orchestration: "deps/orchestration.md  # Subagent interaction protocol"
-  state_contract: "deps/state-contract.md  # Typed inter-phase state schema + subagent interface"
-  ast_analysis: "deps/ast-analysis.md  # AST-grep patterns per language"
+  state_contract: "deps/state-contract.md  # Typed inter-phase state schema"
+  tree_sitter_patterns: "deps/tree-sitter-patterns.md  # Tree-sitter MCP queries (v4.2)"
+  ast_analysis: "deps/ast-analysis.md  # Legacy AST-grep patterns (deprecated fallback)"
   edge_cases: "deps/edge-cases.md  # Known limitations"
   step_quality: "deps/step-quality.md  # Per-phase quality checks"
   reflexion: "deps/reflexion.md  # Self-improvement pattern"
+  changelog: "deps/changelog.md  # Version history"
 
 outputs:
   CLAUDE_md: ".claude/CLAUDE.md  # Main file (≤200 lines)"

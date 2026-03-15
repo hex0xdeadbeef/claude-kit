@@ -234,7 +234,7 @@ baseline_confidence = 1.0  (if manifest only, with version specified)
 if detection_method includes "AST":
   confidence_mod = 0.0  (no adjustment, AST is definitive)
 elif detection_method includes "manifest" and "grep":
-  confidence_mod = -0.00  (both agree, very reliable)
+  confidence_mod = 0.00   (both agree, very reliable — no penalty)
 elif detection_method == "grep only, single pattern":
   confidence_mod = -0.05  (one grep pattern match)
 elif detection_method == "grep only, complex regex":
@@ -428,55 +428,47 @@ subagent_result:
   status: "success"
   state_updates:
     detect:
-      analysis_targets:
-        - target_path: "."
-          language_detection:
-            primary: "Go"
-            confidence: 0.92
-            language_counts:
-              ".go": 156
-              ".proto": 8
-            total_files: 164
-            multi_language: false
-          frameworks:
-            - name: "gin"
-              version: "v1.9.0"
-              detection_method: "manifest + AST"
-              confidence: 0.95
-              ast_match_count: 24
-            - name: "gorm"
-              version: "v1.25.0"
-              detection_method: "manifest + grep"
-              confidence: 0.85
-              grep_match_count: 38
-          build_tools:
-            files:
-              - name: "Makefile"
-                path: "./Makefile"
-                has_docker: true
-              - name: "Dockerfile"
-                path: "./Dockerfile"
-                multi_stage: true
-            ci_cd:
-              providers: ["GitHub Actions"]
-              pipeline_count: 3
-              stages: ["test", "build", "deploy"]
-            linters: ["golangci-lint"]
-          testing:
-            frameworks: ["testing (builtin)", "testify"]
-            mock_tools: ["gomock"]
-            test_file_count: 24
-            test_case_count: 156
-            table_driven_tests: 12
-            assertion_style: "testify/assert"
-            detection_method: "manifest + AST + grep"
       analysis_method: "tree-sitter-mcp"  # or "ast-grep" or "grep"
-      summary:
-        primary_language: "Go"
-        framework_count: 2
-        build_complexity: "high"
-        test_coverage_indicators: "table-driven tests, parallel subtests, mocks"
-        confidence_weighted_avg: 0.88
+      primary_language: "Go"
+      primary_confidence: 0.92
+      secondary_languages: []             # or [{language: "proto", file_count: 8, role: "grpc"}]
+      language_counts:
+        ".go": 156
+        ".proto": 8
+      frameworks:
+        - name: "gin"
+          version: "v1.9.0"
+          category: "http"
+          detection_method: "manifest + AST"
+          confidence: 0.95
+          match_count: 24
+        - name: "gorm"
+          version: "v1.25.0"
+          category: "orm"
+          detection_method: "manifest + grep"
+          confidence: 0.85
+          match_count: 38
+      build_tools:
+        files:
+          - name: "Makefile"
+            path: "./Makefile"
+            details: { has_docker: true }
+          - name: "Dockerfile"
+            path: "./Dockerfile"
+            details: { multi_stage: true }
+        ci_cd:
+          providers: ["GitHub Actions"]
+          pipeline_count: 3
+          stages: ["test", "build", "deploy"]
+        linters: ["golangci-lint"]
+      testing:
+        frameworks: ["testing (builtin)", "testify"]
+        mock_tools: ["gomock"]
+        test_file_count: 24
+        test_case_count: 156
+        table_driven_tests: 12
+        assertion_style: "testify/assert"
+        detection_method: "manifest + AST + grep"
 ```
 
 ---

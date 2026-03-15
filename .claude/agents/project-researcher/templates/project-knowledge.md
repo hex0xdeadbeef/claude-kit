@@ -2,7 +2,7 @@
 
 **Last Updated:** <ISO 8601 timestamp>
 **Version:** <semantic version or git hash>
-**Researcher:** project-researcher agent v3.0
+**Researcher:** project-researcher agent v4.3
 **Analysis Method:** <AST-based | grep-based | mixed>
 
 ---

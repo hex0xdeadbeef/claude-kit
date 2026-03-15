@@ -1,4 +1,4 @@
-# PHASE 7: CRITIQUE (Self-Adversarial Review)
+# PHASE 8: CRITIQUE (Self-Adversarial Review)
 
 ## 7.1 PURPOSE
 
@@ -7,6 +7,7 @@
 **When:** After MAP/DATABASE, before GENERATE
 
 **Required state:** `state.detect.*`, `state.analyze.*`, `state.map.*`
+**Optional state:** `state.graph.*` (may be absent if graph phase failed — graceful degradation per orchestration.md)
 
 **Outputs:** `state.critique`
 
@@ -219,7 +220,7 @@ FOR each finding in [architecture, conventions, patterns]:
 ## 7.8 OUTPUT FORMAT
 
 ```
-[PHASE 6/10] CRITIQUE — DONE
+[CRITIQUE] DONE (phase 8/10)
 State: critique.gate_passed=true, issues=2, calibration_adjustments=1
 
 ### Checklist Summary
@@ -314,4 +315,4 @@ Quality: 6/6 checks ✅
 
 ## NEXT PHASE
 
-→ **PHASE 7: GENERATE** (create artifacts)
+→ **Next: GENERATE** (phase 9/10)

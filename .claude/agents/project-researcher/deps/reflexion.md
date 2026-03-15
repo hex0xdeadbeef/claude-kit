@@ -17,7 +17,7 @@
 1. **Capture failures** during CRITIQUE or VERIFY phases
 2. **Store as lessons** in MCP memory
 3. **Auto-inject** in next run (VALIDATE phase)
-4. **Decay mechanism**: Archive stale lessons after 30 days
+4. **Decay mechanism**: Archive stale lessons after 90 days
 
 ### Example Lesson
 
@@ -42,8 +42,8 @@ example: "internal/{repository_layer}/ → {codegen_tool} error patterns"
 ### Integration Points
 
 - **VALIDATE (Phase 1):** Load lessons, show warnings
-- **CRITIQUE (Phase 6):** Check against known mistakes
-- **VERIFY (Phase 8):** Detect new issues, create lessons
-- **REPORT (Phase 9):** Save lessons to MCP memory
+- **CRITIQUE (Phase 8):** Check against known mistakes
+- **VERIFY (Phase 10):** Detect new issues, create lessons
+- **REPORT (output):** Save lessons to MCP memory
 
 **SEE:** meta-agent v7.0 REFLEXION pattern for full implementation

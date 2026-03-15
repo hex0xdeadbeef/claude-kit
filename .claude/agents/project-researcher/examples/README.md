@@ -51,6 +51,6 @@ When adding new examples:
 
 ## Related
 
-- `../phases/6-report.md` - REPORT phase specification
+- `../subagents/report.md` - REPORT subagent specification
 - `../reference/scoring.md` - Confidence scoring algorithm
 - `../templates/project-knowledge.md` - PROJECT-KNOWLEDGE.md structure

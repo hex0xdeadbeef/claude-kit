@@ -6,12 +6,13 @@ Reference guide for confidence scoring in project analysis.
 
 ## Score Levels
 
-| Score | Meaning | Criteria |
-|-------|---------|----------|
-| HIGH | Very confident | Multiple clear indicators, consistent patterns |
-| MEDIUM | Reasonably confident | Some indicators, minor inconsistencies |
-| LOW | Uncertain | Few indicators, mixed patterns |
-| UNKNOWN | Can't determine | No clear indicators |
+| Score | Range | Meaning | Criteria |
+| -------- | ------- | -------------------- | ---------------------------------------------- |
+| CRITICAL | 90-100% | Absolute certainty | File exists, import found, manifest confirmed |
+| HIGH | 75-89% | Very confident | Multiple clear indicators, consistent patterns |
+| MEDIUM | 50-74% | Reasonably confident | Some indicators, minor inconsistencies |
+| LOW | 25-49% | Uncertain | Few indicators, mixed patterns |
+| VERY LOW | 0-24% | Guess | No clear indicators, pure inference |
 
 ---
 

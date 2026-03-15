@@ -79,7 +79,7 @@ autonomy:
 
 architecture:
   pattern: "orchestrator + 7 subagents + 1 inline phase"
-  total_phases: 10
+  total_phases: 10  # VALIDATE(1) DISCOVER(2) DETECT(3) GRAPH(4) ANALYZE(5) MAP(6) DATABASE(7) CRITIQUE(8) GENERATE(9) VERIFY(10) — REPORT is output, not numbered
   pipeline:
     - {step: 1, name: DISCOVERY, agent: discovery, model: haiku, phases: "VALIDATE + DISCOVER"}
     - {step: 2, name: DETECTION, agent: detection, model: sonnet, phases: "DETECT"}
@@ -90,6 +90,9 @@ architecture:
     - {step: 8, name: VERIFICATION, agent: verification, model: sonnet, gate: blocking}
     - {step: 9, name: REPORT, agent: report, model: haiku, phases: "REPORT"}
   monorepo_strategies:
+    # NOTE: These are execution mode labels, not strategy enum values.
+    # Discovery emits strategy: "single"|"per-module"|"per-module-with-shared-context"
+    # Orchestrator maps strategy + module_count → execution mode:
     single: "sequential: detection → graph → analysis"
     pipeline: "≤3 modules → compound DETECT+GRAPH+ANALYZE per module (all parallel)"
     batch: "4+ modules → 3-wave: all DETECT → all GRAPH → all ANALYZE"
@@ -109,6 +112,11 @@ orchestration:
     model: "{model_from_registry}"
     prompt_pattern: "Read {AGENT_ROOT}/subagents/{name}.md and execute. Project path: {path}. State: {serialize(required_state_fields)}"
 
+  # NOTE: Two numbering schemes coexist:
+  # - PIPELINE (lines 84-91): logical phase IDs (1-9), used in total_phases: 10 counting
+  # - ORCHESTRATION (below): execution step IDs, where steps 2-4 are grouped
+  # Pipeline phase IDs are authoritative for progress reporting ("[PHASE N/10]").
+  # Orchestration step IDs reflect execution grouping (strategy-dependent).
   steps:
     - step: 1
       phase: DISCOVERY

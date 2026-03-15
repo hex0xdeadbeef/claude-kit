@@ -4,7 +4,7 @@
 
 **Principle:** AST sees code semantics, grep sees text. AST analysis yields accurate results on the first pass.
 
-**Load when:** DETECT and ANALYZE phases — as the primary code analysis method.
+**Load when:** LEGACY FALLBACK ONLY — tree-sitter-patterns.md is the primary reference since v4.2. Load only when tree-sitter MCP is unavailable.
 
 ---
 
