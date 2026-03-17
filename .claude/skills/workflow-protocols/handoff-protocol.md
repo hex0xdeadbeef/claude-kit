@@ -52,6 +52,10 @@ handoff_protocol:
           - "Risk + how resolved"
         deviations_from_plan:
           - "Description + rationale"
+        verify_status:
+          lint: "PASS"
+          test: "PASS"
+          command_used: "make fmt && make lint && make test"
         iteration: "N/3"
 
     code_review_to_completion:

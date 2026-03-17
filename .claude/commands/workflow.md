@@ -214,11 +214,13 @@ delegation_protocol:
     agent: "code-reviewer"
     when: "Phase 4 — after /coder completion"
     isolation: "worktree — agent sees only committed changes. Ensure git commit before delegating."
+    optimization: "Pass verify_status in handoff to allow code-reviewer to skip QUICK CHECK re-run (see FIX-1). Worktree overhead is unavoidable but test overhead is not."
     context_to_pass:
       - "Branch: current branch (code-reviewer runs git diff internally in worktree)"
       - "Coder handoff narrative (SEE: handoff_protocol)"
       - "Complexity: S/M/L/XL"
       - "Iteration: N/3"
+      - "Verify status: lint PASS/FAIL, test PASS/FAIL (from coder VERIFY phase)"
     delegation_prompt_template: |
       Review code changes on the current branch.
 
@@ -227,6 +229,7 @@ delegation_protocol:
       - Evaluate adjustments: {list from handoff.evaluate_adjustments}
       - Deviations from plan: {list from handoff.deviations_from_plan}
       - Mitigated risks: {list from handoff.risks_mitigated}
+      - Verify: lint {PASS/FAIL}, test {PASS/FAIL} (command: {verify_command})
 
       Iteration: {N}/3
     returns: "Verdict (APPROVED/APPROVED_WITH_COMMENTS/CHANGES_REQUESTED) + issues + handoff for completion"

@@ -74,6 +74,10 @@ output:
         risks_mitigated:
           - "N+1 query in Part 2 — optimized with batch query"
         deviations_from_plan: []
+        verify_status:
+          lint: PASS
+          test: PASS
+          command_used: "make fmt && make lint && make test"
 
 ## TRIGGERS
 triggers:
@@ -287,6 +291,7 @@ workflow:
       after_each_part:
         - "TodoWrite — mark Part as completed"
         - "Hooks auto-run formatter + linter (SEE: PROJECT-KNOWLEDGE.md)"
+        - "Do NOT run tests (make test / go test) between Parts — tests run ONCE at VERIFY phase. Exception: TDD mode (plan ## TDD) — RED-GREEN-REFACTOR test runs within a Part are implementation, not verification."
 
       complex_logic:
         when: "3+ conditions, state machines"
@@ -315,6 +320,7 @@ workflow:
 
     - phase: 3
       name: "VERIFY"
+      note: "This is the ONLY phase where tests run. Do not run tests earlier."
 
       formatting:
         command: "FMT && LINT"

@@ -37,7 +37,11 @@ Write output to `.claude/prompts/{feature}-evaluate.md`.
 
 ### Step 3: Implement parts in dependency order
 Follow lower-layers-first: data access → models → domain → API → tests → wiring.
-After each Part: run FMT + LINT. Check 5 CRITICAL Rules above continuously.
+After each Part: PostToolUse hooks auto-format files (gofmt). Run LINT only for import/error checks. Check 5 CRITICAL Rules above continuously.
+Do NOT run FMT manually between Parts — hooks handle formatting, VERIFY handles final FMT+LINT.
+IMPORTANT: Do NOT run tests (make test, go test) between Parts. Tests run ONCE at Step 4 VERIFY.
+Running tests after each Part wastes time — compile errors are caught by LINT, logic errors are caught at VERIFY.
+Exception: If plan contains ## TDD section, RED-GREEN-REFACTOR test runs within a Part are allowed (they are implementation, not verification).
 
 ### Step 4: Verify and form handoff
 Run full VERIFY: `make fmt && make lint && make test`.

@@ -28,6 +28,10 @@ checkpoint_protocol:
       reason: "null|string"
       phase: "null|plan-review|implementation"
     handoff_payload: "{ ... contents of latest handoff_output ... }"
+    verify_result:
+      status: "PASS|FAIL|null"
+      command: "make fmt && make lint && make test"
+      timestamp: "ISO 8601 | null"
     issues_history:
       - phase: 2
         iteration: 1
@@ -82,3 +86,7 @@ checkpoint_protocol:
         approved_with_notes:
           - "Part 3: minor — add error context in helper"
         iteration: "1/3"
+      verify_result:
+        status: "PASS"
+        command: "make fmt && make lint && make test"
+        timestamp: "2026-02-20T14:25:00Z"

@@ -24,9 +24,10 @@ disable-model-invocation: true
 
 ## Instructions
 
-### Step 1: Run Quick Check — lint + test (blocking)
-Run `make lint` and `make test`. If EITHER fails → STOP, return to coder.
-Do NOT proceed to review if Quick Check fails.
+### Step 1: Quick Check — lint + test (blocking)
+If coder handoff includes verify_status with lint=PASS and test=PASS → trust coder verification, skip re-run.
+Otherwise: run `make lint` and `make test`. If EITHER fails → STOP, return to coder.
+Do NOT proceed to review if Quick Check fails (whether trusted or re-run).
 
 ### Step 2: Get changes and assess scope
 Run `git diff $BASE...HEAD` (detect base branch first — see code-reviewer.md process). Assess: files changed, lines changed, layers affected.

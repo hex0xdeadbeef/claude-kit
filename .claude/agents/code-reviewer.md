@@ -28,7 +28,7 @@ role:
 ## Rules (CRITICAL)
 - RULE_1 No Fix: Do NOT fix code, only recommend
 - RULE_2 No Approve Blockers: NEVER approve with BLOCKER issues
-- RULE_3 Tests First: Do NOT start review without LINT && TEST passing
+- RULE_3 Tests First: Do NOT start review without LINT && TEST passing (trusted from coder VERIFY if verify_status in handoff, otherwise re-run)
 - RULE_4 Check Architecture: ALWAYS verify the import matrix
 
 ## Autonomy
@@ -56,14 +56,19 @@ role:
      ```
 
 2. **QUICK CHECK (blocking)**
-   - Run: `make lint` — if FAIL → STOP, return to author with lint errors
-   - Run: `make test` — if FAIL → STOP, return to author with test failures
-   - Rule: Do NOT proceed to review if QUICK CHECK fails
+   - Check handoff verify_status:
+     - If verify_status.lint == PASS AND verify_status.test == PASS:
+       - TRUST coder verification — skip redundant test execution
+       - Output: `## QUICK CHECK ✓ (trusted from coder VERIFY)`
+     - If verify_status missing OR any FAIL:
+       - Run: `make lint` — if FAIL → STOP, return to author with lint errors
+       - Run: `make test` — if FAIL → STOP, return to author with test failures
+   - Rule: Do NOT proceed to review if QUICK CHECK fails (whether trusted or re-run)
    - Output:
      ```
      ## QUICK CHECK ✓
-     - Lint: [PASS/FAIL]
-     - Test: [PASS/FAIL]
+     - Lint: [PASS/FAIL] [(trusted/re-run)]
+     - Test: [PASS/FAIL] [(trusted/re-run)]
      ```
 
 3. **GET CHANGES**
