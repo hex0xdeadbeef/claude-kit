@@ -23,6 +23,16 @@ task-analysis → /planner → plan-reviewer (agent) → /coder → code-reviewe
 
 **Phase 4 — Code Review:** Delegate to code-reviewer agent. APPROVED → Done. APPROVED_WITH_COMMENTS → Done (log comments, proceed to completion). CHANGES_REQUESTED → Phase 3 (iteration N/3).
 
+**Phase 2/4 — Incomplete Output Recovery:** If a review agent (plan-reviewer or code-reviewer) returns without a clear verdict:
+
+1. Validate return text for verdict keyword (SEE workflow.md → output_validation)
+2. If missing → SendMessage to the same agent requesting verdict only (1 retry, use agentId)
+3. If verdict recovered → continue pipeline normally
+4. If unrecoverable → WARN user with available agent summary, request manual verdict decision
+5. Write checkpoint with `verdict: "INCOMPLETE"` and `recovery_attempted: true`
+
+**Note:** This scenario is rare after RULE_5 (Output First) was added to agents. But validation remains as a safety net.
+
 **Phase 0 — Get Task (optional):** If beads task → `bd show <id>` + `bd update <id> --status=in_progress`. Skip if ad-hoc.
 
 **Phase 5 — Completion:** After code-review APPROVED/APPROVED_WITH_COMMENTS:

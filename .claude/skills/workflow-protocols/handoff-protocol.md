@@ -27,7 +27,7 @@ handoff_protocol:
           - "Part N: why it needs attention"
 
     plan_review_to_coder:
-      producer: "/plan-review"
+      producer: "plan-reviewer (agent)"
       consumer: "/coder"
       payload:
         artifact: ".claude/prompts/{feature}.md"
@@ -59,7 +59,7 @@ handoff_protocol:
         iteration: "N/3"
 
     code_review_to_completion:
-      producer: "/code-review"
+      producer: "code-reviewer (agent)"
       consumer: "workflow/completion"
       payload:
         verdict: "APPROVED|APPROVED_WITH_COMMENTS|CHANGES_REQUESTED"

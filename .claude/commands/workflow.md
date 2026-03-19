@@ -209,6 +209,12 @@ delegation_protocol:
 
       Iteration: {N}/3
     returns: "Verdict (APPROVED/NEEDS_CHANGES/REJECTED) + issues + handoff for coder"
+    post_delegation: |
+      After receiving plan-reviewer output:
+      1. Validate output (SEE output_validation)
+      2. Extract verdict from VERDICT: header (first line)
+      3. Write checkpoint: phase_completed=2, verdict={extracted_verdict}
+      4. If verdict is INCOMPLETE → follow output_validation.on_incomplete_output
 
   code_review_delegation:
     agent: "code-reviewer"
@@ -233,8 +239,38 @@ delegation_protocol:
 
       Iteration: {N}/3
     returns: "Verdict (APPROVED/APPROVED_WITH_COMMENTS/CHANGES_REQUESTED) + issues + handoff for completion"
+    post_delegation: |
+      After receiving code-reviewer output:
+      1. Validate output (SEE output_validation)
+      2. Extract verdict from VERDICT: header (first line)
+      3. Write checkpoint: phase_completed=4, verdict={extracted_verdict}
+      4. If verdict is INCOMPLETE → follow output_validation.on_incomplete_output
 
   fallback: "If agent delegation unavailable → fallback: re-read diff/plan in parent context (degraded mode, loss of isolation)"
+
+  output_validation:
+    purpose: "Verify agent returned a usable verdict before proceeding"
+    when: "Immediately after receiving agent return (plan-reviewer or code-reviewer)"
+    severity: CRITICAL
+    checks:
+      - check: "First line should be VERDICT: followed by one of the verdict values"
+        look_for: "VERDICT: (case-insensitive) followed by APPROVED_WITH_COMMENTS, APPROVED, CHANGES_REQUESTED, NEEDS_CHANGES, or REJECTED"
+        on_missing: "INCOMPLETE_OUTPUT"
+      - check: "Return text contains handoff section"
+        pattern: "Handoff"
+        on_missing: "INCOMPLETE_OUTPUT — proceed with verdict only if found"
+
+    on_incomplete_output:
+      step_1: "SendMessage to the SAME agent (use agentId from return): 'Your output was incomplete. Provide ONLY the verdict and handoff now. Start your response with VERDICT: followed by the verdict value.'"
+      step_2: "If SendMessage returns verdict → extract it, proceed normally"
+      step_3: "If SendMessage fails or still no verdict → WARN user, show agent summary, ask for manual verdict decision"
+      max_retries: 1
+      note: "SendMessage preserves agent context — the agent still has the full review in memory. This is NOT a new agent launch."
+
+    common_causes:
+      - "Agent exhausted maxTurns on memory operations (SEE RULE_5 in agent artifacts)"
+      - "Agent got stuck in a long Sequential Thinking chain"
+      - "Agent produced output but in unexpected format"
 
   code_researcher_usage:
     agent: "code-researcher"

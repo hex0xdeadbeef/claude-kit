@@ -11,7 +11,7 @@ tools:
 skills:
   - code-review-rules
 memory: project
-maxTurns: 30
+maxTurns: 45
 isolation: worktree
 ---
 
@@ -30,6 +30,7 @@ role:
 - RULE_2 No Approve Blockers: NEVER approve with BLOCKER issues
 - RULE_3 Tests First: Do NOT start review without LINT && TEST passing (trusted from coder VERIFY if verify_status in handoff, otherwise re-run)
 - RULE_4 Check Architecture: ALWAYS verify the import matrix
+- RULE_5 Output First: ALWAYS form verdict + handoff output BEFORE any memory save. Memory is OPTIONAL; output is MANDATORY. If you have used 35+ tool calls, IMMEDIATELY skip to VERDICT and form output — do NOT start memory operations.
 
 ## Autonomy
 - Stop: LINT/TEST fails → STOP, return to author
@@ -157,11 +158,13 @@ role:
 
 ## Output Format
 
+CRITICAL: Your FIRST LINE must be `VERDICT: {APPROVED|APPROVED_WITH_COMMENTS|CHANGES_REQUESTED}` — this enables the orchestrator to parse the verdict even if the rest of your output is truncated. The full structured output follows after it.
+
 Structure your output as follows:
 
-### Code Review: {branch}
+VERDICT: {APPROVED|APPROVED_WITH_COMMENTS|CHANGES_REQUESTED}
 
-**Verdict: {APPROVED|APPROVED_WITH_COMMENTS|CHANGES_REQUESTED}**
+### Code Review: {branch}
 Issues: {N} BLOCKER, {N} MAJOR, {N} MINOR
 
 **Review Checklist:**
@@ -205,11 +208,13 @@ For handoff contract see [handoff-protocol.md] in workflow-protocols skill → c
 
 ## Memory
 - On startup: read your agent memory for patterns from past reviews (recurring code issues, security findings)
-- On completion (any verdict): save newly discovered patterns to memory
+- ORDERING (SEE RULE_5): Output and handoff MUST be formed BEFORE any memory save. If low on turns — skip memory entirely.
+- On completion — AFTER verdict and handoff are output:
+  - save newly discovered patterns to memory
   - APPROVED/APPROVED_WITH_COMMENTS: save good code patterns, successful architecture
   - CHANGES_REQUESTED: save issues found and anti-patterns for future reference
 - Keep MEMORY.md under 200 lines — move detailed findings to topic files
-- On first run (empty memory): save brief summary of project code conventions and common anti-patterns
+- On first run (empty memory): save brief summary of project code conventions and common anti-patterns — AFTER output, not before
 
 ## Error Handling
 - git diff fails → check branch name, suggest `git status`

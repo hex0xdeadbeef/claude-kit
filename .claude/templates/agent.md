@@ -48,6 +48,14 @@ template:
         steps: ["step1", "step2"]
         output: "<expected output>"
 
+    turn_budget:
+      note: "Reserve last 5 turns for output formation. If approaching maxTurns, skip optional operations (memory save, beads) and form output immediately."
+      priority_order:
+        - "1. VERDICT + structured output (MANDATORY)"
+        - "2. Handoff payload (MANDATORY)"
+        - "3. Memory save (OPTIONAL — skip if low on turns)"
+        - "4. Beads reminder (OPTIONAL — skip if low on turns)"
+
     rules:
       - id: R1
         severity: critical
@@ -96,7 +104,7 @@ ai_first_principles:
 quality_gates:
   post_create:
     - "File at correct path: .claude/agents/<name>/<name>.md"
-    - "All required sections present: meta, autonomy, input, workflow, phases, rules, output"
+    - "All required sections present: meta, autonomy, input, workflow, phases, turn_budget, rules, output"
     - "YAML > 80% of file content"
     - "No prose paragraphs or ## headers"
     - "fatal_errors defined"

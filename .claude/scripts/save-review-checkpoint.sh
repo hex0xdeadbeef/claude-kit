@@ -17,7 +17,7 @@ mkdir -p "$STATE_DIR"
 INPUT=$(cat)
 
 python3 << PYTHON_EOF
-import json, sys
+import json, sys, re
 from datetime import datetime, timezone
 
 try:
@@ -29,10 +29,22 @@ agent_type = data.get("agent_type", data.get("agent_name", "unknown"))
 session_id = data.get("session_id", "")
 timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
+# Extract verdict from agent's final response (last_assistant_message per SubagentStop contract)
+output = data.get("last_assistant_message", "")
+verdict = "UNKNOWN"
+if output:
+    match = re.search(
+        r'(?i)verdict:\s*(APPROVED_WITH_COMMENTS|APPROVED|CHANGES_REQUESTED|NEEDS_CHANGES|REJECTED)',
+        str(output)
+    )
+    if match:
+        verdict = match.group(1).upper()
+
 marker = {
     "agent": agent_type,
     "completed_at": timestamp,
-    "session_id": session_id
+    "session_id": session_id,
+    "verdict": verdict
 }
 
 completions_file = "$STATE_DIR/review-completions.jsonl"
