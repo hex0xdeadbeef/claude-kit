@@ -24,6 +24,11 @@ Before implementation, critically evaluate plan (Phase 1.5):
 Evaluate checks: feasibility, hidden complexities, edge cases, performance, dependencies.
 Output: `.claude/prompts/{feature}-evaluate.md`
 
+Evaluate has an exploration budget (SEE coder.md → evaluate_budget).
+When budget is reached, DECIDE with available information.
+Prefer PROCEED with notes over endless research.
+The planner already researched — evaluate is VALIDATION, not discovery.
+
 ## Instructions
 
 ### Step 1: Load plan and verify approval

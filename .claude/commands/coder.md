@@ -210,6 +210,36 @@ workflow:
           Context: Implementing {feature}, evaluating plan feasibility
         note: "NON_CRITICAL — if Task tool unavailable, proceed with inline Grep/Glob"
 
+      evaluate_budget:
+        purpose: "Prevent evaluation loops. When budget exceeded → make PROCEED/REVISE/RETURN decision with available information."
+        budgets:
+          S:
+            file_reads: 3
+            tool_calls: 8
+            signal: "Plan is simple. Quick feasibility check, then PROCEED."
+          M:
+            file_reads: 6
+            tool_calls: 15
+            signal: "Check key files referenced in plan. If no blockers found → PROCEED."
+          L:
+            file_reads: 12
+            tool_calls: 25
+            delegate: "After 5 direct reads, delegate gaps to code-researcher."
+            signal: "After 12 reads, decide PROCEED/REVISE/RETURN."
+          XL:
+            file_reads: 18
+            tool_calls: 35
+            delegate: "MANDATORY code-researcher for gap analysis."
+            signal: "After 18 reads, decide."
+        on_exceeded: |
+          1. STOP reading new files
+          2. With available information, make decision:
+             - No blockers found → PROCEED (gaps are acceptable)
+             - Minor concerns → REVISE (note adjustments)
+             - Major unknowns → RETURN (with specific questions for planner)
+          3. Document decision rationale in evaluate output
+        tracking: "Count file reads against budget"
+
       decisions:
         - decision: PROCEED
           criteria: "Plan is implementable as-is"
