@@ -123,7 +123,18 @@ try:
 except Exception as e:
     print(f"session-analytics: checkpoint read error: {e}", file=sys.stderr)
 
-# 4. Build analytics entry (session_id + timestamp always present)
+# 4. Exploration metrics (derived from tool_breakdown)
+exploration_reads = sum(tool_breakdown.get(t, 0) for t in ("Read", "Grep", "Glob"))
+action_writes = sum(tool_breakdown.get(t, 0) for t in ("Write", "Edit"))
+read_write_ratio = round(exploration_reads / max(action_writes, 1), 1)
+exploration_metrics = {
+    "exploration_reads": exploration_reads,
+    "action_writes": action_writes,
+    "read_write_ratio": read_write_ratio,
+    "exploration_loop_signal": read_write_ratio > 10,
+}
+
+# 5. Build analytics entry (session_id + timestamp always present)
 entry = {
     "session_id": session_id,
     "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -133,6 +144,7 @@ entry = {
     "user_prompts": user_prompts,
     "tool_calls": tool_calls,
     "tool_breakdown": tool_breakdown,
+    "exploration_metrics": exploration_metrics,
     "errors": errors,
     "checkpoint": checkpoint,
 }

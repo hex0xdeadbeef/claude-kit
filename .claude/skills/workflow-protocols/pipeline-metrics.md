@@ -95,4 +95,8 @@ pipeline_metrics:
           warning: "Major misclassification — review task-analysis criteria"
         - condition: "issues_found.blocker > 0 AND was APPROVED by plan-review"
           warning: "Blocker found after plan approval — plan-review may need stricter checks"
+        - condition: "read_write_ratio > 10 (from session-analytics exploration_metrics)"
+          warning: "Possible exploration loop — high read/write ratio"
+        - condition: "exploration_reads > 30 AND action_writes == 0"
+          warning: "Session appears stuck in exploration"
       action: "Append warning to completion output + include in next aggregation report"
