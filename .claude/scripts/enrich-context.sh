@@ -81,7 +81,21 @@ try:
 except Exception:
     pass
 
-# 4. Git branch (fast, subprocess)
+# 4. Sub-phase exploration signal
+try:
+    transcript = os.path.join(STATE_DIR, "session-transcript.jsonl")
+    if os.path.isfile(transcript):
+        with open(transcript) as f:
+            lines = f.readlines()
+        recent = lines[-20:] if len(lines) > 20 else lines
+        recent_reads = sum(1 for l in recent if any(t in l for t in ['"tool_name":"Read"', '"tool_name":"Grep"', '"tool_name":"Glob"']))
+        recent_writes = sum(1 for l in recent if any(t in l for t in ['"tool_name":"Write"', '"tool_name":"Edit"']))
+        if recent_reads > 10 and recent_writes == 0:
+            parts.append(f"Exploration signal: {recent_reads} reads, {recent_writes} writes in last 20 calls — consider transitioning to action")
+except Exception:
+    pass
+
+# 5. Git branch (fast, subprocess)
 try:
     result = subprocess.run(
         ["git", "branch", "--show-current"],

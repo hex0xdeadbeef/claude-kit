@@ -37,6 +37,13 @@ checkpoint_protocol:
         iteration: 1
         issues: ["PR-001: MAJOR — missing tests section"]
 
+  sub_phase:
+    note: "Optional — tracked within planner/coder phases for exploration loop detection"
+    fields:
+      current: "RESEARCH|DESIGN|DOCUMENT|EVALUATE|IMPLEMENT|VERIFY"
+      tool_calls_in_sub_phase: "N (count of tool calls since sub-phase start)"
+      file_reads_in_sub_phase: "N (count of Read/Grep/Glob calls since sub-phase start)"
+
   sub_phase_mapping:
     note: |
       Coder-internal tracking concept (NOT a checkpoint format field).
