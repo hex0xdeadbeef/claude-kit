@@ -49,7 +49,7 @@ Running tests after each Part wastes time — compile errors are caught by LINT,
 Exception: If plan contains ## TDD section, RED-GREEN-REFACTOR test runs within a Part are allowed (they are implementation, not verification).
 
 ### Step 4: Verify and form handoff
-Run full VERIFY: `make fmt && make lint && make test`.
+Run full VERIFY: `go vet ./... && make fmt && make lint && make test`.
 If tests fail 3x → STOP, request help. On success → form handoff payload for code-review.
 
 ## Example

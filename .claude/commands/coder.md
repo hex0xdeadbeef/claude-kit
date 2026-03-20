@@ -77,7 +77,7 @@ output:
         verify_status:
           lint: PASS
           test: PASS
-          command_used: "make fmt && make lint && make test"
+          command_used: "go vet ./... && make fmt && make lint && make test"
 
 ## TRIGGERS
 triggers:
@@ -365,6 +365,22 @@ workflow:
       name: "VERIFY"
       note: "This is the ONLY phase where tests run. Do not run tests earlier."
 
+      verify_startup:
+        step_0: "Resolve VERIFY command before running"
+        checks:
+          - if: "PROJECT-KNOWLEDGE.md exists AND defines custom VERIFY/FMT/LINT/TEST"
+            then: "Use custom commands from PROJECT-KNOWLEDGE.md"
+          - if: "Makefile exists with fmt/lint/test targets"
+            then: "Use make-based: go vet ./... && make fmt && make lint && make test"
+          - if: "go.mod exists but no Makefile"
+            then: "Use Go-native: go fmt ./... && go vet ./... && go test ./..."
+          - else: "WARN: No VERIFY command available. Skip VERIFY, note in handoff."
+        note: "CLAUDE.md defines defaults. PROJECT-KNOWLEDGE.md overrides. This ensures VERIFY never fails due to missing build tooling."
+
+      static_analysis:
+        command: "VET (go vet ./... — catches printf format errors, lock copying, suspicious constructs)"
+        note: "Run before FMT/LINT. Fails fast on compilation-adjacent issues."
+
       formatting:
         command: "FMT && LINT"
 
@@ -398,6 +414,7 @@ workflow:
         - [x] Part 2: ...
 
         Checks:
+        - [x] VET (go vet ./...)
         - [x] FMT
         - [x] LINT
         - [x] TEST (or test-runner subagent — adapt to project)

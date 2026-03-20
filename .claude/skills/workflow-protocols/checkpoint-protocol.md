@@ -21,6 +21,7 @@ checkpoint_protocol:
     timestamp: "ISO 8601"
     complexity: "S|M|L|XL"
     route: "minimal|standard|full"
+    session_type: "workflow|project-research|ad-hoc"
     re_routing:
       occurred: false
       original_route: "null|minimal|standard|full"
@@ -30,12 +31,18 @@ checkpoint_protocol:
     handoff_payload: "{ ... contents of latest handoff_output ... }"
     verify_result:
       status: "PASS|FAIL|null"
-      command: "make fmt && make lint && make test"
+      command: "go vet ./... && make fmt && make lint && make test"
       timestamp: "ISO 8601 | null"
     issues_history:
       - phase: 2
         iteration: 1
         issues: ["PR-001: MAJOR — missing tests section"]
+
+  session_type:
+    note: "Session classification — used by exploration loop detection to exempt read-heavy sessions"
+    values: "workflow|project-research|ad-hoc"
+    default: "ad-hoc (if no checkpoint written yet)"
+    set_by: "Orchestrator at Phase 0.5 (task-analysis) or project-researcher at startup"
 
   sub_phase:
     note: "Optional — tracked within planner/coder phases for exploration loop detection"
@@ -43,6 +50,8 @@ checkpoint_protocol:
       current: "RESEARCH|DESIGN|DOCUMENT|EVALUATE|IMPLEMENT|VERIFY"
       tool_calls_in_sub_phase: "N (count of tool calls since sub-phase start)"
       file_reads_in_sub_phase: "N (count of Read/Grep/Glob calls since sub-phase start)"
+      budget_threshold: "20 reads per sub-phase (see CLAUDE.md error table)"
+      on_exceeded: "STOP_AND_TRANSITION to next sub-phase"
 
   sub_phase_mapping:
     note: |
@@ -79,6 +88,7 @@ checkpoint_protocol:
       timestamp: "2026-02-20T14:30:00Z"
       complexity: "L"
       route: "standard"
+      session_type: "workflow"
       re_routing:
         occurred: false
         original_route: null
@@ -95,5 +105,5 @@ checkpoint_protocol:
         iteration: "1/3"
       verify_result:
         status: "PASS"
-        command: "make fmt && make lint && make test"
+        command: "go vet ./... && make fmt && make lint && make test"
         timestamp: "2026-02-20T14:25:00Z"

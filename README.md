@@ -42,6 +42,9 @@ cp .gitignore /path/to/your/project/   # or merge with existing
 
 # Optional: create personal settings overrides
 cp .claude/settings.local.json.example /path/to/your/project/.claude/settings.local.json
+# Optional: strip Co-Authored-By from commits (set GIT_STRIP_CO_AUTHOR=true in settings.local.json)
+cp .claude/templates/git-hooks/commit-msg /path/to/your/project/.git/hooks/commit-msg
+chmod +x /path/to/your/project/.git/hooks/commit-msg
 ```
 
 ### First Steps

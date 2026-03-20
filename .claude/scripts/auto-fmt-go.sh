@@ -95,9 +95,14 @@ fi
 # hasn't finished using yet (mid-Part editing). goimports runs later
 # as part of `make fmt` in VERIFY phase — that's the right place.
 if command -v gofmt >/dev/null 2>&1; then
-  if gofmt -w "$FILE_PATH" 2>/dev/null; then
+  # FIX-04: Capture gofmt output — log failures instead of silently swallowing
+  # Use && || pattern to prevent set -e from exiting on gofmt failure
+  FMT_OUTPUT=$(gofmt -w "$FILE_PATH" 2>&1) && FMT_STATUS=0 || FMT_STATUS=$?
+  if [[ $FMT_STATUS -eq 0 ]]; then
     # Fix #6: Log successful format (to file, not stdout — avoid noise for Claude)
     echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] auto-fmt-go: formatted $(basename "$FILE_PATH")" >> "$LOG_FILE"
+  else
+    echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] auto-fmt-go: gofmt FAILED on $(basename "$FILE_PATH"): $FMT_OUTPUT" >> "$LOG_FILE"
   fi
 else
   # gofmt not found — this means Go SDK is not installed

@@ -116,7 +116,7 @@ try:
                     key, _, val = stripped.partition(":")
                     key = key.strip()
                     val = val.strip().strip('"').strip("'")
-                    if key in ("phase_completed", "phase_name", "complexity", "route"):
+                    if key in ("phase_completed", "phase_name", "complexity", "route", "session_type"):
                         cp_data[key] = val
         cp_data["feature"] = feature
         checkpoint = cp_data
@@ -127,11 +127,15 @@ except Exception as e:
 exploration_reads = sum(tool_breakdown.get(t, 0) for t in ("Read", "Grep", "Glob"))
 action_writes = sum(tool_breakdown.get(t, 0) for t in ("Write", "Edit"))
 read_write_ratio = round(exploration_reads / max(action_writes, 1), 1)
+# Gate exploration_loop_signal on session_type — project-researcher is read-heavy by design (FIX-05)
+session_type_val = checkpoint.get("session_type", "ad-hoc") if checkpoint else "ad-hoc"
+exploration_loop_signal = read_write_ratio > 10 and session_type_val != "project-research"
 exploration_metrics = {
     "exploration_reads": exploration_reads,
     "action_writes": action_writes,
     "read_write_ratio": read_write_ratio,
-    "exploration_loop_signal": read_write_ratio > 10,
+    "exploration_loop_signal": exploration_loop_signal,
+    "session_type": session_type_val,
 }
 
 # 5. Build analytics entry (session_id + timestamp always present)

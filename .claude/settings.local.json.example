@@ -1,0 +1,18 @@
+{
+  "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/main/config-schema.json",
+  "_comment": [
+    "Personal overrides — copy to settings.local.json (gitignored).",
+    "Scalars override settings.json values; arrays merge; deny wins over allow.",
+    "Common use cases:",
+    "  - Add project-specific permissions (docker, kubectl, etc.)",
+    "  - Set environment variables (GIT_STRIP_CO_AUTHOR, etc.)",
+    "  - Override model for local development"
+  ],
+  "env": {
+    "GIT_STRIP_CO_AUTHOR": "false"
+  },
+  "permissions": {
+    "allow": [],
+    "deny": []
+  }
+}

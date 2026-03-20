@@ -19,7 +19,7 @@ task-analysis → /planner → plan-reviewer (agent) → /coder → code-reviewe
 
 **Phase 2 — Plan Review:** Delegate to plan-reviewer agent. APPROVED → Phase 3. NEEDS_CHANGES → Phase 1 (iteration N/3). REJECTED → Stop.
 
-**Phase 3 — Implementation:** Execute /coder. Verify: `VERIFY` (Go default: make fmt && make lint && make test). PASS → Phase 4. FAIL → fix + retry.
+**Phase 3 — Implementation:** Execute /coder. Verify: `VERIFY` (Go default: go vet ./... && make fmt && make lint && make test). PASS → Phase 4. FAIL → fix + retry.
 
 **Phase 4 — Code Review:** Delegate to code-reviewer agent. APPROVED → Done. APPROVED_WITH_COMMENTS → Done (log comments, proceed to completion). CHANGES_REQUESTED → Phase 3 (iteration N/3).
 
@@ -37,6 +37,10 @@ task-analysis → /planner → plan-reviewer (agent) → /coder → code-reviewe
 
 **Phase 5 — Completion:** After code-review APPROVED/APPROVED_WITH_COMMENTS:
 1. Create git commit (MANDATORY)
+   - Message format: `{type}({scope}): {description}` (types: feat|fix|refactor|test|docs|chore)
+   - Body (optional): max 3 lines, include plan path + complexity + review iterations
+   - Co-Authored-By: included by default (Claude Code system behavior)
+   - To strip: `cp .claude/templates/git-hooks/commit-msg .git/hooks/commit-msg && chmod +x .git/hooks/commit-msg` + set `GIT_STRIP_CO_AUTHOR=true` in settings.local.json env
 2. Run `bd sync` (if beads active)
 3. Remind user to run `bd close <id>` (do NOT auto-close)
 4. Collect pipeline metrics (SEE pipeline-metrics.md)

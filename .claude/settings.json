@@ -97,6 +97,15 @@
             "command": ".claude/scripts/block-dangerous-commands.sh"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/scripts/pre-commit-build.sh"
+          }
+        ]
       }
     ],
     "PostToolUse": [

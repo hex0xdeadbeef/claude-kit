@@ -2,7 +2,7 @@
 
 ## Language Profile
 - Language: Go >= 1.24
-- Commands: VERIFY=`make fmt && make lint && make test`, FMT=`make fmt`, LINT=`make lint`, TEST=`make test`
+- Commands: VERIFY=`go vet ./... && make fmt && make lint && make test`, FMT=`make fmt`, LINT=`make lint`, TEST=`make test`, VET=`go vet ./...`
 - Error wrapping: `fmt.Errorf("context: %w", err)` — NEVER log AND return same error
 - Domain entities: NO encoding/json tags (tags belong in DTOs)
 - Source: `internal/**/*.go`, Generated: `*_gen.go`, Mocks: `*/mocks/*.go`

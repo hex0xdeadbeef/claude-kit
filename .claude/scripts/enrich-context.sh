@@ -38,7 +38,7 @@ try:
                     key, _, val = line.partition(":")
                     key = key.strip()
                     val = val.strip().strip('"').strip("'")
-                    if key in ("phase_completed", "phase_name", "complexity", "route", "verdict"):
+                    if key in ("phase_completed", "phase_name", "complexity", "route", "verdict", "session_type"):
                         data[key] = val
 
         phase = data.get("phase_name", "unknown")
@@ -46,8 +46,9 @@ try:
         complexity = data.get("complexity", "?")
         route = data.get("route", "?")
         verdict = data.get("verdict", "null")
+        session_type = data.get("session_type", "ad-hoc")
 
-        parts.append(f"Checkpoint: {feature} | Phase: {phase} ({phase_num}/4) | Complexity: {complexity} | Route: {route} | Verdict: {verdict}")
+        parts.append(f"Checkpoint: {feature} | Phase: {phase} ({phase_num}/4) | Complexity: {complexity} | Route: {route} | Verdict: {verdict} | Session: {session_type}")
 except Exception:
     pass
 
@@ -90,8 +91,8 @@ try:
         recent = lines[-20:] if len(lines) > 20 else lines
         recent_reads = sum(1 for l in recent if any(t in l for t in ['"tool_name":"Read"', '"tool_name":"Grep"', '"tool_name":"Glob"']))
         recent_writes = sum(1 for l in recent if any(t in l for t in ['"tool_name":"Write"', '"tool_name":"Edit"']))
-        if recent_reads > 10 and recent_writes == 0:
-            parts.append(f"Exploration signal: {recent_reads} reads, {recent_writes} writes in last 20 calls — consider transitioning to action")
+        if recent_reads > 15 and recent_writes == 0:
+            parts.append(f"Exploration signal: {recent_reads} reads, {recent_writes} writes in last 20 calls — consider transitioning to action (threshold: 15, see CLAUDE.md)")
 except Exception:
     pass
 

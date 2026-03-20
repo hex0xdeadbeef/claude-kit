@@ -15,13 +15,14 @@ mkdir -p "$STATE_DIR"
 
 # Read stdin JSON, parse once, write JSONL marker
 INPUT=$(cat)
+export _HOOK_INPUT="$INPUT"
 
-python3 << PYTHON_EOF
-import json, sys, re
+python3 << 'PYTHON_EOF'
+import json, sys, re, os
 from datetime import datetime, timezone
 
 try:
-    data = json.loads('''$INPUT''')
+    data = json.loads(os.environ.get("_HOOK_INPUT", "{}"))
 except Exception:
     data = {}
 
@@ -47,7 +48,7 @@ marker = {
     "verdict": verdict
 }
 
-completions_file = "$STATE_DIR/review-completions.jsonl"
+completions_file = ".claude/workflow-state/review-completions.jsonl"
 try:
     with open(completions_file, "a") as f:
         f.write(json.dumps(marker) + "\n")

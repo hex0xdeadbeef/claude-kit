@@ -1,0 +1,28 @@
+#!/bin/bash
+# Git hook: commit-msg — strip Co-Authored-By trailers before commit finalization
+#
+# Install:
+#   cp .claude/templates/git-hooks/commit-msg .git/hooks/commit-msg
+#   chmod +x .git/hooks/commit-msg
+#
+# Enable: set GIT_STRIP_CO_AUTHOR=true in .claude/settings.local.json env
+#   or export GIT_STRIP_CO_AUTHOR=true in shell
+#
+# How it works:
+#   commit-msg hook runs AFTER the message is written to $1 but BEFORE
+#   the commit is finalized. This is cleaner than post-commit + amend:
+#   - No history rewriting (--amend)
+#   - No hook bypass (--no-verify)
+#   - No auto-push safety concerns
+#
+# WARNING: Only for local development. Do NOT use if your team policy
+# requires AI attribution in commit messages.
+
+if [[ "${GIT_STRIP_CO_AUTHOR:-false}" == "true" ]]; then
+    # macOS sed requires '' after -i; Linux sed does not
+    if [[ "$(uname)" == "Darwin" ]]; then
+        sed -i '' '/^Co-Authored-By:/d' "$1"
+    else
+        sed -i '/^Co-Authored-By:/d' "$1"
+    fi
+fi

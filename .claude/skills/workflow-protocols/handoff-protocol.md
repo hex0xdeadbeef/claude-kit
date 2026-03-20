@@ -55,7 +55,7 @@ handoff_protocol:
         verify_status:
           lint: "PASS"
           test: "PASS"
-          command_used: "make fmt && make lint && make test"
+          command_used: "go vet ./... && make fmt && make lint && make test"
         iteration: "N/3"
 
     code_review_to_completion:
