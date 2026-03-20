@@ -241,6 +241,35 @@ phases:
           - "mcp__postgres__query('SELECT ...')"
         alternative: "/db-explorer for full schema analysis"
 
+    research_budget:
+      purpose: "Prevent exploration loops. When budget exceeded → STOP_AND_TRANSITION to DESIGN with findings so far."
+      budgets:
+        S:
+          file_reads: 5
+          tool_calls: 12
+          signal: "Pattern already exists in project. Find one example and proceed."
+        M:
+          file_reads: 10
+          tool_calls: 20
+          signal: "After 10 file reads, summarize findings and transition to DESIGN."
+        L:
+          file_reads: 20
+          tool_calls: 35
+          delegate: "After 8 direct reads, delegate remaining to code-researcher."
+          signal: "After 20 reads total, summarize and transition."
+        XL:
+          file_reads: 30
+          tool_calls: 50
+          delegate: "MANDATORY code-researcher for multi-package research."
+          signal: "After 30 reads total, summarize and transition."
+      on_exceeded: |
+        1. STOP reading new files
+        2. Summarize what you found (patterns, files, gaps)
+        3. Note what remains unknown
+        4. Transition to DESIGN phase with available information
+        5. Mark unknown areas as "NEEDS_VALIDATION" in plan
+      tracking: "Count file reads (Read + Grep + Glob results opened) against budget"
+
   phase_4_design:
     name: "DESIGN"
     sequential_thinking:

@@ -113,6 +113,7 @@ routing:
     plan_review: "SKIP (optional)"
     code_review: "standard"
     sequential_thinking: "NOT needed"
+    research_budget: "5 reads / 12 calls"
     note: "Fast path — don't overload the process for trivial tasks"
 
   M:
@@ -120,6 +121,7 @@ routing:
     plan_review: "standard"
     code_review: "standard"
     sequential_thinking: "as needed"
+    research_budget: "10 reads / 20 calls"
     note: "Main working mode"
 
   L:
@@ -127,6 +129,7 @@ routing:
     plan_review: "standard"
     code_review: "standard + parallel agents (if >5 files)"
     sequential_thinking: "RECOMMENDED"
+    research_budget: "20 reads / 35 calls (delegate after 8 direct reads)"
     note: "Full flow with possible review parallelization"
 
   XL:
@@ -134,6 +137,7 @@ routing:
     plan_review: "standard + Sequential Thinking REQUIRED"
     code_review: "standard + parallel agents"
     sequential_thinking: "REQUIRED"
+    research_budget: "30 reads / 50 calls (MANDATORY code-researcher)"
     note: "Maximum flow — all checks, all tools"
 ```
 
