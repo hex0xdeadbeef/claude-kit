@@ -20,6 +20,7 @@ Reusable Claude Code configuration kit for any project. Provides a structured mu
 | Plan not approved | FATAL | EXIT — run /plan-review first |
 | PROJECT-KNOWLEDGE.md missing | NON_CRITICAL | Use profile above as defaults |
 | Tests fail 3x | STOP_AND_WAIT | Show errors, request manual fix |
+| Exploration loop (Read/Grep >N budget) | STOP_AND_TRANSITION | Show files read, summarize findings, transition to next sub-phase |
 | Import violation | STOP_AND_FIX | Fix before proceeding |
 | Loop limit exceeded (3x) | STOP | Show iteration summary, request user help |
 

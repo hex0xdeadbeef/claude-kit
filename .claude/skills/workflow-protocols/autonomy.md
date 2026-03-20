@@ -13,6 +13,7 @@
 | USER_INTERVENTION (scope unclear, multiple approaches, user says stop) | Stop, wait for user |
 | TOOL_UNAVAILABLE (MCP unavailable) | Warn, adapt, continue |
 | FAILURE_THRESHOLD (tests/lint fail 3x) | Stop, request manual fix |
+| EXPLORATION_THRESHOLD (file reads exceed budget for complexity) | Summarize findings so far, transition to next sub-phase (DESIGN/IMPLEMENT) |
 
 **Continue conditions (autonomous mode):**
 
@@ -21,3 +22,4 @@
 | Phase completed | → next phase |
 | Auto-fixable (lint fail → FMT) | Fix → retry |
 | Non-critical tool unavailable | Warn → continue |
+| Exploration within budget | Continue research |
