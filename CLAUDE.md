@@ -19,10 +19,10 @@ Reusable Claude Code configuration kit for any project. Provides a structured mu
 | Plan not found | FATAL | EXIT — run /planner first |
 | Plan not approved | FATAL | EXIT — run /plan-review first |
 | PROJECT-KNOWLEDGE.md missing | NON_CRITICAL | Use profile above as defaults |
-| Tests fail 3x | STOP_AND_WAIT | Show errors, request manual fix |
-| Exploration loop (Read/Grep >N budget) | STOP_AND_TRANSITION | Show files read, summarize findings, transition to next sub-phase |
+| Review loop limit (3x) | STOP_AND_WAIT | Show iteration summary, request user help |
+| Test/lint failure loop (3x) | STOP_AND_WAIT | Show errors, request manual fix |
+| Exploration budget exceeded | STOP_AND_TRANSITION | Summarize findings, transition to next sub-phase |
 | Import violation | STOP_AND_FIX | Fix before proceeding |
-| Loop limit exceeded (3x) | STOP | Show iteration summary, request user help |
 
 ## Rules
 - Architecture: `.claude/rules/architecture.md` — import matrix, domain purity (active for `internal/**/*.go`)
