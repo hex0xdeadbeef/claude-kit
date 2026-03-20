@@ -17,6 +17,12 @@ checklist:
     - "Hidden complexities identified"
     - "Decision made: PROCEED / REVISE / RETURN"
 
+  evaluate_to_implement_gate:
+    - "Evaluate decision made (PROCEED/REVISE/RETURN)"
+    - "Evaluate output file written (.claude/prompts/{feature}-evaluate.md)"
+    - "If PROCEED/REVISE → transition to IMPLEMENT"
+    - "No further exploratory research during IMPLEMENT"
+
   implementation:
     - "Code matches plan"
     - "All Parts implemented (TodoWrite updated)"

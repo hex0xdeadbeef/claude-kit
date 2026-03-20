@@ -28,6 +28,12 @@ checklist:
     - "External libraries checked (Context7 if needed)"
     - "Imports between packages verified"
 
+  phase_3_to_4_gate:
+    - "Research summary written"
+    - "Patterns identified or gaps noted"
+    - "Budget not exceeded (or exceeded with summary)"
+    - "Transition to DESIGN decided"
+
   phase_4_design:
     - "Sequential Thinking used (if 3+ alternatives)"
     - "Parts defined in order: DB -> Domain -> Contract -> ..."

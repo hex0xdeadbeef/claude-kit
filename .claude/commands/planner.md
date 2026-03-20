@@ -270,6 +270,19 @@ phases:
         5. Mark unknown areas as "NEEDS_VALIDATION" in plan
       tracking: "Count file reads (Read + Grep + Glob results opened) against budget"
 
+    research_to_design_gate:
+      when: "After RESEARCH phase complete (or budget exceeded)"
+      action: |
+        Before starting DESIGN, write a brief transition summary:
+        ## Research Summary
+        - Files examined: {count}
+        - Patterns found: {list}
+        - Gaps remaining: {list or "none"}
+        - Confidence: {high/medium/low}
+        - Decision: Proceed to DESIGN
+      purpose: "Forces explicit transition from research mode to design mode"
+      enforcement: "DESIGN phase MUST NOT do exploratory reads. Targeted reads of specific files referenced in the plan are allowed."
+
   phase_4_design:
     name: "DESIGN"
     sequential_thinking:

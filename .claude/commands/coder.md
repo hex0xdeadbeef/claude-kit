@@ -307,6 +307,14 @@ workflow:
 
       warning: "NEVER blindly implement a plan — question it first!"
 
+    evaluate_to_implement_gate:
+      when: "After EVALUATE phase complete (decision made)"
+      action: |
+        Before starting IMPLEMENT, write evaluate output file:
+        .claude/prompts/{feature}-evaluate.md (already required)
+      enforcement: "IMPLEMENT phase MUST NOT re-evaluate. Trust the decision."
+      additional: "If new blocker found during IMPLEMENT → mark as deviation in handoff, do NOT restart evaluate."
+
     - phase: 2
       name: "IMPLEMENT PARTS"
       order: "Follow dependency direction: lower layers first (data access → domain → API → tests → wiring)"
