@@ -198,10 +198,15 @@ workflow:
           - "External services ready?"
           - "Database schema compatible?"
 
+      evaluate_delegation:
+        trigger: "Budget 50% consumed without clear PROCEED/REVISE/RETURN decision"
+        action: "Delegate remaining research to code-researcher with specific questions"
+        skip: "S complexity (budget too small to split)"
+
       research_assist:
         tool: "Task (code-researcher agent, model='haiku')"
         when: "Evaluate finds gap: unfamiliar pattern, unknown package structure, unclear existing implementation"
-        skip_when: "S/M complexity OR --minimal mode OR all patterns already clear from plan"
+        skip_when: "S complexity OR all patterns already clear from plan"
         delegation_prompt_example: |
           Investigate codebase for: {specific question from evaluate}
           Focus areas:

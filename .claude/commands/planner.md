@@ -202,17 +202,23 @@ phases:
           - "Related architectural patterns"
 
       - step: "Investigate code"
+        research_strategy:
+          simple: "1-2 files → Grep/Glob directly (within budget)"
+          moderate: "3-5 files → direct research, delegate if budget 60% consumed"
+          complex: "6+ files → ALWAYS delegate to code-researcher"
+          override: "If S/M complexity but unfamiliar codebase → delegate to code-researcher regardless"
+
         simple_search:
-          when: "1-2 files"
+          when: "1-2 files (simple strategy)"
           tools:
             - "Grep 'pattern' --type {language}"
             - "Glob '{SOURCE_GLOB}' (Go default: internal/**/*{keyword}*.go)"
           note: "Check imports between packages (SEE: PROJECT-KNOWLEDGE.md, if available)"
 
         complex_search:
-          when: "Multi-layer patterns (3+ packages, complexity L/XL)"
+          when: "6+ files OR budget 60% consumed without findings (moderate/complex strategy)"
           tool: "Task (code-researcher agent, model='haiku')"
-          skip_when: "S/M complexity OR --minimal mode — use Grep/Glob directly"
+          skip_when: "--minimal mode — use Grep/Glob directly"
           use_for:
             - "Search patterns across entire project"
             - "Analyze existing implementations"
