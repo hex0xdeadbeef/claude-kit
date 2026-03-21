@@ -6,7 +6,8 @@
     "Common use cases:",
     "  - Add project-specific permissions (docker, kubectl, etc.)",
     "  - Set environment variables (GIT_STRIP_CO_AUTHOR, etc.)",
-    "  - Override model for local development"
+    "  - Override model for local development",
+    "  - Configure worktree.sparsePaths for monorepo optimization"
   ],
   "env": {
     "GIT_STRIP_CO_AUTHOR": "false"
@@ -14,5 +15,9 @@
   "permissions": {
     "allow": [],
     "deny": []
+  },
+  "_worktree_comment": "Uncomment for monorepos (100k+ files) to speed up code-reviewer worktree creation. Only checked-out paths will be visible to the reviewer agent.",
+  "worktree": {
+    "sparsePaths": ["internal/", "cmd/", "go.mod", "go.sum", "Makefile"]
   }
 }

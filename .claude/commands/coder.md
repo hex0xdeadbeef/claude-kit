@@ -2,6 +2,7 @@
 name: coder
 description: Implements code strictly per approved plan
 model: sonnet
+effort: high
 ---
 
 # CODER
@@ -167,7 +168,7 @@ startup:
 
 ## WORKFLOW
 workflow:
-  summary: "STARTUP → READ PLAN → EVALUATE → IMPLEMENT PARTS → VERIFY → DONE"
+  summary: "STARTUP → READ PLAN → EVALUATE → IMPLEMENT PARTS → SIMPLIFY (optional, L/XL) → VERIFY → DONE"
 
   phases:
     - phase: 1
@@ -360,6 +361,24 @@ workflow:
         actions:
           - "Update CONFIG_EXAMPLE (Go default: config.yaml.example)"
           - "Update CONFIG_DOCS (Go default: README.md)"
+
+    - phase: 2.5
+      name: "SIMPLIFY (optional)"
+      condition: "complexity L/XL AND total_parts >= 5"
+      skip_when: "S/M complexity, total_parts < 5, or --no-simplify flag"
+      purpose: "Reduce code complexity before review — eliminates NIT/MINOR issues that would cause extra review iterations"
+      action:
+        step_1: "Snapshot changed files: git diff --name-only (save list)"
+        step_2: "Run /simplify on changed files"
+        step_3: "Review simplify diff: git diff --stat"
+        step_4: "Guard check — if simplify changed > 30% of lines touched → revert (git checkout -- {files}), note in handoff: 'simplify skipped — changes too broad'"
+        step_5: "If guard passed → accept simplify changes"
+      guard:
+        purpose: "Prevent /simplify from introducing unintended changes"
+        threshold: "Simplify diff adds/removes > 30% of total lines changed by IMPLEMENT"
+        on_exceeded: "Revert simplify changes, proceed to VERIFY with original code"
+        note: "30% threshold is conservative. If simplify mostly removes dead code, that's fine. If it restructures logic, that's too risky."
+      handoff_impact: "Add simplify_applied: true|false|skipped to coder handoff"
 
     - phase: 3
       name: "VERIFY"

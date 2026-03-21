@@ -29,6 +29,14 @@ checkpoint_protocol:
       reason: "null|string"
       phase: "null|plan-review|implementation"
     handoff_payload: "{ ... contents of latest handoff_output ... }"
+    implementation_progress:
+      note: "Optional — populated by cron auto-save during Phase 3 for L/XL tasks"
+      parts_completed: "N (number of plan parts fully implemented)"
+      parts_total: "N (total parts in plan)"
+      current_part: "N (part currently being implemented, 0 if between parts)"
+      sub_phase: "EVALUATE|IMPLEMENT|SIMPLIFY|VERIFY"
+      auto_saved: true|false
+      cron_id: "string|null (CronCreate job ID for cleanup)"
     verify_result:
       status: "PASS|FAIL|null"
       command: "go vet ./... && make fmt && make lint && make test"
@@ -66,14 +74,20 @@ checkpoint_protocol:
         coder_phase: "3"
 
   recovery:
-    action: "Read checkpoint → resume from next phase"
+    action: "Read checkpoint → resume from next phase (or mid-phase if auto-saved)"
     steps:
       - "Read .claude/workflow-state/{feature}-checkpoint.yaml"
       - "Verify checkpoint integrity (all fields populated)"
-      - "Skip all completed phases"
-      - "Resume from phase_completed + 1"
+      - "Check implementation_progress.auto_saved flag"
+      - "If auto_saved=true AND phase_completed=2 (still in Phase 3):"
+      - "  → Resume Phase 3 from Part {parts_completed + 1}, skip completed Parts"
+      - "  → Coder reads plan, skips Parts 1..N that are already implemented"
+      - "  → Run VERIFY on all code (completed + new Parts) at the end"
+      - "If auto_saved=false → standard recovery: resume from phase_completed + 1"
       - "Load handoff_payload as input for current phase"
-    advantage: "No need to re-evaluate state by indirect signals (plan exists? changes exist?)"
+      - "Re-create cron auto-save if complexity L/XL (step 5 in startup)"
+    advantage: "Mid-phase recovery for XL tasks — no need to re-implement completed Parts"
+    mid_phase_note: "Auto-saved checkpoints have phase_completed set to the LAST FULLY completed phase (not current). implementation_progress tracks mid-phase state separately."
 
   example:
     file: ".claude/workflow-state/{feature}-checkpoint.yaml"

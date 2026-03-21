@@ -43,9 +43,13 @@ task-analysis → /planner → plan-reviewer (agent) → /coder → code-reviewe
    - To strip: `cp .claude/templates/git-hooks/commit-msg .git/hooks/commit-msg && chmod +x .git/hooks/commit-msg` + set `GIT_STRIP_CO_AUTHOR=true` in settings.local.json env
 2. Run `bd sync` (if beads active)
 3. Remind user to run `bd close <id>` (do NOT auto-close)
-4. Collect pipeline metrics (SEE pipeline-metrics.md)
-5. Save lessons_learned to Memory (if non-trivial — SEE mcp-tools.md entity templates)
-6. Write final checkpoint: `phase_completed: 5, phase_name: "completion"`
+4. Collect pipeline metrics (SEE pipeline-metrics.md):
+   a. Standard metrics: phases, iterations, complexity, issues, tools
+   b. Code-researcher metrics: extract from Agent/Task tool return metadata (token count, tool uses, duration per invocation). Sum across all invocations in this pipeline run. Include background_mode_used flag.
+   c. If code-researcher not invoked → set all code_researcher_metrics to 0
+5. CronDelete — remove auto-save cron job (if active, L/XL tasks). Read cron_id from checkpoint, call CronDelete. If CronDelete unavailable → WARN, job will expire with session.
+6. Save lessons_learned to Memory (if non-trivial — SEE mcp-tools.md entity templates)
+7. Write final checkpoint: `phase_completed: 5, phase_name: "completion"`
 
 **Note:** Completion is orchestrator-owned (not delegated to agent or sub-command).
 
@@ -123,7 +127,9 @@ TEST                                         # Tests pass? (Go default: make tes
 
 **Step 1:** Check `.claude/workflow-state/*-checkpoint.yaml`
 
-**Step 2A — Checkpoint found:** Read → verify integrity → resume from `phase_completed + 1` → restore iteration counters.
+**Step 2A — Checkpoint found:** Read → verify integrity → check for mid-phase progress → resume.
+- If `implementation_progress.auto_saved=true`: resume Phase 3 from Part `parts_completed + 1` (skip completed Parts). Re-create cron auto-save (startup step 5).
+- Otherwise: standard resume from `phase_completed + 1` → restore iteration counters.
 
 **Step 2B — No checkpoint (heuristic):**
 

@@ -2,6 +2,7 @@
 name: plan-reviewer
 description: Reviews implementation plans for architecture compliance, completeness, and security. Use when a plan needs validation before coding begins.
 model: sonnet
+effort: high
 tools:
   - Read
   - Grep
@@ -9,6 +10,10 @@ tools:
   - TodoWrite
 skills:
   - plan-review-rules
+disallowedTools:
+  - Write
+  - Edit
+  - Bash
 memory: project
 maxTurns: 40
 ---

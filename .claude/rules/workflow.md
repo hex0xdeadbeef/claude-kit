@@ -8,7 +8,7 @@ Commands (`.claude/commands/` — shared context with orchestrator):
 Agents (`.claude/agents/` — isolated context, clean review):
 - `plan-reviewer` — architecture compliance + completeness validation
 - `code-reviewer` — code review: architecture, security, tests, style
-- `code-researcher` — read-only codebase exploration (haiku, Task tool)
+- `code-researcher` — read-only codebase exploration (haiku, Agent/Task tool, supports background mode)
 
 Design Decision — Commands vs Agents:
 - Commands run INSIDE orchestrator context → shared task analysis, memory, handoffs

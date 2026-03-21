@@ -7,6 +7,7 @@
 # Metrics collected:
 #   - From stdin JSON: session_id, reason
 #   - From transcript JSONL: duration, message count, user prompts, tool calls breakdown, errors
+#   - From transcript JSONL: per-agent metrics (agent_type/agent_id from v2.1.69 hook events)
 #   - From workflow state: checkpoint (feature, phase, complexity, route)
 #
 # Output: one JSONL line appended to .claude/workflow-state/session-analytics.jsonl
@@ -53,6 +54,21 @@ errors = 0
 first_ts = None
 last_ts = None
 
+# Per-agent metrics (v2.1.69: agent_id/agent_type in hook events)
+# Structure: {agent_type: {tool_calls: N, tool_breakdown: {}, errors: N, messages: N}}
+agent_metrics = {}
+
+def get_agent_bucket(agent_t):
+    """Get or create agent metrics bucket."""
+    if agent_t not in agent_metrics:
+        agent_metrics[agent_t] = {
+            "tool_calls": 0,
+            "tool_breakdown": {},
+            "errors": 0,
+            "messages": 0,
+        }
+    return agent_metrics[agent_t]
+
 if transcript_path and os.path.isfile(transcript_path):
     try:
         with open(transcript_path) as f:
@@ -66,6 +82,9 @@ if transcript_path and os.path.isfile(transcript_path):
                 except json.JSONDecodeError:
                     continue
 
+                # Agent attribution (falls back to "orchestrator" for main context)
+                agent_type = entry.get("agent_type", "orchestrator")
+
                 # Timestamps
                 ts = entry.get("timestamp")
                 if ts:
@@ -77,15 +96,24 @@ if transcript_path and os.path.isfile(transcript_path):
                 if entry.get("role") == "user" or entry.get("type") == "human":
                     user_prompts += 1
 
-                # Tool calls
+                # Tool calls — aggregate both globally and per-agent
                 if entry.get("type") == "tool_use":
                     tool_calls += 1
                     tool_name = entry.get("name", entry.get("tool_name", "unknown"))
                     tool_breakdown[tool_name] = tool_breakdown.get(tool_name, 0) + 1
 
-                # Errors
+                    bucket = get_agent_bucket(agent_type)
+                    bucket["tool_calls"] += 1
+                    bucket["tool_breakdown"][tool_name] = bucket["tool_breakdown"].get(tool_name, 0) + 1
+
+                # Errors — aggregate both globally and per-agent
                 if entry.get("is_error") or entry.get("type") == "error":
                     errors += 1
+                    get_agent_bucket(agent_type)["errors"] += 1
+
+                # Message count per agent
+                get_agent_bucket(agent_type)["messages"] += 1
+
     except Exception as e:
         print(f"session-analytics: transcript parse error: {e}", file=sys.stderr)
 else:
@@ -149,11 +177,12 @@ entry = {
     "tool_calls": tool_calls,
     "tool_breakdown": tool_breakdown,
     "exploration_metrics": exploration_metrics,
+    "agent_metrics": agent_metrics if agent_metrics else None,
     "errors": errors,
     "checkpoint": checkpoint,
 }
 
-# 5. Append to analytics file (ALWAYS write, even with partial data)
+# 6. Append to analytics file (ALWAYS write, even with partial data)
 try:
     with open(ANALYTICS_FILE, "a") as f:
         f.write(json.dumps(entry) + "\n")

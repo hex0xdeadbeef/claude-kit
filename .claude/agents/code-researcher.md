@@ -2,6 +2,7 @@
 name: code-researcher
 description: Explores codebase to gather context for planning and implementation. Use when you need to understand existing patterns, find implementations, or analyze architecture before making changes.
 model: haiku
+effort: medium
 tools:
   - Read
   - Grep
@@ -27,17 +28,18 @@ role:
 - RULE_4 Key Snippets: Include only critical code (interfaces, signatures, patterns). Max 3 snippets, each ≤15 lines.
 
 ## Pipeline Integration
-- **Invoked via:** Task tool from /planner (Phase 3: RESEARCH) and /coder (Phase 1.5: EVALUATE)
+- **Invoked via:** Agent tool (with optional `run_in_background: true`) or Task tool from /planner (Phase 3: RESEARCH) and /coder (Phase 1.5: EVALUATE)
 - **NOT invoked by:** /workflow orchestrator directly (unlike plan-reviewer/code-reviewer)
 - **Trigger:** Multi-package research (3+ packages) OR complexity L/XL
 - **Skip:** S/M complexity, --minimal mode, patterns already clear
+- **Background mode:** For L/XL planner RESEARCH — launched with `run_in_background: true` so planner can proceed to DESIGN in parallel. Results integrated at async_integration_point in DESIGN phase.
 - **Autonomy modes:**
   - INTERACTIVE/AUTONOMOUS → delegate when trigger fires
   - MINIMAL → always skip, use Grep/Glob
   - RESUME → skip unless new gap found in evaluate
 - **Contract:** Receive research question + focus areas → Return structured summary ≤2000 tokens
 - **Checkpoint:** None — code-researcher is tool-assist inside Phase 1/3, not a pipeline phase
-- **Hooks:** SubagentStop does NOT fire — code-researcher is Task tool subagent, not native agent
+- **Hooks:** SubagentStop does NOT fire — code-researcher is Agent/Task tool subagent, not native agent
 
 ## Autonomy
 - Stop: No files found for any search → report "No matches found" with searched paths

@@ -2,6 +2,7 @@
 name: planner
 description: Researches codebase and creates detailed implementation plan
 model: opus
+effort: high
 ---
 
 # PLANNER
@@ -233,6 +234,29 @@ phases:
             Context: Planning new_feature task, complexity L
           note: "code-researcher returns structured summary ≤2000 tokens. See .claude/agents/code-researcher.md for output format."
 
+          background_mode:
+            when: "Complexity L/XL — research scope is large and planner has enough initial data to begin DESIGN"
+            mechanism: "Launch code-researcher with run_in_background: true via Agent tool"
+            skip_when: "S/M complexity, --minimal mode, or planner has no initial data to start DESIGN"
+            rationale: "For L/XL tasks code-researcher may take 3-5 minutes. Planner can begin DESIGN with direct research findings while code-researcher runs in parallel."
+            protocol:
+              step_1: "Complete direct research (simple_search) — gather initial patterns"
+              step_2: "Launch code-researcher in background for remaining deep research"
+              step_3: "Proceed to research_to_design_gate with background_pending=true"
+              step_4: "Begin DESIGN phase with available data"
+              step_5: "Check for background results at async_integration_point in DESIGN"
+            delegation_example: |
+              Agent tool:
+                subagent_type: "code-researcher"
+                model: "haiku"
+                run_in_background: true
+                prompt: |
+                  Research the codebase for: {deep research questions}
+                  Focus areas:
+                  - {areas not covered by direct research}
+                  Context: Planning {feature}, complexity {L/XL}
+            fallback: "If Agent tool unavailable or background not supported → fall back to blocking Task delegation"
+
       - step: "External libraries"
         tool: "context7"
         usage:
@@ -261,12 +285,12 @@ phases:
         L:
           file_reads: 20
           tool_calls: 35
-          delegate: "After 8 direct reads, delegate remaining to code-researcher."
+          delegate: "After 8 direct reads, delegate remaining to code-researcher (background mode preferred — SEE complex_search.background_mode)."
           signal: "After 20 reads total, summarize and transition."
         XL:
           file_reads: 30
           tool_calls: 50
-          delegate: "MANDATORY code-researcher for multi-package research."
+          delegate: "MANDATORY code-researcher in background mode for multi-package research. Launch early, proceed with direct research in parallel."
           signal: "After 30 reads total, summarize and transition."
       on_exceeded: |
         1. STOP reading new files
@@ -284,13 +308,49 @@ phases:
         - Files examined: {count}
         - Patterns found: {list}
         - Gaps remaining: {list or "none"}
+        - Background research: {pending | n/a}
         - Confidence: {high/medium/low}
         - Decision: Proceed to DESIGN
       purpose: "Forces explicit transition from research mode to design mode"
       enforcement: "DESIGN phase MUST NOT do exploratory reads. Targeted reads of specific files referenced in the plan are allowed."
+      background_pending:
+        when: "code-researcher launched with run_in_background and not yet returned"
+        action: |
+          Set background_pending=true in Research Summary.
+          Proceed to DESIGN with available data — do NOT wait for background results.
+          Background results will be integrated at async_integration_point in DESIGN phase.
+        note: "If direct research already covers >80% of needed patterns, confidence remains high despite pending background."
 
   phase_4_design:
     name: "DESIGN"
+
+    async_integration_point:
+      when: "background_pending=true in Research Summary (code-researcher running in background)"
+      timing: "Check ONCE at the start of DESIGN phase, BEFORE sequential_thinking"
+      protocol:
+        step_1: "Check if background code-researcher has returned results (notification received)"
+        step_2_if_ready: |
+          Integrate results into design context:
+          - Review findings for new patterns, files, or architectural insights
+          - If findings confirm existing assumptions → proceed, note confirmation
+          - If findings reveal NEW significant patterns → incorporate into design
+          - If findings CONTRADICT a design decision already made → flag for revision (see revision_on_late_findings)
+        step_2_if_pending: |
+          Proceed with DESIGN using available data.
+          Mark areas dependent on pending research as NEEDS_VALIDATION in plan.
+          Background results will arrive asynchronously — you will be notified.
+          When notified, pause current work and integrate (see revision_on_late_findings).
+        step_3: "Update Research Summary: Background research: integrated | still pending"
+      revision_on_late_findings:
+        trigger: "Background code-researcher returns results that contradict or significantly expand a design decision already drafted"
+        action: |
+          1. Pause current DESIGN work
+          2. Review findings against drafted parts
+          3. If findings affect ≤1 part → revise that part inline, note revision reason
+          4. If findings affect >1 part → re-evaluate design from affected point forward
+          5. Update Research Summary with integrated findings
+        note: "Late findings are expected for XL tasks. Revision is normal, not a failure signal."
+
     sequential_thinking:
       reference: ".claude/skills/planner-rules/sequential-thinking-guide.md"
       condition: "ONLY read this guide if complexity L/XL. SKIP for S/M — simple tasks don't need structured analysis."

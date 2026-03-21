@@ -141,6 +141,20 @@ startup:
         - "Does `.claude/prompts/{feature}.md` exist? → can skip Phase 1"
         - "Is there a beads issue in_progress? → bd show <id>"
 
+    - step: 5
+      action: "CronCreate — auto-save checkpoint (L/XL only)"
+      condition: "complexity L or XL"
+      skip_when: "S/M complexity — phases complete quickly, phase-end checkpoints are sufficient"
+      tool: "CronCreate"
+      schedule: "*/10 * * * *"
+      prompt: |
+        Write incremental checkpoint to .claude/workflow-state/{feature}-checkpoint.yaml.
+        Include: current phase, sub-phase, implementation_progress (parts completed/total),
+        iteration counters, timestamp. This is a periodic auto-save — do NOT change workflow state.
+      cleanup: "CronDelete at Phase 5 completion (SEE orchestration-core.md)"
+      fallback: "If CronCreate unavailable → WARN, proceed without auto-save. Phase-end checkpoints still active."
+      note: "Cron scheduling (v2.1.71). Auto-save complements phase-end checkpoints — provides mid-phase recovery for XL tasks where a single phase may take 30+ minutes."
+
 ## PIPELINE
 pipeline:
   mandatory: |
@@ -152,7 +166,7 @@ pipeline:
     NOTE: Language profile + error handling → auto-loaded via CLAUDE.md
 
   flow: "task-analysis → /planner [→ code-researcher*] → plan-reviewer (agent) → /coder [→ code-researcher*] → code-reviewer (agent)"
-  flow_note: "* code-researcher is optional tool-assist via Task tool, triggered by planner/coder for L/XL tasks. Not a pipeline phase."
+  flow_note: "* code-researcher is optional tool-assist via Agent/Task tool, triggered by planner/coder for L/XL tasks. Not a pipeline phase. Supports run_in_background for parallel execution in planner Phase 3."
 
   evaluate_note: |
     /coder runs internal EVALUATE sub-phase (Phase 1.5) before implementing.
@@ -161,6 +175,12 @@ pipeline:
       REVISE: minor gaps, inline fixes → proceed with adjustments noted
       RETURN: major gaps → re-route to Phase 1 (counts toward plan_review iteration counter)
     On RETURN: orchestrator increments plan_review counter, writes checkpoint, re-runs /planner with coder feedback.
+
+  simplify_note: |
+    /coder runs optional SIMPLIFY sub-phase (Phase 2.5) between IMPLEMENT and VERIFY.
+    Condition: complexity L/XL AND total_parts >= 5.
+    Runs /simplify on changed files to eliminate NIT/MINOR issues before code-review.
+    Guard: if simplify changes > 30% of lines touched → revert, proceed with original code.
 
   load_phases:
     - action: "Read .claude/skills/workflow-protocols/autonomy.md"
@@ -274,14 +294,21 @@ delegation_protocol:
 
   code_researcher_usage:
     agent: "code-researcher"
-    mechanism: "Task tool (NOT native agent delegation — code-researcher is tool-assist, not pipeline phase)"
+    mechanism: "Agent tool (run_in_background supported) or Task tool — code-researcher is tool-assist, not pipeline phase"
     invoked_by: "planner (Phase 3) and coder (Phase 1.5) — NOT by orchestrator"
     when: "Multi-package codebase research needed, complexity L/XL"
     skip_when: "S/M complexity, --minimal planner mode"
     returns: "Structured summary ≤2000 tokens (patterns, files, imports, key snippets)"
+    background_mode:
+      when: "L/XL complexity in planner Phase 3 — large research scope"
+      mechanism: "Agent tool with run_in_background: true"
+      benefit: "Planner proceeds to DESIGN with direct research findings while code-researcher runs in parallel"
+      integration: "Results checked at async_integration_point in planner DESIGN phase"
+      revision: "If late findings contradict design decisions → inline revision (≤1 part) or re-evaluate (>1 part)"
+      reference: "SEE planner.md complex_search.background_mode + phase_4_design.async_integration_point"
     checkpoint_impact: "None — research is part of Phase 1/3, not a separate phase"
-    hook_impact: "None — SubagentStop does NOT fire for Task tool subagents"
-    note: "Differs from plan-reviewer/code-reviewer: those are pipeline-phase agents invoked by orchestrator via native delegation. code-researcher is a tool-agent invoked by sub-commands via Task tool."
+    hook_impact: "None — SubagentStop does NOT fire for Task/Agent tool subagents"
+    note: "Differs from plan-reviewer/code-reviewer: those are pipeline-phase agents invoked by orchestrator via native delegation. code-researcher is a tool-agent invoked by sub-commands via Agent/Task tool."
 
 ## RULES
 rules:
@@ -311,7 +338,7 @@ skill_references:
 ## HOOKS
 hooks:
   note: |
-    Configured in .claude/settings.json (authoritative source — 8 event types, 14 scripts).
+    Configured in .claude/settings.json (authoritative source — 11 event types, 17 scripts).
     This section lists only workflow-specific hooks. For complete list see settings.json.
     Deterministic — fires automatically, no need to remember.
 
@@ -319,6 +346,11 @@ hooks:
     - event: PreCompact
       script: ".claude/scripts/save-progress-before-compact.sh"
       behavior: "Saves checkpoint + review completions to additionalContext before compaction"
+      blocking: false
+
+    - event: PostCompact
+      script: ".claude/scripts/verify-state-after-compact.sh"
+      behavior: "Verifies checkpoint + review completions integrity, re-injects state summary"
       blocking: false
 
     - event: SubagentStop
@@ -333,8 +365,10 @@ hooks:
       blocking: true
 
   also_active_during_workflow:
+    - "InstructionsLoaded → validate-instructions.sh (rules validation)"
     - "UserPromptSubmit → enrich-context.sh (context enrichment on every prompt)"
     - "PreToolUse → protect-files.sh, check-artifact-size.sh, block-dangerous-commands.sh"
     - "PostToolUse → auto-fmt-go.sh, yaml-lint.sh, check-references.sh, check-plan-drift.sh"
     - "SessionEnd → session-analytics.sh"
+    - "StopFailure → log-stop-failure.sh (API error logging)"
     - "Notification → notify-user.sh"

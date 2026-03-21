@@ -29,6 +29,13 @@ pipeline_metrics:
     sequential_thinking_used: true|false
     mcp_tools_used: ["memory", "sequential_thinking", "context7", "postgresql"]
     evaluate_decision: "PROCEED|REVISE|RETURN"
+    code_researcher_metrics:
+      invocations: N
+      total_tokens: N
+      total_tool_uses: N
+      total_duration_ms: N
+      background_mode_used: true|false
+      note: "Collected from Agent/Task tool return metadata (v2.1.30+). Zero if code-researcher not invoked."
 
 # ─────────────────────────────────────────────────────
 # STORAGE
@@ -43,6 +50,7 @@ pipeline_metrics:
         - "Complexity: estimated {X} → actual {Y}"
         - "Issues: {blocker}B {major}M {minor}m"
         - "Tools: {list}"
+        - "Code-researcher: {invocations}x, {total_tokens} tokens, {total_duration_ms}ms (background: {yes|no})"
 
 # ─────────────────────────────────────────────────────
 # ANALYSIS
@@ -82,6 +90,8 @@ pipeline_metrics:
       | Complexity accuracy | {N}% (estimated = actual) | {↑↓→} |
       | Top issue category | {category} ({N} occurrences) | |
       | Avg phases per run | {N} | {↑↓→} |
+      | Avg code-researcher tokens | {N} | {↑↓→} |
+      | Code-researcher token share | {N}% of session | {↑↓→} |
 
       **Insights:**
       - {insight 1: e.g. "Plan-review iterations trending up — consider improving planner prompts"}
@@ -99,4 +109,8 @@ pipeline_metrics:
           warning: "Possible exploration loop — high read/write ratio (exempt: project-researcher sessions)"
         - condition: "exploration_reads > 30 AND action_writes == 0 AND session_type != 'project-research'"
           warning: "Session appears stuck in exploration (exempt: project-researcher sessions are read-heavy by design)"
+        - condition: "code_researcher_metrics.total_tokens > 50% of session total tokens"
+          warning: "Code-researcher consuming >50% of token budget — consider narrowing research scope or using inline Grep/Glob"
+        - condition: "code_researcher_metrics.invocations > 3 in single pipeline run"
+          warning: "Excessive code-researcher invocations — may indicate unclear research questions or scope creep"
       action: "Append warning to completion output + include in next aggregation report"

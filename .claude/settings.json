@@ -70,6 +70,17 @@
     ]
   },
   "hooks": {
+    "InstructionsLoaded": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/scripts/validate-instructions.sh"
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Write|Edit",
@@ -157,6 +168,17 @@
         ]
       }
     ],
+    "PostCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/scripts/verify-state-after-compact.sh"
+          }
+        ]
+      }
+    ],
     "SubagentStop": [
       {
         "matcher": "plan-reviewer|code-reviewer",
@@ -201,6 +223,17 @@
           {
             "type": "command",
             "command": ".claude/scripts/session-analytics.sh"
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/scripts/log-stop-failure.sh"
           }
         ]
       }
