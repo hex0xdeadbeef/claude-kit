@@ -38,11 +38,14 @@ try:
                     key, _, val = line.partition(":")
                     key = key.strip()
                     val = val.strip().strip('"').strip("'")
-                    if key in ("phase_completed", "phase_name", "complexity", "route", "verdict", "session_type",
-                               "file_reads_in_sub_phase", "budget_threshold", "current"):
-                        # Note: "current" captures sub_phase.current (sub-phase name like RESEARCH/EVALUATE).
-                        # "sub_phase" is NOT extracted — it appears twice in checkpoint YAML
-                        # (implementation_progress.sub_phase and sub_phase: section header), causing collision.
+                    # Remap "current" → "sub_phase_current" to avoid collision with
+                    # any future top-level "current" key in checkpoint schema.
+                    # "sub_phase" itself is NOT extracted — it appears twice in checkpoint YAML
+                    # (implementation_progress.sub_phase and sub_phase: section header).
+                    if key == "current":
+                        data["sub_phase_current"] = val
+                    elif key in ("phase_completed", "phase_name", "complexity", "route", "verdict", "session_type",
+                                 "file_reads_in_sub_phase", "budget_threshold"):
                         data[key] = val
 
         phase = data.get("phase_name", "unknown")
@@ -141,7 +144,7 @@ try:
     reads_str = data.get("file_reads_in_sub_phase", "") if checkpoints else ""
     if reads_str and reads_str.isdigit():
         reads = int(reads_str)
-        sub_phase_name = data.get("current", "unknown").upper()
+        sub_phase_name = data.get("sub_phase_current", "unknown").upper()
         cp_complexity = data.get("complexity", "M").upper()
         cp_phase = data.get("phase_name", "").lower()
 
