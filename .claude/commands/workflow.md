@@ -240,7 +240,7 @@ delegation_protocol:
     agent: "code-reviewer"
     when: "Phase 4 — after /coder completion"
     isolation: "worktree — agent sees only committed changes. Ensure git commit before delegating."
-    optimization: "Pass verify_status in handoff to allow code-reviewer to skip QUICK CHECK re-run (see FIX-1). Worktree overhead is unavoidable but test overhead is not."
+    optimization: "Pass verify_status in handoff to allow code-reviewer to skip QUICK CHECK re-run (see FIX-1). Worktree checkout scope controlled by worktree.sparsePaths in settings.json (v2.1.76) — reduces creation time and disk usage in monorepos."
     context_to_pass:
       - "Branch: current branch (code-reviewer runs git diff internally in worktree)"
       - "Coder handoff narrative (SEE: handoff_protocol)"
@@ -366,7 +366,7 @@ hooks:
 
   also_active_during_workflow:
     - "InstructionsLoaded → validate-instructions.sh (rules validation)"
-    - "UserPromptSubmit → enrich-context.sh (context enrichment on every prompt)"
+    - "UserPromptSubmit → enrich-context.sh (context enrichment + exploration budget visualization)"
     - "PreToolUse → protect-files.sh, check-artifact-size.sh, block-dangerous-commands.sh"
     - "PostToolUse → auto-fmt-go.sh, yaml-lint.sh, check-references.sh, check-plan-drift.sh"
     - "SessionEnd → session-analytics.sh"

@@ -38,7 +38,11 @@ try:
                     key, _, val = line.partition(":")
                     key = key.strip()
                     val = val.strip().strip('"').strip("'")
-                    if key in ("phase_completed", "phase_name", "complexity", "route", "verdict", "session_type"):
+                    if key in ("phase_completed", "phase_name", "complexity", "route", "verdict", "session_type",
+                               "file_reads_in_sub_phase", "budget_threshold", "current"):
+                        # Note: "current" captures sub_phase.current (sub-phase name like RESEARCH/EVALUATE).
+                        # "sub_phase" is NOT extracted — it appears twice in checkpoint YAML
+                        # (implementation_progress.sub_phase and sub_phase: section header), causing collision.
                         data[key] = val
 
         phase = data.get("phase_name", "unknown")
@@ -127,6 +131,42 @@ try:
                 f"(phase: {phase_label}, threshold: {threshold}) — "
                 f"consider transitioning to action (see CLAUDE.md)"
             )
+except Exception:
+    pass
+
+# 4b. Checkpoint-based exploration budget visualization
+# More reliable than transcript-based detection (section 4) — reads from checkpoint sub_phase data.
+# Budget limits from planner.md (research_budget) and coder.md (evaluate_budget).
+try:
+    reads_str = data.get("file_reads_in_sub_phase", "") if checkpoints else ""
+    if reads_str and reads_str.isdigit():
+        reads = int(reads_str)
+        sub_phase_name = data.get("current", "unknown").upper()
+        cp_complexity = data.get("complexity", "M").upper()
+        cp_phase = data.get("phase_name", "").lower()
+
+        # Budget limits: (phase_name, complexity) → read limit
+        # Source: planner.md research_budget, coder.md evaluate_budget
+        BUDGET_LIMITS = {
+            ("planning", "S"): 5,   ("planning", "M"): 10,
+            ("planning", "L"): 20,  ("planning", "XL"): 30,
+            ("implementation", "S"): 3,  ("implementation", "M"): 6,
+            ("implementation", "L"): 12, ("implementation", "XL"): 18,
+        }
+
+        # Priority: checkpoint budget_threshold > phase/complexity lookup > default 20
+        cp_threshold = data.get("budget_threshold", "")
+        if cp_threshold and cp_threshold.isdigit():
+            limit = int(cp_threshold)
+        else:
+            limit = BUDGET_LIMITS.get((cp_phase, cp_complexity), 20)
+
+        if limit > 0:
+            pct = min(int(reads / limit * 100), 999)
+            budget_line = f"Budget: {reads}/{limit} ({pct}%) — {sub_phase_name}"
+            if pct > 80:
+                budget_line += " — consider transitioning"
+            parts.append(budget_line)
 except Exception:
     pass
 
