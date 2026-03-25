@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/badge/Claude_Code-config_kit-5A45FF?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDJMMiAxOWgyMEwxMiAyeiIgZmlsbD0id2hpdGUiLz48L3N2Zz4=" alt="Claude Code Config Kit"/>
   <img src="https://img.shields.io/badge/agents-5_pipeline-1a73e8?style=flat-square" alt="Agents"/>
   <img src="https://img.shields.io/badge/skills-6_packages-f9ab00?style=flat-square" alt="Skills"/>
-  <img src="https://img.shields.io/badge/hooks-14_scripts-0d904f?style=flat-square" alt="Hooks"/>
+  <img src="https://img.shields.io/badge/hooks-19_scripts-0d904f?style=flat-square" alt="Hooks"/>
   <img src="https://img.shields.io/badge/languages-31_via_tree--sitter-00897b?style=flat-square" alt="Languages"/>
 </p>
 
@@ -295,7 +295,8 @@ flowchart TB
         EVALUATE{"Evaluate plan:<br/>PROCEED / REVISE / RETURN"}
         EVALUATE -->|PROCEED| IMPLEMENT["Implement Parts<br/>in dependency order"]
         EVALUATE -->|REVISE| ADJUST["Note adjustments"] --> IMPLEMENT
-        IMPLEMENT --> VERIFY{"fmt + lint + test"}
+        IMPLEMENT --> SIMPLIFY{"SIMPLIFY<br/>(L/XL, ≥5 parts)"}
+        SIMPLIFY -->|"applied / skipped"| VERIFY{"fmt + lint + test"}
         VERIFY -->|PASS| HANDOFF3["Form handoff"]
         VERIFY -->|"FAIL (max 3x)"| STOP3["STOP: test failures,<br/>request manual fix"]
     end
@@ -436,17 +437,20 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    UP["User Prompt"] -->|UserPromptSubmit| ENR["enrich-context.sh"]
+    IL["InstructionsLoaded:<br/>validate-instructions.sh"] --> UP["User Prompt"]
+    UP -->|UserPromptSubmit| ENR["enrich-context.sh<br/>+ exploration budget"]
     ENR --> CMD["Command Execution"]
 
     CMD --> TOOL{"Tool Call?"}
     TOOL -->|"Write / Edit"| PRE1["protect-files.sh (blocking)"]
     TOOL -->|Write| PRE2["check-artifact-size.sh (blocking)"]
     TOOL -->|Bash| PRE3["block-dangerous-commands.sh (blocking)"]
+    TOOL -->|Bash| PRE4["pre-commit-build.sh (blocking)"]
 
     PRE1 --> EXEC["Tool Executes"]
     PRE2 --> EXEC
     PRE3 --> EXEC
+    PRE4 --> EXEC
 
     EXEC -->|"Write / Edit"| POST1["auto-fmt-go.sh<br/>(non-blocking)"]
     EXEC -->|Edit| POST2["yaml-lint.sh<br/>(non-blocking)"]
@@ -459,26 +463,34 @@ flowchart TB
     POST4 --> CONT
 
     CONT -->|"context limit"| COMPACT["PreCompact (non-blocking):<br/>save-progress-before-compact.sh"]
+    COMPACT --> PCOMPACT["PostCompact (non-blocking):<br/>verify-state-after-compact.sh"]
     CONT -->|"subagent exits"| SUBSTOP["SubagentStop (blocking):<br/>save-review-checkpoint.sh"]
+    CONT -->|"worktree created"| WT["WorktreeCreate (non-blocking):<br/>prepare-worktree.sh"]
     CONT --> STOP["Stop (blocking):<br/>1. verify-phase-completion.sh<br/>2. check-uncommitted.sh"]
+    CONT -.->|"API error"| SFAIL["StopFailure:<br/>log-stop-failure.sh"]
 
     STOP --> SESS["SessionEnd:<br/>session-analytics.sh"]
     SESS --> NOTIFY["Notification:<br/>notify-user.sh"]
 
+    style IL fill:#f9ab00,color:#333,stroke:#e69500
     style UP fill:#1a73e8,color:#fff,stroke:#1557b0
     style ENR fill:#f9ab00,color:#333,stroke:#e69500
     style CMD fill:#e0e0e0,color:#333,stroke:#999
     style PRE1 fill:#d93025,color:#fff,stroke:#b3261e
     style PRE2 fill:#d93025,color:#fff,stroke:#b3261e
     style PRE3 fill:#d93025,color:#fff,stroke:#b3261e
+    style PRE4 fill:#d93025,color:#fff,stroke:#b3261e
     style EXEC fill:#e0e0e0,color:#333,stroke:#999
     style POST1 fill:#0d904f,color:#fff,stroke:#0a7040
     style POST2 fill:#0d904f,color:#fff,stroke:#0a7040
     style POST3 fill:#0d904f,color:#fff,stroke:#0a7040
     style POST4 fill:#0d904f,color:#fff,stroke:#0a7040
     style COMPACT fill:#9334e6,color:#fff,stroke:#7627bb
+    style PCOMPACT fill:#9334e6,color:#fff,stroke:#7627bb
     style SUBSTOP fill:#9334e6,color:#fff,stroke:#7627bb
+    style WT fill:#9334e6,color:#fff,stroke:#7627bb
     style STOP fill:#d93025,color:#fff,stroke:#b3261e
+    style SFAIL fill:#00897b,color:#fff,stroke:#00695c
     style SESS fill:#00897b,color:#fff,stroke:#00695c
     style NOTIFY fill:#00897b,color:#fff,stroke:#00695c
 ```
@@ -487,11 +499,11 @@ flowchart TB
 
 ### ⚙️ Model Routing
 
-| Model | Components | MaxTurns | Purpose |
-|-------|-----------|----------|---------|
-| **opus** | `/workflow`, `/planner`, `/project-researcher`, `/meta-agent` | — | Deep reasoning, orchestration, planning |
-| **sonnet** | `/coder`, `plan-reviewer`, `code-reviewer`, `/db-explorer` | 30 | Implementation, review, execution |
-| **haiku** | `code-researcher`, PR subagents (discovery, report) | 20 | Fast read-only search |
+| Model | Effort | Components | MaxTurns | Purpose |
+|-------|--------|------------|----------|---------|
+| **opus** | high | `/workflow`, `/planner`, `/project-researcher`, `/meta-agent` | — | Deep reasoning, orchestration, planning |
+| **sonnet** | high | `/coder`, `plan-reviewer`, `code-reviewer`, `/db-explorer` | 30 | Implementation, review, execution |
+| **haiku** | medium | `code-researcher`, PR subagents (discovery, report) | 20 | Fast read-only search |
 
 ### 📊 Complexity Routing
 
@@ -512,6 +524,9 @@ flowchart TB
 - **Evaluate Protocol** — coder critically evaluates plan before implementation (PROCEED/REVISE/RETURN gate)
 - **Conditional Deps Loading** — S-complexity skips heavy skill loading, saves ~6,300 tokens
 - **Re-Routing** — pipeline adjusts route on complexity mismatch (downgrade/upgrade)
+- **Cron Auto-Save** — periodic checkpoint auto-save for L/XL tasks via CronCreate (every 10min)
+- **Simplify Protocol** — optional code simplification before review (L/XL, ≥5 parts, 30% guard)
+- **Worktree Optimization** — sparse checkout via `worktree.sparsePaths` reduces worktree size in monorepos
 
 ---
 
@@ -581,7 +596,7 @@ Then add to `~/.claude/mcp.json`:
 │   └── tdd-go/            # TDD workflow for Go projects
 ├── templates/             # Templates for creating new artifacts
 ├── prompts/               # Generated implementation plans
-├── scripts/               # Lifecycle hook scripts (10 scripts)
+├── scripts/               # Lifecycle hook scripts (15 scripts)
 ├── rules/                 # Cross-cutting constraints (architecture rules)
 ├── workflow-state/        # Runtime state (gitignored, generated during workflow)
 ├── agent-memory/          # Agent-specific persistent memory
@@ -600,19 +615,24 @@ Configured in `.claude/settings.json`. Enforce quality automatically:
 
 | Hook | Trigger | Purpose |
 |------|---------|---------|
+| `validate-instructions.sh` | InstructionsLoaded | Validate critical rules loaded into context |
+| `enrich-context.sh` | UserPromptSubmit | Enrich prompt with project context + exploration budget |
 | `protect-files.sh` | PreToolUse (Write/Edit) | Protect critical config files from agent modification |
 | `check-artifact-size.sh` | PreToolUse (Write) | Block writes exceeding size thresholds |
 | `block-dangerous-commands.sh` | PreToolUse (Bash) | Block destructive shell commands |
+| `pre-commit-build.sh` | PreToolUse (Bash) | Validate `go build` before git commit |
 | `auto-fmt-go.sh` | PostToolUse (Write/Edit) | Auto-format Go code |
 | `yaml-lint.sh` | PostToolUse (Edit) | Validate YAML structure |
 | `check-references.sh` | PostToolUse (Write) | Validate all file references |
 | `check-plan-drift.sh` | PostToolUse (Write/Edit) | Detect plan drift during implementation |
-| `enrich-context.sh` | UserPromptSubmit | Enrich prompt with project context |
 | `save-progress-before-compact.sh` | PreCompact | Save checkpoint before context compaction |
+| `verify-state-after-compact.sh` | PostCompact | Verify workflow state integrity after compaction |
 | `save-review-checkpoint.sh` | SubagentStop | Persist review completion state |
+| `prepare-worktree.sh` | WorktreeCreate | Prepare worktree environment for code review |
 | `verify-phase-completion.sh` | Stop | Ensure all meta-agent phases completed |
 | `check-uncommitted.sh` | Stop | Warn on uncommitted changes |
 | `session-analytics.sh` | SessionEnd | Record session analytics |
+| `log-stop-failure.sh` | StopFailure | Log API errors to session analytics |
 | `notify-user.sh` | Notification | Desktop notifications for agent events |
 
 ---
