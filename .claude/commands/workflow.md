@@ -359,6 +359,11 @@ hooks:
       behavior: "Appends review completion marker to .claude/workflow-state/review-completions.jsonl"
       blocking: true
 
+    - event: WorktreeCreate
+      script: ".claude/scripts/prepare-worktree.sh"
+      behavior: "Prepares worktree environment (env vars, Go deps, analytics logging)"
+      blocking: false
+
     - event: Stop
       script: ".claude/scripts/check-uncommitted.sh"
       behavior: "Blocks stop if uncommitted changes exist"

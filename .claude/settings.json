@@ -5,6 +5,17 @@
   "thinking": {
     "type": "adaptive"
   },
+  "worktree": {
+    "sparsePaths": [
+      ".claude/",
+      "internal/",
+      "cmd/",
+      "go.mod",
+      "go.sum",
+      "Makefile",
+      "CLAUDE.md"
+    ]
+  },
   "enabledMcpjsonServers": [
     "memory",
     "sequential-thinking",
@@ -186,6 +197,17 @@
           {
             "type": "command",
             "command": ".claude/scripts/save-review-checkpoint.sh"
+          }
+        ]
+      }
+    ],
+    "WorktreeCreate": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/scripts/prepare-worktree.sh"
           }
         ]
       }
