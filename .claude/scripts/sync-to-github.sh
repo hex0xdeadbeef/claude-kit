@@ -44,8 +44,9 @@ if [ -z "$GITHUB_REPO" ]; then
     exit 1
 fi
 
-# Force-add .claude/ (global gitignore may exclude it)
+# Force-add .claude/ (global gitignore may exclude it), excluding .DS_Store
 git add -f .claude/ 2>/dev/null || true
+git reset HEAD -- .claude/.DS_Store 2>/dev/null || true
 
 # Add root-level kit files
 for f in README.md CLAUDE.md .gitignore; do
