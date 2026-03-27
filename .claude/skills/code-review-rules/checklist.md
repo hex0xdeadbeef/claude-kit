@@ -7,7 +7,6 @@ purpose: "Self-verification checklist for each code-review phase"
 checklist:
   quick_check:
     - "LINT && TEST passes"
-    - "Memory checked: search_nodes for past review issues (NON_CRITICAL)"
 
   review:
     - "Architecture: imports follow matrix (PROJECT-KNOWLEDGE.md, if available)"

@@ -51,13 +51,6 @@ role:
 
 1. **STARTUP**
    - TodoWrite: create review checklist (Quick Check, Architecture, Error Handling, Security, Test Coverage, Verdict)
-   - mcp__memory__search_nodes: query "{feature keywords} review" for past similar issues
-   - Example memory query: "endpoint validation review" → found past issue with missing input sanitization → verify this review checks for it
-   - Output:
-     ```
-     ## STARTUP ✓
-     - Memory: [found N relevant past issues / no relevant history]
-     ```
 
 2. **QUICK CHECK (blocking)**
    - Check handoff verify_status:
@@ -207,7 +200,6 @@ For handoff contract see [handoff-protocol.md] in workflow-protocols skill → c
 ## MCP Tools
 - **Sequential Thinking:** Use for large diffs (>100 lines, >5 files, 3+ layers). SKIP for simple changes.
 - **Context7:** Use when new external library found in diff. Verify correct usage patterns.
-- **Memory:** STARTUP — search_nodes for past similar review issues. On completion — create_entities for recurring patterns found.
 
 ## Memory
 Follows [Agent Memory Protocol](../skills/workflow-protocols/agent-memory-protocol.md). Key points:

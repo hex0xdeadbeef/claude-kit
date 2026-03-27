@@ -55,8 +55,6 @@ role:
      - Recommendations: focus on {handoff.areas_needing_attention}
      ```
    - Rule: Use narrative context to focus the review, but do NOT take planner decisions at face value
-   - mcp__memory__search_nodes: query keywords from the plan for past issues
-   - Example memory query: "plugin architecture worker" → found "Multi-Operation Plugin Architecture" → verify: does new plan conflict with existing solutions
 
 2. **READ PLAN — Structural Validation**
    - Verify required sections: Context, Scope (IN/OUT), Dependencies, Parts with code examples, Acceptance criteria, Testing plan
@@ -166,7 +164,6 @@ For handoff contract see [handoff-protocol.md] in workflow-protocols skill → p
 
 ## MCP Tools
 - **Sequential Thinking:** Use for complex plans (4+ Parts, 3+ layers, >150 lines). SKIP for S/M complexity.
-- **Memory:** STARTUP — search_nodes for similar past solutions. On completion — create_entities for recurring issues found.
 
 ## Memory
 Follows [Agent Memory Protocol](../skills/workflow-protocols/agent-memory-protocol.md). Key points:

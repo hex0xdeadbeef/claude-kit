@@ -7,7 +7,6 @@ purpose: "Self-verification checklist for each plan-review phase"
 checklist:
   phase_1_startup:
     - item: "TodoWrite created"
-    - item: "Memory checked (search_nodes)"
     - item: "Plan loaded from .claude/prompts/"
 
   phase_2_read_plan:

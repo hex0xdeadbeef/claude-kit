@@ -35,4 +35,4 @@ re_routing:
       reason: "{1-sentence: trigger + evidence}"
       phase: "{phase that triggered re-routing}"
     note: "pipeline_metrics reads re_routing data from checkpoint at completion"
-  learning: "Save to MCP Memory: original_route → actual_route + reason for improving heuristics"
+  learning: "Re-routing data captured in checkpoint and pipeline-metrics.jsonl for pattern analysis"

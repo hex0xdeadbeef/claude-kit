@@ -23,7 +23,6 @@ checklist:
     - "Entry and exit points documented"
 
   phase_3_research:
-    - "Memory checked (search_nodes)"
     - "Code investigated (Grep/Glob or code-researcher agent via Task tool)"
     - "External libraries checked (Context7 if needed)"
     - "Imports between packages verified"
@@ -42,7 +41,3 @@ checklist:
   phase_5_document:
     - "Plan saved to `.claude/prompts/`"
     - "Config changes documented (if any)"
-
-  phase_6_save_to_memory:
-    - "Save criteria checked"
-    - "If non-trivial decision -> saved to memory"

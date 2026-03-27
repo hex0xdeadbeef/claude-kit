@@ -27,7 +27,7 @@ pipeline_metrics:
       minor: N
       nit: N
     sequential_thinking_used: true|false
-    mcp_tools_used: ["memory", "sequential_thinking", "context7", "postgresql"]
+    mcp_tools_used: ["sequential_thinking", "context7", "postgresql"]
     evaluate_decision: "PROCEED|REVISE|RETURN"
     code_researcher_metrics:
       invocations: N
@@ -41,16 +41,10 @@ pipeline_metrics:
 # STORAGE
 # ─────────────────────────────────────────────────────
   storage:
-    action: "mcp__memory__create_entities"
-    entity:
-      name: "Pipeline Metrics: {feature}"
-      entityType: "pipeline_metrics"
-      observations:
-        - "Phases: {total}, PR iterations: {N}, CR iterations: {N}"
-        - "Complexity: estimated {X} → actual {Y}"
-        - "Issues: {blocker}B {major}M {minor}m"
-        - "Tools: {list}"
-        - "Code-researcher: {invocations}x, {total_tokens} tokens, {total_duration_ms}ms (background: {yes|no})"
+    action: "Append JSON line to .claude/workflow-state/pipeline-metrics.jsonl"
+    format: "One JSON object per line (append-only JSONL)"
+    file: ".claude/workflow-state/pipeline-metrics.jsonl"
+    note: "Searchable via grep, readable via Read tool. No external MCP server required."
 
 # ─────────────────────────────────────────────────────
 # ANALYSIS
@@ -68,14 +62,14 @@ pipeline_metrics:
 # ─────────────────────────────────────────────────────
   aggregation:
     query_pattern:
-      tool: "mcp__memory__search_nodes"
-      query: "Pipeline Metrics"
-      note: "Returns all entities with 'Pipeline Metrics' in name. Parse observations to extract structured data."
+      tool: "Read"
+      file: ".claude/workflow-state/pipeline-metrics.jsonl"
+      note: "Each line is a JSON object. Parse all lines to extract structured data."
 
     triggers:
       - when: "User explicitly asks for pipeline analysis/stats"
         action: "Full aggregation report"
-      - when: "Every 5th workflow run (check: search_nodes → count 'Pipeline Metrics' entities)"
+      - when: "Every 5th workflow run (count lines in pipeline-metrics.jsonl)"
         action: "Brief summary appended to completion output"
       - when: "Current run has anomaly (see anomaly_detection)"
         action: "Inline warning in completion output"

@@ -269,7 +269,6 @@ re_routing:
 
   tracking:
     - "Record re-routing in checkpoint: original_route → new_route + reason"
-    - "Save to MCP Memory to improve task-analysis heuristics"
     - "Format: 'Re-routing: {task_type}/{original} → {new} because {reason}'"
 ```
 

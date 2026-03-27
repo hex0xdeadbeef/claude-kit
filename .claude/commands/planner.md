@@ -49,10 +49,8 @@ output:
     Summary:
     - Parts: {N}
     - Layers: [{list of layers}]
-    - Saved to memory: {YES/NO}
 
     Checklist:
-    - [x] Memory checked
     - [x] Research complete
     - [x] Sequential Thinking used (if applicable)
     - [x] Full code examples
@@ -100,8 +98,6 @@ autonomy:
 mcp_tools:
   - tool: "Sequential Thinking"
     when: "for complex architectural decisions (MANDATORY for tasks with 3+ alternatives)"
-  - tool: "Memory"
-    usage: "search_nodes to find similar decisions"
   - tool: "code-researcher (via Task tool)"
     when: "Research scope > 3 packages OR complexity L/XL (and not --minimal)"
     usage: "Delegate codebase exploration to haiku agent instead of inline Grep/Glob"
@@ -141,25 +137,14 @@ startup:
       description: "create phase list for progress tracking"
 
     - step: 2
-      action: "mcp__memory__search_nodes"
-      query: "{task keywords}"
-      note: "RECOMMENDED — if Memory MCP unavailable, warn and continue. If relevant entries found → use as context."
-
-    - step: 3
       action: Read
       file: ".claude/templates/plan-template.md"
       description: "load plan template"
 
-  example:
-    tool: "mcp__memory__search_nodes"
-    query: "worker plugin architecture"
-    found: "Multi-Operation Plugin Architecture"
-    action: "Use observations as context for new plan"
-
 ## WORKFLOW
 workflow:
-  summary: "STARTUP (task_analysis) → UNDERSTAND → DATA_FLOW → RESEARCH → DESIGN → DOCUMENT → SAVE TO MEMORY"
-  phases: ["task_analysis", "understand", "data_flow", "research", "design", "document", "save_to_memory"]
+  summary: "STARTUP (task_analysis) → UNDERSTAND → DATA_FLOW → RESEARCH → DESIGN → DOCUMENT"
+  phases: ["task_analysis", "understand", "data_flow", "research", "design", "document"]
   note: "task_analysis is step 0 of startup, determines complexity and route"
 
 ## PHASES
@@ -196,12 +181,6 @@ phases:
   phase_3_research:
     name: "RESEARCH"
     steps:
-      - step: "Check project memory"
-        tool: "mcp__memory__search_nodes"
-        find:
-          - "Similar past solutions"
-          - "Related architectural patterns"
-
       - step: "Investigate code"
         research_strategy:
           simple: "1-2 files → Grep/Glob directly (within budget)"
@@ -396,13 +375,6 @@ phases:
       ## Acceptance Criteria
       - [ ] LINT passes
       - [ ] TEST passes
-
-  phase_6_save_to_memory:
-    name: "SAVE TO MEMORY"
-    criteria:
-      save_when: ["Sequential Thinking used", "New pattern", "3+ alternatives", "External integration", "Plan > 200 lines"]
-      skip_when: ["Standard CRUD", "Trivial changes"]
-    reference: "Entity format + relations → SEE [mcp-tools.md] in planner-rules skill (Memory entity templates)"
 
 ## RULES
 rules:

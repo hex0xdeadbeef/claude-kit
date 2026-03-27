@@ -141,7 +141,11 @@ try:
     agent_memory_src = os.path.join(original_repo_dir, ".claude", "agent-memory")
     agent_memory_dst = os.path.join(worktree_path, ".claude", "agent-memory")
     if os.path.isdir(agent_memory_src):
-        shutil.copytree(agent_memory_src, agent_memory_dst, dirs_exist_ok=True)
+        import sys
+        if sys.version_info >= (3, 8):
+            shutil.copytree(agent_memory_src, agent_memory_dst, dirs_exist_ok=True)
+        elif not os.path.exists(agent_memory_dst):
+            shutil.copytree(agent_memory_src, agent_memory_dst)
         # Count files seeded for analytics
         seeded_count = sum(
             len(files) for _, _, files in os.walk(agent_memory_dst)

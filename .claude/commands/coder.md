@@ -155,11 +155,6 @@ startup:
     - action: "TodoWrite"
       purpose: "Create Parts list for tracking"
 
-    - action: "mcp__memory__search_nodes — query: '{feature keywords} {domain}'"
-      purpose: "Find lessons learned and architectural decisions for similar implementations"
-      use_result: "If found → check past mistakes, reuse patterns, avoid known pitfalls"
-      note: "NON_CRITICAL — if Memory unavailable, warn and continue"
-
     - action: "bd update <id> --status=in_progress"
       purpose: "Pick up task (if beads issue exists). Beads is NON_CRITICAL."
 

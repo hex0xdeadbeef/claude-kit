@@ -39,7 +39,7 @@ Reusable Claude Code configuration kit for any project. Provides a structured mu
 - Hooks: InstructionsLoaded (rules validation), UserPromptSubmit (context enrichment), PreToolUse (file protection + dangerous commands + artifact size + pre-commit build), PostToolUse (auto-fmt + yaml-lint + reference check), PreCompact, PostCompact (state verification), SubagentStop, Stop (phase completion + uncommitted check), SessionEnd (analytics), StopFailure (API error logging), Notification (desktop alerts)
 - Permissions: auto-allow safe ops (make, go, git read, Edit/Write), deny dangerous (rm -rf, git reset --hard, sudo, etc.)
 - Settings: `.claude/settings.json` (shared, git-committed) + `.claude/settings.local.json` (personal overrides, gitignored). Arrays merge, deny wins. See `settings.local.json.example` for template.
-- Memory: auto-memory (build/debug/preferences), MCP Memory (architecture/lessons), subagent memory (agent-specific patterns)
+- Memory: auto-memory (build/debug/preferences), subagent memory (agent-specific patterns)
 - Config: `.claude/settings.json` (permissions + hooks)
 
 ## Conventions

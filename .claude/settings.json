@@ -17,7 +17,6 @@
     ]
   },
   "enabledMcpjsonServers": [
-    "memory",
     "sequential-thinking",
     "context7",
     "tree_sitter"
@@ -60,7 +59,21 @@
       "Bash(sort *)",
       "Bash(touch *)",
       "Bash(tree *)",
-      "Bash(bd *)"
+      "Bash(bd *)",
+      "Edit(/.claude/skills/workflow-protocols/**)",
+      "Edit(/.claude/skills/planner-rules/**)",
+      "Bash(sort -k2)",
+      "Bash(find /Users/dmitriym/Desktop/claude-kit/.claude/agents -type f \\\\\\( -name \"*.md\" -o -name \"*.sh\" -o -name \"*.json\" \\\\\\) -exec wc -l {} +)",
+      "Bash(find /Users/dmitriym/Desktop/claude-kit/.claude/skills -type f \\\\\\( -name \"*.md\" -o -name \"*.sh\" \\\\\\) -exec wc -l {} +)",
+      "Bash(find /Users/dmitriym/Desktop/claude-kit/.claude/docs -type f -exec wc -l {} +)",
+      "Bash(find /Users/dmitriym/Desktop/claude-kit/.claude/prompts -type f -exec wc -l {} +)",
+      "Bash(find /Users/dmitriym/Desktop/claude-kit/.claude/reports -type f -exec wc -l {} +)",
+      "Bash(find /Users/dmitriym/Desktop/claude-kit/.claude/templates/git-hooks -type f -exec wc -l {} +)",
+      "Bash(find /Users/dmitriym/Desktop/claude-kit/.claude/research -type f -exec wc -l {} +)",
+      "Bash(find /Users/dmitriym/Desktop/claude-kit/.claude/archive -type f -exec wc -l {} +)",
+      "Bash(find /Users/dmitriym/Desktop/claude-kit/.claude/agent-memory -type f -exec wc -l {} +)",
+      "Bash(grep -rn \"mcp__memory\\\\|server-memory\\\\|memory\\\\.json\\\\|MCP Memory\" .claude/commands/ .claude/agents/ .claude/skills/ .claude/rules/ CLAUDE.md README.md .claude/PROJECT-KNOWLEDGE.md --include=*.md --include=*.json --include=*.sh)",
+      "Bash(git check-ignore:*)"
     ],
     "deny": [
       "Bash(rm -rf *)",

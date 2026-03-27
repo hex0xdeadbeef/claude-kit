@@ -538,7 +538,6 @@ Configure in `~/.claude/mcp.json`:
 
 | Server | Package | Purpose |
 |--------|---------|---------|
-| `memory` | `@modelcontextprotocol/server-memory` | Persistent agent memory across sessions |
 | `context7` | `@upstash/context7-mcp` | Library documentation lookup |
 | `sequential-thinking` | — | Structured reasoning for complex tasks |
 

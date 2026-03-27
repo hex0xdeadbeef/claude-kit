@@ -156,7 +156,8 @@ memory_files_synced = []
 if worktree_path and agent_type in WORKTREE_AGENTS:
     try:
         import subprocess
-        script_path = os.path.join(".claude", "scripts", "sync-agent-memory.sh")
+        # Resolve to absolute path — CWD should be main repo, but be defensive
+        script_path = os.path.abspath(os.path.join(".claude", "scripts", "sync-agent-memory.sh"))
         result = subprocess.run(
             [script_path, agent_type, worktree_path],
             capture_output=True, text=True, timeout=30

@@ -47,7 +47,6 @@ Output: task type + complexity + route + ST requirement.
 ### Step 3: Research with appropriate tools
 - S/M: use Grep/Glob directly for codebase research
 - L/XL: delegate to code-researcher agent via Task tool for multi-package research
-- Check Memory (mcp__memory__search_nodes) before research (NON_CRITICAL — warn and continue if unavailable)
 
 ### Step 4: Document plan with full code examples
 Write plan to `.claude/prompts/{feature}.md` using plan template.
@@ -87,14 +86,10 @@ For more examples, see [Examples](examples.md).
 **Cause:** Planner thinks plan is simple, but has 5+ parts.
 **Fix:** ALWAYS use Sequential Thinking if Parts >= 5 or alternatives >= 3.
 
-### Memory not checked before planning
-**Cause:** Rushed directly to research phase.
-**Fix:** STARTUP step 2 is RECOMMENDED — run mcp__memory__search_nodes before any research (NON_CRITICAL if unavailable).
-
 For all troubleshooting cases, see [Troubleshooting](troubleshooting.md).
 
 ## Core Deps (loaded at startup)
-- [MCP Tools](mcp-tools.md) — Memory, Sequential Thinking, Context7, PostgreSQL patterns and fallbacks
+- [MCP Tools](mcp-tools.md) — Sequential Thinking, Context7, PostgreSQL patterns and fallbacks
 - [Sequential Thinking Guide](sequential-thinking-guide.md) — when/how to use ST (complexity L/XL only, SKIP for S/M)
 
 ## References

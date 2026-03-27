@@ -73,8 +73,8 @@ output:
       location: Console (via code-reviewer agent)
 
     - phase: Completion
-      produces: Git commit + lessons_learned in Memory (if non-trivial)
-      location: Repository + Memory MCP
+      produces: Git commit
+      location: Repository
 
   final_output: "Implemented, tested, and reviewed code with commit."
 
@@ -89,7 +89,7 @@ autonomy:
 ## MCP TOOLS
 mcp_tools:
   reference: "SEE [mcp-tools.md] in planner-rules / coder-rules skill"
-  workflow_usage: "Sequential Thinking (complex orchestration), Memory (startup search + completion save)"
+  workflow_usage: "Sequential Thinking (complex orchestration)"
 
 ## STARTUP
 startup:
@@ -125,23 +125,19 @@ startup:
         - "Phase 5: Completion — commit + metrics (pending)"
 
     - step: 2
-      action: "mcp__memory__search_nodes — query: '{task keywords}'"
-      note: "MANDATORY! Check for similar solutions"
-
-    - step: 3
       action: "Check beads"
       checks:
         - "bd list --status=open → is there a related task?"
         - "bd list --status=in_progress → is there unfinished work?"
       note: "Beads is NON_CRITICAL. If bd unavailable → skip."
 
-    - step: 4
+    - step: 3
       action: "Check session recovery"
       checks:
         - "Does `.claude/prompts/{feature}.md` exist? → can skip Phase 1"
         - "Is there a beads issue in_progress? → bd show <id>"
 
-    - step: 5
+    - step: 4
       action: "CronCreate — auto-save checkpoint (L/XL only)"
       condition: "complexity L or XL"
       skip_when: "S/M complexity — phases complete quickly, phase-end checkpoints are sufficient"
@@ -200,7 +196,6 @@ pipeline:
   completion_notes:
     - "Git commit created (MANDATORY)"
     - "bd sync executed (MANDATORY, if beads)"
-    - "Save lessons_learned → SEE orchestration-core.md + mcp-tools.md (if non-trivial)"
 
 ## DELEGATION PROTOCOL
 delegation_protocol:

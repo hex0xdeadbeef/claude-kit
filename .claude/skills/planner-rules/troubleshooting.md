@@ -6,11 +6,6 @@ troubleshooting:
     fix: "ALWAYS use Sequential Thinking if Parts ≥ 5 or alternatives ≥ 3"
     lesson: "Complex plans need structured decision-making"
 
-  - problem: "Memory not checked before planning"
-    cause: "Rushed directly to research phase"
-    fix: "STARTUP phase is RECOMMENDED - search_nodes before any research (NON_CRITICAL if unavailable)"
-    lesson: "Existing solutions save hours of work"
-
   - problem: "Plan has incomplete code examples (signatures only)"
     cause: "Planner shows function signature without body"
     fix: "RULE_3: FULL examples, not signatures"

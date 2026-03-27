@@ -13,7 +13,7 @@ disable-model-invocation: true
 | Handoff | BEFORE forming handoff between phases | 4 pipeline contracts + 1 tool contract (code-researcher) + narrative casting |
 | Checkpoint | AFTER completing each phase | Format (12 YAML fields), recovery (5 steps), state persistence |
 | Re-routing | On complexity mismatch signal | Downgrade/upgrade route + tracking + learning |
-| Pipeline Metrics | At completion phase only | Format (12 fields), storage (MCP Memory), analysis, anomaly detection |
+| Pipeline Metrics | At completion phase only | Format (12 fields), storage (JSONL file), analysis, anomaly detection |
 | Agent Memory | Agent startup + completion | Shared memory behavior for all `memory: project` agents |
 
 ## Instructions

@@ -207,13 +207,12 @@ The kit is written entirely in Markdown (specifications) and Shell (hooks). Ther
 | Framework | Category | Purpose | Detection |
 |-----------|----------|---------|-----------|
 | Claude Code | AI development tool | Runtime platform for the kit | manifest (settings.json) |
-| MCP (Model Context Protocol) | Integration | Memory, sequential-thinking, context7, tree-sitter, postgres | manifest (settings.json) |
+| MCP (Model Context Protocol) | Integration | sequential-thinking, context7, tree-sitter, postgres | manifest (settings.json) |
 
 ### MCP Server Integrations
 
 | Server | Required | Purpose |
 |--------|----------|---------|
-| memory (@modelcontextprotocol/server-memory) | Required | Persistent agent memory across sessions |
 | context7 (@upstash/context7-mcp) | Required | Library documentation lookup |
 | sequential-thinking | Required | Structured reasoning for complex tasks |
 | tree_sitter | Optional | Code analysis (symbols, dependencies, repo-map) |
@@ -350,7 +349,6 @@ SKIP            — phase not applicable (e.g., S-complexity skips plan-review)
 
 | Server | Driver | Purpose | Auth Method |
 |--------|--------|---------|-------------|
-| memory | @modelcontextprotocol/server-memory | Persistent memory across sessions | Local (no auth) |
 | sequential-thinking | built-in | Structured reasoning | Local |
 | context7 | @upstash/context7-mcp | Library documentation lookup | API key |
 | tree_sitter | MCP server | Code analysis (symbols, deps) | Local |

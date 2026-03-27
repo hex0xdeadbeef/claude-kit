@@ -21,7 +21,7 @@ task-analysis → /planner → plan-reviewer (agent) → /coder → code-reviewe
 
 **Phase 3 — Implementation:** Execute /coder. Verify: `VERIFY` (Go default: go vet ./... && make fmt && make lint && make test). PASS → Phase 4. FAIL → fix + retry.
 
-**Phase 4 — Code Review:** Delegate to code-reviewer agent. APPROVED → Done. APPROVED_WITH_COMMENTS → Done (log comments, proceed to completion). CHANGES_REQUESTED → Phase 3 (iteration N/3).
+**Phase 4 — Code Review:** Before delegating, run `git worktree prune 2>/dev/null || true` to clean stale worktree metadata from crashed sessions. Delegate to code-reviewer agent. APPROVED → Done. APPROVED_WITH_COMMENTS → Done (log comments, proceed to completion). CHANGES_REQUESTED → Phase 3 (iteration N/3).
 
 **Phase 2/4 — Incomplete Output Recovery:** If a review agent (plan-reviewer or code-reviewer) returns without a clear verdict:
 
@@ -48,12 +48,9 @@ task-analysis → /planner → plan-reviewer (agent) → /coder → code-reviewe
    b. Code-researcher metrics: extract from Agent/Task tool return metadata (token count, tool uses, duration per invocation). Sum across all invocations in this pipeline run. Include background_mode_used flag.
    c. If code-researcher not invoked → set all code_researcher_metrics to 0
 5. CronDelete — remove auto-save cron job (if active, L/XL tasks). Read cron_id from checkpoint, call CronDelete. If CronDelete unavailable → WARN, job will expire with session.
-6. Save lessons_learned to Memory (if non-trivial — SEE mcp-tools.md entity templates)
-7. Write final checkpoint: `phase_completed: 5, phase_name: "completion"`
+6. Write final checkpoint: `phase_completed: 5, phase_name: "completion"`
 
 **Note:** Completion is orchestrator-owned (not delegated to agent or sub-command).
-
-**Lessons learned format (if saving):** create_entities with entityType="lessons_learned", observations: ["Problem: X → Solution: Y", "Pattern: Z works well for W"].
 
 ---
 

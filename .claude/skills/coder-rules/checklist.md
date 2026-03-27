@@ -8,7 +8,6 @@ checklist:
   startup:
     - "Plan loaded from .claude/prompts/"
     - "TodoWrite created with Parts"
-    - "Memory checked: search_nodes for lessons/decisions (NON_CRITICAL)"
     - "Feature branch created (if needed)"
     - "If beads used → status updated to in_progress"
 
