@@ -74,7 +74,8 @@
       "Bash(find /Users/dmitriym/Desktop/claude-kit/.claude/agent-memory -type f -exec wc -l {} +)",
       "Bash(grep -rn \"mcp__memory\\\\|server-memory\\\\|memory\\\\.json\\\\|MCP Memory\" .claude/commands/ .claude/agents/ .claude/skills/ .claude/rules/ CLAUDE.md README.md .claude/PROJECT-KNOWLEDGE.md --include=*.md --include=*.json --include=*.sh)",
       "Bash(git check-ignore:*)",
-      "Bash(bash /Users/dmitriym/Desktop/claude-kit/.claude/scripts/sync-to-github.sh \"docs: add MCP Memory full audit report\")"
+      "Bash(bash /Users/dmitriym/Desktop/claude-kit/.claude/scripts/sync-to-github.sh \"docs: add MCP Memory full audit report\")",
+      "Bash(bash /Users/dmitriym/Desktop/claude-kit/.claude/scripts/sync-to-github.sh \"chore: cleanup .DS_Store + sync script fix\")"
     ],
     "deny": [
       "Bash(rm -rf *)",
