@@ -8,10 +8,10 @@ tools:
   - Grep
   - Glob
   - TodoWrite
+  - Write
 skills:
   - plan-review-rules
 disallowedTools:
-  - Write
   - Edit
   - Bash
 memory: project
@@ -32,7 +32,7 @@ role:
 - NEVER approve a plan with BLOCKER issues
 - ALWAYS verify the import matrix
 - Read plan FROM SCRATCH — never trust cached version
-- Output First: ALWAYS form verdict + handoff output BEFORE any memory save. Memory is OPTIONAL; output is MANDATORY. If you have used 30+ tool calls, IMMEDIATELY skip to VERDICT and form output.
+- Output First: ALWAYS form verdict + handoff output BEFORE any memory save. Memory is OPTIONAL; output is MANDATORY. If you have used 28+ tool calls, IMMEDIATELY skip to VERDICT and form output. Reserve last 2 turns after output for memory save. If turns exhausted after output — skip memory.
 
 ## Autonomy
 - Stop: Security issue found → BLOCKER, cannot approve
@@ -169,10 +169,10 @@ For handoff contract see [handoff-protocol.md] in workflow-protocols skill → p
 - **Memory:** STARTUP — search_nodes for similar past solutions. On completion — create_entities for recurring issues found.
 
 ## Memory
+Follows [Agent Memory Protocol](../skills/workflow-protocols/agent-memory-protocol.md). Key points:
 - On startup: read your agent memory for patterns from past reviews (recurring issues, common plan mistakes)
-- ORDERING (SEE Rules): Output and handoff MUST be formed BEFORE any memory save. If low on turns — skip memory entirely.
+- ORDERING (SEE Rules): Output and handoff MUST be formed BEFORE any memory save. 2 turns reserved after output for memory. If turns exhausted after output — skip memory.
 - On completion — AFTER verdict and handoff are output:
-  - save newly discovered patterns to memory
   - APPROVED: save successful patterns, good plan structures
   - NEEDS_CHANGES/REJECTED: save issues found and common mistakes for future reference
 - Keep MEMORY.md under 200 lines — move detailed issue catalogs to topic files

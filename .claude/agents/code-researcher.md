@@ -121,12 +121,14 @@ NOT allowed:
 - Git operations that change state (commit, checkout, etc.)
 
 ## Memory
+Follows [Agent Memory Protocol](../skills/workflow-protocols/agent-memory-protocol.md). Key points:
 - On startup: read your agent memory for codebase topology (package locations, key files, patterns)
-- On completion: save newly discovered codebase structure to memory
+- On completion — AFTER primary output: save newly discovered codebase structure to memory
   - Package locations, key interfaces, important file paths
   - Patterns found: how existing features are structured
 - Keep MEMORY.md under 200 lines — move detailed findings to topic files
 - On first run (empty memory): save brief summary of project package structure and key entry points
+- Memory is NON_CRITICAL — if turns exhausted after output, skip memory
 
 ## Error Handling
 - No matching files found → report: "No files matching '{pattern}' found. Searched in: {paths}"

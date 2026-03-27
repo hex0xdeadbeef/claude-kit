@@ -1,6 +1,6 @@
 #!/bin/bash
 # Hook: WorktreeCreate (no matcher — fires on all worktree creations)
-# Purpose: Prepare worktree environment for code-reviewer (env vars, deps, analytics)
+# Purpose: Prepare worktree environment for code-reviewer (env vars, deps, memory pre-seed, analytics)
 # Non-blocking: ALWAYS exit 0 (never block worktree creation)
 # Performance: go mod download may take up to 30s (timeout enforced in Python subprocess)
 #
@@ -21,7 +21,7 @@ command -v python3 >/dev/null 2>&1 || exit 0
 export _HOOK_INPUT="$INPUT"
 
 python3 << 'PYTHON_EOF'
-import json, os, subprocess, sys
+import json, os, shutil, subprocess, sys
 from datetime import datetime, timezone
 
 STATE_DIR = ".claude/workflow-state"
@@ -83,6 +83,18 @@ if not worktree_path:
         pass
     sys.exit(0)
 
+# 2b. Resolve original_repo_dir (main repo that worktree was created from)
+# Strategy 1: from hook payload
+original_repo_dir = (
+    hook_input.get("original_repo_dir")
+    or hook_input.get("originalRepoDir")
+    or hook_input.get("cwd")
+    or (hook_input.get("worktree", {}) or {}).get("original_repo_dir")
+)
+# Strategy 2: cwd — hook runs in the main repo directory
+if not original_repo_dir:
+    original_repo_dir = os.getcwd()
+
 # 3. Prepare worktree environment
 setup_actions = []
 
@@ -91,7 +103,6 @@ try:
     env_example = os.path.join(worktree_path, ".env.example")
     env_target = os.path.join(worktree_path, ".env")
     if os.path.isfile(env_example) and not os.path.isfile(env_target):
-        import shutil
         shutil.copy2(env_example, env_target)
         setup_actions.append("env_copied")
 except Exception as e:
@@ -122,6 +133,25 @@ except FileNotFoundError:
     setup_actions.append("go_not_found")
 except Exception as e:
     print(f"prepare-worktree: go mod download error: {e}", file=sys.stderr)
+
+# 3c. Pre-seed agent memory into worktree (IMP-09)
+# Copies .claude/agent-memory/ from main repo so the agent starts with accumulated memory.
+# Paired with sync-agent-memory.sh (IMP-01/IMP-05) which copies memory BACK after agent completes.
+try:
+    agent_memory_src = os.path.join(original_repo_dir, ".claude", "agent-memory")
+    agent_memory_dst = os.path.join(worktree_path, ".claude", "agent-memory")
+    if os.path.isdir(agent_memory_src):
+        shutil.copytree(agent_memory_src, agent_memory_dst, dirs_exist_ok=True)
+        # Count files seeded for analytics
+        seeded_count = sum(
+            len(files) for _, _, files in os.walk(agent_memory_dst)
+        )
+        setup_actions.append(f"agent_memory_seeded:{seeded_count}")
+    else:
+        setup_actions.append("agent_memory_no_src")
+except Exception as e:
+    setup_actions.append("agent_memory_seed_failed")
+    print(f"prepare-worktree: memory pre-seed failed: {e}", file=sys.stderr)
 
 # Node: npm ci (if package-lock.json exists) — uncomment for Node projects
 # try:

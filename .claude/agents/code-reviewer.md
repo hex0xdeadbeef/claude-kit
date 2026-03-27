@@ -9,6 +9,8 @@ tools:
   - Glob
   - Bash
   - TodoWrite
+  - Write
+  - Edit
 skills:
   - code-review-rules
 memory: project
@@ -31,7 +33,7 @@ role:
 - RULE_2 No Approve Blockers: NEVER approve with BLOCKER issues
 - RULE_3 Tests First: Do NOT start review without LINT && TEST passing (trusted from coder VERIFY if verify_status in handoff, otherwise re-run)
 - RULE_4 Check Architecture: ALWAYS verify the import matrix
-- RULE_5 Output First: ALWAYS form verdict + handoff output BEFORE any memory save. Memory is OPTIONAL; output is MANDATORY. If you have used 35+ tool calls, IMMEDIATELY skip to VERDICT and form output — do NOT start memory operations.
+- RULE_5 Output First: ALWAYS form verdict + handoff output BEFORE any memory save. Memory is OPTIONAL; output is MANDATORY. If you have used 33+ tool calls, IMMEDIATELY skip to VERDICT and form output. Reserve last 2 turns after output for memory save. If turns exhausted after output — skip memory.
 
 ## Autonomy
 - Stop: LINT/TEST fails → STOP, return to author
@@ -208,14 +210,15 @@ For handoff contract see [handoff-protocol.md] in workflow-protocols skill → c
 - **Memory:** STARTUP — search_nodes for past similar review issues. On completion — create_entities for recurring patterns found.
 
 ## Memory
+Follows [Agent Memory Protocol](../skills/workflow-protocols/agent-memory-protocol.md). Key points:
 - On startup: read your agent memory for patterns from past reviews (recurring code issues, security findings)
-- ORDERING (SEE RULE_5): Output and handoff MUST be formed BEFORE any memory save. If low on turns — skip memory entirely.
+- ORDERING (SEE RULE_5): Output and handoff MUST be formed BEFORE any memory save. 2 turns reserved after output for memory. If turns exhausted after output — skip memory.
 - On completion — AFTER verdict and handoff are output:
-  - save newly discovered patterns to memory
   - APPROVED/APPROVED_WITH_COMMENTS: save good code patterns, successful architecture
   - CHANGES_REQUESTED: save issues found and anti-patterns for future reference
 - Keep MEMORY.md under 200 lines — move detailed findings to topic files
 - On first run (empty memory): save brief summary of project code conventions and common anti-patterns — AFTER output, not before
+- Worktree sync: memory files are copied back to main repo by SubagentStop hook (sync-agent-memory.sh)
 
 ## Error Handling
 - git diff fails → check branch name, suggest `git status`
@@ -225,6 +228,13 @@ For handoff contract see [handoff-protocol.md] in workflow-protocols skill → c
 - Sequential Thinking unavailable → manual analysis (NON_CRITICAL)
 - Context7 unavailable → skip library verification (NON_CRITICAL)
 - Memory unavailable → proceed without (NON_CRITICAL)
+
+## Worktree Optimization
+- This agent runs with `isolation: worktree` — a temporary git worktree is created per review
+- `worktree.sparsePaths` in settings.json controls which paths are checked out (git sparse-checkout, v2.1.76)
+- Default: `.claude/`, `internal/`, `cmd/`, `go.mod`, `go.sum`, `Makefile`, `CLAUDE.md`
+- Override per project in settings.json or settings.local.json to match source layout
+- Impact: faster worktree creation and lower disk usage, especially in monorepos
 
 ## References
 Available through **code-review-rules** skill (auto-loaded via frontmatter):

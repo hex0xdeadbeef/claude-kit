@@ -395,6 +395,39 @@ SKIP            — phase not applicable (e.g., S-complexity skips plan-review)
 | SessionEnd | Session termination | session-analytics.sh |
 | Notification | Agent events | notify-user.sh |
 
+### Worktree Optimization (sparsePaths)
+
+The code-reviewer agent runs with `isolation: worktree`, creating a temporary git worktree for each review cycle. In monorepo projects, full checkout can be slow and disk-intensive.
+
+**Configuration** (`settings.json`):
+
+```json
+{
+  "worktree": {
+    "sparsePaths": [".claude/", "internal/", "cmd/", "go.mod", "go.sum", "Makefile", "CLAUDE.md"]
+  }
+}
+```
+
+**How it works:** Uses `git sparse-checkout` (v2.1.76) to check out only the listed paths into the worktree. The code-reviewer operates on `git diff`, so it only needs source directories relevant to the review, not the entire repo.
+
+**Default paths (Go project template):**
+
+| Path | Reason |
+|------|--------|
+| `.claude/` | Agent config, rules, skills (required for any review) |
+| `internal/` | Primary Go source code |
+| `cmd/` | Go entry points |
+| `go.mod`, `go.sum` | Dependency declarations |
+| `Makefile` | Build/test commands |
+| `CLAUDE.md` | Project instructions |
+
+**Per-project override:** When deploying to a non-Go project, update `sparsePaths` to match the target project's source layout. Examples:
+
+- **TypeScript monorepo:** `["packages/", "tsconfig.json", "package.json", ".claude/", "CLAUDE.md"]`
+- **Python project:** `["src/", "tests/", "pyproject.toml", ".claude/", "CLAUDE.md"]`
+- **Rust project:** `["src/", "Cargo.toml", "Cargo.lock", ".claude/", "CLAUDE.md"]`
+
 ---
 
 ## Technical Debt
