@@ -1,3 +1,0 @@
-[2026-03-28T19:05:08Z] protect-files: BLOCKED track-task-lifecycle.sh — Hook script (.claude/scripts/). Changes must be made by user, not by agent.
-[2026-03-28T19:06:50Z] protect-files: BLOCKED settings.json — Workflow config (.claude/settings.json). Changes must be made by user, not by agent.
-[2026-03-28T21:05:35Z] block-dangerous: BLOCKED [git rm .claude/prompts/imp-w01-conditional-hooks.md .claude/prompts/imp-w07-subagent-tracking.md .claude/prompts/imp-w09-memory-freshness.md 2>/dev/null; git add -f .claude/agent-memory/plan-reviewer/] — Destructive rm command (rm -r -f). Remove specific files instead: rm file.go
