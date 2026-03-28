@@ -20,6 +20,24 @@ This skill is loaded by /coder when:
 When NOT loaded, standard coder workflow applies (implement → test).
 Coder checks for `## TDD` heading in `.claude/prompts/{feature}.md` at startup.
 
+## The Iron Law
+
+**Violating the letter of the rules is violating the spirit of the rules.**
+
+```
+NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST
+```
+
+Write code before the test? Delete it. Start over.
+
+No exceptions:
+- Don't keep it as "reference"
+- Don't "adapt" it while writing tests
+- Don't look at it
+- Delete means delete
+
+Implement fresh from `go test` failures. Period.
+
 ## Red-Green-Refactor Cycle
 
 For EACH unit of behavior (one function, one method, one endpoint):
@@ -146,6 +164,40 @@ When EVALUATE phase or RED phase encounters unfamiliar patterns:
 **Cause:** Added all test cases before writing code — violates ONE-at-a-time rule.
 **Fix:** Add ONE test case, RED → GREEN → REFACTOR. Then add next case.
 Use `t.Skip("not yet implemented")` for cases you haven't reached yet.
+
+## Common Rationalizations
+
+| Excuse | Reality |
+|--------|---------|
+| "Too simple to test" | Simple code breaks. Test takes 30 seconds. |
+| "I'll write tests after" | Tests passing immediately prove nothing. |
+| "Tests after achieve same goals" | Tests-after = "what does this do?" Tests-first = "what should this do?" |
+| "Already manually tested" | Ad-hoc ≠ systematic. No record, can't re-run with `go test`. |
+| "Deleting X hours is wasteful" | Sunk cost fallacy. Keeping unverified code is technical debt. |
+| "Keep as reference, write tests first" | You'll adapt it. That's testing after. Delete means delete. |
+| "Need to explore first" | Fine. Throw away exploration, start with TDD. |
+| "Hard to test = skip test" | Listen to the test. Hard to test = hard to use. Simplify the interface. |
+| "TDD will slow me down" | TDD faster than debugging. `go test` catches regressions immediately. |
+| "Manual `curl`/`go run` is faster" | Manual doesn't prove edge cases. You'll re-test every change. |
+| "Existing code has no tests" | You're improving it. Add tests for the code you're changing. |
+
+## Red Flags — STOP and Start Over
+
+- Code written before test
+- Test written after implementation
+- Test passes immediately on first run
+- Can't explain why test failed
+- Tests added "later"
+- Rationalizing "just this once"
+- "I already manually tested it"
+- "Tests after achieve the same purpose"
+- "It's about spirit not ritual"
+- "Keep as reference" or "adapt existing code"
+- "Already spent X hours, deleting is wasteful"
+- "TDD is dogmatic, I'm being pragmatic"
+- "This is different because..."
+
+**All of these mean: Delete code. Run `go test`. Start over with TDD.**
 
 For detailed patterns and examples, see:
 - [TDD Patterns](references/patterns.md) — table-driven TDD, test helpers, benchmark TDD
