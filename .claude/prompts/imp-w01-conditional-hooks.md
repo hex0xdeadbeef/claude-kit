@@ -1,4 +1,4 @@
-# IMP-W01: Conditional `if` для hooks — снижение overhead
+# IMP-W01: Conditional `if` fields for hooks — reduce spawning overhead
 
 ## Metadata
 - **Complexity:** XL (user-requested)
