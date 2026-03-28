@@ -153,7 +153,7 @@ startup:
       condition: "Re-entry after CHANGES_REQUESTED (iteration > 1 in handoff context)"
       files:
         - ".claude/skills/coder-rules/review-response.md"
-      purpose: "Load review feedback handling protocol. Triggers TRIAGE → VERIFY → EVALUATE before IMPLEMENT on re-entry."
+      purpose: "Load review feedback handling protocol. Triggers TRIAGE → VERIFY → EVALUATE → IMPLEMENT → DOCUMENT response pattern on re-entry."
 
     - action: "TodoWrite"
       purpose: "Create Parts list for tracking"

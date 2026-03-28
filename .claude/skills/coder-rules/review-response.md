@@ -99,7 +99,8 @@ response_protocol:
     code_reviewer:
       context: "Primary feedback source — structured issues with severity"
       format: |
-        Issues arrive as structured payload (code_review_to_completion contract):
+        Issues arrive as structured payload (code_review_to_completion contract,
+        forwarded by orchestrator to /coder on re-entry):
           issues[]:
             - id: "CR-001"
               severity: "BLOCKER|MAJOR|MINOR|NIT"
