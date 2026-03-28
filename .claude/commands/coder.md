@@ -23,15 +23,9 @@ input:
       format: "Filename"
       example: "{feature-name}"
 
-    - name: beads-id
-      required: false
-      format: "beads-XXX"
-      example: "beads-abc123"
-
   examples:
     - "/coder                              # Auto-find plan in prompts/"
     - "/coder {feature-name}               # Use specific plan"
-    - "/coder beads-abc123                 # Get task from beads"
 
   error_handling:
     plan_not_found: "ERROR: Plan not found at {path}. Create with /planner first."
@@ -154,9 +148,6 @@ startup:
 
     - action: "TodoWrite"
       purpose: "Create Parts list for tracking"
-
-    - action: "bd update <id> --status=in_progress"
-      purpose: "Pick up task (if beads issue exists). Beads is NON_CRITICAL."
 
     - action: "git checkout -b feature/<name>"
       purpose: "Create feature branch (if needed)"

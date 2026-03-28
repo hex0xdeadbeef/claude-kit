@@ -151,12 +151,6 @@ preconditions:
     - check: "git status clean?"
       fail_action: "WARN: uncommitted changes detected"
 
-  if_beads:
-    - check: "bd show <id> → not blocked?"
-      fail_action: "STOP: task is blocked. SEE: bd blocked"
-    - check: "Dependencies closed?"
-      fail_action: "WARN: dependency <dep-id> still open"
-
   if_database:
     - check: "Schema up to date? (migrations applied)"
       fail_action: "WARN: pending migrations detected"

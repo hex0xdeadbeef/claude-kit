@@ -1,5 +1,5 @@
 #!/bin/bash
-# Sync .claude/ and .beads/ to personal GitHub repository
+# Sync .claude/ to personal GitHub repository
 # Usage: ./sync-to-github.sh [commit message]
 #
 # Setup:
@@ -52,11 +52,6 @@ git reset HEAD -- .claude/.DS_Store 2>/dev/null || true
 for f in README.md CLAUDE.md .gitignore; do
     [ -f "$f" ] && git add "$f" 2>/dev/null || true
 done
-
-# Add .beads/ if exists
-if [ -d ".beads" ]; then
-    git add -f .beads/ 2>/dev/null || true
-fi
 
 # Commit message
 MSG="${1:-Auto-sync $(date '+%Y-%m-%d %H:%M')}"

@@ -20,7 +20,7 @@ disable-model-invocation: true
 
 ### Step 1: Load at /workflow startup (step 0.1)
 Read this SKILL.md for protocol overview. Then load Core Deps files:
-[Autonomy](autonomy.md), [Beads Integration](beads.md), [Orchestration Core](orchestration-core.md).
+[Autonomy](autonomy.md), [Orchestration Core](orchestration-core.md).
 
 ### Step 2: Use event-driven protocol loading
 Do NOT load all protocols upfront. Load on-demand per Event Triggers below:
@@ -85,7 +85,6 @@ For all troubleshooting cases, see [Examples & Troubleshooting](examples-trouble
 ## Core Deps (workflow-only, loaded at startup)
 These files define fundamental workflow behavior and are loaded at pipeline startup (step 0.1):
 - [Autonomy](autonomy.md) — 3 modes (INTERACTIVE/AUTONOMOUS/RESUME), stop/continue conditions
-- [Beads Integration](beads.md) — core commands, priority values, per-command integration matrix
 - [Orchestration Core](orchestration-core.md) — pipeline phases, loop limits (max 3), session recovery
 
 ## Protocol References

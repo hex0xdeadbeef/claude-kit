@@ -22,11 +22,6 @@ input:
       format: "Task description text"
       example: "Add new functionality"
 
-    - name: beads-id
-      required: false
-      format: "beads-XXX"
-      example: "beads-abc123"
-
     - name: --minimal
       required: false
       format: flag
@@ -35,8 +30,6 @@ input:
   examples:
     - cmd: "/planner Add new endpoint"
       description: "New API endpoint"
-    - cmd: "/planner beads-abc123"
-      description: "Work with beads task"
     - cmd: "/planner --minimal Add field to model"
       description: "Minimal plan for simple task"
 
@@ -112,7 +105,6 @@ mcp_tools:
 
 ## CONTEXT
 context:
-  tracking: "bd for beads integration"
   template: ".claude/templates/plan-template.md"
 
 ## STARTUP
@@ -396,7 +388,7 @@ rules:
 
 ## ERROR HANDLING
 error_handling:
-  # Common MCP/beads errors → auto-loaded via CLAUDE.md (error handling section)
+  # Common MCP errors → auto-loaded via CLAUDE.md (error handling section)
   command_specific:
     - situation: Template missing
       action: "Use minimal format from PHASE 4: DOCUMENT"

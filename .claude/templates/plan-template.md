@@ -18,7 +18,6 @@ plan:
         reason: "{Why}"
 
   dependencies:
-    beads_issue: "beads-XXX"  # if created
     blocks: []                # tasks this blocks
     blocked_by: []            # tasks blocking this
 

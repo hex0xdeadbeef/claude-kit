@@ -33,7 +33,7 @@ task-analysis → /planner → plan-reviewer (agent) → /coder → code-reviewe
 
 **Note:** This scenario is rare after RULE_5 (Output First) was added to agents. But validation remains as a safety net.
 
-**Phase 0 — Get Task (optional):** If beads task → `bd show <id>` + `bd update <id> --status=in_progress`. Skip if ad-hoc.
+**Phase 0 — Get Task (optional):** Parse task from user input. Skip if ad-hoc.
 
 **Phase 5 — Completion:** After code-review APPROVED/APPROVED_WITH_COMMENTS:
 1. Create git commit (MANDATORY)
@@ -41,14 +41,12 @@ task-analysis → /planner → plan-reviewer (agent) → /coder → code-reviewe
    - Body (optional): max 3 lines, include plan path + complexity + review iterations
    - Co-Authored-By: included by default (Claude Code system behavior)
    - To strip: `cp .claude/templates/git-hooks/commit-msg .git/hooks/commit-msg && chmod +x .git/hooks/commit-msg` + set `GIT_STRIP_CO_AUTHOR=true` in settings.local.json env
-2. Run `bd sync` (if beads active)
-3. Remind user to run `bd close <id>` (do NOT auto-close)
-4. Collect pipeline metrics (SEE pipeline-metrics.md):
+2. Collect pipeline metrics (SEE pipeline-metrics.md):
    a. Standard metrics: phases, iterations, complexity, issues, tools
    b. Code-researcher metrics: extract from Agent/Task tool return metadata (token count, tool uses, duration per invocation). Sum across all invocations in this pipeline run. Include background_mode_used flag.
    c. If code-researcher not invoked → set all code_researcher_metrics to 0
-5. CronDelete — remove auto-save cron job (if active, L/XL tasks). Read cron_id from checkpoint, call CronDelete. If CronDelete unavailable → WARN, job will expire with session.
-6. Write final checkpoint: `phase_completed: 5, phase_name: "completion"`
+3. CronDelete — remove auto-save cron job (if active, L/XL tasks). Read cron_id from checkpoint, call CronDelete. If CronDelete unavailable → WARN, job will expire with session.
+4. Write final checkpoint: `phase_completed: 5, phase_name: "completion"`
 
 **Note:** Completion is orchestrator-owned (not delegated to agent or sub-command).
 
@@ -117,7 +115,6 @@ tracking_protocol:
 ls .claude/workflow-state/*-checkpoint.yaml  # Checkpoint?
 ls .claude/prompts/                          # Plan?
 ls .claude/prompts/*-evaluate.md              # Evaluate output?
-bd list --status=in_progress                 # Active beads?
 git diff $(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||' || echo main)...HEAD --stat  # Code changes?
 TEST                                         # Tests pass? (Go default: make test)
 ```
@@ -125,7 +122,7 @@ TEST                                         # Tests pass? (Go default: make tes
 **Step 1:** Check `.claude/workflow-state/*-checkpoint.yaml`
 
 **Step 2A — Checkpoint found:** Read → verify integrity → check for mid-phase progress → resume.
-- If `implementation_progress.auto_saved=true`: resume Phase 3 from Part `parts_completed + 1` (skip completed Parts). Re-create cron auto-save (startup step 5).
+- If `implementation_progress.auto_saved=true`: resume Phase 3 from Part `parts_completed + 1` (skip completed Parts). Re-create cron auto-save (startup step 3).
 - Otherwise: standard resume from `phase_completed + 1` → restore iteration counters.
 
 **Step 2B — No checkpoint (heuristic):**

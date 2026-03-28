@@ -9,7 +9,6 @@ checklist:
     - "Plan loaded from .claude/prompts/"
     - "TodoWrite created with Parts"
     - "Feature branch created (if needed)"
-    - "If beads used → status updated to in_progress"
 
   evaluate:
     - "Plan feasibility assessed"

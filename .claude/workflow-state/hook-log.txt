@@ -1,0 +1,2 @@
+[2026-03-28T19:05:08Z] protect-files: BLOCKED track-task-lifecycle.sh — Hook script (.claude/scripts/). Changes must be made by user, not by agent.
+[2026-03-28T19:06:50Z] protect-files: BLOCKED settings.json — Workflow config (.claude/settings.json). Changes must be made by user, not by agent.

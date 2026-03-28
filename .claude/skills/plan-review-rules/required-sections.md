@@ -23,9 +23,8 @@ required_sections:
       - no_ambiguity: "Clear boundary of what's included/excluded"
 
   - section: Dependencies
-    required: IF_BEADS
+    required: OPTIONAL
     validate:
-      - beads_issue_linked: "beads-XXX ID present if tracked"
       - blocking_issues: "List what must complete first"
       - blocked_issues: "List what this blocks"
 
@@ -110,7 +109,7 @@ common_issues:
       - Bind/Unbind endpoints
     example_good: |
       OUT:
-      - {Related feature} (tracked in beads-XYZ, requires separate research)
+      - {Related feature} (tracked separately, requires own research)
     severity: MAJOR
 
   - issue: "Parts not ordered by dependency"

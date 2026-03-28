@@ -49,12 +49,11 @@ template:
         output: "<expected output>"
 
     turn_budget:
-      note: "Reserve last 5 turns for output formation. If approaching maxTurns, skip optional operations (memory save, beads) and form output immediately."
+      note: "Reserve last 5 turns for output formation. If approaching maxTurns, skip optional operations (memory save) and form output immediately."
       priority_order:
         - "1. VERDICT + structured output (MANDATORY)"
         - "2. Handoff payload (MANDATORY)"
         - "3. Memory save (OPTIONAL — skip if low on turns)"
-        - "4. Beads reminder (OPTIONAL — skip if low on turns)"
 
     rules:
       - id: R1
@@ -70,10 +69,6 @@ template:
       - situation: "File not found"
         action: "FATAL: <message> — stop execution"
 
-    beads_integration:
-      on_start: "bd create --title='<agent> {input}' --type=task"
-      on_finish: "bd close {id} --reason='Completed'"
-
     output:
       format: "<markdown | YAML | text>"
       sections: ["section1", "section2"]
@@ -86,7 +81,7 @@ template:
     checklist:
       startup: ["Load PROJECT-KNOWLEDGE.md if exists", "Confirm input valid"]
       execution: ["<phase 1 check>", "<phase 2 check>"]
-      completion: ["Output written", "beads closed"]
+      completion: ["Output written"]
 
 ai_first_principles:
   format:
@@ -108,7 +103,6 @@ quality_gates:
     - "YAML > 80% of file content"
     - "No prose paragraphs or ## headers"
     - "fatal_errors defined"
-    - "beads_integration present"
     - "checklist present"
 
 examples:
@@ -154,10 +148,6 @@ examples:
           action: "Skip with warning, continue"
         - situation: "Output dir missing"
           action: "FATAL: docs/ not found — create it first"
-
-      beads_integration:
-        on_start: "bd create --title='doc-gen {input}' --type=task"
-        on_finish: "bd close {id} --reason='Docs generated'"
 
       output:
         format: "markdown"

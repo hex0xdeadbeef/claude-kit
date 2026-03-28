@@ -41,7 +41,7 @@ examples:
       trigger: "Phase 4: APPROVED"
       steps:
         - action: "Suggest commit command to user"
-          command: "git add <specific-files> && git commit -m 'feat: ...' && bd sync"
+          command: "git add <specific-files> && git commit -m 'feat: ...'"
           note: "NEVER use git add . — always stage specific files to avoid committing secrets (.env, credentials)"
         - action: "Wait for user to decide when to commit"
     bad:
@@ -69,10 +69,6 @@ troubleshooting:
   - problem: "Session interrupted mid-workflow"
     cause: "Connection lost, timeout, or manual stop"
     fix: "Check `.claude/prompts/{feature}.md` for saved plan, use --from-phase to resume"
-
-  - problem: "bd sync fails"
-    cause: "Network issue or beads daemon not running"
-    fix: "Run `bd doctor` to diagnose, restart daemon if needed"
 
 common_mistakes:
   - mistake: "Skipping Phase 2 (plan-review)"

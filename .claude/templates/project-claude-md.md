@@ -20,7 +20,6 @@ Layers: handler → service/controller → repository → models
 | Error | Severity | Action |
 |-------|----------|--------|
 | Memory/ST/Context7/PostgreSQL MCP unavailable | NON_CRITICAL | Warn, proceed without |
-| Beads unavailable | NON_CRITICAL | Skip beads phases |
 | Plan not found | FATAL | EXIT — run /planner first |
 | Plan not approved | FATAL | EXIT — run /plan-review first |
 | PROJECT-KNOWLEDGE.md missing | NON_CRITICAL | Use profile above as defaults |

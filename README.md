@@ -154,7 +154,7 @@ Creates, enhances, audits, and manages Claude Code artifacts (commands, skills, 
 /meta-agent cleanup                    # remove runs older than 7 days
 ```
 
-**Flags:** `--dry-run` (preview) · `--track` (beads tracking) · `--explore` (Tree of Thought)
+**Flags:** `--dry-run` (preview) · `--explore` (Tree of Thought)
 
 **Artifact types:** `command` · `skill` · `rule` · `agent`
 
@@ -253,8 +253,7 @@ flowchart LR
 flowchart TB
     subgraph STARTUP ["Startup"]
         TA["Task Analysis<br/>(S/M/L/XL)"] --> S1["Memory search"]
-        S1 --> S2["Beads check"]
-        S2 --> S3["Session recovery check"]
+        S1 --> S3["Session recovery check"]
     end
 
     S3 -->|S| ROUTE_S["Minimal route:<br/>skip Plan Review"]
@@ -415,7 +414,7 @@ flowchart LR
     PREV["plan-reviewer"] --> PRR
     CREV["code-reviewer"] --> CRR
 
-    WP -->|startup| A1["autonomy.md, beads.md,<br/>orchestration-core.md"]
+    WP -->|startup| A1["autonomy.md,<br/>orchestration-core.md"]
     WP -->|on-demand| A2["handoff-protocol.md,<br/>checkpoint-protocol.md,<br/>re-routing.md,<br/>pipeline-metrics.md"]
 
     PLR -->|startup| B1["mcp-tools.md"]
