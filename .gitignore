@@ -38,3 +38,6 @@ Thumbs.db
 # Environment
 .env
 .env.local
+
+# Third-party research sources (not part of this project)
+superpowers-main/
