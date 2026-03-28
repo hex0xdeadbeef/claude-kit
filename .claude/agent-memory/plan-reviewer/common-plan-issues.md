@@ -138,3 +138,25 @@ outer fence when rendered. The coder sees a broken block and may misinterpret wh
 Suggest using 4-space indentation or a 4-backtick outer fence to disambiguate.
 For content with inner fences, also accept describing the inner fence in prose rather than
 showing it literally in the example block.
+
+## Pattern: Phase replacement without skip_when on replaced phase
+
+Frequency: Seen in qw4-review-response.md (2026-03-29, iteration 1, NEEDS_CHANGES; iteration 2, APPROVED)
+Severity: MAJOR
+
+When a plan adds a new conditional phase (e.g., Phase 0.5 "re-entry only") and claims it
+"replaces" an existing phase on that condition, the plan MUST also add a `skip_when` condition
+to the existing phase being replaced. Otherwise both phases run, which is either redundant or
+contradictory.
+
+**Why:** The coder sees Phase 0.5 (condition: re-entry) and Phase 1.5 (no condition) as
+independent — without explicit `skip_when` on Phase 1.5, both run on re-entry.
+**How to apply:** MAJOR when a plan adds a "replaces X on condition Y" note but does not
+update Phase X to add `skip_when: Y`. Planner must add the skip_when change as a separate
+modification to the replaced phase. The claim "replaces X" in a note does not substitute
+for an explicit structural change.
+
+**Resolution pattern (qw4 iteration 2):** Add `skip_when` to BOTH the new phase (skip on
+non-triggering condition) and the replaced phase (skip when the new phase runs). The plan
+should express this as two separate named Changes, each with a YAML snippet. A `summary_reentry`
+variant in `workflow.summary` further disambiguates the two execution paths for the coder.
