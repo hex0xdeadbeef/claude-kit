@@ -3,8 +3,11 @@
 troubleshooting:
   - problem: "Tests fail 3x in a row - stuck"
     cause: "Bug in implementation logic or wrong approach"
-    fix: "Review Part logic with Sequential Thinking, compare with plan examples"
-    lesson: "Complex business logic needs structured analysis before coding"
+    fix: "Load systematic-debugging skill. Run Phase 1 (Root Cause Investigation):
+      read error output, reproduce with `go test -v -count=1 -run TestXxx ./...`,
+      trace data flow backward. Find root cause before attempting fix."
+    lesson: "Systematic root cause investigation is faster than guess-and-check.
+      3x failures = time for structured approach, not another fix attempt."
 
   - problem: "Import matrix violation detected by hooks"
     cause: "Didn't check architecture rules before implementation"

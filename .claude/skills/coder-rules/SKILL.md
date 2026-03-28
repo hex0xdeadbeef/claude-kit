@@ -50,7 +50,8 @@ Exception: If plan contains ## TDD section, RED-GREEN-REFACTOR test runs within 
 
 ### Step 4: Verify and form handoff
 Run full VERIFY: `go vet ./... && make fmt && make lint && make test`.
-If tests fail 3x → STOP, request help. On success → form handoff payload for code-review.
+If tests fail 3x → load systematic-debugging skill, run Phase 1 root cause investigation.
+On success → form handoff payload for code-review.
 
 ## Example
 
@@ -77,7 +78,9 @@ For more examples, see [Examples](examples.md).
 
 ### Tests fail 3x in a row — stuck
 **Cause:** Bug in implementation logic or wrong approach.
-**Fix:** Use Sequential Thinking for root cause analysis. Compare with plan examples. If still stuck → STOP, request manual help.
+**Fix:** Load systematic-debugging skill. Run Phase 1 (Root Cause Investigation) with
+`go test -v -count=1 ./...` output as evidence. Trace data flow to find root cause.
+If root cause found → implement single fix + VERIFY. If still stuck → STOP, request manual help.
 
 ### Import matrix violation detected
 **Cause:** Didn't check architecture rules before implementation.
