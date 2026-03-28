@@ -246,7 +246,6 @@ All research completed. Implementer can work directly from this plan.
 Key decisions:
 - Insert-only changes — no modification of existing content
 - Iron Law early (after When to Use), rationalizations + red flags late (after Common Issues)
-- Minimal Go adaptations (m- [ ] Iron Law section present with `NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST`
-ost content is language-agnostic)
+- Minimal Go adaptations (most content is language-agnostic)
 - "Violating the letter" as opening line of Iron Law section, not separate section
 - ~60 new lines → total ~213 lines (reasonable for SKILL.md)
