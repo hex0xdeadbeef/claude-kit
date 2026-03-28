@@ -101,3 +101,40 @@ criteria (Mermaid syntax, YAML frontmatter) were added — the remaining vaguene
 **Why:** Planners focus on content coverage and skip structural correctness checks.
 **How to apply:** Flag residual undefined counts as NIT if technical criteria are present;
 flag as MINOR if technical criteria are also absent.
+
+## Pattern: Aspirational/future patterns not labeled as such in documentation plans
+
+Frequency: Seen in qw5-parallel-dispatch.md (2026-03-29, iterations 1 and 2)
+Severity: MAJOR (iteration 1); resolved by iteration 2
+
+When a plan documents multiple use cases and some are aspirational (not yet implemented behavior),
+the plan MUST explicitly label those sections as "future pattern" or "planned behavior."
+
+Failure to label produces documentation that implies non-existent behavior is current. Planner
+handoffs often correctly identify this as a known risk — reviewer must verify the plan body
+actually implements the labeling, not just acknowledges it in handoff notes.
+
+Resolution pattern (qw5 iteration 2): blockquote callout at top of future section + "NOTE" in
+research section + "FUTURE PATTERN" in Use Case heading. This is the accepted resolution form.
+
+**Why:** Documentation shipped without "future" labels misleads implementers and readers about
+actual system capabilities.
+**How to apply:** MAJOR when plan body presents aspirational behavior symmetrically with existing
+behavior, with no distinguishing label. The coder cannot make this judgment call — it requires a
+planner revision. Accept "future pattern" callout block, `status: future` field, or equivalent
+explicit marker in the section.
+
+## Pattern: Nested code fences in plan content examples
+
+Frequency: Seen in qw3-tdd-rationalization.md (2026-03-29, iteration 1, APPROVED)
+Severity: MINOR
+
+When a plan wraps a content example in an outer markdown fence, and that content itself contains
+inner fences (e.g., for code banners like NO PRODUCTION CODE), the inner fence terminates the
+outer fence when rendered. The coder sees a broken block and may misinterpret what to insert.
+
+**Why:** Planners write nested fences without accounting for Markdown rendering rules.
+**How to apply:** Flag as MINOR. Coder can recover intent from Research section context.
+Suggest using 4-space indentation or a 4-backtick outer fence to disambiguate.
+For content with inner fences, also accept describing the inner fence in prose rather than
+showing it literally in the example block.

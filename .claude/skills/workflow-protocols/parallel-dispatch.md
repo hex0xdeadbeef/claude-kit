@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Parallel Dispatch Protocol
 
-Parallel dispatch is faster than sequential when 2+ tasks are independent — no shared state, no file conflicts. Key condition: each agent operates on its own scope with no overlap.
+Parallel dispatch is faster than sequential when 2+ tasks are independent — no shared state, no file conflicts. Key condition: each agent operates on its own scope with no overlap. Each agent gets constructed context (not inherited session history) — this keeps agents focused and preserves the caller's context for coordination.
 
 ## Decision Flowchart
 
@@ -113,6 +113,15 @@ After all agents return results:
 Red flags after merge:
 - Two agents edited the same file → review both changes
 - One agent's fix broke another agent's test → related problems, not independent
+
+## Key Benefits
+
+- **Parallelization** — multiple investigations happen simultaneously (3 problems in time of 1)
+- **Focus** — each agent has narrow scope, less context to track
+- **Independence** — agents don't interfere with each other
+- **Context preservation** — caller's context stays clean for coordination
+
+Example: /planner Phase 3, L-complexity — 3 code-researchers dispatched in parallel across handler/service/repository layers, each returning ≤2000 token summary. Planner integrates all findings at DESIGN phase async integration point.
 
 ## Common Mistakes
 
