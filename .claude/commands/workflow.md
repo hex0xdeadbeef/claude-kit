@@ -337,6 +337,12 @@ hooks:
       behavior: "Verifies checkpoint + review completions integrity, re-injects state summary"
       blocking: false
 
+    - event: SubagentStart
+      script: ".claude/scripts/track-task-lifecycle.sh"
+      matcher: "code-researcher"
+      behavior: "Logs code-researcher invocation to .claude/workflow-state/task-events.jsonl for pipeline metrics"
+      blocking: false
+
     - event: SubagentStop
       script: ".claude/scripts/save-review-checkpoint.sh"
       matcher: "plan-reviewer|code-reviewer"

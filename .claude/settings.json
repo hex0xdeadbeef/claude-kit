@@ -1,5 +1,4 @@
 {
-  "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/main/config-schema.json",
   "autoMemoryEnabled": true,
   "model": "sonnet",
   "thinking": {
@@ -24,6 +23,7 @@
   "permissions": {
     "allow": [
       "Edit",
+      "Edit(.claude/settings.json)",
       "Write",
       "TodoWrite",
       "Bash(make *)",
@@ -87,7 +87,8 @@
       "Bash(grep -ri bead /Users/dmitriym/Desktop/claude-kit --include=*.go --include=*.ts --include=*.js --include=*.py --include=*.txt --include=*.md --include=*.json)",
       "Bash(grep -rn 'bd ' /Users/dmitriym/Desktop/claude-kit --include=*.md)",
       "Bash(grep -rn \"beads\\\\|bead\" /Users/dmitriym/Desktop/claude-kit/.claude/prompts/ --include=*.md)",
-      "Bash(grep -rn \"thread\\\\|Thread\" /Users/dmitriym/Desktop/claude-kit --include=*.md)"
+      "Bash(grep -rn \"thread\\\\|Thread\" /Users/dmitriym/Desktop/claude-kit --include=*.md)",
+      "Bash(git worktree:*)"
     ],
     "deny": [
       "Bash(rm -rf *)",
@@ -232,6 +233,17 @@
           {
             "type": "command",
             "command": ".claude/scripts/verify-state-after-compact.sh"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "matcher": "code-researcher",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/scripts/track-task-lifecycle.sh"
           }
         ]
       }
