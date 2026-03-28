@@ -34,7 +34,21 @@ agent_memory_protocol:
   limits:
     memory_index: "MEMORY.md ≤200 lines — move detailed findings to topic files"
     topic_files: "One file per topic (e.g., patterns.md, anti-patterns.md)"
-    cleanup: "Remove outdated entries when updating"
+    cleanup: "Remove outdated entries when updating (SEE freshness thresholds)"
+
+  freshness:
+    source: "File system mtime (v2.1.75 — last-modified timestamps in memory files)"
+    check_when: "On startup, after reading MEMORY.md"
+    method: "Run: ls -la .claude/agent-memory/{agent_name}/ to see file dates"
+    thresholds:
+      fresh: "< 30 days — use normally"
+      stale: "30-90 days — WARN: verify relevance before relying on patterns"
+      expired: "> 90 days — WARN: suggest deletion, do not rely on for decisions"
+    behavior:
+      on_stale: "Log warning, still read content but cross-check against current code"
+      on_expired: "Log warning, suggest cleanup in completion phase, do not base decisions on"
+      never: "Never auto-delete — agent proposes, user decides"
+    severity: "NON_CRITICAL — proceed even if freshness check fails"
 
   tools_required:
     write_new: "Write tool — create new memory files"

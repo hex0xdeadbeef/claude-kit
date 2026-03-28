@@ -195,7 +195,7 @@ For handoff contract see [handoff-protocol.md] in workflow-protocols skill → c
   - Recommendations: {areas for attention if merge proceeds}
   ```
 
-**Ready for:** merge / bd close | /coder (if CHANGES_REQUESTED)
+**Ready for:** merge | /coder (if CHANGES_REQUESTED)
 
 ## MCP Tools
 - **Sequential Thinking:** Use for large diffs (>100 lines, >5 files, 3+ layers). SKIP for simple changes.
@@ -204,6 +204,7 @@ For handoff contract see [handoff-protocol.md] in workflow-protocols skill → c
 ## Memory
 Follows [Agent Memory Protocol](../skills/workflow-protocols/agent-memory-protocol.md). Key points:
 - On startup: read your agent memory for patterns from past reviews (recurring code issues, security findings)
+- Freshness: check file dates via `ls -la .claude/agent-memory/code-reviewer/`. Files > 30d = stale (verify before relying), > 90d = expired (suggest cleanup)
 - ORDERING (SEE RULE_5): Output and handoff MUST be formed BEFORE any memory save. 2 turns reserved after output for memory. If turns exhausted after output — skip memory.
 - On completion — AFTER verdict and handoff are output:
   - APPROVED/APPROVED_WITH_COMMENTS: save good code patterns, successful architecture
@@ -236,5 +237,3 @@ Available through **code-review-rules** skill (auto-loaded via frontmatter):
 - **Troubleshooting** — common review issues, mistakes, and fixes
 - Top 3 mistakes: (1) NEVER approve with blockers, (2) ALWAYS use ST for 100+ lines, (3) ALWAYS grep search_patterns
 
-## Beads
-If APPROVED → remind user to run `bd close <id>`. NON_CRITICAL. Auto-close: false.

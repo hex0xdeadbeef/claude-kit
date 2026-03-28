@@ -168,6 +168,7 @@ For handoff contract see [handoff-protocol.md] in workflow-protocols skill → p
 ## Memory
 Follows [Agent Memory Protocol](../skills/workflow-protocols/agent-memory-protocol.md). Key points:
 - On startup: read your agent memory for patterns from past reviews (recurring issues, common plan mistakes)
+- Freshness: check file dates via `ls -la .claude/agent-memory/plan-reviewer/`. Files > 30d = stale (verify before relying), > 90d = expired (suggest cleanup)
 - ORDERING (SEE Rules): Output and handoff MUST be formed BEFORE any memory save. 2 turns reserved after output for memory. If turns exhausted after output — skip memory.
 - On completion — AFTER verdict and handoff are output:
   - APPROVED: save successful patterns, good plan structures
@@ -189,5 +190,3 @@ Available through **plan-review-rules** skill (auto-loaded via frontmatter):
 - **Checklist** — self-verification at each review phase
 - **Troubleshooting** — common review issues and fixes
 
-## Beads
-No beads action in plan-review phase. Beads is NON_CRITICAL.

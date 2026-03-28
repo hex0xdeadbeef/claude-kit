@@ -123,6 +123,7 @@ NOT allowed:
 ## Memory
 Follows [Agent Memory Protocol](../skills/workflow-protocols/agent-memory-protocol.md). Key points:
 - On startup: read your agent memory for codebase topology (package locations, key files, patterns)
+- Freshness: check file dates via `ls -la .claude/agent-memory/code-researcher/`. Files > 30d = stale (verify before relying), > 90d = expired (suggest cleanup)
 - On completion — AFTER primary output: save newly discovered codebase structure to memory
   - Package locations, key interfaces, important file paths
   - Patterns found: how existing features are structured
