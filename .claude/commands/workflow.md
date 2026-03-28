@@ -34,7 +34,7 @@ input:
   arguments:
     - name: task
       required: true
-      format: "Text or beads ID"
+      format: "Text"
       example: "Add new functionality"
 
     - name: --auto
@@ -51,7 +51,6 @@ input:
     - "/workflow Add new endpoint"
     - "/workflow --auto Implement resource update"
     - "/workflow --from-phase 3"
-    - "/workflow beads-abc123"
 
 ## OUTPUT
 output:
@@ -125,19 +124,11 @@ startup:
         - "Phase 5: Completion — commit + metrics (pending)"
 
     - step: 2
-      action: "Check beads"
-      checks:
-        - "bd list --status=open → is there a related task?"
-        - "bd list --status=in_progress → is there unfinished work?"
-      note: "Beads is NON_CRITICAL. If bd unavailable → skip."
-
-    - step: 3
       action: "Check session recovery"
       checks:
         - "Does `.claude/prompts/{feature}.md` exist? → can skip Phase 1"
-        - "Is there a beads issue in_progress? → bd show <id>"
 
-    - step: 4
+    - step: 3
       action: "CronCreate — auto-save checkpoint (L/XL only)"
       condition: "complexity L or XL"
       skip_when: "S/M complexity — phases complete quickly, phase-end checkpoints are sufficient"
@@ -155,7 +146,7 @@ startup:
 pipeline:
   mandatory: |
     🔴 MANDATORY: Load skills BEFORE executing any phase:
-    - Workflow: workflow-protocols skill (step 0.1) — includes autonomy, beads, orchestration-core
+    - Workflow: workflow-protocols skill (step 0.1) — includes autonomy, orchestration-core
     - Planner: planner-rules skill (step 0) — includes mcp-tools, sequential-thinking-guide
     - Coder: coder-rules skill (step 0) — includes mcp-tools
     NOTE: Plan Review and Code Review → agents/ with skills preloading (plan-review-rules, code-review-rules)
@@ -182,9 +173,6 @@ pipeline:
     - action: "Read .claude/skills/workflow-protocols/autonomy.md"
       when: "BEFORE starting Phase 0"
       required: true
-    - action: "Read .claude/skills/workflow-protocols/beads.md"
-      when: "BEFORE starting Phase 0"
-      required: true
     - action: "Read .claude/skills/workflow-protocols/orchestration-core.md"
       when: "ALWAYS — contains pipeline phases, loop limits, session recovery"
       required: true
@@ -195,7 +183,6 @@ pipeline:
 
   completion_notes:
     - "Git commit created (MANDATORY)"
-    - "bd sync executed (MANDATORY, if beads)"
 
 ## DELEGATION PROTOCOL
 delegation_protocol:
@@ -314,7 +301,7 @@ rules:
 
 ## ERROR HANDLING
 error_handling:
-  common: "SEE CLAUDE.md (MCP unavailable, beads, tests 3x fail)"
+  common: "SEE CLAUDE.md (MCP unavailable, tests 3x fail)"
   workflow_specific:
     - "Loop limit exceeded (3 iterations) → STOP, show summary, request user help"
     - "User says 'stop' → Stop immediately, await instructions"
@@ -336,6 +323,8 @@ hooks:
     Configured in .claude/settings.json (authoritative source — 11 event types, 17 scripts).
     This section lists only workflow-specific hooks. For complete list see settings.json.
     Deterministic — fires automatically, no need to remember.
+    Conditional `if` (v2.1.85): PreToolUse/PostToolUse hooks use `if` field with permission rule
+    syntax to reduce process spawning. Security hooks (protect-files, block-dangerous) remain unconditional.
 
   workflow_specific:
     - event: PreCompact
@@ -367,8 +356,8 @@ hooks:
   also_active_during_workflow:
     - "InstructionsLoaded → validate-instructions.sh (rules validation)"
     - "UserPromptSubmit → enrich-context.sh (context enrichment + exploration budget visualization)"
-    - "PreToolUse → protect-files.sh, check-artifact-size.sh, block-dangerous-commands.sh"
-    - "PostToolUse → auto-fmt-go.sh, yaml-lint.sh, check-references.sh, check-plan-drift.sh"
+    - "PreToolUse → protect-files.sh, check-artifact-size.sh [if: Write(.claude/**)], block-dangerous-commands.sh, pre-commit-build.sh [if: Bash(git commit*)]"
+    - "PostToolUse → auto-fmt-go.sh [if: **/*.go], yaml-lint.sh [if: Edit(.claude/**)], check-references.sh [if: Write(.claude/**)], check-plan-drift.sh [if: .claude/**]"
     - "SessionEnd → session-analytics.sh"
     - "StopFailure → log-stop-failure.sh (API error logging)"
     - "Notification → notify-user.sh"

@@ -59,7 +59,6 @@
       "Bash(sort *)",
       "Bash(touch *)",
       "Bash(tree *)",
-      "Bash(bd *)",
       "Edit(/.claude/skills/workflow-protocols/**)",
       "Edit(/.claude/skills/planner-rules/**)",
       "Bash(sort -k2)",
@@ -75,7 +74,20 @@
       "Bash(grep -rn \"mcp__memory\\\\|server-memory\\\\|memory\\\\.json\\\\|MCP Memory\" .claude/commands/ .claude/agents/ .claude/skills/ .claude/rules/ CLAUDE.md README.md .claude/PROJECT-KNOWLEDGE.md --include=*.md --include=*.json --include=*.sh)",
       "Bash(git check-ignore:*)",
       "Bash(bash /Users/dmitriym/Desktop/claude-kit/.claude/scripts/sync-to-github.sh \"docs: add MCP Memory full audit report\")",
-      "Bash(bash /Users/dmitriym/Desktop/claude-kit/.claude/scripts/sync-to-github.sh \"chore: cleanup .DS_Store + sync script fix\")"
+      "Bash(bash /Users/dmitriym/Desktop/claude-kit/.claude/scripts/sync-to-github.sh \"chore: cleanup .DS_Store + sync script fix\")",
+      "Bash(find /Users/dmitriym/Desktop/claude-kit/.claude -type f -exec ls -lh {})",
+      "Read(//Users/dmitriym/Desktop/claude-kit/**)",
+      "Bash(rsync -av --exclude='.DS_Store' --exclude='workflow-state/*' --exclude='worktrees/*' --exclude='reports/*' --exclude='research/*' --exclude='prompts/*' --exclude='archive/*' --exclude='agent-memory/*' --exclude='settings.local.json' --exclude='PROJECT-KNOWLEDGE.md' --exclude='docs/*' .claude/ /Users/dmitriym/Desktop/osb-golden-broker/.claude/)",
+      "Edit(/.claude/skills/coder-rules/**)",
+      "Edit(/.claude/skills/plan-review-rules/**)",
+      "Bash(find /Users/dmitriym/Desktop/claude-kit/.claude -type f \\\\\\(-name *.md -o -name *.json -o -name *.sh \\\\\\))",
+      "Bash(find /Users/dmitriym/Desktop/claude-kit/.claude -type f \\\\\\(-name *.md -o -name *.json -o -name *.sh \\\\\\) -exec wc -l {} +)",
+      "Bash(find /Users/dmitriym/Desktop/claude-kit -type f \\\\\\(-name *.md -o -name *.sh -o -name *.json -o -name *.yaml -o -name *.yml -o -name *.txt -o -name *.go -o -name *.ts -o -name *.js -o -name *.py \\\\\\))",
+      "Bash(find /Users/dmitriym/Desktop/claude-kit -type f \\\\\\(-name *.go -o -name *.ts -o -name *.js -o -name *.py -o -name *.txt -o -name *.md -o -name *.json \\\\\\))",
+      "Bash(grep -ri bead /Users/dmitriym/Desktop/claude-kit --include=*.go --include=*.ts --include=*.js --include=*.py --include=*.txt --include=*.md --include=*.json)",
+      "Bash(grep -rn 'bd ' /Users/dmitriym/Desktop/claude-kit --include=*.md)",
+      "Bash(grep -rn \"beads\\\\|bead\" /Users/dmitriym/Desktop/claude-kit/.claude/prompts/ --include=*.md)",
+      "Bash(grep -rn \"thread\\\\|Thread\" /Users/dmitriym/Desktop/claude-kit --include=*.md)"
     ],
     "deny": [
       "Bash(rm -rf *)",
@@ -93,6 +105,9 @@
       "Bash(mkfs.*)",
       "Bash(truncate *)",
       "Read(.env)"
+    ],
+    "additionalDirectories": [
+      "/tmp"
     ]
   },
   "hooks": {
@@ -122,6 +137,7 @@
         "hooks": [
           {
             "type": "command",
+            "if": "Write(.claude/**)",
             "command": ".claude/agents/meta-agent/scripts/check-artifact-size.sh"
           }
         ]
@@ -140,6 +156,7 @@
         "hooks": [
           {
             "type": "command",
+            "if": "Bash(git commit*)",
             "command": ".claude/scripts/pre-commit-build.sh"
           }
         ]
@@ -151,6 +168,12 @@
         "hooks": [
           {
             "type": "command",
+            "if": "Write(**/*.go)",
+            "command": ".claude/scripts/auto-fmt-go.sh"
+          },
+          {
+            "type": "command",
+            "if": "Edit(**/*.go)",
             "command": ".claude/scripts/auto-fmt-go.sh"
           }
         ]
@@ -160,6 +183,7 @@
         "hooks": [
           {
             "type": "command",
+            "if": "Edit(.claude/**)",
             "command": ".claude/agents/meta-agent/scripts/yaml-lint.sh"
           }
         ]
@@ -169,6 +193,7 @@
         "hooks": [
           {
             "type": "command",
+            "if": "Write(.claude/**)",
             "command": ".claude/agents/meta-agent/scripts/check-references.sh"
           }
         ]
@@ -178,6 +203,12 @@
         "hooks": [
           {
             "type": "command",
+            "if": "Write(.claude/**)",
+            "command": ".claude/agents/meta-agent/scripts/check-plan-drift.sh"
+          },
+          {
+            "type": "command",
+            "if": "Edit(.claude/**)",
             "command": ".claude/agents/meta-agent/scripts/check-plan-drift.sh"
           }
         ]
