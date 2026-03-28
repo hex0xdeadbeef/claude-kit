@@ -94,6 +94,9 @@ triggers:
   - if: "Evaluate phase finds unfamiliar pattern or unclear existing implementation"
     then: "Use code-researcher agent via Task tool for investigation before implementing"
 
+  - if: "Re-entry after CHANGES_REQUESTED (code-review iteration > 1)"
+    then: "Load review-response.md, follow response protocol before implementing fixes"
+
 ## AUTONOMY
 autonomy:
   modes:
@@ -146,6 +149,12 @@ startup:
         - ".claude/skills/tdd-go/SKILL.md"
       purpose: "Load TDD Red-Green-Refactor workflow. If ## TDD absent — skip, use standard implement→test flow."
 
+    - action: "Conditional: Load Review Response protocol"
+      condition: "Re-entry after CHANGES_REQUESTED (iteration > 1 in handoff context)"
+      files:
+        - ".claude/skills/coder-rules/review-response.md"
+      purpose: "Load review feedback handling protocol. Triggers TRIAGE → VERIFY → EVALUATE before IMPLEMENT on re-entry."
+
     - action: "TodoWrite"
       purpose: "Create Parts list for tracking"
 
@@ -155,8 +164,21 @@ startup:
 ## WORKFLOW
 workflow:
   summary: "STARTUP → READ PLAN → EVALUATE → IMPLEMENT PARTS → SIMPLIFY (optional, L/XL) → VERIFY → DONE"
+  summary_reentry: "STARTUP → READ PLAN → REVIEW RESPONSE → IMPLEMENT FIXES → VERIFY → DONE"
 
   phases:
+    - phase: 0.5
+      name: "REVIEW RESPONSE (re-entry only)"
+      condition: "Active when /coder re-enters after CHANGES_REQUESTED"
+      skip_when: "First run (no prior code-review)"
+      reference: ".claude/skills/coder-rules/review-response.md"
+      steps:
+        - "TRIAGE: Parse issues by severity from code-reviewer handoff"
+        - "VERIFY: Check each issue against current codebase"
+        - "EVALUATE: ACCEPT / PUSH_BACK / CLARIFY per issue"
+        - "Output: issues triage summary → feeds into IMPLEMENT phase"
+      note: "Replaces EVALUATE (Phase 1.5) on re-entry — plan already validated, focus on review feedback"
+
     - phase: 1
       name: "READ PLAN"
       steps:
@@ -170,6 +192,7 @@ workflow:
     - phase: 1.5
       name: "EVALUATE"
       purpose: "Critically evaluate plan from developer perspective BEFORE implementation"
+      skip_when: "Re-entry after CHANGES_REQUESTED — Phase 0.5 (REVIEW RESPONSE) handles feedback triage instead"
 
       evaluate_checks:
         feasibility:

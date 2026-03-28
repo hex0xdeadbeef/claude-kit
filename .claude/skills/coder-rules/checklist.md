@@ -32,5 +32,15 @@ checklist:
     - "VERIFY passes (adapt commands to project — SEE .claude/PROJECT-KNOWLEDGE.md)"
     - "If config changed → CONFIG_EXAMPLE and CONFIG_DOCS updated"
 
+  review_response:
+    condition: "Active on re-entry after CHANGES_REQUESTED"
+    checks:
+      - "Issues triaged by severity (BLOCKER → MAJOR → MINOR → NIT)"
+      - "Each issue verified against codebase before implementing"
+      - "Push-backs documented with technical reasoning"
+      - "Fixes implemented in severity order, tested individually"
+      - "NIT handling follows iteration strategy (1/3: all, 2/3: skip NIT, 3/3: BLOCKER+MAJOR only)"
+      - "Handoff includes resolution status per issue"
+
   completion:
     - "Handoff payload formed for code-reviewer (SEE handoff-protocol.md)"

@@ -97,4 +97,5 @@ For detailed checks, read the supporting files in this skill directory:
 - [Examples](examples.md) — bad/good code patterns, layer import rules
 - [Checklist](checklist.md) — self-verification at each coder phase
 - [Troubleshooting](troubleshooting.md) — common coder issues and fixes
+- [Review Response](review-response.md) — handling CHANGES_REQUESTED feedback from code-reviewer (loaded on re-entry iterations)
 - [code-researcher agent](../../agents/code-researcher.md) — available via Task tool for codebase investigation during evaluate phase (L/XL complexity)
