@@ -15,6 +15,7 @@ disable-model-invocation: true
 | Re-routing | On complexity mismatch signal | Downgrade/upgrade route + tracking + learning |
 | Pipeline Metrics | At completion phase only | Format (12 fields), storage (JSONL file), analysis, anomaly detection |
 | Agent Memory | Agent startup + completion | Shared memory behavior for all `memory: project` agents |
+| Parallel Dispatch | 2+ independent tasks identified (L/XL) | Multi-agent dispatch patterns (research + future debugging) |
 
 ## Instructions
 
@@ -80,6 +81,7 @@ For all troubleshooting cases, see [Examples & Troubleshooting](examples-trouble
 - Forming handoff → read handoff contract (see [Handoff Protocol](handoff-protocol.md))
 - plan-review or coder signals mismatch → re-route (see [Re-routing](re-routing.md))
 - All phases done → collect metrics (see [Pipeline Metrics](pipeline-metrics.md))
+- Multiple independent tasks identified (L/XL planner research, or independent failures) → read [Parallel Dispatch](parallel-dispatch.md)
 - Problem encountered → see [Examples & Troubleshooting](examples-troubleshooting.md)
 
 ## Core Deps (workflow-only, loaded at startup)
@@ -95,3 +97,4 @@ For detailed protocol specifications, read the supporting files in this skill di
 - [Pipeline Metrics](pipeline-metrics.md) — format, storage, analysis, anomaly detection
 - [Examples & Troubleshooting](examples-troubleshooting.md) — execution examples, common mistakes, troubleshooting
 - [Agent Memory Protocol](agent-memory-protocol.md) — shared memory behavior for all `memory: project` agents
+- [Parallel Dispatch](parallel-dispatch.md) — decision flowchart, research multi-dispatch, failure isolation, conflict detection
