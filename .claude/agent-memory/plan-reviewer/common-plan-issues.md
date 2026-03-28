@@ -12,6 +12,7 @@ Frequency: High (seen in imp-w01-conditional-hooks.md, iteration 1)
 Severity when found: MAJOR x3
 
 Plans for config_change or documentation tasks frequently omit:
+
 - Scope (IN/OUT) — required ALWAYS per required-sections.md
 - Files Summary — required ALWAYS (inline file mentions per Part don't count)
 - Acceptance Criteria — required ALWAYS; verification checklists in a Part don't substitute
@@ -69,3 +70,34 @@ requires it. For pure documentation updates the answer is simple ("manual verifi
 the section should still be present.
 
 **How to apply:** Flag as MINOR when Testing Plan section is absent, even for doc-only plans.
+
+## Pattern: Skill file inventory errors in research/documentation plans
+
+Frequency: Seen in workflow-research.md (2026-03-29, iterations 1 and 2)
+Severity: MINOR
+
+Plans that enumerate skill package file lists frequently contain errors vs actual filesystem:
+
+- Incorrect file count in heading vs actual list (off-by-one) — persists across iterations even
+  when file names are corrected (seen in workflow-research iteration 2: workflow-protocols says
+  "(8 files)" for 9 actual; planner-rules says "(7 files)" for 8 actual)
+- Wrong file names (e.g., `evaluate-protocol.md` listed but file is actually `checklist.md`)
+- Files that exist in one skill package attributed to another
+
+**Why:** Research agents may transpose file names or counts across skill packages.
+Iteration fixes tend to correct file names but miss heading counts.
+**How to apply:** Flag as MINOR; always check BOTH file names AND heading counts vs filesystem.
+Advise coder to spot-check all skill file lists against filesystem at the start of Part 5.
+
+## Pattern: Vague acceptance criteria for documentation tasks
+
+Frequency: Seen in workflow-research.md (2026-03-29)
+Severity: NIT after Mermaid/YAML criteria added (was MINOR before iteration 2 fix)
+
+Documentation plans sometimes use undefined metrics in acceptance criteria ("shows all N levels
+of relationships") without defining what those N levels are. After iteration 2 fix, technical
+criteria (Mermaid syntax, YAML frontmatter) were added — the remaining vagueness is NIT-level.
+
+**Why:** Planners focus on content coverage and skip structural correctness checks.
+**How to apply:** Flag residual undefined counts as NIT if technical criteria are present;
+flag as MINOR if technical criteria are also absent.

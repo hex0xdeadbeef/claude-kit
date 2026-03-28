@@ -4,5 +4,12 @@
       "Bash(bash .claude/scripts/sync-to-github.sh \"Update README.md: fix outdated structure, remove deleted commands, update hooks\")",
       "Bash(xargs ls -la)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "sequential-thinking",
+    "context7",
+    "tree_sitter",
+    "gitlab-mr"
+  ],
+  "enableAllProjectMcpServers": true
 }

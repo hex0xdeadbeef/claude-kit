@@ -1,25 +1,4 @@
 {
-  "autoMemoryEnabled": true,
-  "model": "sonnet",
-  "thinking": {
-    "type": "adaptive"
-  },
-  "worktree": {
-    "sparsePaths": [
-      ".claude/",
-      "internal/",
-      "cmd/",
-      "go.mod",
-      "go.sum",
-      "Makefile",
-      "CLAUDE.md"
-    ]
-  },
-  "enabledMcpjsonServers": [
-    "sequential-thinking",
-    "context7",
-    "tree_sitter"
-  ],
   "permissions": {
     "allow": [
       "Edit",
@@ -88,7 +67,8 @@
       "Bash(grep -rn 'bd ' /Users/dmitriym/Desktop/claude-kit --include=*.md)",
       "Bash(grep -rn \"beads\\\\|bead\" /Users/dmitriym/Desktop/claude-kit/.claude/prompts/ --include=*.md)",
       "Bash(grep -rn \"thread\\\\|Thread\" /Users/dmitriym/Desktop/claude-kit --include=*.md)",
-      "Bash(git worktree:*)"
+      "Bash(git worktree:*)",
+      "Bash(npx markdownlint-cli:*)"
     ],
     "deny": [
       "Bash(rm -rf *)",
@@ -111,6 +91,12 @@
       "/tmp"
     ]
   },
+  "model": "sonnet",
+  "enabledMcpjsonServers": [
+    "sequential-thinking",
+    "context7",
+    "tree_sitter"
+  ],
   "hooks": {
     "InstructionsLoaded": [
       {
@@ -138,8 +124,8 @@
         "hooks": [
           {
             "type": "command",
-            "if": "Write(.claude/**)",
-            "command": ".claude/agents/meta-agent/scripts/check-artifact-size.sh"
+            "command": ".claude/agents/meta-agent/scripts/check-artifact-size.sh",
+            "if": "Write(.claude/**)"
           }
         ]
       },
@@ -157,8 +143,8 @@
         "hooks": [
           {
             "type": "command",
-            "if": "Bash(git commit*)",
-            "command": ".claude/scripts/pre-commit-build.sh"
+            "command": ".claude/scripts/pre-commit-build.sh",
+            "if": "Bash(git commit*)"
           }
         ]
       }
@@ -169,13 +155,13 @@
         "hooks": [
           {
             "type": "command",
-            "if": "Write(**/*.go)",
-            "command": ".claude/scripts/auto-fmt-go.sh"
+            "command": ".claude/scripts/auto-fmt-go.sh",
+            "if": "Write(**/*.go)"
           },
           {
             "type": "command",
-            "if": "Edit(**/*.go)",
-            "command": ".claude/scripts/auto-fmt-go.sh"
+            "command": ".claude/scripts/auto-fmt-go.sh",
+            "if": "Edit(**/*.go)"
           }
         ]
       },
@@ -184,8 +170,8 @@
         "hooks": [
           {
             "type": "command",
-            "if": "Edit(.claude/**)",
-            "command": ".claude/agents/meta-agent/scripts/yaml-lint.sh"
+            "command": ".claude/agents/meta-agent/scripts/yaml-lint.sh",
+            "if": "Edit(.claude/**)"
           }
         ]
       },
@@ -194,8 +180,8 @@
         "hooks": [
           {
             "type": "command",
-            "if": "Write(.claude/**)",
-            "command": ".claude/agents/meta-agent/scripts/check-references.sh"
+            "command": ".claude/agents/meta-agent/scripts/check-references.sh",
+            "if": "Write(.claude/**)"
           }
         ]
       },
@@ -204,13 +190,13 @@
         "hooks": [
           {
             "type": "command",
-            "if": "Write(.claude/**)",
-            "command": ".claude/agents/meta-agent/scripts/check-plan-drift.sh"
+            "command": ".claude/agents/meta-agent/scripts/check-plan-drift.sh",
+            "if": "Write(.claude/**)"
           },
           {
             "type": "command",
-            "if": "Edit(.claude/**)",
-            "command": ".claude/agents/meta-agent/scripts/check-plan-drift.sh"
+            "command": ".claude/agents/meta-agent/scripts/check-plan-drift.sh",
+            "if": "Edit(.claude/**)"
           }
         ]
       }
@@ -329,5 +315,20 @@
         ]
       }
     ]
+  },
+  "worktree": {
+    "sparsePaths": [
+      ".claude/",
+      "internal/",
+      "cmd/",
+      "go.mod",
+      "go.sum",
+      "Makefile",
+      "CLAUDE.md"
+    ]
+  },
+  "autoMemoryEnabled": true,
+  "thinking": {
+    "type": "adaptive"
   }
 }
