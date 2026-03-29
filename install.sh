@@ -30,8 +30,8 @@ else
 fi
 
 # ── Logging ────────────────────────────────────────────────────────────────────
-info()  { echo -e "${GREEN}[kit]${NC} $1"; }
-warn()  { echo -e "${YELLOW}[kit]${NC} $1"; }
+info()  { echo -e "${GREEN}[kit]${NC} $1" >&2; }
+warn()  { echo -e "${YELLOW}[kit]${NC} $1" >&2; }
 error() { echo -e "${RED}[kit]${NC} $1" >&2; }
 
 # ── Usage ──────────────────────────────────────────────────────────────────────
@@ -105,7 +105,6 @@ download_and_extract() {
     local version="$1"
     local tmp_dir
     tmp_dir=$(mktemp -d)
-    trap 'rm -rf "$tmp_dir"' EXIT INT TERM
 
     local tarball_url="https://github.com/${REPO}/releases/download/${version}/claude-kit-${version}.tar.gz"
 
@@ -224,9 +223,9 @@ main() {
     version=$(resolve_version)
     info "Version: ${version}"
 
-    # Download
-    local tmp_dir
+    # Download (global so EXIT trap can access it after main() returns)
     tmp_dir=$(download_and_extract "$version")
+    trap 'rm -rf "$tmp_dir"' EXIT INT TERM
     local src_dir="${tmp_dir}/claude-kit-${version}"
 
     if [ ! -d "$src_dir" ]; then
