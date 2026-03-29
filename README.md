@@ -33,29 +33,53 @@ Structured multi-agent development workflow with built-in planning, implementati
 
 ### Installation
 
-Copy the kit into your project:
+```bash
+curl -sL https://raw.githubusercontent.com/hex0xdeadbeef/claude-kit/main/install.sh | bash
+```
+
+### Update existing installation
 
 ```bash
-cp -r .claude/ /path/to/your/project/
-cp CLAUDE.md /path/to/your/project/
-cp .gitignore /path/to/your/project/   # or merge with existing
-
-# Optional: create personal settings overrides
-cp .claude/settings.local.json.example /path/to/your/project/.claude/settings.local.json
-# Optional: strip Co-Authored-By from commits (set GIT_STRIP_CO_AUTHOR=true in settings.local.json)
-cp .claude/templates/git-hooks/commit-msg /path/to/your/project/.git/hooks/commit-msg
-chmod +x /path/to/your/project/.git/hooks/commit-msg
+bash install.sh --update
 ```
 
 ### First Steps
 
 ```bash
-# Initialize .claude/ configuration for the project
-/meta-agent onboard
-
-# Analyze codebase and generate PROJECT-KNOWLEDGE.md
+# 1. Edit CLAUDE.md — update Language Profile to match your project stack
+# 2. Analyze codebase and generate PROJECT-KNOWLEDGE.md
 /project-researcher
+
+# 3. Validate configuration
+/meta-agent onboard
 ```
+
+### Options
+
+```bash
+KIT_VERSION=v1.0.0 bash install.sh    # install specific version
+INSTALL_DIR=/path/to/project bash install.sh --update   # install to specific directory
+```
+
+<details>
+<summary>Manual Installation (advanced)</summary>
+
+```bash
+git clone https://github.com/hex0xdeadbeef/claude-kit.git
+cd claude-kit
+bash install.sh                        # install to current directory
+bash install.sh --update               # update existing installation
+
+# Or copy manually:
+cp -r .claude/ /path/to/your/project/
+cp CLAUDE.md /path/to/your/project/
+# Merge .gitignore manually
+
+# Optional: personal settings overrides (gitignored, never overwritten by updates)
+cp .claude/settings.local.json.example /path/to/your/project/.claude/settings.local.json
+```
+
+</details>
 
 ---
 

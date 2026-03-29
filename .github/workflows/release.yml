@@ -1,0 +1,91 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract version
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Build release tarball
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          ARCHIVE="claude-kit-${VERSION}.tar.gz"
+
+          # git archive respects .gitattributes export-ignore — no manual exclusion needed
+          git archive \
+            --format=tar.gz \
+            --prefix="claude-kit-${VERSION}/" \
+            --output="${ARCHIVE}" \
+            HEAD
+
+          echo "ARCHIVE=${ARCHIVE}" >> "$GITHUB_ENV"
+
+      - name: Verify tarball contents
+        run: |
+          echo "=== Tarball contents ==="
+          tar tzf "${ARCHIVE}" | head -60
+          echo ""
+          echo "=== Checking excluded paths are absent ==="
+          # These paths must NOT appear in the tarball
+          EXCLUDED=(
+            "PROJECT-KNOWLEDGE.md"
+            "workflow-state/"
+            "prompts/"
+            "agent-memory/"
+            ".DS_Store"
+            ".gitkeep"
+            "superpowers-main/"
+            ".github/"
+          )
+          FAILED=0
+          for path in "${EXCLUDED[@]}"; do
+            if tar tzf "${ARCHIVE}" | grep -q "$path"; then
+              echo "ERROR: excluded path found in tarball: $path"
+              FAILED=1
+            fi
+          done
+          if [ "$FAILED" -eq 1 ]; then
+            echo "Tarball contains excluded paths — aborting release"
+            exit 1
+          fi
+          echo "All exclusion checks passed."
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.ARCHIVE }}
+          generate_release_notes: true
+          body: |
+            ## Install
+
+            ```bash
+            curl -sL https://raw.githubusercontent.com/hex0xdeadbeef/claude-kit/main/install.sh | bash
+            ```
+
+            ## Update existing installation
+
+            ```bash
+            bash install.sh --update
+            ```
+
+            ## Specific version
+
+            ```bash
+            KIT_VERSION=${{ steps.version.outputs.VERSION }} bash install.sh
+            ```
+
+            See [README.md](https://github.com/hex0xdeadbeef/claude-kit#readme) for full documentation.
