@@ -4,7 +4,7 @@
 # Blocking: exit 2 if write fails (blocks agent completion)
 #
 # Worktree path resolution (IMP-04):
-#   1. Try SubagentStop payload fields (worktree_path, worktreePath, cwd)
+#   1. Try SubagentStop payload fields (worktree_path, worktreePath, worktree.path)
 #   2. Fallback: scan .git/worktrees/ for most recent worktree (code-reviewer only)
 #   3. Log discovery data to worktree-events-debug.jsonl for contract refinement
 #
@@ -62,7 +62,6 @@ WORKTREE_AGENTS = {"code-reviewer"}
 worktree_path = (
     data.get("worktree_path")
     or data.get("worktreePath")
-    or data.get("cwd")
     or (data.get("worktree", {}) or {}).get("path")
 )
 

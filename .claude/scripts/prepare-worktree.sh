@@ -20,7 +20,7 @@ command -v python3 >/dev/null 2>&1 || exit 0
 # Pass stdin to python via env var (proven pattern from session-analytics.sh)
 export _HOOK_INPUT="$INPUT"
 
-python3 << 'PYTHON_EOF'
+(python3 << 'PYTHON_EOF' || true)
 import json, os, shutil, subprocess, sys
 from datetime import datetime, timezone
 
@@ -69,18 +69,20 @@ worktree_branch = (
     or (hook_input.get("worktree", {}) or {}).get("branch")
 )
 
+# ALWAYS log received keys for contract discovery (regardless of whether worktree_path found)
+try:
+    with open(DEBUG_FILE, "a") as f:
+        f.write(json.dumps({
+            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "hook": "WorktreeCreate",
+            "worktree_path_found": bool(worktree_path),
+            "received_keys": sorted(hook_input.keys()),
+            "raw_input": input_data[:2000],
+        }) + "\n")
+except Exception:
+    pass
+
 if not worktree_path:
-    # Contract discovery: log the actual fields received
-    try:
-        with open(DEBUG_FILE, "a") as f:
-            f.write(json.dumps({
-                "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "error": "worktree_path not found in hook input",
-                "received_keys": list(hook_input.keys()),
-                "raw_input": input_data[:2000],
-            }) + "\n")
-    except Exception:
-        pass
     sys.exit(0)
 
 # 2b. Resolve original_repo_dir (main repo that worktree was created from)
@@ -193,4 +195,7 @@ except Exception as e:
 PYTHON_EOF
 
 # ALWAYS exit 0 — never block worktree creation
+# Claude Code requires non-empty stdout from hooks (observed: "no successful output" error without it)
+# Output minimal JSON — avoid semantic content that could contaminate agent metadata
+echo '{}'
 exit 0
