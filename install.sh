@@ -86,8 +86,9 @@ resolve_version() {
     fi
 
     # Fallback: git ls-remote (no API rate limit)
+    # grep -v '^{}' filters out annotated tag dereference lines (e.g. v1.0.0^{})
     version=$(git ls-remote --tags --sort=-v:refname "https://github.com/${REPO}.git" 'v*' 2>/dev/null \
-        | head -1 | sed 's|.*refs/tags/||')
+        | grep -v '\^{}' | head -1 | sed 's|.*refs/tags/||')
 
     if [ -n "$version" ]; then
         echo "$version"
@@ -104,6 +105,7 @@ download_and_extract() {
     local version="$1"
     local tmp_dir
     tmp_dir=$(mktemp -d)
+    trap 'rm -rf "$tmp_dir"' EXIT INT TERM
 
     local tarball_url="https://github.com/${REPO}/releases/download/${version}/claude-kit-${version}.tar.gz"
 

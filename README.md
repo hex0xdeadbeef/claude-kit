@@ -40,7 +40,7 @@ curl -sL https://raw.githubusercontent.com/hex0xdeadbeef/claude-kit/main/install
 ### Update existing installation
 
 ```bash
-bash install.sh --update
+curl -sL https://raw.githubusercontent.com/hex0xdeadbeef/claude-kit/main/install.sh | bash -s -- --update
 ```
 
 ### First Steps
