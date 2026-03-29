@@ -203,7 +203,9 @@ flowchart LR
     SMP --> VRF[VERIFY\nvet+fmt+lint+test]
 
     VRF -->|FAIL 3x| STOP_V([STOP])
-    VRF -->|PASS| CR{code-reviewer\nagent\nworktree}
+    VRF -->|PASS| SC{SPEC CHECK\nPhase 3.5}
+    SC -->|PASS/PARTIAL| CR{code-reviewer\nagent\nworktree}
+    SC -->|FAIL\nmax 1 retry| IMP_FIX[Inline fix] --> VRF
 
     CR -->|APPROVED\nAPPROVED_WITH_COMMENTS| COMP[Phase 5\nCompletion]
     CR -->|CHANGES_REQUESTED\nmax 3x| COD
@@ -333,7 +335,7 @@ delegation_template:
 **Владеет:** Реализация кода, EVALUATE-фаза, VERIFY-фаза, формирование handoff для code-review.
 **Не владеет:** Архитектурное планирование, код-ревью, изменение scope задачи.
 
-**5 фаз работы:**
+**6 фаз работы:**
 
 | Фаза | Название        | Действие                                                                    |
 | ---- | --------------- | --------------------------------------------------------------------------- |
@@ -342,6 +344,7 @@ delegation_template:
 | 2    | Implement Parts | Реализовывать в порядке зависимостей (data → domain → API → tests → wiring) |
 | 2.5  | Simplify        | Запустить `/simplify` на изменённых файлах (L/XL + parts≥5, опционально)    |
 | 3    | Verify          | Запустить VET, FMT, LINT, TEST                                              |
+| 3.5  | **Spec Check**  | Verify plan compliance: Parts coverage, scope, deviations, AC, interfaces   |
 
 **EVALUATE — матрица решений:**
 

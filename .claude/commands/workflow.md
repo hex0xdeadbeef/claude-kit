@@ -261,6 +261,7 @@ delegation_protocol:
       - "Complexity: S/M/L/XL"
       - "Iteration: N/3"
       - "Verify status: lint PASS/FAIL, test PASS/FAIL (from coder VERIFY phase)"
+      - "Spec check result: status, coverage, issues (from coder Phase 3.5)"
     delegation_prompt_template: |
       Review code changes on the current branch.
 
@@ -270,6 +271,7 @@ delegation_protocol:
       - Deviations from plan: {list from handoff.deviations_from_plan}
       - Mitigated risks: {list from handoff.risks_mitigated}
       - Verify: lint {PASS/FAIL}, test {PASS/FAIL} (command: {verify_command})
+      - Spec check: {PASS|PARTIAL|FAIL} (coverage: {pct}%, issues: {N})
 
       Iteration: {N}/3
     returns: "Verdict (APPROVED/APPROVED_WITH_COMMENTS/CHANGES_REQUESTED) + issues + handoff for completion"

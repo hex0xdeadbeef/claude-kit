@@ -47,6 +47,7 @@ output:
     - [x] FMT
     - [x] LINT
     - [x] TEST (or project test command)
+    - [x] SPEC CHECK (coverage: 100%)
 
     Ready for: /code-review
 
@@ -59,6 +60,7 @@ output:
       - Coder implemented {N} Parts per plan {feature}.md
       - Evaluate phase: {PROCEED|REVISE|RETURN} — adjustments: {list}
       - Deviations from plan: {list or "none"}
+      - Spec check: {PASS|PARTIAL|FAIL} (coverage: {pct}%)
       - High-risk areas: {list}
     example: |
       Handoff → /code-review:
@@ -73,6 +75,15 @@ output:
           lint: PASS
           test: PASS
           command_used: "go vet ./... && make fmt && make lint && make test"
+        spec_check:
+          status: PASS
+          coverage_pct: 100
+          deviations_confirmed:
+            - "Part 3: Simplified error handling — using sentinel instead of custom error type"
+          ac_coverage:
+            - "AC 1: covered by TestCreateUser"
+            - "AC 2: covered by TestListUsers"
+          issues: []
 
 ## TRIGGERS
 triggers:
@@ -155,6 +166,11 @@ startup:
         - ".claude/skills/coder-rules/review-response.md"
       purpose: "Load review feedback handling protocol. Triggers TRIAGE → VERIFY → EVALUATE → IMPLEMENT → DOCUMENT response pattern on re-entry."
 
+    - action: "Load Spec Check protocol"
+      files:
+        - ".claude/skills/coder-rules/spec-check.md"
+      purpose: "Load spec compliance checklist for Phase 3.5"
+
     - action: "TodoWrite"
       purpose: "Create Parts list for tracking"
 
@@ -163,8 +179,8 @@ startup:
 
 ## WORKFLOW
 workflow:
-  summary: "STARTUP → READ PLAN → EVALUATE → IMPLEMENT PARTS → SIMPLIFY (optional, L/XL) → VERIFY → DONE"
-  summary_reentry: "STARTUP → READ PLAN → REVIEW RESPONSE → IMPLEMENT FIXES → VERIFY → DONE"
+  summary: "STARTUP → READ PLAN → EVALUATE → IMPLEMENT PARTS → SIMPLIFY (optional, L/XL) → VERIFY → SPEC CHECK → DONE"
+  summary_reentry: "STARTUP → READ PLAN → REVIEW RESPONSE → IMPLEMENT FIXES → VERIFY → SPEC CHECK → DONE"
 
   phases:
     - phase: 0.5
@@ -446,8 +462,27 @@ workflow:
         - [x] FMT
         - [x] LINT
         - [x] TEST (or test-runner subagent — adapt to project)
+        - [x] SPEC CHECK (coverage: N%)
 
         Ready for code review → /code-review
+
+    - phase: 3.5
+      name: "SPEC CHECK"
+      purpose: "Verify implementation matches plan before code-review handoff"
+      reference: ".claude/skills/coder-rules/spec-check.md"
+      steps:
+        - "Run spec compliance checklist against plan"
+        - "S complexity: lightweight mode (Parts coverage only)"
+        - "M/L/XL: full checklist (coverage + scope + deviations + AC + interfaces)"
+        - "If FAIL: inline fix → re-run VERIFY → re-run SPEC CHECK (max 1 retry)"
+        - "If PASS/PARTIAL: proceed to handoff"
+      output: |
+        spec_check:
+          status: "PASS|PARTIAL|FAIL"
+          coverage_pct: N
+          deviations_confirmed: [...]
+          ac_coverage: [...]
+          issues: [...]
 
 ## RULES
 rules:

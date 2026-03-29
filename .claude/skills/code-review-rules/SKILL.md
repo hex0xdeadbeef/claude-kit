@@ -22,12 +22,18 @@ disable-model-invocation: true
 - Security issue (any severity) → always BLOCKER
 - Import matrix violation → always BLOCKER
 
+## Spec Check Trust
+If coder handoff includes spec_check with status=PASS → trust spec compliance, skip plan compliance re-check during REVIEW. Focus REVIEW entirely on code quality (architecture, error handling, security, test coverage).
+If spec_check.status=PARTIAL → note documented gaps as MINOR during REVIEW.
+If spec_check missing → backward compat: check plan coverage during REVIEW.
+
 ## Instructions
 
 ### Step 1: Quick Check — lint + test (blocking)
 If coder handoff includes verify_status with lint=PASS and test=PASS → trust coder verification, skip re-run.
 Otherwise: run `make lint` and `make test`. If EITHER fails → STOP, return to coder.
 Do NOT proceed to review if Quick Check fails (whether trusted or re-run).
+Also check spec_check from coder handoff. If status=PASS → note compliance trusted. If PARTIAL → note gaps. If missing → plan to check coverage during REVIEW (backward compat).
 
 ### Step 2: Get changes and assess scope
 Run `git diff $BASE...HEAD` (detect base branch first — see code-reviewer.md process). Assess: files changed, lines changed, layers affected.

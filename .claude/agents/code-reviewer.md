@@ -60,12 +60,23 @@ role:
      - If verify_status missing OR any FAIL:
        - Run: `make lint` — if FAIL → STOP, return to author with lint errors
        - Run: `make test` — if FAIL → STOP, return to author with test failures
+   - Check handoff spec_check:
+     - If spec_check.status == PASS:
+       - TRUST coder spec compliance — skip plan compliance re-check
+       - Output: `- Spec compliance: PASS (trusted from coder Phase 3.5)`
+     - If spec_check.status == PARTIAL:
+       - Note gaps from spec_check.issues, factor into REVIEW as MINOR
+       - Output: `- Spec compliance: PARTIAL ({N} gaps — see issues)`
+     - If spec_check missing:
+       - Backward compat: read plan file, verify Parts coverage manually during REVIEW
+       - Output: `- Spec compliance: not checked (manual fallback during REVIEW)`
    - Rule: Do NOT proceed to review if QUICK CHECK fails (whether trusted or re-run)
    - Output:
      ```
      ## QUICK CHECK ✓
      - Lint: [PASS/FAIL] [(trusted/re-run)]
      - Test: [PASS/FAIL] [(trusted/re-run)]
+     - Spec compliance: [PASS/PARTIAL/not checked]
      ```
 
 3. **GET CHANGES**

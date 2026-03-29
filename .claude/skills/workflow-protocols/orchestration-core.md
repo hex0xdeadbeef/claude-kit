@@ -5,13 +5,13 @@
 ## Pipeline & Phases
 
 ```
-task-analysis → /designer* → /planner → plan-reviewer (agent) → /coder → code-reviewer (agent) → completion
-     ↓              ↓             ↓              ↓                  ↓              ↓                    ↓
-  Classify    Design(L/XL)     Plan       Validation             Code         Review              Commit+Metrics
-  S/M → skip ↗     ↓ REJECT         ↓ FAIL         ↓ FAIL
+task-analysis → /designer* → /planner → plan-reviewer (agent) → /coder → SPEC CHECK → code-reviewer (agent) → completion
+     ↓              ↓             ↓              ↓                  ↓          ↓              ↓                    ↓
+  Classify    Design(L/XL)     Plan       Validation             Code    Phase 3.5       Review              Commit+Metrics
+  S/M → skip ↗     ↓ REJECT         ↓ FAIL         ↓ FAIL  ↓ FAIL+retry
   M(new/integ) → optional ↗
-                  ← user ←        ← back ←       ← back ←
-                                  (max 3x)       (max 3x)
+                  ← user ←        ← back ←       ← back ←  ← VERIFY ←
+                                  (max 3x)       (max 3x)   (max 1x)
 ```
 
 **Phase 0.5 — Task Analysis:** Classify (type + S/M/L/XL) → Route. S: skip plan-review. L/XL: Sequential Thinking recommended/required.
@@ -24,7 +24,9 @@ task-analysis → /designer* → /planner → plan-reviewer (agent) → /coder �
 
 **Phase 2 — Plan Review:** Delegate to plan-reviewer agent. APPROVED → Phase 3. NEEDS_CHANGES → Phase 1 (iteration N/3). REJECTED → Stop.
 
-**Phase 3 — Implementation:** Execute /coder. Verify: `VERIFY` (Go default: go vet ./... && make fmt && make lint && make test). PASS → Phase 4. FAIL → fix + retry.
+**Phase 3 — Implementation:** Execute /coder. Verify: `VERIFY` (Go default: go vet ./... && make fmt && make lint && make test). PASS → Spec Check (Phase 3.5). FAIL → fix + retry.
+
+**Phase 3.5 — Spec Check:** Inline in /coder. Verifies plan compliance after VERIFY passes. PASS/PARTIAL → Phase 4. FAIL → inline fix (max 1 retry) → re-run VERIFY → re-check.
 
 **Phase 4 — Code Review:** Before delegating, run `git worktree prune 2>/dev/null || true` to clean stale worktree metadata from crashed sessions. Delegate to code-reviewer agent. APPROVED → Done. APPROVED_WITH_COMMENTS → Done (log comments, proceed to completion). CHANGES_REQUESTED → Phase 3 (iteration N/3).
 

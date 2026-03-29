@@ -29,6 +29,15 @@ When budget is reached, DECIDE with available information.
 Prefer PROCEED with notes over endless research.
 The planner already researched — evaluate is VALIDATION, not discovery.
 
+## Spec Check Protocol
+
+After VERIFY passes, run spec compliance self-check (Phase 3.5):
+- PASS: all Parts covered, scope respected, AC traceable → proceed to handoff
+- PARTIAL: minor gaps documented → proceed with gaps noted in handoff
+- FAIL: missing Part → inline fix (max 1 retry) → re-run VERIFY → re-check
+
+Full checklist: [Spec Check](spec-check.md)
+
 ## Instructions
 
 ### Step 1: Load plan and verify approval
@@ -48,10 +57,15 @@ IMPORTANT: Do NOT run tests (make test, go test) between Parts. Tests run ONCE a
 Running tests after each Part wastes time — compile errors are caught by LINT, logic errors are caught at VERIFY.
 Exception: If plan contains ## TDD section, RED-GREEN-REFACTOR test runs within a Part are allowed (they are implementation, not verification).
 
-### Step 4: Verify and form handoff
+### Step 4: Verify
 Run full VERIFY: `go vet ./... && make fmt && make lint && make test`.
 If tests fail 3x → load systematic-debugging skill, run Phase 1 root cause investigation.
-On success → form handoff payload for code-review.
+On success → proceed to Step 5.
+
+### Step 5: Spec Check and form handoff
+Run SPEC CHECK (see [Spec Check](spec-check.md)). S complexity: lightweight (coverage only).
+If FAIL: inline fix → re-run VERIFY → re-check (max 1 retry).
+On PASS/PARTIAL → form handoff payload for code-review, including spec_check.
 
 ## Example
 
@@ -101,4 +115,5 @@ For detailed checks, read the supporting files in this skill directory:
 - [Checklist](checklist.md) — self-verification at each coder phase
 - [Troubleshooting](troubleshooting.md) — common coder issues and fixes
 - [Review Response](review-response.md) — handling CHANGES_REQUESTED feedback from code-reviewer (loaded on re-entry iterations)
+- [Spec Check](spec-check.md) — spec compliance self-check protocol (Phase 3.5, after VERIFY)
 - [code-researcher agent](../../agents/code-researcher.md) — available via Task tool for codebase investigation during evaluate phase (L/XL complexity)

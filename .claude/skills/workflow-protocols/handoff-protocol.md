@@ -74,6 +74,14 @@ handoff_protocol:
           lint: "PASS"
           test: "PASS"
           command_used: "go vet ./... && make fmt && make lint && make test"
+        spec_check:
+          status: "PASS|PARTIAL|FAIL"
+          coverage_pct: 100
+          deviations_confirmed:
+            - "Part N: adjustment description"
+          ac_coverage:
+            - "AC N: covered by TestXxx"
+          issues: []
         iteration: "N/3"
 
     code_review_to_completion:
