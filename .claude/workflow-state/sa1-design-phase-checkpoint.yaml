@@ -1,0 +1,66 @@
+feature: sa1-design-phase
+phase_completed: 2
+phase_name: plan-review
+iteration:
+  plan_review: "3/3"
+  code_review: "0/3"
+verdict: APPROVED
+timestamp: "2026-03-29T18:00:00Z"
+complexity: XL
+route: full
+session_type: workflow
+re_routing:
+  occurred: false
+  original_route: null
+  new_route: null
+  reason: null
+  phase: null
+handoff_payload:
+  to: coder
+  artifact: ".claude/prompts/sa1-design-phase.md"
+  metadata:
+    task_type: integration
+    complexity: XL
+    sequential_thinking_used: true
+    alternatives_considered: 4
+    plan_version: "1.2"
+  key_decisions:
+    - "Separate /designer command (Approach A) — SRP, first-class checkpoint, standalone spec"
+    - "Phase 0.7 numbering — between task-analysis (0.5) and planning (1)"
+    - "Skip for S/M, mandatory for L/XL, optional for M new_feature/integration"
+    - "Spec as standalone file (.claude/prompts/{feature}-spec.md)"
+    - "5 phases: EXPLORE → CLARIFY → PROPOSE → SPEC → GATE"
+  known_risks:
+    - "Pipeline duration increase for L/XL — mitigated by reducing plan-review iterations"
+    - "New handoff contract complexity — mitigated by following existing 4-contract pattern"
+    - "check-uncommitted.sh decimal parsing — mitigated by Part 12 float-safe fix"
+  areas_needing_attention:
+    - "Part 4: workflow.md startup sequence + output.phases changes — critical for routing"
+    - "Part 6: handoff contract consistency with existing contracts + narrative_casting"
+    - "Part 8: plan-reviewer spec coverage check — must not break S/M flow"
+    - "Part 12: check-uncommitted.sh — Stop hook must handle 0.7 correctly"
+    - "Part 13: README.md — user-facing docs must match internal pipeline"
+implementation_progress: null
+verify_result: null
+issues_history:
+  - phase: 2
+    iteration: 1
+    issues:
+      - "PR-001: MAJOR — Part 5 would replace session recovery table (fixed: add rows above)"
+      - "PR-002: MINOR — Part 6 missing planner_to_plan_review spec fields (fixed)"
+      - "PR-003: MINOR — spec-template missing status field (fixed)"
+      - "PR-004: MINOR — --from-phase not updated for 0.7 (fixed)"
+      - "PR-005: MINOR — spec check missing S/M exclusion (fixed)"
+      - "PR-006: MINOR — workflow.md description not updated (fixed)"
+  - phase: 2
+    iteration: 2
+    issues:
+      - "PR-101: MINOR — M+optional routing note in pipeline diagram (fixed in v1.2)"
+      - "PR-102: MINOR — narrative_casting lacks YAML snippet (fixed in v1.2)"
+  - phase: 2
+    iteration: 3
+    issues:
+      - "Deep review: BLOCKER — check-uncommitted.sh decimal parsing bug (fixed: Part 12 added)"
+      - "Deep review: MINOR — README.md not in plan (fixed: Part 13 added)"
+      - "Deep review: MINOR — workflow.md output.phases missing Designer (fixed: Part 4 change 8 added)"
+      - "Deep review: FIX — Part 9 wrong planner phase numbers (fixed: Phase 2→1, Phase 5→4)"
