@@ -4,14 +4,47 @@
 
 ## Pipeline & Phases
 
-```
-task-analysis → /designer* → /planner → plan-reviewer (agent) → /coder → SPEC CHECK → code-reviewer (agent) → completion
-     ↓              ↓             ↓              ↓                  ↓          ↓              ↓                    ↓
-  Classify    Design(L/XL)     Plan       Validation             Code    Phase 3.5       Review              Commit+Metrics
-  S/M → skip ↗     ↓ REJECT         ↓ FAIL         ↓ FAIL  ↓ FAIL+retry
-  M(new/integ) → optional ↗
-                  ← user ←        ← back ←       ← back ←  ← VERIFY ←
-                                  (max 3x)       (max 3x)   (max 1x)
+```mermaid
+flowchart LR
+    INPUT([Task]) --> TA[Phase 0.5\nTask Analysis]
+
+    TA -->|S| PLN_MIN[/planner\n--minimal]
+    TA -->|M| PLN[/planner]
+    TA -->|L/XL| DES[/designer\nPhase 0.7]
+    TA -->|M new/integ\noptional| DES
+
+    DES -->|approved spec| PLN
+    DES -->|rejected| USR([user])
+    USR -->|feedback| DES
+
+    PLN --> PR{plan-reviewer\nagent}
+    PLN_MIN -->|S: skip| COD
+
+    PR -->|APPROVED| COD[/coder]
+    PR -->|NEEDS_CHANGES\nmax 3x| PLN
+    PR -->|REJECTED| STOP_PR([STOP])
+
+    COD --> EVAL{EVALUATE\nPROCEED/REVISE/RETURN}
+    EVAL -->|RETURN| PLN
+    EVAL -->|PROCEED/REVISE| IMPL[Implement Parts]
+
+    IMPL --> SIMP{Simplify?\nL/XL + parts≥5}
+    SIMP -->|Yes| SMP[/simplify]
+    SIMP -->|No| VRF
+    SMP --> VRF[VERIFY\nvet+fmt+lint+test]
+
+    VRF -->|FAIL 3x| STOP_V([STOP])
+    VRF -->|PASS| SC[SPEC CHECK\nPhase 3.5]
+    SC -->|FAIL max 1x| VRF
+    SC -->|PASS/PARTIAL| CR{code-reviewer\nagent\nworktree}
+
+    CR -->|APPROVED\nAPPROVED_WITH_COMMENTS| COMP[Phase 5\nCompletion]
+    CR -->|CHANGES_REQUESTED\nmax 3x| COD
+
+    COMP --> GIT([git commit\n+ metrics])
+
+    CR_RES[code-researcher\nhaiku] -.->|tool-assist L/XL| PLN
+    CR_RES -.->|tool-assist evaluate| COD
 ```
 
 **Phase 0.5 — Task Analysis:** Classify (type + S/M/L/XL) → Route. S: skip plan-review. L/XL: Sequential Thinking recommended/required.
