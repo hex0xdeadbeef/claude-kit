@@ -108,8 +108,6 @@ download_and_extract() {
 
     local tarball_url="https://github.com/${REPO}/releases/download/${version}/claude-kit-${version}.tar.gz"
 
-    info "Downloading Claude Kit ${version}..."
-
     if ! fetch "$tarball_url" | tar xz -C "$tmp_dir" 2>/dev/null; then
         rm -rf "$tmp_dir"
         error "Download failed. Check that version ${version} exists:"
@@ -224,6 +222,7 @@ main() {
     info "Version: ${version}"
 
     # Download (global so EXIT trap can access it after main() returns)
+    info "Downloading Claude Kit ${version}..."
     tmp_dir=$(download_and_extract "$version")
     trap 'rm -rf "$tmp_dir"' EXIT INT TERM
     local src_dir="${tmp_dir}/claude-kit-${version}"
