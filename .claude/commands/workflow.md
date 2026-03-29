@@ -1,6 +1,6 @@
 ---
 name: workflow
-description: "Full development cycle: task-analysis → planner → plan-review (agent) → coder → code-review (agent)"
+description: "Full development cycle: task-analysis → [/designer (L/XL)] → planner → plan-review (agent) → coder → code-review (agent)"
 model: opus
 ---
 
@@ -44,8 +44,8 @@ input:
 
     - name: --from-phase
       required: false
-      format: "1-4"
-      description: "Resume from specified phase (1=Planning, 2=Plan Review, 3=Implementation, 4=Code Review)"
+      format: "0.7|1-4"
+      description: "Resume from specified phase (0.7=Design, 1=Planning, 2=Plan Review, 3=Implementation, 4=Code Review)"
 
   examples:
     - "/workflow Add new endpoint"
@@ -55,6 +55,11 @@ input:
 ## OUTPUT
 output:
   phases:
+    - phase: Design
+      produces: Approved design spec
+      location: ".claude/prompts/{feature}-spec.md"
+      note: "L/XL only. S/M skip to Planning."
+
     - phase: Planning
       produces: Implementation plan
       location: ".claude/prompts/{feature}.md"
@@ -106,6 +111,13 @@ startup:
         XL: "full flow + Sequential Thinking REQUIRED"
       warning: "MANDATORY! Wrong classification = wasted work"
 
+    - step: 0.2
+      action: "Route through /designer (L/XL only)"
+      condition: "complexity L or XL"
+      skip_when: "S/M complexity — designer adds overhead for simple tasks"
+      optional_when: "M complexity AND task_type is new_feature or integration — ask user"
+      note: "For M tasks of type new_feature/integration, ask user: 'This task may benefit from a design phase. Run /designer first?'"
+
     - step: 0.1
       action: "Load workflow-protocols skill"
       files:
@@ -117,6 +129,7 @@ startup:
       items:
         - "Phase 0: Get Task (completed — task received)"
         - "Phase 0.5: Task Analysis (completed — already done in step 0)"
+        - "Phase 0.7: Design → /designer (pending — or skip if S/M)"
         - "Phase 1: Planning (pending)"
         - "Phase 2: Plan Review → plan-reviewer agent (pending — or skip if S-complexity)"
         - "Phase 3: Implementation (pending)"
@@ -152,8 +165,8 @@ pipeline:
     NOTE: Plan Review and Code Review → agents/ with skills preloading (plan-review-rules, code-review-rules)
     NOTE: Language profile + error handling → auto-loaded via CLAUDE.md
 
-  flow: "task-analysis → /planner [→ code-researcher*] → plan-reviewer (agent) → /coder [→ code-researcher*] → code-reviewer (agent)"
-  flow_note: "* code-researcher is optional tool-assist via Agent/Task tool, triggered by planner/coder for L/XL tasks. Not a pipeline phase. Supports run_in_background for parallel execution in planner Phase 3."
+  flow: "task-analysis → /designer* → /planner [→ code-researcher*] → plan-reviewer (agent) → /coder [→ code-researcher*] → code-reviewer (agent)"
+  flow_note: "* /designer is Phase 0.7, activated for L/XL tasks only. S/M skip to /planner. code-researcher is optional tool-assist."
 
   evaluate_note: |
     /coder runs internal EVALUATE sub-phase (Phase 1.5) before implementing.
@@ -161,7 +174,9 @@ pipeline:
       PROCEED: plan is implementable → start implementation
       REVISE: minor gaps, inline fixes → proceed with adjustments noted
       RETURN: major gaps → re-route to Phase 1 (counts toward plan_review iteration counter)
-    On RETURN: orchestrator increments plan_review counter, writes checkpoint, re-runs /planner with coder feedback.
+    On RETURN: orchestrator increments plan_review counter, writes checkpoint.
+    If spec exists (L/XL path): re-run /planner with coder feedback + original spec.
+    If no spec (S/M path): re-run /planner with coder feedback only.
 
   simplify_note: |
     /coder runs optional SIMPLIFY sub-phase (Phase 2.5) between IMPLEMENT and VERIFY.
@@ -190,6 +205,23 @@ delegation_protocol:
   mechanism: "Claude auto-delegates based on agent description. Orchestrator forms delegation prompt with handoff context."
   isolation_guarantee: "Agents run in clean context. CLAUDE.md auto-loaded from project root. Parent conversation history is NOT passed."
   reference: "SEE: pipeline.flow for quick route overview"
+
+  designer_delegation:
+    command: "/designer"
+    when: "Phase 0.7 — after task analysis, before /planner"
+    skip_when: "S/M complexity (direct to /planner)"
+    optional_when: "M complexity AND task_type in [new_feature, integration] — ask user"
+    context_to_pass:
+      - "Task description"
+      - "Complexity: L/XL"
+      - "Task type: {type}"
+    returns: "Approved spec file + handoff payload for /planner"
+    post_delegation: |
+      After /designer completion:
+      1. Verify spec file exists at .claude/prompts/{feature}-spec.md
+      2. Verify status: approved in spec frontmatter
+      3. Write checkpoint: phase_completed=0.7, phase_name="design"
+      4. Pass designer handoff to /planner as additional input
 
   plan_review_delegation:
     agent: "plan-reviewer"

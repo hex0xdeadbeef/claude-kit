@@ -27,6 +27,11 @@ input:
       format: flag
       description: "Minimal plan without deep research"
 
+    - name: --spec
+      required: false
+      format: "path to spec file"
+      description: "Design spec from /designer (auto-passed by workflow for L/XL)"
+
   examples:
     - cmd: "/planner Add new endpoint"
       description: "New API endpoint"
@@ -64,6 +69,8 @@ output:
           - "Migration may conflict with existing index"
         areas_needing_attention:
           - "Part 3: Controller — complex state transition logic"
+        spec_referenced: true|false
+        spec_artifact: ".claude/prompts/{feature}-spec.md"  # if applicable
 
 ## AUTONOMY
 autonomy:
@@ -124,6 +131,12 @@ startup:
       output: "Type + Complexity + Route + Sequential Thinking requirement"
       warning: "MANDATORY! Wrong classification = wasted work or insufficient planning"
 
+    - step: 0.5
+      action: "Load spec if provided"
+      check: "If --spec provided OR .claude/prompts/{feature}-spec.md exists"
+      action_if_found: "Read spec → use as input for Phase 1 (Understand) and Phase 4 (Design)"
+      action_if_not_found: "Proceed without spec (standard flow)"
+
     - step: 1
       action: TodoWrite
       description: "create phase list for progress tracking"
@@ -162,7 +175,7 @@ phases:
           - "Scope: what is IN, what is OUT?"
           - "Priorities: what is critical?"
           - "Constraints: specific requirements?"
-        note: "Task types and keywords → SEE [task-analysis.md] in planner-rules skill"
+        note: "Task types and keywords → SEE [task-analysis.md] in planner-rules skill. If spec provided → skip clarifying questions already answered in spec. Focus on implementation-specific questions only."
 
   phase_2_data_flow:
     name: "DATA_FLOW"
@@ -294,6 +307,7 @@ phases:
 
   phase_4_design:
     name: "DESIGN"
+    note: "If spec provided → use spec's selected approach and key decisions as starting point. Designer already explored alternatives — planner refines into Parts."
 
     async_integration_point:
       when: "background_pending=true in Research Summary (code-researcher running in background)"

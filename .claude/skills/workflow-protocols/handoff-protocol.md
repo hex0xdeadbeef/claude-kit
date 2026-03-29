@@ -9,6 +9,22 @@ handoff_protocol:
   rule: "Every phase MUST create a handoff payload for the next phase"
 
   contract:
+    designer_to_planner:
+      producer: "/designer"
+      consumer: "/planner"
+      payload:
+        spec_artifact: ".claude/prompts/{feature}-spec.md"
+        metadata:
+          task_type: "{new_feature|integration|...}"
+          complexity: "{L|XL}"
+          approaches_considered: N
+          sequential_thinking_used: true|false
+        key_decisions:
+          - "Key decision description + rationale"
+        known_risks:
+          - "Risk description + severity"
+        acceptance_criteria_count: N
+
     planner_to_plan_review:
       producer: "/planner"
       consumer: "plan-reviewer (agent)"
@@ -19,6 +35,8 @@ handoff_protocol:
           complexity: "{S|M|L|XL}"
           sequential_thinking_used: true|false
           alternatives_considered: N
+          spec_referenced: true|false
+          spec_artifact: ".claude/prompts/{feature}-spec.md"  # if applicable, null otherwise
         key_decisions:
           - "Key decision description + rationale"
         known_risks:
@@ -78,7 +96,7 @@ handoff_protocol:
     template_fields:
       - field: "context_source"
         value: "{agent_name}"
-        description: "Which agent produced the artifact"
+        description: "Which agent produced the artifact (planner | designer | coder)"
       - field: "work_performed"
         value: "{brief_description}"
         description: "What the agent did"

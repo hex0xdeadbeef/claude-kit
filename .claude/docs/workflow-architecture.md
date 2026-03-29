@@ -39,6 +39,7 @@ diagrams: 3
 | ---------------- | -------------------------------------- | ------------------------------------------ | ------ |
 | workflow         | `.claude/commands/workflow.md`         | Оркестратор полного цикла                  | opus   |
 | planner          | `.claude/commands/planner.md`          | Исследование кодовой базы + создание плана | opus   |
+| designer         | `.claude/commands/designer.md`         | Design exploration + spec creation         | opus   |
 | coder            | `.claude/commands/coder.md`            | Реализация по утверждённому плану          | sonnet |
 | review-checklist | `.claude/commands/review-checklist.md` | Справочник чек-листов для code-reviewer    | sonnet |
 
@@ -54,6 +55,7 @@ diagrams: 3
 
 | Пакет              | Путь                                 | Кол-во файлов | Загружает           |
 | ------------------ | ------------------------------------ | ------------- | ------------------- |
+| design-rules       | `.claude/skills/design-rules/`       | 3             | /designer (startup) |
 | workflow-protocols | `.claude/skills/workflow-protocols/` | 9             | /workflow (startup) |
 | planner-rules      | `.claude/skills/planner-rules/`      | 8             | /planner (startup)  |
 | plan-review-rules  | `.claude/skills/plan-review-rules/`  | 5             | plan-reviewer agent |
@@ -117,6 +119,7 @@ diagrams: 3
 
 | Файл                 | Путь                                     | Назначение                               |
 | -------------------- | ---------------------------------------- | ---------------------------------------- |
+| spec-template.md     | `.claude/templates/spec-template.md`     | Template for design specs                |
 | plan-template.md     | `.claude/templates/plan-template.md`     | Шаблон плана реализации                  |
 | command.md           | `.claude/templates/command.md`           | Шаблон для создания команд               |
 | skill.md             | `.claude/templates/skill.md`             | Шаблон для создания skill-пакетов        |
@@ -148,6 +151,7 @@ diagrams: 3
 | Фаза | Название       | Исполнитель           | Вход                | Выход                                                     |
 | ---- | -------------- | --------------------- | ------------------- | --------------------------------------------------------- |
 | 0.5  | Task Analysis  | /workflow             | Задача (текст)      | Сложность S/M/L/XL + маршрут                              |
+| 0.7  | Design         | /designer             | Task + context      | `.claude/prompts/{feature}-spec.md`                       |
 | 1    | Planning       | /planner              | Задача + маршрут    | `.claude/prompts/{feature}.md`                            |
 | 2    | Plan Review    | plan-reviewer (agent) | Plan file + handoff | Вердикт APPROVED/NEEDS_CHANGES/REJECTED                   |
 | 3    | Implementation | /coder                | Approved plan       | Рабочий код + VERIFY                                      |
@@ -160,8 +164,8 @@ diagrams: 3
 | --------- | ------ | ----- | ---------------------------------------------------------- | ------------------- | ---------------- |
 | S         | 1      | 1     | /planner --minimal → skip Phase 2 → /coder → code-reviewer | Не нужен            | **Пропускается** |
 | M         | 2–3    | 2     | Стандартный (все фазы)                                     | По необходимости    | Стандартный      |
-| L         | 4–6    | 3+    | Стандартный                                                | **Рекомендуется**   | Стандартный      |
-| XL        | 7+     | 4+    | Полный                                                     | **ОБЯЗАТЕЛЕН**      | Стандартный      |
+| L         | 4–6    | 3+    | /designer → стандартный                                    | **Рекомендуется**   | Стандартный      |
+| XL        | 7+     | 4+    | /designer → полный                                         | **ОБЯЗАТЕЛЕН**      | Стандартный      |
 
 ### Лимиты циклов
 
@@ -177,7 +181,10 @@ flowchart LR
     INPUT([Задача]) --> TA[Phase 0.5\nTask Analysis]
 
     TA -->|S| PLN_MIN[/planner\n--minimal]
-    TA -->|M/L/XL| PLN[/planner]
+    TA -->|M| PLN[/planner]
+    TA -->|L/XL| DES[/designer\nPhase 0.7]
+
+    DES -->|approved spec| PLN
 
     PLN --> PR{plan-reviewer\nagent}
     PLN_MIN -->|S: skip| COD
@@ -906,6 +913,7 @@ PROJECT-KNOWLEDGE.md (проектные переопределения: VERIFY 
 
 | Шаблон               | Путь                                     | Назначение                                                  |
 | -------------------- | ---------------------------------------- | ----------------------------------------------------------- |
+| spec-template.md     | `.claude/templates/spec-template.md`     | Template for design specs (используется /designer)          |
 | plan-template.md     | `.claude/templates/plan-template.md`     | Структура плана реализации (используется /planner)          |
 | command.md           | `.claude/templates/command.md`           | Шаблон создания новых команд (>80% YAML, YAML-first)        |
 | skill.md             | `.claude/templates/skill.md`             | Шаблон структуры skill-пакета (SKILL.md + supporting files) |

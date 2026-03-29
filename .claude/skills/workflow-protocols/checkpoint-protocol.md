@@ -12,8 +12,8 @@ checkpoint_protocol:
 
   format:
     feature: "{feature-name}"
-    phase_completed: "0.5|1|2|3|4|5"
-    phase_name: "task-analysis|planning|plan-review|implementation|code-review|completion"
+    phase_completed: "0.5|0.7|1|2|3|4|5"
+    phase_name: "task-analysis|design|planning|plan-review|implementation|code-review|completion"
     iteration:
       plan_review: "N/3"
       code_review: "N/3"

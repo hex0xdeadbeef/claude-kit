@@ -58,6 +58,10 @@ role:
 
 2. **READ PLAN — Structural Validation**
    - Verify required sections: Context, Scope (IN/OUT), Dependencies, Parts with code examples, Acceptance criteria, Testing plan
+   - If complexity L/XL: check for referenced spec file (`.claude/prompts/{feature}-spec.md`)
+   - If spec exists: verify plan covers all acceptance criteria from spec
+   - If complexity is L or XL AND spec file not found: add MINOR issue (not BLOCKER — spec is recommended, planner may have good reasons)
+   - Skip spec check entirely for S and M complexity (M tasks may legitimately have no spec if user declined optional designer)
    - Reference: For details see [required-sections.md] in plan-review-rules skill
    - Output:
      ```
@@ -90,6 +94,10 @@ role:
    - Tests planned for each layer
    - Config changes documented (if applicable)
    - Acceptance criteria are concrete (functional + technical + architecture)
+   - Spec alignment (if spec exists):
+     - Plan approach matches spec selected approach
+     - Plan scope covers spec requirements (IN scope)
+     - Plan acceptance criteria include spec acceptance criteria
    - Output:
      ```
      ## VALIDATE COMPLETENESS ✓
@@ -133,6 +141,7 @@ Issues: {N} BLOCKER, {N} MAJOR, {N} MINOR
 | Layer imports | PASS/FAIL |
 | Clean domain | PASS/FAIL |
 | Error handling | PASS/FAIL |
+| Spec alignment | PASS/FAIL/N/A |
 
 **Issues Found (if any):**
 [PR-NNN] [SEVERITY] Issue Name

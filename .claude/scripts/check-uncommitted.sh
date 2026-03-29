@@ -26,9 +26,10 @@ if [ "$UNCOMMITTED" -gt 0 ]; then
   CHECKPOINT=$(ls .claude/workflow-state/*-checkpoint.yaml 2>/dev/null | tail -1)
   if [[ -n "$CHECKPOINT" ]]; then
     # Check 1: phase_completed < 5 (workflow not yet finished)
-    PHASE=$(grep 'phase_completed:' "$CHECKPOINT" 2>/dev/null | sed 's/[^0-9]//g' || echo "0")
-    PHASE="${PHASE:-0}"
-    if [[ "$PHASE" -lt 5 ]]; then
+    PHASE_RAW=$(grep 'phase_completed:' "$CHECKPOINT" 2>/dev/null | sed 's/.*phase_completed:[[:space:]]*//' | tr -d '"'"'" || echo "0")
+    PHASE_RAW="${PHASE_RAW:-0}"
+    IS_COMPLETE=$(awk -v p="$PHASE_RAW" 'BEGIN { print (p+0 >= 5) ? "1" : "0" }')
+    if [[ "$IS_COMPLETE" == "0" ]]; then
       # Check 2: checkpoint mtime within last 4 hours (not stale from previous session)
       if [[ "$(uname)" == "Darwin" ]]; then
         MTIME=$(stat -f %m "$CHECKPOINT" 2>/dev/null || echo "0")

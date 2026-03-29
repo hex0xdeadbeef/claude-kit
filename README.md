@@ -65,12 +65,15 @@ chmod +x /path/to/your/project/.git/hooks/commit-msg
 
 The main command that orchestrates the entire development process. Executes all phases sequentially with user confirmation between steps.
 
-**Pipeline:** `task-analysis` → `planner` → `plan-review` → `coder` → `code-review`
+**Pipeline:** `task-analysis` → `designer*` → `planner` → `plan-review` → `coder` → `code-review`
+
+\* designer runs for L/XL tasks only. S/M skip to planner.
 
 ```bash
 /workflow Add new REST endpoint for profiles
 /workflow --auto Implement resource update         # autonomous mode, no confirmations
 /workflow --from-phase 3                            # resume from specified phase
+/workflow --from-phase 0.7                           # resume from design phase
 ```
 
 <details>
@@ -89,6 +92,7 @@ The main command that orchestrates the entire development process. Executes all 
 | # | Phase | Description |
 |---|-------|-------------|
 | 1 | Task Analysis | Complexity classification (S/M/L/XL) and route selection |
+| 1.5 | Design | Requirements exploration + approach selection *(L/XL only, optional for M new_feature/integration)* |
 | 2 | Planning | Codebase research, implementation plan creation |
 | 3 | Plan Review | Plan validation against architecture *(skipped for S-complexity)* |
 | 4 | Implementation | Code writing strictly per approved plan, running tests |

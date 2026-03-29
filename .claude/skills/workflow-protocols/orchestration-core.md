@@ -5,17 +5,22 @@
 ## Pipeline & Phases
 
 ```
-task-analysis → /planner → plan-reviewer (agent) → /coder → code-reviewer (agent) → completion
-     ↓              ↓              ↓                  ↓              ↓                    ↓
-  Classify        Plan       Validation             Code         Review              Commit+Metrics
-  S → skip PR              ↓ FAIL         ↓ FAIL
-                          ← back ←       ← back ←
-                          (max 3x)       (max 3x)
+task-analysis → /designer* → /planner → plan-reviewer (agent) → /coder → code-reviewer (agent) → completion
+     ↓              ↓             ↓              ↓                  ↓              ↓                    ↓
+  Classify    Design(L/XL)     Plan       Validation             Code         Review              Commit+Metrics
+  S/M → skip ↗     ↓ REJECT         ↓ FAIL         ↓ FAIL
+  M(new/integ) → optional ↗
+                  ← user ←        ← back ←       ← back ←
+                                  (max 3x)       (max 3x)
 ```
 
 **Phase 0.5 — Task Analysis:** Classify (type + S/M/L/XL) → Route. S: skip plan-review. L/XL: Sequential Thinking recommended/required.
 
-**Phase 1 — Planning:** Execute /planner. Output: `.claude/prompts/{feature}.md`
+**Phase 0.7 — Design (L/XL only):** Execute /designer. Output: `.claude/prompts/{feature}-spec.md`. User approval gate required. SKIP for S/M complexity.
+- If user rejects design → iterate within /designer (not a pipeline loop — internal to designer)
+- Checkpoint: `phase_completed: 0.7, phase_name: "design"`
+
+**Phase 1 — Planning:** Execute /planner. If spec exists → planner references spec. Output: `.claude/prompts/{feature}.md`
 
 **Phase 2 — Plan Review:** Delegate to plan-reviewer agent. APPROVED → Phase 3. NEEDS_CHANGES → Phase 1 (iteration N/3). REJECTED → Stop.
 
@@ -113,6 +118,7 @@ tracking_protocol:
 **Quick check commands:**
 ```
 ls .claude/workflow-state/*-checkpoint.yaml  # Checkpoint?
+ls .claude/prompts/*-spec.md                  # Spec?
 ls .claude/prompts/                          # Plan?
 ls .claude/prompts/*-evaluate.md              # Evaluate output?
 git diff $(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||' || echo main)...HEAD --stat  # Code changes?
@@ -126,6 +132,15 @@ TEST                                         # Tests pass? (Go default: make tes
 - Otherwise: standard resume from `phase_completed + 1` → restore iteration counters.
 
 **Step 2B — No checkpoint (heuristic):**
+
+**Pre-planning recovery:**
+
+| Spec exists? | Plan exists? | Resume from |
+|---|---|---|
+| No | No | Phase 0.7: Design (if L/XL) or Phase 1: Planning (S/M) |
+| Yes (approved) | No | Phase 1: Planning (spec done, skip design) |
+
+**Post-planning recovery:**
 
 | Plan exists? | Evaluate exists? | Code changes? | Tests pass? | Resume from                                          |
 | ------------ | ---------------- | ------------- | ----------- | ---------------------------------------------------- |
