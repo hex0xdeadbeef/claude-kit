@@ -297,11 +297,12 @@ delegation_protocol:
         on_missing: "INCOMPLETE_OUTPUT — proceed with verdict only if found"
 
     on_incomplete_output:
-      step_1: "SendMessage to the SAME agent (use agentId from return): 'Your output was incomplete. Provide ONLY the verdict and handoff now. Start your response with VERDICT: followed by the verdict value.'"
-      step_2: "If SendMessage returns verdict → extract it, proceed normally"
-      step_3: "If SendMessage fails or still no verdict → WARN user, show agent summary, ask for manual verdict decision"
+      step_1: "Check .claude/workflow-state/review-completions.jsonl — save-review-checkpoint.sh extracts verdict via regex on SubagentStop. If verdict found → use it, proceed with minimal handoff (verdict only, no detailed issues)."
+      step_2: "If verdict found in review-completions.jsonl → extract it, proceed normally with minimal handoff"
+      step_3: "If no verdict in review-completions.jsonl → re-launch code-reviewer agent with minimal prompt: 'The previous code review did not return a verdict. Check .claude/workflow-state/review-completions.jsonl for prior run context. Run git diff to see changes. Output ONLY: VERDICT: {verdict} followed by brief handoff. Do NOT save memory. Do NOT fix lint issues.'"
+      step_4: "If re-launch also fails or returns no verdict → WARN user, show what information is available (review-completions.jsonl, agent output summary), ask for manual verdict decision"
       max_retries: 1
-      note: "SendMessage preserves agent context — the agent still has the full review in memory. This is NOT a new agent launch."
+      note: "step_1 leverages save-review-checkpoint.sh which already runs on SubagentStop and extracts verdict via regex — no SendMessage needed. step_3 is a fresh agent launch, always available regardless of deferred tool state."
 
     common_causes:
       - "Agent exhausted maxTurns on memory operations (SEE RULE_5 in agent artifacts)"

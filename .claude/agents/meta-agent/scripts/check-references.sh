@@ -18,6 +18,11 @@ set -euo pipefail
 INPUT=$(cat)
 FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
 
+# Skip agent-memory paths — avoid hook amplification loop during agent memory saves
+if [[ "$FILE_PATH" == *"agent-memory"* ]]; then
+  exit 0
+fi
+
 # Only check .claude/ artifact files
 if [[ ! "$FILE_PATH" =~ \.claude/ ]] || [[ ! "$FILE_PATH" =~ \.md$ ]]; then
   exit 0

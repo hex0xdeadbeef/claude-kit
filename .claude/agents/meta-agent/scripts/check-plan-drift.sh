@@ -28,6 +28,11 @@ INPUT=$(cat)
 TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty')
 FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
 
+# Skip agent-memory paths — avoid hook amplification loop during agent memory saves
+if [[ "$FILE_PATH" == *"agent-memory"* ]]; then
+  exit 0
+fi
+
 # ─── Guard: only check artifact files ─────────────────────────────────────────
 if [[ ! "$FILE_PATH" =~ \.claude/ ]]; then
   exit 0
