@@ -196,6 +196,8 @@ PYTHON_EOF
 
 # ALWAYS exit 0 — never block worktree creation
 # Claude Code requires non-empty stdout from hooks (observed: "no successful output" error without it)
-# Output minimal JSON — avoid semantic content that could contaminate agent metadata
-echo '{}'
+# CRITICAL: Do NOT output JSON (e.g. "{}") — Claude Code parses hook stdout as WorktreeCreate metadata,
+# and "{}" was being captured as worktreePath, causing "{}/" directories to be created at project root.
+# Plain text avoids metadata contamination.
+echo 'worktree prepared'
 exit 0

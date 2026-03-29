@@ -67,6 +67,12 @@ worktree_path = (
 
 worktree_resolution = "payload" if worktree_path else None
 
+# Guard: reject non-path values from hook stdout contamination (e.g. "{}" from prepare-worktree.sh)
+if worktree_path and (not str(worktree_path).startswith("/") or str(worktree_path).strip() in ("{}", "{", "}")):
+    print(f"save-review-checkpoint: rejecting invalid worktree_path: {worktree_path!r}", file=sys.stderr)
+    worktree_path = None
+    worktree_resolution = None
+
 # Strategy 2: Fallback — scan .git/worktrees/ for most recent worktree
 if not worktree_path and agent_type in WORKTREE_AGENTS:
     worktrees_dir = os.path.join(".git", "worktrees")

@@ -14,7 +14,7 @@ set -e
 # CONFIGURATION - EDIT THESE VALUES
 # ============================================================
 PROJECT_DIR="/Users/dmitriym/Desktop/claude-kit"
-SYNC_BRANCH="sync/initial"
+SYNC_BRANCH="main"
 # ============================================================
 
 # Colors
