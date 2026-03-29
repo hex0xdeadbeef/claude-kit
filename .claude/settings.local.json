@@ -4,7 +4,16 @@
       "Bash(bash .claude/scripts/sync-to-github.sh \"Update README.md: fix outdated structure, remove deleted commands, update hooks\")",
       "Bash(xargs ls -la)",
       "Edit(/.claude/skills/workflow-protocols/**)",
-      "Edit(/.claude/skills/code-review-rules/**)"
+      "Edit(/.claude/skills/code-review-rules/**)",
+      "Bash(shellcheck -x /Users/dmitriym/Desktop/claude-kit/install.sh)",
+      "Bash(curl -s https://api.github.com/repos/hex0xdeadbeef/claude-kit/releases/latest)",
+      "Bash(git ls-remote:*)",
+      "Bash(bash .claude/agents/meta-agent/scripts/yaml-lint.sh)",
+      "Bash(bash .claude/agents/meta-agent/scripts/check-references.sh)",
+      "Bash(sed -i '' 's|# Output minimal JSON — avoid semantic content that could contaminate agent metadata|# CRITICAL: Do NOT output JSON \\(e.g. \"\"{}\"\"\\) — Claude Code parses hook stdout as WorktreeCreate metadata,\\\\n# and \"\"{}\"\" was being captured as worktreePath, causing \"\"{}/\"\" directories to be created at project root.\\\\n# Plain text avoids metadata contamination.|' .claude/scripts/prepare-worktree.sh)",
+      "Bash(sed -i '' \"s|echo ''{}''|echo ''worktree prepared''|\" .claude/scripts/prepare-worktree.sh)",
+      "Bash(git tag:*)",
+      "Bash(bash .claude/scripts/sync-to-github.sh \"fix\\(hooks\\): prevent worktree {} dir + code-reviewer amplification loop \\(v1.0.5\\)\")"
     ]
   },
   "enableAllProjectMcpServers": true,
