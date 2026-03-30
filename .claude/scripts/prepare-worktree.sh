@@ -8,6 +8,10 @@
 # Expected fields (best-guess from worktree field in v2.1.69 status-line hooks):
 #   worktree_path, worktree_name, worktree_branch, original_repo_dir
 # On parse failure: raw stdin is logged to worktree-events-debug.jsonl for contract discovery.
+#
+# Worktree path resolution (IMP-02, 2026-03-30):
+#   WorktreeCreate payload does NOT contain worktree_path.
+#   Fallback chain: payload fields → .git/worktrees/ scan → git worktree list --porcelain
 
 set -euo pipefail
 
@@ -49,7 +53,7 @@ except Exception:
     sys.exit(0)
 
 # 2. Extract worktree info (field names are best-guess — log on missing for discovery)
-# Try multiple possible field name patterns
+# Strategy 1: Try multiple possible field name patterns from payload
 worktree_path = (
     hook_input.get("worktree_path")
     or hook_input.get("worktreePath")
@@ -69,6 +73,70 @@ worktree_branch = (
     or (hook_input.get("worktree", {}) or {}).get("branch")
 )
 
+worktree_resolution = "payload" if worktree_path else None
+
+# Guard: reject non-path values (e.g. "{}" from prior stdout contamination bug)
+if worktree_path and (not str(worktree_path).startswith("/") or str(worktree_path).strip() in ("{}", "{", "}")):
+    print(f"prepare-worktree: rejecting invalid worktree_path: {worktree_path!r}", file=sys.stderr)
+    worktree_path = None
+    worktree_resolution = None
+
+# --- IMP-02: Fallback strategies when worktree_path not in payload ---
+
+# Strategy 2: Scan .git/worktrees/ for most recent worktree
+if not worktree_path:
+    worktrees_dir = os.path.join(".git", "worktrees")
+    if os.path.isdir(worktrees_dir):
+        try:
+            entries = [
+                d for d in os.listdir(worktrees_dir)
+                if os.path.isdir(os.path.join(worktrees_dir, d))
+            ]
+            if entries:
+                # Sort by modification time, most recent first
+                entries.sort(
+                    key=lambda d: os.path.getmtime(os.path.join(worktrees_dir, d)),
+                    reverse=True
+                )
+                # Read gitdir file to find worktree path
+                gitdir_file = os.path.join(worktrees_dir, entries[0], "gitdir")
+                if os.path.isfile(gitdir_file):
+                    with open(gitdir_file) as f:
+                        gitdir_content = f.read().strip()
+                    # gitdir contains path to worktree/.git — extract parent
+                    candidate = gitdir_content.rsplit("/.git", 1)[0]
+                    if os.path.isdir(candidate):
+                        worktree_path = candidate
+                        worktree_resolution = "fallback_gitdir"
+        except Exception as e:
+            print(f"prepare-worktree: worktree fallback scan failed: {e}", file=sys.stderr)
+
+# Strategy 3: git worktree list --porcelain
+if not worktree_path:
+    try:
+        result = subprocess.run(
+            ["git", "worktree", "list", "--porcelain"],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0:
+            worktrees = []
+            for line in result.stdout.splitlines():
+                if line.startswith("worktree "):
+                    path = line[len("worktree "):]
+                    # Skip the main worktree (cwd)
+                    if path != os.getcwd():
+                        worktrees.append(path)
+            if worktrees:
+                # Take the last one (most recently added)
+                candidate = worktrees[-1]
+                if os.path.isdir(candidate):
+                    worktree_path = candidate
+                    worktree_resolution = "fallback_git_worktree_list"
+    except Exception:
+        pass
+
+# --- End IMP-02 ---
+
 # ALWAYS log received keys for contract discovery (regardless of whether worktree_path found)
 try:
     with open(DEBUG_FILE, "a") as f:
@@ -76,6 +144,7 @@ try:
             "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "hook": "WorktreeCreate",
             "worktree_path_found": bool(worktree_path),
+            "worktree_resolution": worktree_resolution,
             "received_keys": sorted(hook_input.keys()),
             "raw_input": input_data[:2000],
         }) + "\n")
@@ -185,6 +254,7 @@ try:
         "worktree_name": worktree_name or "unknown",
         "worktree_path": worktree_path,
         "worktree_branch": worktree_branch or "unknown",
+        "worktree_resolution": worktree_resolution,
         "setup_actions": setup_actions,
     }
     with open(EVENTS_FILE, "a") as f:
