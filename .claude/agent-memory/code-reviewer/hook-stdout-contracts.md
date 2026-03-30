@@ -21,7 +21,7 @@ Allow: no output (exit 0 silently).
 Note: Stop uses a DIFFERENT (simpler) format than PreToolUse.
 
 **WorktreeCreate** (prepare-worktree.sh):
-`{}` — minimal non-empty JSON required. Empty stdout causes "no successful output" error.
+**NO stdout at all** — silent exit 0. Claude Code parses ALL stdout (JSON or plain text) as worktree metadata, creating bogus directories (e.g. `worktreePath="{}"` or `worktreePath="worktree prepared"`).
 
 **UserPromptSubmit / PreCompact / PostCompact / InstructionsLoaded**:
 `{"additionalContext": "..."}` — or nothing on success/no-op.

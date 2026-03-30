@@ -4,7 +4,7 @@
 
 Claude Code requires non-empty stdout from hooks to consider them successful.
 Hooks that don't need to inject context or block should output nothing (exit 0 silently).
-**CRITICAL:** Do NOT output JSON (`{}`) from WorktreeCreate — Claude Code parses it as metadata.
+**CRITICAL:** Do NOT output ANYTHING to stdout from WorktreeCreate hooks — Claude Code parses ALL stdout (JSON or plain text) as worktree metadata (e.g. `worktreePath="worktree prepared"`).
 
 | Event | Script | Stdout Contract | Notes |
 |-------|--------|----------------|-------|
@@ -15,7 +15,7 @@ Hooks that don't need to inject context or block should output nothing (exit 0 s
 | PreCompact | save-progress-before-compact.sh | `{"additionalContext": "..."}` | Preserves state |
 | PostCompact | verify-state-after-compact.sh | `{"additionalContext": "..."}` | Restores state |
 | InstructionsLoaded | validate-instructions.sh | `{"additionalContext": "..."}` | Rules validation |
-| WorktreeCreate | prepare-worktree.sh | Plain text (e.g. `worktree prepared`) | Required non-empty; JSON avoided — Claude Code parses JSON as worktree metadata |
+| WorktreeCreate | prepare-worktree.sh | **nothing** (silent exit 0) | ANY stdout parsed as worktree metadata — causes bogus directories |
 | SubagentStart | track-task-lifecycle.sh | nothing | Writes to JSONL |
 | SubagentStop | save-review-checkpoint.sh | nothing | Writes to JSONL |
 | Stop | check-uncommitted.sh | `{"decision": "block", "reason": "..."}` or nothing | Workflow-only |

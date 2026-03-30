@@ -75,11 +75,15 @@ worktree_branch = (
 
 worktree_resolution = "payload" if worktree_path else None
 
-# Guard: reject non-path values (e.g. "{}" from prior stdout contamination bug)
-if worktree_path and (not str(worktree_path).startswith("/") or str(worktree_path).strip() in ("{}", "{", "}")):
-    print(f"prepare-worktree: rejecting invalid worktree_path: {worktree_path!r}", file=sys.stderr)
-    worktree_path = None
-    worktree_resolution = None
+# Guard: reject non-absolute paths and paths containing JSON/stdout contamination
+# Claude Code parses WorktreeCreate hook stdout as worktree metadata, so ANY stdout
+# (JSON or plain text) gets captured as worktreePath. This guard catches all such cases.
+if worktree_path:
+    wp = str(worktree_path).strip()
+    if not wp.startswith("/") or " " in wp or "{" in wp or "}" in wp:
+        print(f"prepare-worktree: rejecting invalid worktree_path: {worktree_path!r}", file=sys.stderr)
+        worktree_path = None
+        worktree_resolution = None
 
 # --- IMP-02: Fallback strategies when worktree_path not in payload ---
 
@@ -152,6 +156,13 @@ except Exception:
     pass
 
 if not worktree_path:
+    sys.exit(0)
+
+# Final validation: worktree_path must be absolute, contain no spaces, and exist as directory
+# This is defense-in-depth against stdout contamination (e.g. "worktree prepared", "{}", etc.)
+wp = str(worktree_path).strip()
+if not wp.startswith("/") or " " in wp or "{" in wp or "}" in wp or not os.path.isdir(wp):
+    print(f"prepare-worktree: final validation failed for worktree_path: {worktree_path!r}", file=sys.stderr)
     sys.exit(0)
 
 # 2b. Resolve original_repo_dir (main repo that worktree was created from)
@@ -265,9 +276,9 @@ except Exception as e:
 PYTHON_EOF
 
 # ALWAYS exit 0 — never block worktree creation
-# Claude Code requires non-empty stdout from hooks (observed: "no successful output" error without it)
-# CRITICAL: Do NOT output JSON (e.g. "{}") — Claude Code parses hook stdout as WorktreeCreate metadata,
-# and "{}" was being captured as worktreePath, causing "{}/" directories to be created at project root.
-# Plain text avoids metadata contamination.
-echo 'worktree prepared'
+# CRITICAL: Do NOT output ANYTHING to stdout from WorktreeCreate hooks.
+# Claude Code parses ALL WorktreeCreate hook stdout as worktree metadata:
+#   - "{}" → worktreePath="{}" → creates "{}/.claude/agent-memory/" directory
+#   - "worktree prepared" → worktreePath="worktree prepared" → creates "worktree prepared/.claude/agent-memory/"
+# The ONLY safe option is silent exit (no stdout at all).
 exit 0
