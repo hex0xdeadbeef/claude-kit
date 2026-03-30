@@ -1,7 +1,8 @@
 #!/bin/bash
 # Hook: SubagentStop (matcher: plan-reviewer|code-reviewer)
 # Purpose: Write marker about review agent completion + sync agent memory from worktree
-# Blocking: exit 2 if write fails (blocks agent completion)
+# Blocking: exit 2 only if BOTH primary and fallback writes fail
+# IMP-06: defensive fallback to /tmp when primary write fails — logging should not block agent
 #
 # Worktree path resolution (IMP-04):
 #   1. Try SubagentStop payload fields (worktree_path, worktreePath, worktree.path)
@@ -269,11 +270,21 @@ if memory_sync_result:
     marker["memory_sync"] = memory_sync_result
     marker["memory_files_synced"] = memory_files_synced
 
+# --- IMP-06: Defensive fallback for marker write ---
+# Primary write to review-completions.jsonl; on failure, fallback to /tmp.
+# Logging failure should not block agent completion — only exit 2 if both fail.
 completions_file = ".claude/workflow-state/review-completions.jsonl"
 try:
     with open(completions_file, "a") as f:
         f.write(json.dumps(marker) + "\n")
 except Exception as e:
-    print(f"ERROR: Failed to write review marker: {e}", file=sys.stderr)
-    sys.exit(2)
+    import tempfile
+    fallback_file = os.path.join(tempfile.gettempdir(), "claude-review-completions-fallback.jsonl")
+    try:
+        with open(fallback_file, "a") as f:
+            f.write(json.dumps(marker) + "\n")
+        print(f"WARN: Primary write failed ({e}), wrote to fallback: {fallback_file}", file=sys.stderr)
+    except Exception as e2:
+        print(f"ERROR: Both primary and fallback write failed: {e} / {e2}", file=sys.stderr)
+        sys.exit(2)
 PYTHON_EOF
