@@ -66,10 +66,12 @@ flowchart LR
 **Phase 2/4 — Incomplete Output Recovery:** If a review agent (plan-reviewer or code-reviewer) returns without a clear verdict:
 
 1. Validate return text for verdict keyword (SEE workflow.md → output_validation)
-2. If missing → SendMessage to the same agent requesting verdict only (1 retry, use agentId)
-3. If verdict recovered → continue pipeline normally
-4. If unrecoverable → WARN user with available agent summary, request manual verdict decision
-5. Write checkpoint with `verdict: "INCOMPLETE"` and `recovery_attempted: true`
+2. If missing → check review-completions.jsonl (save-review-checkpoint.sh extracts verdict on SubagentStop via transcript)
+3. If still missing → re-launch review agent with minimal prompt (SEE workflow.md → output_validation.on_incomplete_output)
+   Minimal prompt: "Output ONLY: VERDICT: {verdict} followed by brief handoff. No memory save."
+4. If verdict recovered from checkpoint or re-launch → continue pipeline normally
+5. If re-launch also fails → WARN user, show review-completions.jsonl data, request manual verdict
+6. Write checkpoint with `verdict: "INCOMPLETE"` and `recovery_attempted: true`
 
 **Note:** This scenario is rare after RULE_5 (Output First) was added to agents. But validation remains as a safety net.
 
