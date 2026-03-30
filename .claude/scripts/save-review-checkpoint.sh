@@ -12,6 +12,10 @@
 #   After resolving worktree_path, delegates to sync-agent-memory.sh (standalone utility).
 #   Runs BEFORE worktree cleanup (blocking hook).
 #   Memory sync failure is NON_CRITICAL — logged but does not block.
+#
+# Verdict extraction (IMP-01, 2026-03-30):
+#   SubagentStop payload does NOT contain last_assistant_message.
+#   Fallback: read transcript_path JSONL → find last assistant entry → regex for VERDICT:.
 
 set -euo pipefail
 
@@ -39,12 +43,55 @@ try:
 except Exception:
     data = {}
 
-agent_type = data.get("agent_type", data.get("agent_name", "unknown"))
+# IMP-07: agent_type fallback includes "name" (WorktreeCreate uses "name" field)
+agent_type = (
+    data.get("agent_type")
+    or data.get("agent_name")
+    or data.get("name")
+    or "unknown"
+)
 session_id = data.get("session_id", "")
 timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-# Extract verdict from agent's final response (last_assistant_message per SubagentStop contract)
+# --- IMP-01: Extract verdict from agent's final response ---
+# Strategy 1: Try last_assistant_message from payload (may not exist in current Claude Code versions)
 output = data.get("last_assistant_message", "")
+
+# Strategy 2: Read transcript_path JSONL — find last assistant message
+# SubagentStop payload includes transcript_path but NOT last_assistant_message.
+# The transcript is a JSONL file with the full agent conversation.
+transcript_used = False
+if not output:
+    transcript_path = data.get("transcript_path", "")
+    if transcript_path and os.path.isfile(transcript_path):
+        try:
+            with open(transcript_path) as f:
+                lines = f.readlines()
+            # Search in reverse for last assistant message
+            for line in reversed(lines):
+                try:
+                    entry = json.loads(line.strip())
+                    role = entry.get("role", "")
+                    if role == "assistant":
+                        content = entry.get("content", "")
+                        if isinstance(content, list):
+                            # Anthropic message format: [{type: "text", text: "..."}]
+                            for block in content:
+                                if isinstance(block, dict) and block.get("type") == "text":
+                                    text = block.get("text", "")
+                                    if text:
+                                        output = text
+                                        break
+                        elif isinstance(content, str):
+                            output = content
+                        if output:
+                            transcript_used = True
+                            break
+                except (json.JSONDecodeError, KeyError):
+                    continue
+        except Exception as e:
+            print(f"save-review-checkpoint: transcript read failed: {e}", file=sys.stderr)
+
 verdict = "UNKNOWN"
 if output:
     match = re.search(
@@ -53,6 +100,32 @@ if output:
     )
     if match:
         verdict = match.group(1).upper()
+
+# --- End IMP-01 ---
+
+# --- IMP-03: ALWAYS log SubagentStop payload for contract discovery ---
+try:
+    discovery = {
+        "timestamp": timestamp,
+        "hook": "SubagentStop",
+        "agent_type": agent_type,
+        "session_id": session_id,
+        "received_keys": sorted(data.keys()),
+        "verdict_found": verdict != "UNKNOWN",
+        "verdict_source": "transcript" if transcript_used else ("payload" if data.get("last_assistant_message") else "none"),
+        "transcript_path_present": bool(data.get("transcript_path")),
+    }
+    # Include raw payload fields (excluding last_assistant_message/transcript content — too large)
+    payload_sample = {
+        k: str(v)[:200] for k, v in data.items()
+        if k not in ("last_assistant_message",)
+    }
+    discovery["payload_sample"] = payload_sample
+    with open(DEBUG_FILE, "a") as f:
+        f.write(json.dumps(discovery) + "\n")
+except Exception:
+    pass
+# --- End IMP-03 ---
 
 # --- IMP-04: Resolve worktree_path for worktree-isolated agents ---
 # Agents known to run with isolation: worktree
@@ -127,29 +200,6 @@ if not worktree_path and agent_type in WORKTREE_AGENTS:
     except Exception:
         pass
 
-# Log contract discovery data (always, for refining SubagentStop contract knowledge)
-if agent_type in WORKTREE_AGENTS:
-    try:
-        discovery = {
-            "timestamp": timestamp,
-            "hook": "SubagentStop",
-            "agent_type": agent_type,
-            "session_id": session_id,
-            "worktree_path": worktree_path,
-            "resolution": worktree_resolution,
-            "received_keys": sorted(data.keys()),
-        }
-        # Include raw payload fields (excluding last_assistant_message — too large)
-        payload_sample = {
-            k: str(v)[:200] for k, v in data.items()
-            if k != "last_assistant_message"
-        }
-        discovery["payload_sample"] = payload_sample
-        with open(DEBUG_FILE, "a") as f:
-            f.write(json.dumps(discovery) + "\n")
-    except Exception:
-        pass
-
 # --- End IMP-04 ---
 
 # --- IMP-01/IMP-05: Sync agent memory via standalone script ---
@@ -208,6 +258,9 @@ marker = {
     "session_id": session_id,
     "verdict": verdict,
 }
+# Include verdict source for debugging
+if transcript_used:
+    marker["verdict_source"] = "transcript"
 # Include worktree_path and memory sync status in marker
 if worktree_path:
     marker["worktree_path"] = worktree_path
