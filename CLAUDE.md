@@ -39,7 +39,7 @@ Reusable Claude Code configuration kit for any project. Provides a structured mu
 
 ## Enforcement
 
-- Hooks: InstructionsLoaded (rules validation), UserPromptSubmit (context enrichment), PreToolUse (file protection + dangerous commands + artifact size + pre-commit build), PostToolUse (auto-fmt + yaml-lint + reference check + plan-drift), PreCompact, PostCompact (state verification), SubagentStart (code-researcher lifecycle tracking), SubagentStop, Stop (phase completion + uncommitted check), SessionEnd (analytics), StopFailure (API error logging), Notification (desktop alerts). Conditional `if` (v2.1.85) on 6 hooks reduces process spawning; security hooks remain unconditional.
+- Hooks: InstructionsLoaded (rules validation), UserPromptSubmit (context enrichment), PreToolUse (file protection + dangerous commands + artifact size + pre-commit build), PostToolUse (auto-fmt + yaml-lint + reference check + plan-drift), PreCompact, PostCompact (state verification), SubagentStart (code-researcher lifecycle tracking), SubagentStop, WorktreeCreate (worktree env prep, stdout `{}` required v2.1.84+), Stop (phase completion + uncommitted check), SessionEnd (analytics), StopFailure (API error logging), Notification (desktop alerts). Conditional `if` (v2.1.85) on 6 hooks reduces process spawning; security hooks remain unconditional.
 - Permissions: auto-allow safe ops (make, go, git read, Edit/Write), deny dangerous (rm -rf, git reset --hard, sudo, etc.)
 - Settings: `.claude/settings.json` (shared, git-committed) + `.claude/settings.local.json` (personal overrides, gitignored). Arrays merge, deny wins. See `settings.local.json.example` for template.
 - Memory: auto-memory (build/debug/preferences), subagent memory (agent-specific patterns)
