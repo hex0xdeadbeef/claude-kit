@@ -189,4 +189,8 @@ try:
 except Exception as e:
     print(f"session-analytics: failed to write analytics: {e}", file=sys.stderr)
 PYTHON_EOF
+
+# IMP-16: Clean up stale worktrees at session end
+git worktree prune 2>/dev/null || true
+
 exit 0
