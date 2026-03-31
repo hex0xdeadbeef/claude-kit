@@ -216,10 +216,17 @@ except Exception as e:
 
 PYTHON_EOF
 
-# ALWAYS exit 0 — never block worktree creation
-# CRITICAL: Do NOT output ANYTHING to stdout from WorktreeCreate hooks.
-# Claude Code parses ALL WorktreeCreate hook stdout as worktree metadata:
-#   - "{}" → worktreePath="{}" → creates "{}/.claude/agent-memory/" directory
-#   - "worktree prepared" → worktreePath="worktree prepared" → creates "worktree prepared/.claude/agent-memory/"
-# The ONLY safe option is silent exit (no stdout at all).
+# WorktreeCreate stdout protocol (history):
+#   Pre-v2.1.84: Claude Code parsed stdout as worktree PATH (not JSON).
+#                Empty/no stdout was required — any output became the path string,
+#                e.g. "{}" → worktreePath="{}" → tried to create "{}/.claude/" directory.
+#   v2.1.84+:    Claude Code parses stdout as JSON. Silent exit = error:
+#                "WorktreeCreate hook failed: no successful output".
+#                echo "{}" = success signal with no path override (uses default path).
+#                echo '{"worktreePath":"/abs/path"}' = success with explicit path override.
+#
+# REQUIRED: output valid JSON before exit 0.
+echo "{}"   # WorktreeCreate protocol: stdout JSON required for success signal.
+            # Empty object = use default worktree path, no metadata override.
+            # Claude Code ~v2.1.84+: silent exit = "no successful output" error.
 exit 0
