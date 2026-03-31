@@ -615,25 +615,57 @@ The script correctly skips worktree logic for plan-reviewer (via the `WORKTREE_A
 
 ## 8. Claude Code CHANGELOG Reference — Hook Features
 
-| Version | Feature / Fix |
-|---------|---------------|
-| **2.0.46** | Initial hook system: `PreToolUse`, `PostToolUse` events |
-| **2.1.59** | Hook filtering based on command patterns |
-| **2.1.61** | Fix: `SessionEnd` hooks not firing on `/resume` session switch |
-| **2.1.62** | `if` field with bash glob pattern matching |
-| **2.1.75** | `SubagentStart`, `SubagentStop`, `PreCompact`, `PostCompact` events |
-| **2.1.76** | `InstructionsLoaded`, `UserPromptSubmit` events; stdout contract improvements |
-| **2.1.77** | Fix: PreToolUse `"allow"` bypassing `deny` permission rules |
-| **2.1.78** | `StopFailure` event; fix infinite loop on API errors triggering stop hooks |
-| **2.1.81** | Fix: plugin hooks blocking prompt after plugin directory deleted |
-| **2.1.83** | `CwdChanged`, `FileChanged` events; fix: uninstalled plugin hooks still firing |
-| **2.1.84** | `TaskCreated` event; `WorktreeCreate` `type: "http"` support |
-| **2.1.85** | Conditional `if` field (permission rule syntax); `WorktreeCreate` `hookSpecificOutput.worktreePath` |
-| **2.1.88** | `PermissionDenied` event; fix: `if` not matching compound commands; fix: absolute paths for Write/Edit/Read |
+### 8.1 Hook Events — Introduction Timeline
 
-**Events used by claude-kit:** InstructionsLoaded, UserPromptSubmit, PreToolUse, PostToolUse, PreCompact, PostCompact, SubagentStart, SubagentStop, WorktreeCreate, Stop, SessionEnd, StopFailure, Notification (13 of 17 available).
+| Version | Date (approx.) | Events / Feature |
+|---------|----------------|------------------|
+| **v1.0.38** | Jun 27, 2025 | **Hooks system introduced.** Initial events: `PreToolUse`, `PostToolUse`, `Stop`, `SessionEnd` |
+| **v1.0.41** | Jun 30, 2025 | `Stop` split into `Stop` + `SubagentStop` |
+| **v1.0.48** | Jul 2, 2025 | `PreCompact` added |
+| **v1.0.54** | Jul 10, 2025 | `UserPromptSubmit` added |
+| **v1.0.62** | Jul 16, 2025 | `SessionStart` added |
+| **v2.0.37** | ~Nov 2025 | `Notification` added |
+| **v2.0.43** | ~Nov 2025 | `SubagentStart` added |
+| **v2.1.33** | Feb 6, 2026 | `TeammateIdle` + `TaskCompleted` events |
+| **v2.1.50** | Feb 20, 2026 | `WorktreeCreate` + `WorktreeRemove` events |
+| **v2.1.69** | Mar 5, 2026 | `InstructionsLoaded` event |
+| **v2.1.76** | Mar 14, 2026 | `PostCompact`, `Elicitation`, `ElicitationResult` events; `worktree.sparsePaths` setting |
+| **v2.1.78** | Mar 17, 2026 | `StopFailure` event |
+| **v2.1.83** | Mar 25, 2026 | `CwdChanged` + `FileChanged` events |
+| **v2.1.84** | Mar 26, 2026 | `TaskCreated` event |
+| **v2.1.88** | Mar 30, 2026 | `PermissionDenied` event |
 
-**Events NOT used:** CwdChanged, FileChanged, TaskCreated, PermissionDenied — potential future integration points.
+### 8.2 Payload and Behavior Changes
+
+| Version | Change |
+|---------|--------|
+| **v2.1.3** | Hook timeout increased from 60s to **10 minutes** |
+| **v2.1.9** | `PreToolUse` can return `additionalContext` to inject text into model context |
+| **v2.1.47** | **`last_assistant_message` added to `SubagentStop` and `Stop` inputs** — confirms P9 (comment in `save-review-checkpoint.sh:18` is wrong; field was added) |
+| **v2.1.63** | HTTP hooks added — POST JSON to URL instead of shell commands |
+| **v2.1.69** | `agent_id` and `agent_type` fields added to ALL hook event payloads |
+| **v2.1.72** | Fix: `transcript_path` pointing to wrong directory for resumed sessions |
+| **v2.1.74** | Fix: `SessionEnd` hooks killed after 1.5s (now respects `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS`) |
+| **v2.1.84** | `WorktreeCreate` with `type: "http"` can return `hookSpecificOutput.worktreePath` |
+| **v2.1.85** | Conditional `if` field (permission rule syntax) — reduces process spawning |
+| **v2.1.85** | `PreToolUse` can satisfy `AskUserQuestion` via `updatedInput` |
+| **v2.1.88** | Fix: `if` not matching compound commands or env-var prefixes |
+| **v2.1.88** | Fix: `PreToolUse`/`PostToolUse` now provide `file_path` as absolute path |
+
+### 8.3 Security Fixes
+
+| Version | Issue |
+|---------|-------|
+| **v2.1.51** | `statusLine`/`fileSuggestion` hooks could execute without workspace trust; HTTP hooks allowed arbitrary env var interpolation (fixed: requires `allowedEnvVars`) |
+| **v2.1.77** | `PreToolUse` returning `"allow"` could bypass `deny` permission rules including enterprise managed settings (fixed) |
+
+### 8.4 Events Used by claude-kit
+
+**Active (13):** InstructionsLoaded, UserPromptSubmit, PreToolUse, PostToolUse, PreCompact, PostCompact, SubagentStart, SubagentStop, WorktreeCreate, Stop, SessionEnd, StopFailure, Notification
+
+**Not used (potential future):** CwdChanged, FileChanged, TaskCreated, PermissionDenied, WorktreeRemove, SessionStart, TeammateIdle, TaskCompleted
+
+> **Key implication from v2.1.47:** `last_assistant_message` IS present in SubagentStop payload. `save-review-checkpoint.sh:18` comment ("payload does NOT contain last_assistant_message") is factually incorrect — it may have been true before v2.1.47. The fix (IMP-15) should update the comment to reflect the version dependency.
 
 ---
 
