@@ -208,6 +208,15 @@
             "command": ".claude/scripts/track-task-lifecycle.sh"
           }
         ]
+      },
+      {
+        "matcher": "plan-reviewer|code-reviewer",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/scripts/track-task-lifecycle.sh"
+          }
+        ]
       }
     ],
     "SubagentStop": [
