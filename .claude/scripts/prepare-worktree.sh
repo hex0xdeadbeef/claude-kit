@@ -9,8 +9,8 @@
 #   worktree_path, worktree_name, worktree_branch, original_repo_dir
 # On parse failure: raw stdin is logged to worktree-events-debug.jsonl for contract discovery.
 #
-# Worktree path resolution (IMP-02, 2026-03-30):
-#   WorktreeCreate payload does NOT contain worktree_path.
+# Worktree path resolution (IMP-02 → IMP-11):
+#   Delegated to resolve-worktree-path.py (shared utility).
 #   Fallback chain: payload fields → .git/worktrees/ scan → git worktree list --porcelain
 
 set -euo pipefail
@@ -52,14 +52,8 @@ except Exception:
         pass
     sys.exit(0)
 
-# 2. Extract worktree info (field names are best-guess — log on missing for discovery)
-# Strategy 1: Try multiple possible field name patterns from payload
-worktree_path = (
-    hook_input.get("worktree_path")
-    or hook_input.get("worktreePath")
-    or hook_input.get("path")
-    or (hook_input.get("worktree", {}) or {}).get("path")
-)
+# 2. Extract worktree info
+# Name and branch from payload (used only for analytics, not by resolver)
 worktree_name = (
     hook_input.get("worktree_name")
     or hook_input.get("worktreeName")
@@ -73,73 +67,27 @@ worktree_branch = (
     or (hook_input.get("worktree", {}) or {}).get("branch")
 )
 
-worktree_resolution = "payload" if worktree_path else None
-
-# Guard: reject non-absolute paths and paths containing JSON/stdout contamination
-# Claude Code parses WorktreeCreate hook stdout as worktree metadata, so ANY stdout
-# (JSON or plain text) gets captured as worktreePath. This guard catches all such cases.
-if worktree_path:
-    wp = str(worktree_path).strip()
-    if not wp.startswith("/") or " " in wp or "{" in wp or "}" in wp:
-        print(f"prepare-worktree: rejecting invalid worktree_path: {worktree_path!r}", file=sys.stderr)
-        worktree_path = None
-        worktree_resolution = None
-
-# --- IMP-02: Fallback strategies when worktree_path not in payload ---
-
-# Strategy 2: Scan .git/worktrees/ for most recent worktree
-if not worktree_path:
-    worktrees_dir = os.path.join(".git", "worktrees")
-    if os.path.isdir(worktrees_dir):
-        try:
-            entries = [
-                d for d in os.listdir(worktrees_dir)
-                if os.path.isdir(os.path.join(worktrees_dir, d))
-            ]
-            if entries:
-                # Sort by modification time, most recent first
-                entries.sort(
-                    key=lambda d: os.path.getmtime(os.path.join(worktrees_dir, d)),
-                    reverse=True
-                )
-                # Read gitdir file to find worktree path
-                gitdir_file = os.path.join(worktrees_dir, entries[0], "gitdir")
-                if os.path.isfile(gitdir_file):
-                    with open(gitdir_file) as f:
-                        gitdir_content = f.read().strip()
-                    # gitdir contains path to worktree/.git — extract parent
-                    candidate = gitdir_content.rsplit("/.git", 1)[0]
-                    if os.path.isdir(candidate):
-                        worktree_path = candidate
-                        worktree_resolution = "fallback_gitdir"
-        except Exception as e:
-            print(f"prepare-worktree: worktree fallback scan failed: {e}", file=sys.stderr)
-
-# Strategy 3: git worktree list --porcelain
-if not worktree_path:
-    try:
-        result = subprocess.run(
-            ["git", "worktree", "list", "--porcelain"],
-            capture_output=True, text=True, timeout=5
-        )
-        if result.returncode == 0:
-            worktrees = []
-            for line in result.stdout.splitlines():
-                if line.startswith("worktree "):
-                    path = line[len("worktree "):]
-                    # Skip the main worktree (cwd)
-                    if path != os.getcwd():
-                        worktrees.append(path)
-            if worktrees:
-                # Take the last one (most recently added)
-                candidate = worktrees[-1]
-                if os.path.isdir(candidate):
-                    worktree_path = candidate
-                    worktree_resolution = "fallback_git_worktree_list"
-    except Exception:
-        pass
-
-# --- End IMP-02 ---
+# Resolve worktree path via shared utility (IMP-11)
+# Handles: payload extraction, .git/worktrees/ scan, git worktree list, path validation
+resolver = os.path.join(".claude", "scripts", "resolve-worktree-path.py")
+worktree_path = None
+worktree_resolution = None
+try:
+    env = os.environ.copy()
+    env["_CALLER"] = "prepare-worktree"
+    result = subprocess.run(
+        ["python3", resolver],
+        capture_output=True, text=True, timeout=10,
+        env=env
+    )
+    if result.stderr:
+        print(result.stderr.rstrip(), file=sys.stderr)
+    if result.stdout.strip():
+        resolved = json.loads(result.stdout.strip())
+        worktree_path = resolved.get("worktree_path")
+        worktree_resolution = resolved.get("resolution")
+except Exception as e:
+    print(f"prepare-worktree: resolver failed: {e}", file=sys.stderr)
 
 # ALWAYS log received keys for contract discovery (regardless of whether worktree_path found)
 try:
@@ -156,13 +104,6 @@ except Exception:
     pass
 
 if not worktree_path:
-    sys.exit(0)
-
-# Final validation: worktree_path must be absolute, contain no spaces, and exist as directory
-# This is defense-in-depth against stdout contamination (e.g. "worktree prepared", "{}", etc.)
-wp = str(worktree_path).strip()
-if not wp.startswith("/") or " " in wp or "{" in wp or "}" in wp or not os.path.isdir(wp):
-    print(f"prepare-worktree: final validation failed for worktree_path: {worktree_path!r}", file=sys.stderr)
     sys.exit(0)
 
 # 2b. Resolve original_repo_dir (main repo that worktree was created from)

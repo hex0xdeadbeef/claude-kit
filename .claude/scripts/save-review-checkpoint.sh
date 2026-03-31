@@ -4,10 +4,9 @@
 # Blocking: exit 2 only if BOTH primary and fallback writes fail
 # IMP-06: defensive fallback to /tmp when primary write fails — logging should not block agent
 #
-# Worktree path resolution (IMP-04):
-#   1. Try SubagentStop payload fields (worktree_path, worktreePath, worktree.path)
-#   2. Fallback: scan .git/worktrees/ for most recent worktree (code-reviewer only)
-#   3. Log discovery data to worktree-events-debug.jsonl for contract refinement
+# Worktree path resolution (IMP-04 → IMP-11):
+#   Delegated to resolve-worktree-path.py (shared utility).
+#   Fallback chain: payload fields → .git/worktrees/ scan → git worktree list --porcelain
 #
 # Agent memory sync (IMP-01 + IMP-05):
 #   After resolving worktree_path, delegates to sync-agent-memory.sh (standalone utility).
@@ -129,93 +128,31 @@ except Exception:
     pass
 # --- End IMP-03 ---
 
-# --- IMP-04: Resolve worktree_path for worktree-isolated agents ---
+# --- IMP-04 → IMP-11: Resolve worktree_path via shared utility ---
 # Agents known to run with isolation: worktree
 WORKTREE_AGENTS = {"code-reviewer"}
 
-# Strategy 1: Extract from SubagentStop payload (try multiple field name patterns)
-worktree_path = (
-    data.get("worktree_path")
-    or data.get("worktreePath")
-    or (data.get("worktree", {}) or {}).get("path")
-)
-
-worktree_resolution = "payload" if worktree_path else None
-
-# IMP-12: Guard synced with prepare-worktree.sh (IMP-09) — reject non-absolute paths,
-# paths containing spaces, and JSON/stdout contamination characters.
-if worktree_path:
-    wp = str(worktree_path).strip()
-    if not wp.startswith("/") or " " in wp or "{" in wp or "}" in wp:
-        print(f"save-review-checkpoint: rejecting invalid worktree_path: {worktree_path!r}", file=sys.stderr)
-        worktree_path = None
-        worktree_resolution = None
-
-# Strategy 2: Fallback — scan .git/worktrees/ for most recent worktree
-if not worktree_path and agent_type in WORKTREE_AGENTS:
-    worktrees_dir = os.path.join(".git", "worktrees")
-    if os.path.isdir(worktrees_dir):
-        try:
-            entries = [
-                d for d in os.listdir(worktrees_dir)
-                if os.path.isdir(os.path.join(worktrees_dir, d))
-            ]
-            if entries:
-                # Sort by modification time, most recent first
-                entries.sort(
-                    key=lambda d: os.path.getmtime(os.path.join(worktrees_dir, d)),
-                    reverse=True
-                )
-                # Read gitdir file to find worktree path
-                gitdir_file = os.path.join(worktrees_dir, entries[0], "gitdir")
-                if os.path.isfile(gitdir_file):
-                    with open(gitdir_file) as f:
-                        gitdir_content = f.read().strip()
-                    # gitdir contains path to worktree/.git — extract parent
-                    candidate = gitdir_content.rsplit("/.git", 1)[0]
-                    if os.path.isdir(candidate):
-                        worktree_path = candidate
-                        worktree_resolution = "fallback_gitdir"
-        except Exception as e:
-            print(f"save-review-checkpoint: worktree fallback scan failed: {e}", file=sys.stderr)
-
-# Strategy 3: Fallback — try `git worktree list --porcelain` for most recent
-if not worktree_path and agent_type in WORKTREE_AGENTS:
+worktree_path = None
+worktree_resolution = None
+if agent_type in WORKTREE_AGENTS:
+    import subprocess
+    resolver = os.path.join(".claude", "scripts", "resolve-worktree-path.py")
     try:
-        import subprocess
+        env = os.environ.copy()
+        env["_CALLER"] = "save-review-checkpoint"
         result = subprocess.run(
-            ["git", "worktree", "list", "--porcelain"],
-            capture_output=True, text=True, timeout=5
+            ["python3", resolver],
+            capture_output=True, text=True, timeout=10,
+            env=env
         )
-        if result.returncode == 0:
-            # Parse porcelain output: "worktree /path/to/worktree\n..."
-            worktrees = []
-            for line in result.stdout.splitlines():
-                if line.startswith("worktree "):
-                    path = line[len("worktree "):]
-                    # Skip the main worktree (cwd)
-                    if path != os.getcwd():
-                        worktrees.append(path)
-            if worktrees:
-                # Take the last one (most recently added)
-                candidate = worktrees[-1]
-                if os.path.isdir(candidate):
-                    worktree_path = candidate
-                    worktree_resolution = "fallback_git_worktree_list"
-    except Exception:
-        pass
-
-# --- End IMP-04 ---
-
-# IMP-12: Final validation — defense-in-depth against stdout contamination
-# Synced with prepare-worktree.sh (IMP-09). Catches paths that passed the initial
-# guard but were resolved by fallback strategies to invalid values.
-if worktree_path:
-    wp = str(worktree_path).strip()
-    if not wp.startswith("/") or " " in wp or "{" in wp or "}" in wp or not os.path.isdir(wp):
-        print(f"save-review-checkpoint: final validation failed for worktree_path: {worktree_path!r}", file=sys.stderr)
-        worktree_path = None
-        worktree_resolution = None
+        if result.stderr:
+            print(result.stderr.rstrip(), file=sys.stderr)
+        if result.stdout.strip():
+            resolved = json.loads(result.stdout.strip())
+            worktree_path = resolved.get("worktree_path")
+            worktree_resolution = resolved.get("resolution")
+    except Exception as e:
+        print(f"save-review-checkpoint: resolver failed: {e}", file=sys.stderr)
 
 # --- IMP-01/IMP-05: Sync agent memory via standalone script ---
 # Delegates to sync-agent-memory.sh (IMP-05: single-responsibility extraction).
