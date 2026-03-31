@@ -18,7 +18,7 @@ export _HOOK_INPUT="$INPUT"
 command -v python3 >/dev/null 2>&1 || exit 0
 
 python3 << 'PYTHON_EOF'
-import json, sys, os
+import json, sys, os, re
 
 # Required rules — core quality guarantees
 REQUIRED_RULES = {
@@ -88,6 +88,21 @@ if missing_optional:
     warnings.append("Optional rules not loaded (may be expected if editing non-Go files):")
     for rule, purpose in missing_optional.items():
         warnings.append(f"  - .claude/rules/{rule} — {purpose}")
+
+# Hook protocol smoke test: WorktreeCreate stdout contract (v2.1.84+)
+# Static analysis — validates prepare-worktree.sh contains JSON echo
+try:
+    wt_script = os.path.join(".claude", "scripts", "prepare-worktree.sh")
+    if os.path.isfile(wt_script):
+        with open(wt_script) as f:
+            script_content = f.read()
+        if not re.search(r'echo\s+[\'"]?\{', script_content):
+            warnings.append(
+                "HOOK PROTOCOL: prepare-worktree.sh missing JSON stdout — "
+                "WorktreeCreate requires echo '{}' before exit 0 (Claude Code v2.1.84+)"
+            )
+except Exception:
+    pass  # Non-critical
 
 if warnings:
     text = "## Instructions Validation Warning\n" + "\n".join(warnings)
