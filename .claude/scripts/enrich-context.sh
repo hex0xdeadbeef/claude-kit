@@ -89,56 +89,8 @@ try:
 except Exception:
     pass
 
-# 4. Phase-aware exploration loop detection
-# Thresholds vary by pipeline phase (from checkpoint) to reduce false positives
-# RESEARCH phase (planner): high reads expected → threshold 20
-# EVALUATE phase (coder 1.5): moderate reads → threshold 12
-# IMPLEMENT phase (coder 2): low reads expected → threshold 5
-# Default (no checkpoint / ad-hoc): original threshold 15
-try:
-    # Determine current phase from checkpoint for threshold selection
-    phase_name = ""
-    try:
-        cp_files = sorted(glob.glob(os.path.join(STATE_DIR, "*-checkpoint.yaml")))
-        if cp_files:
-            with open(cp_files[-1]) as cpf:
-                for cpline in cpf:
-                    cpline = cpline.strip()
-                    if cpline.startswith("phase_name:"):
-                        phase_name = cpline.partition(":")[2].strip().strip('"').strip("'").upper()
-                        break
-    except Exception:
-        pass
-
-    # Phase-aware thresholds (reads in last 20 calls with 0 writes)
-    THRESHOLDS = {
-        "RESEARCH": 20,     # planner researching — high reads normal
-        "EVALUATE": 12,     # coder evaluating plan — moderate reads
-        "IMPLEMENT": 5,     # coder implementing — should be writing, not reading
-        "PLAN REVIEW": 15,  # reviewer reading plan — moderate reads normal
-        "CODE REVIEW": 15,  # reviewer reading code — moderate reads normal
-    }
-    threshold = THRESHOLDS.get(phase_name, 15)
-
-    transcript = os.path.join(STATE_DIR, "session-transcript.jsonl")
-    if os.path.isfile(transcript):
-        with open(transcript) as f:
-            lines = f.readlines()
-        recent = lines[-20:] if len(lines) > 20 else lines
-        recent_reads = sum(1 for l in recent if any(t in l for t in ['"tool_name":"Read"', '"tool_name":"Grep"', '"tool_name":"Glob"']))
-        recent_writes = sum(1 for l in recent if any(t in l for t in ['"tool_name":"Write"', '"tool_name":"Edit"']))
-        if recent_reads > threshold and recent_writes == 0:
-            phase_label = phase_name if phase_name else "unknown phase"
-            parts.append(
-                f"Exploration signal: {recent_reads} reads, {recent_writes} writes in last 20 calls "
-                f"(phase: {phase_label}, threshold: {threshold}) — "
-                f"consider transitioning to action (see CLAUDE.md)"
-            )
-except Exception:
-    pass
-
-# 4b. Checkpoint-based exploration budget visualization
-# More reliable than transcript-based detection (section 4) — reads from checkpoint sub_phase data.
+# 4. Checkpoint-based exploration budget visualization
+# Reads from checkpoint sub_phase data to show exploration budget usage.
 # Budget limits from planner.md (research_budget) and coder.md (evaluate_budget).
 try:
     reads_str = data.get("file_reads_in_sub_phase", "") if checkpoints else ""
