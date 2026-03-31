@@ -51,11 +51,13 @@ This document analyzes the complete hook system powering the claude-kit Workflow
 | 20 | `check-references.sh` | PostToolUse (Write) | No | Validate ref: and arrow references |
 | 21 | `check-plan-drift.sh` | PostToolUse (Write\|Edit) | No | Detect file-level drift from plan |
 
-### 2.3 Standalone Utility
+### 2.3 Standalone Utilities
 
 | # | Script | Called By | Purpose |
 |---|--------|-----------|---------|
 | 22 | `sync-agent-memory.sh` | `save-review-checkpoint.sh` | Agent memory worktree-to-main sync |
+
+> **Note:** `sync-to-github.sh` also resides in `.claude/scripts/` but is a developer convenience utility (not a hook and not bound to any event in `settings.json`) — excluded from this analysis. Actual file count in `.claude/scripts/`: 17 (15 hooks + 2 utilities).
 
 ---
 
@@ -233,8 +235,8 @@ flowchart TB
 
 ### IMP-09: Silence WorktreeCreate hook stdout (2026-03-30)
 - **Root cause:** `prepare-worktree.sh` output `echo 'worktree prepared'` on stdout. Claude Code parses ALL WorktreeCreate hook stdout as worktree metadata. The text was captured as a path, causing `worktree prepared/` directories at project root.
-- **Fix:** Removed `echo` → silent `exit 0`. Enhanced path guard (reject spaces/braces). Final validation (defense-in-depth).
-- **Lesson:** WorktreeCreate hooks must output **nothing** to stdout. This is the single most important contract.
+- **Fix:** Removed `echo` → silent `exit 0`. Enhanced path guard (reject spaces/braces). Added final validation block with `os.path.isdir()` check (lines 161-166 of `prepare-worktree.sh`). Note: `save-review-checkpoint.sh` was NOT updated with this validation block — creates the full divergence documented in P4.
+- **Lesson:** WorktreeCreate hooks must output **nothing** to stdout. This is the single most important contract. The concrete failure examples (`{}`→path, `worktree prepared`→path) are documented in `prepare-worktree.sh:267-272` — preserve this comment when refactoring.
 
 ---
 
@@ -257,7 +259,7 @@ This is the **Stop hook** format. For PreToolUse hooks, the correct format is:
 - `block-dangerous-commands.sh:122-131` — uses correct `hookSpecificOutput` envelope
 - `pre-commit-build.sh` — uses correct `hookSpecificOutput` envelope
 
-**Impact:** Claude Code may ignore the block decision or process it incorrectly. The script also outputs `{"decision":"approve"}` (lines 25, 37, 65, 80) — PreToolUse allow should be no output (empty stdout).
+**Impact:** Claude Code may ignore the block decision or process it incorrectly. The script also outputs `{"decision":"approve"}` (lines 24, 36, 64, 80) — PreToolUse allow should be no output (empty stdout).
 
 **Related fix:** IMP-10
 
@@ -276,11 +278,9 @@ The Stop hook expects `{"decision":"block","reason":"..."}` for blocking, or not
 
 ---
 
-#### P3 — PostToolUse scripts output text (LOW)
+#### P3 — PostToolUse stderr output (NOTED, by design — not a problem)
 
-PostToolUse scripts (`auto-fmt-go.sh`, `yaml-lint.sh`, `check-references.sh`, `check-plan-drift.sh`) output informational text to stderr. This is correct behavior — PostToolUse informational output is expected on stderr, not stdout.
-
-**Impact:** None — this is by design.
+PostToolUse scripts (`auto-fmt-go.sh`, `yaml-lint.sh`, `check-references.sh`, `check-plan-drift.sh`) output informational text to stderr. This is correct behavior — PostToolUse informational output is expected on stderr, not stdout. No action needed.
 
 ---
 
@@ -289,14 +289,19 @@ PostToolUse scripts (`auto-fmt-go.sh`, `yaml-lint.sh`, `check-references.sh`, `c
 #### P4 — Worktree resolution duplicated with inconsistent guards (HIGH)
 
 **Evidence:** The 3-strategy worktree path resolution is duplicated:
-- `prepare-worktree.sh:57-136` — guard rejects `{`, `}`, non-absolute paths
-- `save-review-checkpoint.sh:136-202` — guard rejects `{}`, `{`, `}`, non-absolute paths but **missing space check** from IMP-09
 
-The guards diverged after IMP-09 enhanced `prepare-worktree.sh` with space rejection. `save-review-checkpoint.sh` was not updated.
+- `prepare-worktree.sh:57-136` — full guard with 3 checks
+- `save-review-checkpoint.sh:136-202` — stale guard missing 3 enhancements from IMP-09
 
-**Impact:** A contaminated worktree path with spaces could bypass the guard in `save-review-checkpoint.sh` and cause invalid memory sync.
+**Three divergences after IMP-09:**
 
-**Related fix:** IMP-11 (extract to shared utility), IMP-12 (sync guard)
+1. **Space check missing** — `prepare-worktree.sh` rejects paths containing spaces; `save-review-checkpoint.sh` does not
+2. **Brace pattern mismatch** — `prepare-worktree.sh` checks `"{" in wp or "}" in wp` (individual chars); `save-review-checkpoint.sh` uses `.strip() in ("{}", "{", "}")` (string equality after strip, less strict)
+3. **Final validation block absent** — `prepare-worktree.sh` has an `os.path.isdir()` final validation (lines 161-166); `save-review-checkpoint.sh` has no equivalent
+
+**Impact:** A contaminated worktree path with spaces or unexpected characters could bypass the guard in `save-review-checkpoint.sh` and cause invalid memory sync.
+
+**Related fix:** IMP-11 (extract to shared utility), IMP-12 (sync all 3 guards)
 
 ---
 
@@ -530,9 +535,9 @@ The script correctly skips worktree logic for plan-reviewer (via the `WORKTREE_A
 
 | Attribute | Detail |
 |-----------|--------|
-| **Problem** | P4 — `save-review-checkpoint.sh:144-148` guard is missing the space check added in IMP-09 |
+| **Problem** | P4 — `save-review-checkpoint.sh:144-148` guard is missing 3 enhancements from IMP-09 |
 | **Root cause** | IMP-09 only updated `prepare-worktree.sh` — forgot to update the duplicate code |
-| **Proposed fix** | Add space rejection to the guard: `or " " in str(worktree_path)` |
+| **Proposed fix** | Port all 3 changes from `prepare-worktree.sh`: (1) add space rejection `or " " in str(worktree_path)`, (2) align brace pattern to use `"{" in wp or "}" in wp`, (3) add `os.path.isdir()` final validation block |
 | **Impact** | Prevents memory sync with invalid paths. Quick fix while IMP-11 is planned. |
 | **Effort** | S — 1 line change |
 | **Priority** | HIGH — immediate vulnerability |
