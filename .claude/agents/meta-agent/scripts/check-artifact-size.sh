@@ -2,9 +2,11 @@
 # check-artifact-size.sh — PreToolUse hook (Write/Edit)
 # Deterministic SIZE_GATE: blocks writes exceeding critical thresholds.
 #
-# Hook contract:
+# Hook contract (PreToolUse — IMP-10):
 #   stdin: JSON {"tool_name":"Write","tool_input":{"file_path":"...","content":"..."}}
-#   stdout: JSON {"decision":"block","reason":"..."} or {"decision":"approve"}
+#   stdout (deny): JSON {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"..."}}
+#   stdout (allow): no output (empty stdout)
+#   stdout (warn): JSON {"additionalContext":"..."} — informational, does not block
 #   exit 0 always (non-zero = hook ignored by Claude Code)
 #
 # Thresholds (from blocking-gates.md#SIZE_GATE):
@@ -21,7 +23,6 @@ CONTENT=$(echo "$INPUT" | jq -r '.tool_input.content // empty')
 
 # Only check .claude/ artifact files
 if [[ ! "$FILE_PATH" =~ \.claude/ ]]; then
-  echo '{"decision":"approve"}'
   exit 0
 fi
 
@@ -33,7 +34,6 @@ else
   if [[ -f "$FILE_PATH" ]]; then
     LINE_COUNT=$(wc -l < "$FILE_PATH")
   else
-    echo '{"decision":"approve"}'
     exit 0
   fi
 fi
@@ -61,20 +61,35 @@ elif [[ "$FILE_PATH" =~ /agents/ ]]; then
   CRITICAL=1200
   WARNING=800
 else
-  echo '{"decision":"approve"}'
   exit 0
 fi
 
-# Block on critical
+# Block on critical — IMP-10: use PreToolUse hookSpecificOutput envelope (not Stop format)
 if (( LINE_COUNT > CRITICAL )); then
-  echo "{\"decision\":\"block\",\"reason\":\"SIZE_GATE: ${TYPE} artifact is ${LINE_COUNT} lines (critical threshold: ${CRITICAL}). Split via progressive_offloading before writing → deps/artifact-quality.md#progressive_offloading\"}"
+  DENY_REASON="SIZE_GATE: ${TYPE} artifact is ${LINE_COUNT} lines (critical threshold: ${CRITICAL}). Split via progressive_offloading before writing."
+  DENY_REASON="$DENY_REASON" python3 -c "
+import json, os
+output = {
+    'hookSpecificOutput': {
+        'hookEventName': 'PreToolUse',
+        'permissionDecision': 'deny',
+        'permissionDecisionReason': os.environ.get('DENY_REASON', 'Artifact too large')
+    }
+}
+print(json.dumps(output))
+"
   exit 0
 fi
 
-# Warn on warning threshold (approve but inform)
+# Warn on warning threshold (allow but inform via additionalContext)
 if (( LINE_COUNT > WARNING )); then
-  echo "{\"decision\":\"approve\",\"reason\":\"SIZE_GATE warning: ${TYPE} artifact is ${LINE_COUNT} lines (warning threshold: ${WARNING}). Consider splitting.\"}"
+  WARN_MSG="SIZE_GATE warning: ${TYPE} artifact is ${LINE_COUNT} lines (warning threshold: ${WARNING}). Consider splitting."
+  WARN_MSG="$WARN_MSG" python3 -c "
+import json, os
+print(json.dumps({'additionalContext': os.environ.get('WARN_MSG', '')}))
+"
   exit 0
 fi
 
-echo '{"decision":"approve"}'
+# Below thresholds — allow silently (no stdout for PreToolUse allow)
+exit 0
