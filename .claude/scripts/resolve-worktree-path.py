@@ -9,7 +9,7 @@ Exit: 0 always
 
 Resolution strategies (in order):
   1. Payload field extraction (worktree_path, worktreePath, path, worktree.path)
-  2. .git/worktrees/ scan — most recent by mtime
+  2. .git/worktrees/ scan — session-aware match (IMP-23), then most recent by mtime
   3. git worktree list --porcelain — last entry (most recently added)
 
 Guards (applied after strategy 1 and as final validation):
@@ -45,7 +45,7 @@ if worktree_path:
         worktree_path = None
         resolution = None
 
-# Strategy 2: Scan .git/worktrees/ for most recent worktree
+# Strategy 2: Scan .git/worktrees/ for matching worktree
 if not worktree_path:
     worktrees_dir = os.path.join(".git", "worktrees")
     if os.path.isdir(worktrees_dir):
@@ -55,18 +55,35 @@ if not worktree_path:
                 if os.path.isdir(os.path.join(worktrees_dir, d))
             ]
             if entries:
-                entries.sort(
-                    key=lambda d: os.path.getmtime(os.path.join(worktrees_dir, d)),
-                    reverse=True
-                )
-                gitdir_file = os.path.join(worktrees_dir, entries[0], "gitdir")
+                # IMP-23: session-aware matching for parallel workflows
+                session_id = data.get("session_id", "")
+                matched_entry = None
+                match_resolution = "fallback_gitdir"
+
+                if session_id and len(session_id) >= 8:
+                    prefix = session_id[:8]
+                    for entry in entries:
+                        if prefix in entry:
+                            matched_entry = entry
+                            match_resolution = "fallback_gitdir_session_match"
+                            break
+
+                if not matched_entry:
+                    # Fallback: most recent by mtime
+                    entries.sort(
+                        key=lambda d: os.path.getmtime(os.path.join(worktrees_dir, d)),
+                        reverse=True
+                    )
+                    matched_entry = entries[0]
+
+                gitdir_file = os.path.join(worktrees_dir, matched_entry, "gitdir")
                 if os.path.isfile(gitdir_file):
                     with open(gitdir_file) as f:
                         gitdir_content = f.read().strip()
                     candidate = gitdir_content.rsplit("/.git", 1)[0]
                     if os.path.isdir(candidate):
                         worktree_path = candidate
-                        resolution = "fallback_gitdir"
+                        resolution = match_resolution
         except Exception as e:
             print(f"{CALLER}: worktree fallback scan failed: {e}", file=sys.stderr)
 
