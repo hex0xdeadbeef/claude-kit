@@ -30,7 +30,14 @@ if [ "$UNCOMMITTED" -gt 0 ]; then
     PHASE_RAW="${PHASE_RAW:-0}"
     IS_COMPLETE=$(awk -v p="$PHASE_RAW" 'BEGIN { print (p+0 >= 5) ? "1" : "0" }')
     if [[ "$IS_COMPLETE" == "0" ]]; then
-      # Check 2: checkpoint mtime within last 4 hours (not stale from previous session)
+      # IMP-13: Complexity-aware staleness window (S/M: 4h, L: 8h, XL: 12h)
+      COMPLEXITY=$(grep 'complexity:' "$CHECKPOINT" 2>/dev/null | sed 's/.*complexity:[[:space:]]*//' | tr -d '"'"'" | tr '[:lower:]' '[:upper:]' || echo "")
+      case "$COMPLEXITY" in
+        XL) STALENESS_WINDOW=43200 ;;  # 12 hours
+        L)  STALENESS_WINDOW=28800 ;;  # 8 hours
+        *)  STALENESS_WINDOW=14400 ;;  # 4 hours (S/M/unknown)
+      esac
+      # Check 2: checkpoint mtime within staleness window (not stale from previous session)
       if [[ "$(uname)" == "Darwin" ]]; then
         MTIME=$(stat -f %m "$CHECKPOINT" 2>/dev/null || echo "0")
       else
@@ -38,7 +45,7 @@ if [ "$UNCOMMITTED" -gt 0 ]; then
       fi
       NOW=$(date +%s)
       AGE=$(( NOW - MTIME ))
-      if [[ "$AGE" -lt 14400 ]]; then  # 4 hours = 14400 seconds
+      if [[ "$AGE" -lt "$STALENESS_WINDOW" ]]; then
         IS_WORKFLOW="true"
       fi
     fi
