@@ -15,8 +15,9 @@
 #   Memory sync failure is NON_CRITICAL — logged but does not block.
 #
 # Verdict extraction (IMP-01, 2026-03-30):
-#   SubagentStop payload does NOT contain last_assistant_message.
-#   Fallback: read transcript_path JSONL → find last assistant entry → regex for VERDICT:.
+#   SubagentStop payload MAY contain last_assistant_message (added in v2.1.47).
+#   Transcript fallback provides more reliable extraction regardless.
+#   Strategy: try payload first → fallback to transcript_path JSONL → regex for VERDICT:.
 
 set -euo pipefail
 
@@ -141,11 +142,14 @@ worktree_path = (
 
 worktree_resolution = "payload" if worktree_path else None
 
-# Guard: reject non-path values from hook stdout contamination (e.g. "{}" from prepare-worktree.sh)
-if worktree_path and (not str(worktree_path).startswith("/") or str(worktree_path).strip() in ("{}", "{", "}")):
-    print(f"save-review-checkpoint: rejecting invalid worktree_path: {worktree_path!r}", file=sys.stderr)
-    worktree_path = None
-    worktree_resolution = None
+# IMP-12: Guard synced with prepare-worktree.sh (IMP-09) — reject non-absolute paths,
+# paths containing spaces, and JSON/stdout contamination characters.
+if worktree_path:
+    wp = str(worktree_path).strip()
+    if not wp.startswith("/") or " " in wp or "{" in wp or "}" in wp:
+        print(f"save-review-checkpoint: rejecting invalid worktree_path: {worktree_path!r}", file=sys.stderr)
+        worktree_path = None
+        worktree_resolution = None
 
 # Strategy 2: Fallback — scan .git/worktrees/ for most recent worktree
 if not worktree_path and agent_type in WORKTREE_AGENTS:
@@ -202,6 +206,16 @@ if not worktree_path and agent_type in WORKTREE_AGENTS:
         pass
 
 # --- End IMP-04 ---
+
+# IMP-12: Final validation — defense-in-depth against stdout contamination
+# Synced with prepare-worktree.sh (IMP-09). Catches paths that passed the initial
+# guard but were resolved by fallback strategies to invalid values.
+if worktree_path:
+    wp = str(worktree_path).strip()
+    if not wp.startswith("/") or " " in wp or "{" in wp or "}" in wp or not os.path.isdir(wp):
+        print(f"save-review-checkpoint: final validation failed for worktree_path: {worktree_path!r}", file=sys.stderr)
+        worktree_path = None
+        worktree_resolution = None
 
 # --- IMP-01/IMP-05: Sync agent memory via standalone script ---
 # Delegates to sync-agent-memory.sh (IMP-05: single-responsibility extraction).
