@@ -28,5 +28,5 @@ Updated manually after each IMP commit. Use `git log --grep="IMP-"` for commit h
 | IMP-21 | DONE | P1 | CLAUDE.md | Add WorktreeCreate to hooks enumeration | 7bb9ff8 |
 | IMP-22 | DONE | P2 | validate-instructions.sh | Smoke test for WorktreeCreate protocol | f71a294 |
 | IMP-23 | DONE | P2 | resolve-worktree-path.py | Session-aware worktree matching | 5c984ed |
-| IMP-24 | DONE | P3 | improvements-registry.md | Centralize IMP tracking (this file) | — |
-| IMP-25 | PENDING | P3 | settings.json + script | SubagentStart tracking for review agents | — |
+| IMP-24 | DONE | P3 | improvements-registry.md | Centralize IMP tracking (this file) | cd71564 |
+| IMP-25 | DONE | P3 | settings.json | SubagentStart tracking for review agents | 0e7a45d |
