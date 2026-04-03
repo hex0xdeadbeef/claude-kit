@@ -2,6 +2,7 @@
 name: workflow
 description: "Full development cycle: task-analysis → [/designer (L/XL)] → planner → plan-review (agent) → coder → code-review (agent)"
 model: opus
+effort: high
 ---
 
 role:
@@ -355,7 +356,7 @@ skill_references:
 ## HOOKS
 hooks:
   note: |
-    Configured in .claude/settings.json (authoritative source — 11 event types, 17 scripts).
+    Configured in .claude/settings.json (authoritative source — 12 event types, 18 scripts + 2 prompt hooks).
     This section lists only workflow-specific hooks. For complete list see settings.json.
     Deterministic — fires automatically, no need to remember.
     Conditional `if` (v2.1.85): PreToolUse/PostToolUse hooks use `if` field with permission rule
@@ -397,8 +398,9 @@ hooks:
   also_active_during_workflow:
     - "InstructionsLoaded → validate-instructions.sh (rules validation)"
     - "UserPromptSubmit → enrich-context.sh (context enrichment + exploration budget visualization)"
-    - "PreToolUse → protect-files.sh, check-artifact-size.sh [if: Write(.claude/**)], block-dangerous-commands.sh, pre-commit-build.sh [if: Bash(git commit*)]"
+    - "PreToolUse → protect-files.sh, check-artifact-size.sh [if: Write(.claude/**)], import-matrix prompt hook [if: internal/**/*.go], block-dangerous-commands.sh, pre-commit-build.sh [if: Bash(git commit*)]"
     - "PostToolUse → auto-fmt-go.sh [if: **/*.go], yaml-lint.sh [if: Edit(.claude/**)], check-references.sh [if: Write(.claude/**)], check-plan-drift.sh [if: .claude/**]"
     - "SessionEnd → session-analytics.sh"
     - "StopFailure → log-stop-failure.sh (API error logging)"
     - "Notification → notify-user.sh"
+    - "ConfigChange → audit-config-change.sh (audit log + blocks project_settings changes during active workflow)"

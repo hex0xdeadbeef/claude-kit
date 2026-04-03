@@ -96,6 +96,23 @@
         ]
       },
       {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "You are a Go architecture import matrix enforcer.\n\nRULES (strict, zero exceptions):\n1. handler layer (internal/handler/) may import: service, controller, models. NEVER: repository\n2. service layer (internal/service/) may import: repository, models. NEVER: handler\n3. repository layer (internal/repository/) may import: models. NEVER: handler, service\n4. models layer (internal/models/) stdlib only. NEVER: any internal/ package\n\nAnalyze this tool call for import violations:\n\n$ARGUMENTS\n\nSTEPS:\n1. Extract file_path from tool_input to determine the layer (handler/service/repository/models)\n2. If file is not in one of the 4 layers, respond {\"permissionDecision\": \"allow\"}\n3. If file is a test file (*_test.go), respond {\"permissionDecision\": \"allow\"}\n4. Find import statements in tool_input.content (Write) or tool_input.new_string (Edit)\n5. If no import statements found, respond {\"permissionDecision\": \"allow\"}\n6. Check each internal/ import against the rules for that layer\n7. If violation found, respond {\"permissionDecision\": \"deny\", \"permissionDecisionReason\": \"Import violation: [layer] must not import [forbidden package]\"}\n8. If no violations, respond {\"permissionDecision\": \"allow\"}\n\nRespond with ONLY the JSON object, nothing else.",
+            "if": "Write(internal/**/*.go)",
+            "timeout": 30
+          },
+          {
+            "type": "prompt",
+            "prompt": "You are a Go architecture import matrix enforcer.\n\nRULES (strict, zero exceptions):\n1. handler layer (internal/handler/) may import: service, controller, models. NEVER: repository\n2. service layer (internal/service/) may import: repository, models. NEVER: handler\n3. repository layer (internal/repository/) may import: models. NEVER: handler, service\n4. models layer (internal/models/) stdlib only. NEVER: any internal/ package\n\nAnalyze this tool call for import violations:\n\n$ARGUMENTS\n\nSTEPS:\n1. Extract file_path from tool_input to determine the layer (handler/service/repository/models)\n2. If file is not in one of the 4 layers, respond {\"permissionDecision\": \"allow\"}\n3. If file is a test file (*_test.go), respond {\"permissionDecision\": \"allow\"}\n4. Find import statements in tool_input.content (Write) or tool_input.new_string (Edit)\n5. If no import statements found, respond {\"permissionDecision\": \"allow\"}\n6. Check each internal/ import against the rules for that layer\n7. If violation found, respond {\"permissionDecision\": \"deny\", \"permissionDecisionReason\": \"Import violation: [layer] must not import [forbidden package]\"}\n8. If no violations, respond {\"permissionDecision\": \"allow\"}\n\nRespond with ONLY the JSON object, nothing else.",
+            "if": "Edit(internal/**/*.go)",
+            "timeout": 30
+          }
+        ]
+      },
+      {
         "matcher": "Write",
         "hooks": [
           {
@@ -296,6 +313,17 @@
           {
             "type": "command",
             "command": ".claude/scripts/notify-user.sh"
+          }
+        ]
+      }
+    ],
+    "ConfigChange": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/scripts/audit-config-change.sh"
           }
         ]
       }
