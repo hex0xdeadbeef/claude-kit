@@ -78,6 +78,7 @@ def extract_top_level(content, key):
                 return stripped[len(key) + 1:].strip().strip('"').strip("'")
     return None
 
+
 def aggregate_pipeline_metrics(metrics_file, complexity, agent_type):
     """Read pipeline-metrics.jsonl and return a brief history summary, or None.
 
