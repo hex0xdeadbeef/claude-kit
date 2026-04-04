@@ -116,20 +116,24 @@ if verdict == "UNKNOWN" and agent_type in REVIEW_AGENTS and agent_id:
     block_marker = os.path.join(STATE_DIR, f".verdict-block-{agent_id}")
     if not os.path.exists(block_marker):
         # First attempt — block stop, give agent one more chance
+        # Guard: only block if marker write succeeds (prevents infinite loop)
+        marker_written = False
         try:
             with open(block_marker, "w") as f:
                 f.write(timestamp)
+            marker_written = True
         except Exception:
-            pass
-        print(json.dumps({
-            "decision": "block",
-            "reason": (
-                "No verdict found in output. You MUST output your review verdict now. "
-                "Output VERDICT: {APPROVED|NEEDS_CHANGES|CHANGES_REQUESTED|REJECTED} "
-                "followed by a brief handoff section. Skip memory save."
-            )
-        }))
-        sys.exit(0)
+            print(f"save-review-checkpoint: block marker write failed, skipping block", file=sys.stderr)
+        if marker_written:
+            print(json.dumps({
+                "decision": "block",
+                "reason": (
+                    "No verdict found in output. You MUST output your review verdict now. "
+                    "Output VERDICT: {APPROVED|NEEDS_CHANGES|CHANGES_REQUESTED|REJECTED} "
+                    "followed by a brief handoff section. Skip memory save."
+                )
+            }))
+            sys.exit(0)
     else:
         # Second attempt — allow stop, clean up marker
         try:
