@@ -96,6 +96,7 @@ role:
      - Deviations from plan: {list from handoff.deviations_from_plan}
      - Mitigated risks: {list from handoff.risks_mitigated}
      ```
+   - If [Design context] provided (L/XL tasks): read spec file at `.claude/prompts/{feature}-spec.md`, note acceptance criteria for verification during REVIEW
    - Rule: Use narrative to focus review on risky areas, do NOT skip standard checks
    - Determine if Sequential Thinking needed: >100 lines or >5 files → yes
    - Output:

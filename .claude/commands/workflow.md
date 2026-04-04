@@ -282,6 +282,7 @@ delegation_protocol:
       - "Verify status: lint PASS/FAIL, test PASS/FAIL (from coder VERIFY phase)"
       - "Spec check result: status, coverage, issues (from coder Phase 3.5)"
       - "Prior iteration issues: checkpoint.issues_history[] (if iteration > 1)"
+      - "Design spec: path + acceptance criteria count (if complexity L/XL and spec exists)"
     delegation_prompt_template: |
       Review code changes on the current branch.
 
@@ -292,6 +293,13 @@ delegation_protocol:
       - Mitigated risks: {list from handoff.risks_mitigated}
       - Verify: lint {PASS/FAIL}, test {PASS/FAIL} (command: {verify_command})
       - Spec check: {PASS|PARTIAL|FAIL} (coverage: {pct}%, issues: {N})
+
+      {if complexity in [L, XL] and spec file exists}
+      [Design context]:
+      - Spec: .claude/prompts/{feature}-spec.md (read for acceptance criteria and design decisions)
+      - Acceptance criteria: {N from spec}
+      - Note: verify implementation covers spec requirements, especially acceptance criteria
+      {/if}
 
       {if iteration > 1}
       [Prior review iterations]:
