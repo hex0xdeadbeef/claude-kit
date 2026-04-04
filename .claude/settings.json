@@ -227,11 +227,28 @@
         ]
       },
       {
-        "matcher": "plan-reviewer|code-reviewer",
+        "matcher": "plan-reviewer",
         "hooks": [
           {
             "type": "command",
             "command": ".claude/scripts/track-task-lifecycle.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/scripts/inject-review-context.sh plan-reviewer"
+          }
+        ]
+      },
+      {
+        "matcher": "code-reviewer",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/scripts/track-task-lifecycle.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/scripts/inject-review-context.sh code-reviewer"
           }
         ]
       }

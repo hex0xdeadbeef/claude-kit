@@ -423,6 +423,13 @@ hooks:
       behavior: "Logs code-researcher invocation to .claude/workflow-state/task-events.jsonl for pipeline metrics"
       blocking: false
 
+    - event: SubagentStart
+      script: ".claude/scripts/inject-review-context.sh <agent-type>"
+      matcher: "plan-reviewer (arg: plan-reviewer), code-reviewer (arg: code-reviewer)"
+      behavior: "Injects workflow context (feature, complexity, iteration, prior issues, plan/spec paths) as additionalContext for review agents"
+      blocking: false
+      note: "Split into two separate matcher entries in settings.json to pass agent type as $1"
+
     - event: SubagentStop
       script: ".claude/scripts/save-review-checkpoint.sh"
       matcher: "plan-reviewer|code-reviewer"
