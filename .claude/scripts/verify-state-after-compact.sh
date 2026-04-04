@@ -6,8 +6,9 @@
 # Checks:
 #   1. Checkpoint file exists and is readable
 #   2. review-completions.jsonl is valid JSONL (each line parses as JSON)
-#   3. Re-injects key state fields (phase, iteration, feature) as additionalContext
-#      so the model has them even if PreCompact additionalContext was truncated
+#   3. Re-injects key state fields (phase, iteration, feature, handoff, issues history,
+#      implementation progress) as additionalContext so the model has them even if
+#      PreCompact additionalContext was truncated
 #
 # Output: JSON with additionalContext containing state verification result
 
@@ -25,6 +26,43 @@ state_dir = ".claude/workflow-state"
 warnings = []
 state_summary = []
 
+
+def extract_yaml_section(text, section_name):
+    """Extract lines belonging to a top-level YAML section (indent-based)."""
+    lines = text.splitlines()
+    in_section = False
+    base_indent = -1
+    result = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            if in_section:
+                result.append("")
+            continue
+        indent = len(line) - len(line.lstrip())
+        if not in_section:
+            if stripped.startswith(section_name + ":"):
+                in_section = True
+                base_indent = indent
+                val = stripped[len(section_name) + 1:].strip()
+                if val:
+                    result.append(val)
+            continue
+        if indent <= base_indent:
+            break
+        result.append(stripped)
+    return result if result else None
+
+
+def extract_scalar(lines, key):
+    """Extract a scalar value from parsed YAML section lines."""
+    for line in lines:
+        stripped = line.strip().lstrip("- ")
+        if stripped.startswith(key + ":"):
+            return stripped[len(key) + 1:].strip().strip('"').strip("'")
+    return None
+
+
 # 1. Verify checkpoint
 checkpoints = sorted(glob.glob(os.path.join(state_dir, "*-checkpoint.yaml")))
 if checkpoints:
@@ -35,7 +73,7 @@ if checkpoints:
         if not content.strip():
             warnings.append(f"Checkpoint file empty: {latest}")
         else:
-            # Extract key fields for re-injection
+            # Extract key scalar fields
             fields = {}
             for line in content.splitlines():
                 stripped = line.strip()
@@ -54,6 +92,54 @@ if checkpoints:
                                  f"complexity={fields.get('complexity', '?')}, "
                                  f"plan_review_iter={fields.get('plan_review_iteration', '0')}, "
                                  f"code_review_iter={fields.get('code_review_iteration', '0')}")
+
+            # Extract handoff context
+            handoff = extract_yaml_section(content, "handoff_payload")
+            if handoff:
+                h_to = extract_scalar(handoff, "to")
+                h_artifact = extract_scalar(handoff, "artifact")
+                h_verdict = extract_scalar(handoff, "verdict")
+                if any([h_to, h_artifact, h_verdict]):
+                    state_summary.append(f"  handoff: to={h_to or '?'}, "
+                                         f"artifact={h_artifact or '?'}, "
+                                         f"verdict={h_verdict or '?'}")
+
+            # Extract issues history (count iterations and last verdict)
+            issues = extract_yaml_section(content, "issues_history")
+            if issues:
+                iter_entries = []
+                current = {}
+                for line in issues:
+                    stripped = line.strip().lstrip("- ")
+                    if stripped.startswith("phase:"):
+                        if current:
+                            iter_entries.append(current)
+                        current = {"phase": stripped.split(":")[1].strip()}
+                    elif ":" in stripped and current:
+                        k, _, v = stripped.partition(":")
+                        k = k.strip()
+                        v = v.strip().strip('"').strip("'")
+                        if k in ("iteration", "verdict"):
+                            current[k] = v
+                if current:
+                    iter_entries.append(current)
+                for entry in iter_entries:
+                    state_summary.append(
+                        f"  history: phase {entry.get('phase', '?')} "
+                        f"iter {entry.get('iteration', '?')} -> {entry.get('verdict', '?')}")
+
+            # Extract implementation progress
+            progress = extract_yaml_section(content, "implementation_progress")
+            if progress:
+                p_completed = extract_scalar(progress, "parts_completed")
+                p_total = extract_scalar(progress, "parts_total")
+                p_current = extract_scalar(progress, "current_part")
+                p_sub = extract_scalar(progress, "sub_phase")
+                if any([p_completed, p_total, p_sub]):
+                    state_summary.append(
+                        f"  progress: parts {p_completed or '?'}/{p_total or '?'}, "
+                        f"current={p_current or '?'}, sub_phase={p_sub or '?'}")
+
     except Exception as e:
         warnings.append(f"Checkpoint read error: {latest} — {e}")
 else:
