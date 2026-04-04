@@ -44,7 +44,14 @@ checkpoint_protocol:
     issues_history:
       - phase: 2
         iteration: 1
+        verdict: "NEEDS_CHANGES"
         issues: ["PR-001: MAJOR — missing tests section"]
+        resolved: ["PR-001: added tests section"]
+      - phase: 2
+        iteration: 2
+        verdict: "APPROVED"
+        issues: []
+        resolved: []
 
   session_type:
     note: "Session classification — used by exploration loop detection to exempt read-heavy sessions"

@@ -111,10 +111,12 @@ tracking_protocol:
   increment_rules:
     - trigger: "plan-review verdict = NEEDS_CHANGES"
       action: "plan_review_counter += 1"
-      then: "Guard check → write checkpoint → re-run /planner"
+      then: "Append issues_history entry (phase=2, verdict, issues, resolved=[]) → Guard check → write checkpoint → re-run /planner"
+      resolved_population: "pre_delegation step (before next plan-reviewer launch) populates resolved[] in previous entry from planner handoff"
     - trigger: "code-review verdict = CHANGES_REQUESTED"
       action: "code_review_counter += 1"
-      then: "Guard check → write checkpoint → re-run /coder"
+      then: "Append issues_history entry (phase=4, verdict, issues, resolved=[]) → Guard check → write checkpoint → re-run /coder"
+      resolved_population: "pre_delegation step (before next code-reviewer launch) populates resolved[] in previous entry from coder handoff"
 
   guard_check:
     when: "BEFORE launching re-loop phase (planner or coder)"

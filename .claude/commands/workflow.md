@@ -233,6 +233,7 @@ delegation_protocol:
       - "Planner handoff narrative (SEE: handoff_protocol)"
       - "Complexity: S/M/L/XL"
       - "Iteration: N/3"
+      - "Prior iteration issues: checkpoint.issues_history[] (if iteration > 1)"
     delegation_prompt_template: |
       Review the implementation plan at .claude/prompts/{feature}.md
 
@@ -242,14 +243,31 @@ delegation_protocol:
       - Known risks: {list from handoff.known_risks}
       - Recommendations: focus on {handoff.areas_needing_attention}
 
+      {if iteration > 1}
+      [Prior review iterations]:
+      {for each entry in checkpoint.issues_history where phase == 2}
+      - Iteration {entry.iteration}/3: {entry.verdict}
+        Issues: {entry.issues as comma-separated list}
+        {if entry.resolved is not empty}Addressed: {entry.resolved as comma-separated list}{/if}
+      {/for}
+      Focus: verify prior issues were addressed, check for regressions
+      {/if}
+
       Iteration: {N}/3
     returns: "Verdict (APPROVED/NEEDS_CHANGES/REJECTED) + issues + handoff for coder"
+    pre_delegation: |
+      Before delegating to plan-reviewer (iteration 2+ only):
+      1. If checkpoint.issues_history has a prior entry for phase 2 with resolved == []:
+         - Populate resolved[] from planner handoff: summarize what planner changed
+           (e.g., "PR-001: added tests section per review feedback")
+         - Write updated checkpoint before delegation
     post_delegation: |
       After receiving plan-reviewer output:
       1. Validate output (SEE output_validation)
       2. Extract verdict from VERDICT: header (first line)
-      3. Write checkpoint: phase_completed=2, verdict={extracted_verdict}
-      4. If verdict is INCOMPLETE → follow output_validation.on_incomplete_output
+      3. Append to checkpoint.issues_history: {phase: 2, iteration: N, verdict: {verdict}, issues: [extracted issues], resolved: []}
+      4. Write checkpoint: phase_completed=2, verdict={extracted_verdict}
+      5. If verdict is INCOMPLETE → follow output_validation.on_incomplete_output
 
   code_review_delegation:
     agent: "code-reviewer"
@@ -263,6 +281,7 @@ delegation_protocol:
       - "Iteration: N/3"
       - "Verify status: lint PASS/FAIL, test PASS/FAIL (from coder VERIFY phase)"
       - "Spec check result: status, coverage, issues (from coder Phase 3.5)"
+      - "Prior iteration issues: checkpoint.issues_history[] (if iteration > 1)"
     delegation_prompt_template: |
       Review code changes on the current branch.
 
@@ -274,14 +293,31 @@ delegation_protocol:
       - Verify: lint {PASS/FAIL}, test {PASS/FAIL} (command: {verify_command})
       - Spec check: {PASS|PARTIAL|FAIL} (coverage: {pct}%, issues: {N})
 
+      {if iteration > 1}
+      [Prior review iterations]:
+      {for each entry in checkpoint.issues_history where phase == 4}
+      - Iteration {entry.iteration}/3: {entry.verdict}
+        Issues: {entry.issues as comma-separated list}
+        {if entry.resolved is not empty}Addressed: {entry.resolved as comma-separated list}{/if}
+      {/for}
+      Focus: verify prior issues were addressed, check for regressions
+      {/if}
+
       Iteration: {N}/3
     returns: "Verdict (APPROVED/APPROVED_WITH_COMMENTS/CHANGES_REQUESTED) + issues + handoff for completion"
+    pre_delegation: |
+      Before delegating to code-reviewer (iteration 2+ only):
+      1. If checkpoint.issues_history has a prior entry for phase 4 with resolved == []:
+         - Populate resolved[] from coder handoff: summarize what coder changed
+           (e.g., "CR-001: refactored error wrapping in handler per review feedback")
+         - Write updated checkpoint before delegation
     post_delegation: |
       After receiving code-reviewer output:
       1. Validate output (SEE output_validation)
       2. Extract verdict from VERDICT: header (first line)
-      3. Write checkpoint: phase_completed=4, verdict={extracted_verdict}
-      4. If verdict is INCOMPLETE → follow output_validation.on_incomplete_output
+      3. Append to checkpoint.issues_history: {phase: 4, iteration: N, verdict: {verdict}, issues: [extracted issues], resolved: []}
+      4. Write checkpoint: phase_completed=4, verdict={extracted_verdict}
+      5. If verdict is INCOMPLETE → follow output_validation.on_incomplete_output
 
   fallback: "If agent delegation unavailable → fallback: re-read diff/plan in parent context (degraded mode, loss of isolation)"
 
