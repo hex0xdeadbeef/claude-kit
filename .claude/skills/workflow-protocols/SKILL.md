@@ -12,6 +12,7 @@ disable-model-invocation: true
 |----------|-------------|---------|
 | Handoff | BEFORE forming handoff between phases | 4 pipeline contracts + 1 tool contract (code-researcher) + narrative casting |
 | Checkpoint | AFTER completing each phase | Format (12 YAML fields), recovery (5 steps), state persistence |
+| State Layer | On-demand (debugging state issues, Phase 5 cleanup) | File contracts, lifecycle rules, cleanup protocol for .claude/workflow-state/ |
 | Re-routing | On complexity mismatch signal | Downgrade/upgrade route + tracking + learning |
 | Pipeline Metrics | At completion phase only | Format (12 fields), storage (JSONL file), analysis, anomaly detection |
 | Agent Memory | Agent startup + completion | Shared memory behavior for all `memory: project` agents |
@@ -81,6 +82,7 @@ For all troubleshooting cases, see [Examples & Troubleshooting](examples-trouble
 - Forming handoff → read handoff contract (see [Handoff Protocol](handoff-protocol.md))
 - plan-review or coder signals mismatch → re-route (see [Re-routing](re-routing.md))
 - All phases done → collect metrics (see [Pipeline Metrics](pipeline-metrics.md))
+- Phase 5 cleanup → read cleanup protocol (see [State Layer](state-layer.md))
 - Multiple independent tasks identified (L/XL planner research, or independent failures) → read [Parallel Dispatch](parallel-dispatch.md)
 - Problem encountered → see [Examples & Troubleshooting](examples-troubleshooting.md)
 
@@ -93,6 +95,7 @@ These files define fundamental workflow behavior and are loaded at pipeline star
 For detailed protocol specifications, read the supporting files in this skill directory:
 - [Handoff Protocol](handoff-protocol.md) — 4 contracts + narrative casting template
 - [Checkpoint Protocol](checkpoint-protocol.md) — format, recovery, example
+- [State Layer](state-layer.md) — file contracts, lifecycle categories, cleanup protocol for .claude/workflow-state/
 - [Re-routing](re-routing.md) — 3 triggers + tracking fields + learning
 - [Pipeline Metrics](pipeline-metrics.md) — format, storage, analysis, anomaly detection
 - [Examples & Troubleshooting](examples-troubleshooting.md) — execution examples, common mistakes, troubleshooting

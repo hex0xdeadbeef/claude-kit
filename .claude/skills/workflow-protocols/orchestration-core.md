@@ -89,6 +89,11 @@ flowchart LR
    c. If code-researcher not invoked → set all code_researcher_metrics to 0
 3. CronDelete — remove auto-save cron job (if active, L/XL tasks). Read cron_id from checkpoint, call CronDelete. If CronDelete unavailable → WARN, job will expire with session.
 4. Write final checkpoint: `phase_completed: 5, phase_name: "completion"`
+5. Clean up session-specific state files (SEE state-layer.md cleanup_protocol):
+   - Delete: review-completions.jsonl, task-events.jsonl, worktree-events-debug.jsonl, hook-log.txt
+   - Delete LAST: {feature}-checkpoint.yaml (steps 1-4 may still reference it)
+   - Preserve: pipeline-metrics.jsonl, session-analytics.jsonl, config-changes.jsonl
+   - Failure: NON_CRITICAL — warn but do not block commit
 
 **Note:** Completion is orchestrator-owned (not delegated to agent or sub-command).
 
