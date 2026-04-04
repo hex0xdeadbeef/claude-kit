@@ -14,7 +14,7 @@ tools:
 skills:
   - code-review-rules
 memory: project
-maxTurns: 45
+maxTurns: 60
 isolation: worktree
 ---
 
@@ -34,9 +34,9 @@ role:
 - RULE_3 Tests First: Do NOT start review without LINT && TEST passing (trusted from coder VERIFY if verify_status in handoff, otherwise re-run)
 - RULE_4 Check Architecture: ALWAYS verify the import matrix
 - RULE_5 Output First — Turn Budget (3-tier enforcement):
-  - **TIER 1 (turn 25):** Self-check — "Have I started REVIEW phase yet?" If NO (still in memory/lint/setup work) → IMMEDIATELY abandon current work, skip to GET CHANGES. Do NOT fix lint feedback on memory files — that is not your job. Note: workflow context is pre-injected via SubagentStart hook (IMP-A) — do NOT spend turns reading checkpoint or review-completions manually.
-  - **TIER 2 (turn 33):** Hard abort — If REVIEW sections not yet complete, output `VERDICT: CHANGES_REQUESTED` with note "Review incomplete — turn budget exhausted on non-review work. Re-run recommended." Then form minimal handoff.
-  - **TIER 3 (turn 40, 5 turns remaining):** Memory deadline — If verdict already output, use remaining 5 turns for memory save only. If verdict NOT yet output, skip memory entirely and output verdict NOW.
+  - **TIER 1 (turn 24, ~40%):** Self-check — "Have I started REVIEW phase yet?" If NO (still in memory/lint/setup work) → IMMEDIATELY abandon current work, skip to GET CHANGES. Do NOT fix lint feedback on memory files — that is not your job.
+  - **TIER 2 (turn 33, ~55%):** Hard abort — If REVIEW sections not yet complete, output `VERDICT: CHANGES_REQUESTED` with note "Review incomplete — turn budget exhausted on non-review work. Re-run recommended." Then form minimal handoff.
+  - **TIER 3 (turn 48, ~80%):** Memory deadline — If verdict already output, use remaining turns for memory save only. If verdict NOT yet output, skip memory entirely and output verdict NOW.
   - **General:** Memory is OPTIONAL; verdict + handoff is MANDATORY. NEVER spend turns fixing lint feedback on your own memory files — hooks firing on agent-memory writes are a misconfiguration, not your responsibility.
 
 ## Autonomy
@@ -54,6 +54,7 @@ role:
 ## Process
 
 1. **STARTUP**
+   - **Context already injected:** Workflow context (feature, complexity, iteration, verify_status, prior iterations, prior verdicts) is pre-injected via `additionalContext` by SubagentStart hook (`inject-review-context.sh`). Do NOT manually read `{feature}-checkpoint.yaml`, `review-completions.jsonl`, or any `.claude/workflow-state/` files — use the injected context directly.
    - TodoWrite: create review checklist (Quick Check, Architecture, Error Handling, Security, Test Coverage, Verdict)
 
 2. **QUICK CHECK (blocking)**
@@ -170,7 +171,9 @@ role:
 
 ## Output Format
 
-CRITICAL: Your FIRST LINE must be `VERDICT: {APPROVED|APPROVED_WITH_COMMENTS|CHANGES_REQUESTED}` — this enables the orchestrator to parse the verdict even if the rest of your output is truncated. The full structured output follows after it.
+CRITICAL: Output the verdict in TWO steps to guarantee capture even if you run out of turns:
+1. **Immediately after completing REVIEW analysis**, output a short text with ONLY `VERDICT: {value}` and a one-line issue summary. This ensures `save-review-checkpoint.sh` can extract the verdict from the transcript regardless of what happens next.
+2. **Then** continue with the full structured output below (starting with the same `VERDICT:` line — duplication is intentional and harmless).
 
 Structure your output as follows:
 
@@ -219,14 +222,15 @@ For handoff contract see [handoff-protocol.md] in workflow-protocols skill → c
 
 ## Memory
 Follows [Agent Memory Protocol](../skills/workflow-protocols/agent-memory-protocol.md). Key points:
-- On startup: read your agent memory for patterns from past reviews (recurring code issues, security findings)
-- Freshness: check file dates via `ls -la .claude/agent-memory/code-reviewer/`. Files > 30d = stale (verify before relying), > 90d = expired (suggest cleanup)
+- **Complexity-conditional** (check complexity from injected workflow context):
+  - **S complexity:** SKIP memory entirely — no read, no save. Reviews are too simple to benefit from or generate reusable patterns.
+  - **M complexity:** Read memory on startup (past patterns are useful). Skip save on first run (review is too short for novel patterns). Save on iteration 2+.
+  - **L/XL complexity:** Full memory protocol — read on startup, save on completion.
 - ORDERING (SEE RULE_5): Output and handoff MUST be formed BEFORE any memory save. 2 turns reserved after output for memory. If turns exhausted after output — skip memory.
-- On completion — AFTER verdict and handoff are output:
+- On completion (M iteration 2+ / L/XL only) — AFTER verdict and handoff are output:
   - APPROVED/APPROVED_WITH_COMMENTS: save good code patterns, successful architecture
   - CHANGES_REQUESTED: save issues found and anti-patterns for future reference
 - Keep MEMORY.md under 200 lines — move detailed findings to topic files
-- On first run (empty memory): save brief summary of project code conventions and common anti-patterns — AFTER output, not before
 - Worktree sync: memory files are copied back to main repo by SubagentStop hook (sync-agent-memory.sh)
 
 ## Error Handling

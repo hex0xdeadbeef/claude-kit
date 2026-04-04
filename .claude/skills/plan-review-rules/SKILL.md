@@ -78,9 +78,9 @@ For more examples, see [Troubleshooting](troubleshooting.md) and [Architecture C
 
 For all troubleshooting cases, see [Troubleshooting](troubleshooting.md).
 
-## References
-For detailed checks, read the supporting files in this skill directory:
-- [Architecture Checks](architecture-checks.md) — import matrix, domain purity, layer violations, security, design patterns, concurrency
-- [Required Sections](required-sections.md) — plan structure validation, section-by-section checks
-- [Checklist](checklist.md) — self-verification at each review phase
-- [Troubleshooting](troubleshooting.md) — common review issues and fixes
+## References (ON-DEMAND — do NOT read eagerly)
+Do NOT read supporting files upfront. This SKILL.md contains all essential rules inline. Load files only when the specific trigger condition is met:
+- [Architecture Checks](architecture-checks.md) — **Read when:** plan has 4+ Parts or 3+ layers AND you need detailed import matrix / domain purity rules beyond what's in the agent artifact.
+- [Required Sections](required-sections.md) — **Read when:** plan is missing sections and you need to verify which are truly required vs optional.
+- [Checklist](checklist.md) — **Read when:** self-verifying before outputting verdict (optional, only if uncertain about coverage).
+- [Troubleshooting](troubleshooting.md) — **Read when:** encountering an unexpected issue during review. Do NOT read preemptively.

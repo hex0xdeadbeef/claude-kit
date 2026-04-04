@@ -344,10 +344,10 @@ delegation_protocol:
     on_incomplete_output:
       step_1: "Check .claude/workflow-state/review-completions.jsonl — save-review-checkpoint.sh extracts verdict via regex on SubagentStop. If verdict found → use it, proceed with minimal handoff (verdict only, no detailed issues)."
       step_2: "If verdict found in review-completions.jsonl → extract it, proceed normally with minimal handoff"
-      step_3: "If no verdict in review-completions.jsonl → re-launch code-reviewer agent with minimal prompt: 'The previous code review did not return a verdict. Check .claude/workflow-state/review-completions.jsonl for prior run context. Run git diff to see changes. Output ONLY: VERDICT: {verdict} followed by brief handoff. Do NOT save memory. Do NOT fix lint issues.'"
-      step_4: "If re-launch also fails or returns no verdict → WARN user, show what information is available (review-completions.jsonl, agent output summary), ask for manual verdict decision"
+      step_3: "If no verdict in review-completions.jsonl → launch verdict-recovery agent (NOT full code-reviewer). verdict-recovery is a lightweight agent (maxTurns: 10, haiku, no memory, no skills, no TodoWrite) that reads the diff and outputs ONLY a verdict + brief handoff. See .claude/agents/verdict-recovery.md."
+      step_4: "If verdict-recovery also fails or returns no verdict → WARN user, show what information is available (review-completions.jsonl, agent output summary), ask for manual verdict decision"
       max_retries: 1
-      note: "step_1 leverages save-review-checkpoint.sh which already runs on SubagentStop and extracts verdict via regex — no SendMessage needed. step_3 is a fresh agent launch, always available regardless of deferred tool state."
+      note: "step_1 leverages save-review-checkpoint.sh which already runs on SubagentStop and extracts verdict via regex — no SendMessage needed. step_3 uses verdict-recovery agent instead of re-launching full code-reviewer — completes in ~30 seconds vs ~5 minutes, higher success rate due to focused scope (no memory/skills/checklist overhead)."
 
     common_causes:
       - "Agent exhausted maxTurns on memory operations (SEE RULE_5 in agent artifacts)"

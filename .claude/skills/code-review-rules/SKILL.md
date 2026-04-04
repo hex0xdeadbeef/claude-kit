@@ -88,9 +88,9 @@ For more examples (incl. grep search patterns), see [Examples](examples.md).
 
 For all troubleshooting cases, see [Troubleshooting](troubleshooting.md).
 
-## References
-For detailed checks, read the supporting files in this skill directory:
-- [Examples](examples.md) — bad/good code patterns, grep search patterns
-- [Security Checklist](security-checklist.md) — OWASP checks (complexity M+, SKIP for S)
-- [Checklist](checklist.md) — self-verification at each review phase
-- [Troubleshooting](troubleshooting.md) — common review issues, mistakes, and fixes
+## References (ON-DEMAND — do NOT read eagerly)
+Do NOT read supporting files upfront. This SKILL.md contains all essential rules inline. Load files only when the specific trigger condition is met:
+- [Examples](examples.md) — **Read when:** running grep search patterns during REVIEW step 3. Contains bad/good code patterns and automated grep commands.
+- [Security Checklist](security-checklist.md) — **Read when:** complexity M+ AND reviewing security area. SKIP entirely for S complexity.
+- [Checklist](checklist.md) — **Read when:** self-verifying before outputting verdict (optional, only if uncertain about coverage).
+- [Troubleshooting](troubleshooting.md) — **Read when:** encountering an unexpected issue during review (e.g., git fails, unclear verdict). Do NOT read preemptively.
