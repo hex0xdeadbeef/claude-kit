@@ -3,6 +3,7 @@
 # Purpose: Write marker about review agent completion + sync agent memory from worktree
 # Blocking: exit 2 only if BOTH primary and fallback writes fail
 # IMP-06: defensive fallback to /tmp when primary write fails — logging should not block agent
+# IMP-H: verdict protection — blocks agent stop once if no verdict found (review agents only)
 #
 # Worktree path resolution (IMP-04 → IMP-11):
 #   Delegated to resolve-worktree-path.py (shared utility).
@@ -103,6 +104,40 @@ if output:
         verdict = match.group(1).upper()
 
 # --- End IMP-01 ---
+
+# --- IMP-H: Verdict protection — block agent stop if no verdict found ---
+# Review agents (plan-reviewer, code-reviewer) MUST output a verdict.
+# If verdict is UNKNOWN: block stop once to give agent another chance.
+# Track attempts via marker file to avoid infinite blocking.
+REVIEW_AGENTS = {"plan-reviewer", "code-reviewer"}
+agent_id = data.get("agent_id", "")
+
+if verdict == "UNKNOWN" and agent_type in REVIEW_AGENTS and agent_id:
+    block_marker = os.path.join(STATE_DIR, f".verdict-block-{agent_id}")
+    if not os.path.exists(block_marker):
+        # First attempt — block stop, give agent one more chance
+        try:
+            with open(block_marker, "w") as f:
+                f.write(timestamp)
+        except Exception:
+            pass
+        print(json.dumps({
+            "decision": "block",
+            "reason": (
+                "No verdict found in output. You MUST output your review verdict now. "
+                "Output VERDICT: {APPROVED|NEEDS_CHANGES|CHANGES_REQUESTED|REJECTED} "
+                "followed by a brief handoff section. Skip memory save."
+            )
+        }))
+        sys.exit(0)
+    else:
+        # Second attempt — allow stop, clean up marker
+        try:
+            os.remove(block_marker)
+        except Exception:
+            pass
+        print(f"save-review-checkpoint: verdict still UNKNOWN after block, allowing stop", file=sys.stderr)
+# --- End IMP-H ---
 
 # --- IMP-03: ALWAYS log SubagentStop payload for contract discovery ---
 try:

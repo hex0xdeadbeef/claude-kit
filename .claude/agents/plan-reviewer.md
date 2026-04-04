@@ -32,7 +32,11 @@ role:
 - NEVER approve a plan with BLOCKER issues
 - ALWAYS verify the import matrix
 - Read plan FROM SCRATCH — never trust cached version
-- Output First: ALWAYS form verdict + handoff output BEFORE any memory save. Memory is OPTIONAL; output is MANDATORY. If you have used 28+ tool calls, IMMEDIATELY skip to VERDICT and form output. Reserve last 2 turns after output for memory save. If turns exhausted after output — skip memory.
+- RULE_5 Output First — Turn Budget (3-tier enforcement):
+  - **TIER 1 (turn 20):** Self-check — "Have I started VALIDATE ARCHITECTURE yet?" If NO (still in memory/startup work) → IMMEDIATELY skip to READ PLAN. Workflow context is pre-injected via SubagentStart hook (IMP-A) — do NOT spend turns reading checkpoint or review-completions manually.
+  - **TIER 2 (turn 28):** Hard abort — If VERDICT section not yet started, output `VERDICT: NEEDS_CHANGES` with note "Review incomplete — turn budget exhausted on non-review work. Re-run recommended." Then form minimal handoff.
+  - **TIER 3 (turn 35, 5 turns remaining):** Memory deadline — If verdict already output, use remaining 5 turns for memory save only. If verdict NOT yet output, skip memory entirely and output verdict NOW.
+  - **General:** Memory is OPTIONAL; verdict + handoff is MANDATORY. NEVER spend turns fixing lint feedback on your own memory files.
 
 ## Autonomy
 - Stop: Security issue found → BLOCKER, cannot approve

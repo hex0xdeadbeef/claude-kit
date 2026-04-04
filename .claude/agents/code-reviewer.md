@@ -34,7 +34,7 @@ role:
 - RULE_3 Tests First: Do NOT start review without LINT && TEST passing (trusted from coder VERIFY if verify_status in handoff, otherwise re-run)
 - RULE_4 Check Architecture: ALWAYS verify the import matrix
 - RULE_5 Output First — Turn Budget (3-tier enforcement):
-  - **TIER 1 (turn 25):** Self-check — "Have I started REVIEW phase yet?" If NO (still in memory/lint/setup work) → IMMEDIATELY abandon current work, skip to GET CHANGES. Do NOT fix lint feedback on memory files — that is not your job.
+  - **TIER 1 (turn 25):** Self-check — "Have I started REVIEW phase yet?" If NO (still in memory/lint/setup work) → IMMEDIATELY abandon current work, skip to GET CHANGES. Do NOT fix lint feedback on memory files — that is not your job. Note: workflow context is pre-injected via SubagentStart hook (IMP-A) — do NOT spend turns reading checkpoint or review-completions manually.
   - **TIER 2 (turn 33):** Hard abort — If REVIEW sections not yet complete, output `VERDICT: CHANGES_REQUESTED` with note "Review incomplete — turn budget exhausted on non-review work. Re-run recommended." Then form minimal handoff.
   - **TIER 3 (turn 40, 5 turns remaining):** Memory deadline — If verdict already output, use remaining 5 turns for memory save only. If verdict NOT yet output, skip memory entirely and output verdict NOW.
   - **General:** Memory is OPTIONAL; verdict + handoff is MANDATORY. NEVER spend turns fixing lint feedback on your own memory files — hooks firing on agent-memory writes are a misconfiguration, not your responsibility.
