@@ -78,6 +78,70 @@ def extract_top_level(content, key):
                 return stripped[len(key) + 1:].strip().strip('"').strip("'")
     return None
 
+def aggregate_pipeline_metrics(metrics_file, complexity, agent_type):
+    """Read pipeline-metrics.jsonl and return a brief history summary, or None.
+
+    Returns None when:
+    - File missing or unreadable
+    - Fewer than 3 total entries (insufficient history)
+    """
+    if not os.path.isfile(metrics_file):
+        return None
+    try:
+        entries = []
+        with open(metrics_file) as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    try:
+                        entries.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        continue
+    except Exception:
+        return None
+
+    if len(entries) < 3:
+        return None
+
+    # Iterations for matching complexity
+    matching = [e for e in entries if e.get("complexity", {}).get("estimated") == complexity
+                or e.get("complexity", {}).get("actual") == complexity]
+    if not matching:
+        matching = entries  # Fall back to all runs if no complexity match
+
+    if agent_type == "plan-reviewer":
+        iters = [e.get("review_iterations", {}).get("plan_review", 0) for e in matching if "review_iterations" in e]
+    else:
+        iters = [e.get("review_iterations", {}).get("code_review", 0) for e in matching if "review_iterations" in e]
+    avg_iters = round(sum(iters) / len(iters), 1) if iters else None
+
+    # Top issue categories across all entries
+    category_counts = {}
+    for e in entries:
+        found = e.get("issues_found", {})
+        for cat, count in found.items():
+            if isinstance(count, int) and count > 0:
+                category_counts[cat] = category_counts.get(cat, 0) + count
+    top_categories = sorted(category_counts.items(), key=lambda x: x[1], reverse=True)[:3]
+
+    # Anomaly: recent BLOCKER pattern (last 3 runs)
+    recent = entries[-3:]
+    recent_blockers = sum(1 for e in recent if e.get("issues_found", {}).get("blocker", 0) > 0)
+
+    lines = ["[Pipeline history context]:"]
+    n_complexity = len(matching)
+    n_total = len(entries)
+    scope = f"{complexity} complexity" if n_complexity < n_total else "all runs"
+    if avg_iters is not None:
+        review_label = "plan-review" if agent_type == "plan-reviewer" else "code-review"
+        lines.append(f"- Avg {review_label} iterations ({scope}, {n_complexity} runs): {avg_iters}")
+    if top_categories:
+        cats = ", ".join(f"{cat} ({cnt})" for cat, cnt in top_categories)
+        lines.append(f"- Top issue categories: {cats}")
+    if recent_blockers >= 2:
+        lines.append(f"- Note: {recent_blockers}/3 recent runs had BLOCKER issues — focus security/architecture checks")
+
+    return "\n".join(lines) if len(lines) > 1 else None
 
 agent_type = os.environ.get("_AGENT_TYPE", "unknown")
 state_dir = ".claude/workflow-state"
@@ -229,6 +293,16 @@ if os.path.isfile(completions_file):
                 lines.append(f"  - {r.get('completed_at', '?')}: {r.get('verdict', '?')}")
     except Exception:
         pass
+
+# Pipeline history (IMP-F) — inject only if sufficient history exists
+metrics_summary = aggregate_pipeline_metrics(
+    os.path.join(state_dir, "pipeline-metrics.jsonl"),
+    complexity,
+    agent_type
+)
+if metrics_summary:
+    lines.append("")
+    lines.append(metrics_summary)
 
 text = "\n".join(lines)
 print(json.dumps({"additionalContext": text}))
