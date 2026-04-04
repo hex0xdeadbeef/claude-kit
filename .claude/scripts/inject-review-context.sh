@@ -18,8 +18,8 @@ set -euo pipefail
 
 AGENT_TYPE="${1:-unknown}"
 
-# Consume stdin (SubagentStart payload — not needed, but must be read to avoid SIGPIPE)
-cat > /dev/null
+# Consume stdin (SubagentStart payload — not needed, but must be drained)
+cat > /dev/null 2>/dev/null || true
 
 command -v python3 >/dev/null 2>&1 || {
   echo '{"additionalContext": "[Workflow Context] python3 not available — context injection skipped"}'
@@ -154,13 +154,25 @@ if agent_type == "code-reviewer":
     # Plan-review approved_with_notes from handoff
     handoff = extract_yaml_section(content, "handoff_payload")
     if handoff:
-        notes_section = extract_yaml_section("\n".join(handoff), "approved_with_notes")
-        if notes_section:
+        # Collect list items after "approved_with_notes:" key
+        # (extract_yaml_section strips indentation, so use list-item collector)
+        in_notes = False
+        notes = []
+        for h_line in handoff:
+            stripped = h_line.strip()
+            if stripped.startswith("approved_with_notes:"):
+                in_notes = True
+                continue
+            if in_notes:
+                if stripped.startswith("- "):
+                    notes.append(stripped[2:].strip().strip('"').strip("'"))
+                elif stripped and not stripped.startswith("-"):
+                    break
+        if notes:
             lines.append("")
             lines.append("Plan-review notes:")
-            for note in notes_section:
-                if note.strip():
-                    lines.append(f"  {note}")
+            for note in notes:
+                lines.append(f"  - {note}")
 
 # Prior iterations from issues_history
 issues = extract_yaml_section(content, "issues_history")

@@ -105,6 +105,9 @@ if checkpoints:
                                          f"verdict={h_verdict or '?'}")
 
             # Extract issues history (count iterations and last verdict)
+            # Note: parser assumes "phase:" is the first field in each list entry.
+            # YAML does not guarantee field order, but checkpoint-protocol.md defines
+            # this order and all writers (orchestrator) follow it.
             issues = extract_yaml_section(content, "issues_history")
             if issues:
                 iter_entries = []

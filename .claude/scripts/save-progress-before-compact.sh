@@ -65,8 +65,8 @@ if checkpoints:
 
         # Full checkpoint (may be truncated but summaries above survive)
         parts.append(f"## Workflow Checkpoint\nFile: {checkpoints[-1]}\n{content}")
-    except Exception:
-        pass
+    except Exception as e:
+        parts.append(f"## Checkpoint Warning\nRead error: {checkpoints[-1]} — {e}")
 
 # Recent review completions
 completions_file = os.path.join(state_dir, "review-completions.jsonl")
@@ -76,8 +76,8 @@ if os.path.isfile(completions_file):
             lines = f.readlines()[-5:]
         if lines:
             parts.append("## Recent Review Completions\n" + "".join(lines))
-    except Exception:
-        pass
+    except Exception as e:
+        parts.append(f"## Checkpoint Warning\nRead error: {checkpoints[-1]} — {e}")
 
 text = "\n\n".join(parts) if parts else "No workflow state found before compaction."
 print(json.dumps({"additionalContext": text}))
