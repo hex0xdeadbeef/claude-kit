@@ -47,6 +47,17 @@ files:
     lifecycle: session-specific
     cleanup: "Phase 5 completion"
 
+  - name: "agent-id-registry.jsonl"
+    format: JSONL
+    written_by:
+      - "track-task-lifecycle.sh (SubagentStart, matcher: plan-reviewer|code-reviewer) — IMP-01"
+    read_by:
+      - "save-review-checkpoint.sh (SubagentStop) — recover agent_type when payload omits it"
+    schema: "{agent_id, agent_type, session_id, registered_at}"
+    lifecycle: session-specific
+    cleanup: "Phase 5 completion"
+    note: "Enables IMP-H to work for code-reviewer (isolation:worktree) where SubagentStop payload has empty agent_type"
+
   - name: "task-events.jsonl"
     format: JSONL
     written_by:
@@ -117,7 +128,7 @@ files:
 lifecycle_categories:
   session-specific:
     description: "Created during workflow, consumed by pipeline, cleaned at completion"
-    files: ["{feature}-checkpoint.yaml", "review-completions.jsonl", "task-events.jsonl"]
+    files: ["{feature}-checkpoint.yaml", "review-completions.jsonl", "agent-id-registry.jsonl", "task-events.jsonl"]
     retention: "Until Phase 5 completion (data captured in pipeline-metrics.jsonl)"
 
   cross-session:
@@ -141,6 +152,7 @@ cleanup_protocol:
     action: "Delete after Phase 5 metrics are collected and written to pipeline-metrics.jsonl"
     files:
       - "review-completions.jsonl"
+      - "agent-id-registry.jsonl"
       - "task-events.jsonl"
       - "worktree-events-debug.jsonl"
       - "hook-log.txt"

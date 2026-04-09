@@ -37,6 +37,22 @@ entry = {
 with open(EVENTS_FILE, "a") as f:
     f.write(json.dumps(entry) + "\n")
 
+# IMP-01: Agent-ID Registry
+REGISTRY_FILE = os.path.join(STATE_DIR, "agent-id-registry.jsonl")
+REVIEW_AGENTS = {"plan-reviewer", "code-reviewer"}
+if entry["agent_type"] in REVIEW_AGENTS and entry["agent_id"]:
+    try:
+        with open(REGISTRY_FILE, "a") as f:
+            f.write(json.dumps({
+                "agent_id": entry["agent_id"],
+                "agent_type": entry["agent_type"],
+                "session_id": entry["session_id"],
+                "registered_at": entry["timestamp"],
+            }) + "\n")
+    except Exception:
+        pass  # NON_CRITICAL
+
+
 # IMP-18: Debug logging for contract discovery (mirrors IMP-03 pattern in save-review-checkpoint.sh)
 DEBUG_FILE = os.path.join(STATE_DIR, "worktree-events-debug.jsonl")
 try:

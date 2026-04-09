@@ -18,6 +18,11 @@
 #   SubagentStop payload MAY contain last_assistant_message (added in v2.1.47).
 #   Transcript fallback provides more reliable extraction regardless.
 #   Strategy: try payload first → fallback to transcript_path JSONL → regex for VERDICT:.
+#
+# Agent-ID Registry (IMP-01, 2026-04-10):
+#   When payload omits agent_type (e.g. code-reviewer with isolation:worktree),
+#   recover it via agent-id-registry.jsonl written by track-task-lifecycle.sh at SubagentStart.
+#   effective_agent_type is used for IMP-H, worktree resolution, memory sync, and marker.
 
 set -euo pipefail
 
@@ -52,8 +57,38 @@ agent_type = (
     or data.get("name")
     or "unknown"
 )
+
+agent_id = data.get("agent_id", "")
 session_id = data.get("session_id", "")
 timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+# --- IMP-01: Agent-ID Registry lookup ---
+# When payload omits agent_type, recover via registry written at SubagentStart.
+def lookup_agent_registry(aid):
+    if not aid:
+        return None
+    rf = os.path.join(STATE_DIR, "agent-id-registry.jsonl")
+    if not os.path.isfile(rf):
+        return None
+    try:
+        with open(rf) as f:
+            for line in reversed(f.readlines()):
+                try:
+                    e = json.loads(line.strip())
+                    if e.get("agent_id") == aid:
+                        return e.get("agent_type")
+                except json.JSONDecodeError:
+                    continue
+    except Exception:
+        pass
+    return None
+
+effective_agent_type = agent_type
+if not effective_agent_type or effective_agent_type == "unknown":
+    recovered = lookup_agent_registry(agent_id)
+    if recovered:
+        effective_agent_type = recovered
+# --- End IMP-01 registry ---
 
 # --- IMP-01: Extract verdict from agent's final response ---
 # Strategy 1: Try last_assistant_message from payload (may not exist in current Claude Code versions)
@@ -109,10 +144,10 @@ if output:
 # Review agents (plan-reviewer, code-reviewer) MUST output a verdict.
 # If verdict is UNKNOWN: block stop once to give agent another chance.
 # Track attempts via marker file to avoid infinite blocking.
+# Uses effective_agent_type (IMP-01) to handle payloads with empty agent_type.
 REVIEW_AGENTS = {"plan-reviewer", "code-reviewer"}
-agent_id = data.get("agent_id", "")
 
-if verdict == "UNKNOWN" and agent_type in REVIEW_AGENTS and agent_id:
+if verdict == "UNKNOWN" and effective_agent_type in REVIEW_AGENTS and agent_id:
     block_marker = os.path.join(STATE_DIR, f".verdict-block-{agent_id}")
     if not os.path.exists(block_marker):
         # First attempt — block stop, give agent one more chance
@@ -149,6 +184,7 @@ try:
         "timestamp": timestamp,
         "hook": "SubagentStop",
         "agent_type": agent_type,
+        "effective_agent_type": effective_agent_type,
         "session_id": session_id,
         "received_keys": sorted(data.keys()),
         "verdict_found": verdict != "UNKNOWN",
@@ -169,11 +205,12 @@ except Exception:
 
 # --- IMP-04 → IMP-11: Resolve worktree_path via shared utility ---
 # Agents known to run with isolation: worktree
+# Uses effective_agent_type so worktree resolution works even when payload omits agent_type.
 WORKTREE_AGENTS = {"code-reviewer"}
 
 worktree_path = None
 worktree_resolution = None
-if agent_type in WORKTREE_AGENTS:
+if effective_agent_type in WORKTREE_AGENTS:
     import subprocess
     resolver = os.path.join(".claude", "scripts", "resolve-worktree-path.py")
     try:
@@ -199,13 +236,13 @@ if agent_type in WORKTREE_AGENTS:
 memory_sync_result = None
 memory_files_synced = []
 
-if worktree_path and agent_type in WORKTREE_AGENTS:
+if worktree_path and effective_agent_type in WORKTREE_AGENTS:
     try:
         import subprocess
         # Resolve to absolute path — CWD should be main repo, but be defensive
         script_path = os.path.abspath(os.path.join(".claude", "scripts", "sync-agent-memory.sh"))
         result = subprocess.run(
-            [script_path, agent_type, worktree_path],
+            [script_path, effective_agent_type, worktree_path],
             capture_output=True, text=True, timeout=30
         )
         # Parse structured JSON output from stdout
@@ -223,13 +260,13 @@ if worktree_path and agent_type in WORKTREE_AGENTS:
         print(f"save-review-checkpoint: memory sync script failed: {e}", file=sys.stderr)
 
 # Log memory sync result to discovery file
-if agent_type in WORKTREE_AGENTS and worktree_path:
+if effective_agent_type in WORKTREE_AGENTS and worktree_path:
     try:
         sync_log = {
             "timestamp": timestamp,
             "hook": "SubagentStop",
             "event": "memory_sync",
-            "agent_type": agent_type,
+            "agent_type": effective_agent_type,
             "session_id": session_id,
             "worktree_path": worktree_path,
             "worktree_resolution": worktree_resolution,
@@ -244,11 +281,15 @@ if agent_type in WORKTREE_AGENTS and worktree_path:
 # --- End IMP-01/IMP-05 ---
 
 marker = {
-    "agent": agent_type,
+    "agent": effective_agent_type,
     "completed_at": timestamp,
     "session_id": session_id,
     "verdict": verdict,
 }
+# IMP-01: record if agent_type was recovered from registry
+if effective_agent_type != agent_type:
+    marker["effective_agent_type"] = effective_agent_type
+    marker["raw_agent_type"] = agent_type
 # Include verdict source for debugging
 if transcript_used:
     marker["verdict_source"] = "transcript"
