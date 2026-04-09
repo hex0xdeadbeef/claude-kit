@@ -67,11 +67,47 @@ flowchart LR
 
 1. Validate return text for verdict keyword (SEE workflow.md → output_validation)
 2. If missing → check review-completions.jsonl (save-review-checkpoint.sh extracts verdict on SubagentStop via transcript). **Apply filter rules below** before treating any entry as authoritative.
-3. If still missing → re-launch review agent with minimal prompt (SEE workflow.md → output_validation.on_incomplete_output)
-   Minimal prompt: "Output ONLY: VERDICT: {verdict} followed by brief handoff. No memory save."
-4. If verdict recovered from checkpoint or re-launch → continue pipeline normally
-5. If re-launch also fails → WARN user, show review-completions.jsonl data, request manual verdict
-6. Write checkpoint with `verdict: "INCOMPLETE"` and `recovery_attempted: true`
+3. If no matching entry (genuine UNKNOWN) → launch **verdict-recovery** agent (NOT re-launch of full plan-reviewer/code-reviewer). See .claude/agents/verdict-recovery.md — lightweight haiku, ~30s, no memory/skills/checklist.
+4. If a matching entry exists but verdict is still UNKNOWN (IMP-H already blocked once and agent still failed) → launch **verdict-recovery** agent — do NOT re-block, do NOT re-launch full review agent.
+5. If verdict recovered from checkpoint or verdict-recovery → continue pipeline normally.
+6. If verdict-recovery also fails → WARN user, show filtered review-completions.jsonl data + agent output summary, request manual verdict.
+7. Write checkpoint with `verdict: "INCOMPLETE"` and `recovery_attempted: true`.
+
+**UNKNOWN verdict resolution rules (IMP-06):**
+
+```yaml
+phase_2_recovery:  # plan-reviewer
+  step_1: "Read review-completions.jsonl → filter by session_id == current AND effective_agent_type == 'plan-reviewer'"
+  step_2: "If no matching entry → genuine UNKNOWN → launch verdict-recovery (scope: plan)"
+  step_3: "If matching entry has verdict != UNKNOWN → use it, proceed"
+  step_4: "If matching entry has verdict == UNKNOWN → IMP-H already blocked once; launch verdict-recovery"
+  forbidden: "NEVER re-launch plan-reviewer from incomplete-output path. Only loop-limit retries (NEEDS_CHANGES) re-launch planner/plan-reviewer."
+
+phase_4_recovery:  # code-reviewer
+  step_1: "Read review-completions.jsonl → filter by session_id == current AND effective_agent_type == 'code-reviewer'"
+  step_2: "If no matching entry → genuine UNKNOWN → launch verdict-recovery (scope: code)"
+  step_3: "If matching entry has verdict != UNKNOWN → use it, proceed"
+  step_4: "If matching entry has verdict == UNKNOWN → IMP-H already blocked once; launch verdict-recovery"
+  forbidden: "NEVER re-launch plan-reviewer when Phase 4 is active. NEVER re-launch full code-reviewer from incomplete-output path."
+
+anti_patterns:
+  wrong_1:
+    symptom: "Orchestrator sees last entry in review-completions.jsonl is {agent:'unknown', verdict:'UNKNOWN'} and re-launches plan-reviewer"
+    why_wrong: "Entry is noise (payload with empty agent_type OR stale cross-session record). Must filter by effective_agent_type + session_id first."
+    right: "Filter first (IMP-02). If filtered result is empty → verdict-recovery, not plan-reviewer re-launch."
+  wrong_2:
+    symptom: "During Phase 4 (code review), orchestrator re-launches plan-reviewer because review-completions.jsonl has an UNKNOWN entry"
+    why_wrong: "Phase-agent mismatch. Phase 4 UNKNOWN resolution must target code-reviewer's output only."
+    right: "Filter by the agent owning the current phase (plan-reviewer for phase 2, code-reviewer for phase 4)."
+  wrong_3:
+    symptom: "Re-launch full plan-reviewer/code-reviewer (5+ min, memory, skills) on incomplete output"
+    why_wrong: "Same agent just failed to output verdict. Re-running won't help and costs 10x verdict-recovery."
+    right: "Use verdict-recovery (~30s, haiku, no memory/skills). Full-agent re-launch reserved for NEEDS_CHANGES/CHANGES_REQUESTED loop."
+
+cost_comparison:
+  verdict_recovery: "~30s, haiku, maxTurns:10, no memory, no skills — designed for this"
+  full_reviewer_relaunch: "~5min, sonnet, maxTurns:60, full memory+skills stack — overkill and likely to fail again for same reason"
+```
 
 **review-completions.jsonl filter rules (IMP-02):**
 
