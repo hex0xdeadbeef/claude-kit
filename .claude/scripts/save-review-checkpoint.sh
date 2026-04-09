@@ -280,16 +280,16 @@ if effective_agent_type in WORKTREE_AGENTS and worktree_path:
 
 # --- End IMP-01/IMP-05 ---
 
+# IMP-05: "agent" holds raw payload agent_type; "effective_agent_type" always
+# present and reflects post-registry-recovery value. Lets consumers distinguish
+# noise unknowns from recovered ones without a conditional schema.
 marker = {
-    "agent": effective_agent_type,
+    "agent": agent_type,
+    "effective_agent_type": effective_agent_type,
     "completed_at": timestamp,
     "session_id": session_id,
     "verdict": verdict,
 }
-# IMP-01: record if agent_type was recovered from registry
-if effective_agent_type != agent_type:
-    marker["effective_agent_type"] = effective_agent_type
-    marker["raw_agent_type"] = agent_type
 # Include verdict source for debugging
 if transcript_used:
     marker["verdict_source"] = "transcript"

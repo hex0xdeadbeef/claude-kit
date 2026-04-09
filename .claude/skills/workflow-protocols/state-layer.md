@@ -42,8 +42,9 @@ files:
       - "verify-state-after-compact.sh (PostCompact) — integrity verification"
       - "Orchestrator — output_validation fallback (when agent returns incomplete)"
     schema:
-      required: "{agent, completed_at, session_id, verdict}"
+      required: "{agent, effective_agent_type, completed_at, session_id, verdict}"
       optional: "{verdict_source, worktree_path, worktree_resolution, memory_sync, memory_files_synced}"
+      note: "agent=raw payload agent_type (may be 'unknown'); effective_agent_type=post-registry-recovery value (always present)"
     lifecycle: session-specific
     cleanup: "Phase 5 completion"
 
