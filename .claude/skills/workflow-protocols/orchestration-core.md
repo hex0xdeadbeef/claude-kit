@@ -66,12 +66,38 @@ flowchart LR
 **Phase 2/4 — Incomplete Output Recovery:** If a review agent (plan-reviewer or code-reviewer) returns without a clear verdict:
 
 1. Validate return text for verdict keyword (SEE workflow.md → output_validation)
-2. If missing → check review-completions.jsonl (save-review-checkpoint.sh extracts verdict on SubagentStop via transcript)
+2. If missing → check review-completions.jsonl (save-review-checkpoint.sh extracts verdict on SubagentStop via transcript). **Apply filter rules below** before treating any entry as authoritative.
 3. If still missing → re-launch review agent with minimal prompt (SEE workflow.md → output_validation.on_incomplete_output)
    Minimal prompt: "Output ONLY: VERDICT: {verdict} followed by brief handoff. No memory save."
 4. If verdict recovered from checkpoint or re-launch → continue pipeline normally
 5. If re-launch also fails → WARN user, show review-completions.jsonl data, request manual verdict
 6. Write checkpoint with `verdict: "INCOMPLETE"` and `recovery_attempted: true`
+
+**review-completions.jsonl filter rules (IMP-02):**
+
+When reading `review-completions.jsonl` for verdict recovery or prior-iteration context, the orchestrator MUST filter entries to avoid false positives from platform noise (payloads with empty `agent_type`, entries from unrelated sessions, etc.):
+
+```yaml
+filter_predicate:
+  session_id: "== current session_id"
+  effective_agent_type:
+    in: ["plan-reviewer", "code-reviewer"]  # ignore "unknown" — noise
+    must_match: "the agent phase just delegated (phase 2 → plan-reviewer, phase 4 → code-reviewer)"
+  optional_cross_check:
+    agent_id: "present in agent-id-registry.jsonl for current session"
+    rationale: "double-guard — only trust entries whose agent_id was registered at SubagentStart"
+
+schema_note: |
+  Entries have two fields since IMP-05:
+    - "agent"               → raw payload agent_type (may be "unknown" for worktree agents)
+    - "effective_agent_type" → post-registry-recovery value (always present, authoritative)
+  ALWAYS filter on "effective_agent_type", NEVER on raw "agent".
+
+rationale: |
+  Without filtering, an "unknown" entry left over from a prior pipeline run or
+  a noise SubagentStop from an unrelated subagent would be mistaken for a
+  missing verdict from plan-reviewer, triggering an unnecessary re-launch (RC-4).
+```
 
 **Note:** This scenario is rare after RULE_5 (Output First) was added to agents. But validation remains as a safety net.
 

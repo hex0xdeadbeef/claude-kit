@@ -18,8 +18,9 @@ set -euo pipefail
 
 AGENT_TYPE="${1:-unknown}"
 
-# Consume stdin (SubagentStart payload — not needed, but must be drained)
-cat > /dev/null 2>/dev/null || true
+# Read SubagentStart payload — need session_id for IMP-02 filtering
+HOOK_INPUT=$(cat 2>/dev/null || echo '{}')
+export _HOOK_INPUT="$HOOK_INPUT"
 
 command -v python3 >/dev/null 2>&1 || {
   echo '{"additionalContext": "[Workflow Context] python3 not available — context injection skipped"}'
@@ -145,6 +146,14 @@ def aggregate_pipeline_metrics(metrics_file, complexity, agent_type):
     return "\n".join(lines) if len(lines) > 1 else None
 
 agent_type = os.environ.get("_AGENT_TYPE", "unknown")
+
+# IMP-02: session_id from SubagentStart payload for filtering review-completions
+try:
+    _payload = json.loads(os.environ.get("_HOOK_INPUT", "{}"))
+    current_session_id = _payload.get("session_id", "")
+except Exception:
+    current_session_id = ""
+
 state_dir = ".claude/workflow-state"
 prompts_dir = ".claude/prompts"
 
@@ -273,7 +282,7 @@ if issues:
             if resolved_str and resolved_str != "[]":
                 lines.append(f"    Addressed: {resolved_str}")
 
-# Prior verdicts from review-completions.jsonl
+# Prior verdicts from review-completions.jsonl (IMP-02: filter by session + effective_agent_type)
 completions_file = os.path.join(state_dir, "review-completions.jsonl")
 if os.path.isfile(completions_file):
     try:
@@ -283,10 +292,19 @@ if os.path.isfile(completions_file):
         for cl in comp_lines:
             try:
                 entry = json.loads(cl.strip())
-                if entry.get("agent") == agent_type:
-                    relevant.append(entry)
-            except (json.JSONDecodeError, KeyError):
+            except json.JSONDecodeError:
                 continue
+            # IMP-05: prefer effective_agent_type, fall back to raw agent for legacy entries
+            eff = entry.get("effective_agent_type") or entry.get("agent", "")
+            if eff != agent_type:
+                continue
+            # IMP-02: ignore "unknown" noise (platform payloads with empty agent_type)
+            if eff == "unknown":
+                continue
+            # IMP-02: scope to current session only
+            if current_session_id and entry.get("session_id") != current_session_id:
+                continue
+            relevant.append(entry)
         if relevant:
             lines.append("")
             lines.append("Prior review completions (this pipeline):")
