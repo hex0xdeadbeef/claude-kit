@@ -106,6 +106,25 @@ if not effective_agent_type or effective_agent_type == "unknown":
         effective_agent_type = "code-reviewer"
 # --- End IMP-01 registry ---
 
+# --- P1-2: Backfill registry at SubagentStop if type was recovered via heuristic ---
+# Provides audit trail and self-healing: future stops for the same agent_id skip re-inference.
+# Also ensures IMP-02 session filter finds a valid entry for iteration-2 context injection.
+if effective_agent_type in REVIEW_AGENTS and agent_id and effective_agent_type != agent_type:
+    try:
+        REGISTRY_FILE = os.path.join(STATE_DIR, "agent-id-registry.jsonl")
+        with open(REGISTRY_FILE, "a") as f:
+            f.write(json.dumps({
+                "agent_id": agent_id,
+                "agent_type": effective_agent_type,
+                "session_id": session_id,
+                "registered_at": timestamp,
+                "registration_source": "SubagentStop-backfill",
+            }) + "\n")
+    except Exception:
+        pass  # NON_CRITICAL
+# --- End P1-2 ---
+
+
 # --- IMP-01: Extract verdict from agent's final response ---
 # Strategy 1: Try last_assistant_message from payload (may not exist in current Claude Code versions)
 output = data.get("last_assistant_message", "")
