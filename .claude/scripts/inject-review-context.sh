@@ -283,26 +283,29 @@ if issues:
                 lines.append(f"    Addressed: {resolved_str}")
 
 # Prior verdicts from review-completions.jsonl (IMP-02: filter by session + effective_agent_type)
+# P1-3: Preserve "unknown" entries as failed_attempts metadata for orchestrator recovery decisions
 completions_file = os.path.join(state_dir, "review-completions.jsonl")
 if os.path.isfile(completions_file):
     try:
         with open(completions_file) as f:
             comp_lines = f.readlines()
         relevant = []
+        failed_attempts = []
         for cl in comp_lines:
             try:
                 entry = json.loads(cl.strip())
             except json.JSONDecodeError:
                 continue
-            # IMP-05: prefer effective_agent_type, fall back to raw agent for legacy entries
-            eff = entry.get("effective_agent_type") or entry.get("agent", "")
-            if eff != agent_type:
-                continue
-            # IMP-02: ignore "unknown" noise (platform payloads with empty agent_type)
-            if eff == "unknown":
-                continue
             # IMP-02: scope to current session only
             if current_session_id and entry.get("session_id") != current_session_id:
+                continue
+            # IMP-05: prefer effective_agent_type, fall back to raw agent for legacy entries
+            eff = entry.get("effective_agent_type") or entry.get("agent", "")
+            # P1-3: Track unknown entries as failed attempts instead of discarding
+            if eff == "unknown":
+                failed_attempts.append(entry)
+                continue
+            if eff != agent_type:
                 continue
             relevant.append(entry)
         if relevant:
@@ -310,6 +313,9 @@ if os.path.isfile(completions_file):
             lines.append("Prior review completions (this pipeline):")
             for r in relevant[-3:]:  # Last 3
                 lines.append(f"  - {r.get('completed_at', '?')}: {r.get('verdict', '?')}")
+        if failed_attempts:
+            lines.append(f"Prior failed attempts (unknown agent_type): {len(failed_attempts)}")
+            lines.append(f"  Last failed at: {failed_attempts[-1].get('completed_at', '?')}")
     except Exception:
         pass
 

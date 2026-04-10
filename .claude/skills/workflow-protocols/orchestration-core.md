@@ -78,14 +78,18 @@ flowchart LR
 ```yaml
 phase_2_recovery:  # plan-reviewer
   step_1: "Read review-completions.jsonl → filter by session_id == current AND effective_agent_type == 'plan-reviewer'"
-  step_2: "If no matching entry → genuine UNKNOWN → launch verdict-recovery (scope: plan)"
+  step_2: "If no matching entry → check prior_failed_attempts in injected context (P1-3)"
+  step_2a: "If prior_failed_attempts > 0 → review ran but verdict was lost → launch verdict-recovery (scope: plan)"
+  step_2b: "If prior_failed_attempts == 0 → genuine UNKNOWN, review never ran → launch verdict-recovery (scope: plan)"
   step_3: "If matching entry has verdict != UNKNOWN → use it, proceed"
   step_4: "If matching entry has verdict == UNKNOWN → IMP-H already blocked once; launch verdict-recovery"
   forbidden: "NEVER re-launch plan-reviewer from incomplete-output path. Only loop-limit retries (NEEDS_CHANGES) re-launch planner/plan-reviewer."
 
 phase_4_recovery:  # code-reviewer
   step_1: "Read review-completions.jsonl → filter by session_id == current AND effective_agent_type == 'code-reviewer'"
-  step_2: "If no matching entry → genuine UNKNOWN → launch verdict-recovery (scope: code)"
+  step_2: "If no matching entry → check prior_failed_attempts in injected context (P1-3)"
+  step_2a: "If prior_failed_attempts > 0 → review ran but verdict was lost → launch verdict-recovery (scope: code)"
+  step_2b: "If prior_failed_attempts == 0 → genuine UNKNOWN, review never ran → launch verdict-recovery (scope: code)"
   step_3: "If matching entry has verdict != UNKNOWN → use it, proceed"
   step_4: "If matching entry has verdict == UNKNOWN → IMP-H already blocked once; launch verdict-recovery"
   forbidden: "NEVER re-launch plan-reviewer when Phase 4 is active. NEVER re-launch full code-reviewer from incomplete-output path."
