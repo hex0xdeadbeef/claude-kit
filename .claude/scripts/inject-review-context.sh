@@ -284,18 +284,34 @@ if issues:
 
 # Prior verdicts from review-completions.jsonl (IMP-02: filter by session + effective_agent_type)
 # P1-3: Preserve "unknown" entries as failed_attempts metadata for orchestrator recovery decisions
+# P3-3: Read from both primary and fallback locations — fallback written by IMP-06 when primary fails
 completions_file = os.path.join(state_dir, "review-completions.jsonl")
-if os.path.isfile(completions_file):
+fallback_file = os.path.join("/tmp", "claude-review-completions-fallback.jsonl")
+
+comp_lines = []
+for _cf in (completions_file, fallback_file):
+    if os.path.isfile(_cf):
+        try:
+            with open(_cf) as f:
+                comp_lines.extend(f.readlines())
+        except Exception:
+            pass
+
+if comp_lines:
     try:
-        with open(completions_file) as f:
-            comp_lines = f.readlines()
         relevant = []
         failed_attempts = []
+        seen = set()  # P3-3: deduplicate by (session_id, completed_at, agent)
         for cl in comp_lines:
             try:
                 entry = json.loads(cl.strip())
             except json.JSONDecodeError:
                 continue
+            # P3-3: deduplicate entries that exist in both primary and fallback
+            dedup_key = (entry.get("session_id", ""), entry.get("completed_at", ""), entry.get("agent", ""))
+            if dedup_key in seen:
+                continue
+            seen.add(dedup_key)
             # IMP-02: scope to current session only
             if current_session_id and entry.get("session_id") != current_session_id:
                 continue
@@ -318,6 +334,7 @@ if os.path.isfile(completions_file):
             lines.append(f"  Last failed at: {failed_attempts[-1].get('completed_at', '?')}")
     except Exception:
         pass
+
 
 # Pipeline history (IMP-F) — inject only if sufficient history exists
 metrics_summary = aggregate_pipeline_metrics(

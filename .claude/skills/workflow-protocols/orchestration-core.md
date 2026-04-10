@@ -118,7 +118,11 @@ cost_comparison:
 
 **review-completions.jsonl filter rules (IMP-02):**
 
-When reading `review-completions.jsonl` for verdict recovery or prior-iteration context, the orchestrator MUST filter entries to avoid false positives from platform noise (payloads with empty `agent_type`, entries from unrelated sessions, etc.):
+When reading `review-completions.jsonl` for verdict recovery or prior-iteration context, the orchestrator MUST read from BOTH primary and fallback locations (P3-3), then filter entries:
+
+- Primary: `.claude/workflow-state/review-completions.jsonl`
+- Fallback: `/tmp/claude-review-completions-fallback.jsonl` (written by IMP-06 when primary write fails)
+- Deduplicate by `(session_id, completed_at, agent)` before filtering
 
 ```yaml
 filter_predicate:
