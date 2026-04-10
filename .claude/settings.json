@@ -255,7 +255,7 @@
     ],
     "SubagentStop": [
       {
-        "matcher": "plan-reviewer|code-reviewer",
+        "matcher": "plan-reviewer|code-reviewer|verdict-recovery",
         "hooks": [
           {
             "type": "command",

@@ -106,6 +106,10 @@ if not effective_agent_type or effective_agent_type == "unknown":
         effective_agent_type = "code-reviewer"
 # --- End IMP-01 registry ---
 
+# Review agents set — used by P1-2 backfill, P2-2 anomaly detection, IMP-H verdict protection
+REVIEW_AGENTS = {"plan-reviewer", "code-reviewer", "verdict-recovery"}
+
+
 # --- P1-2: Backfill registry at SubagentStop if type was recovered via heuristic ---
 # Provides audit trail and self-healing: future stops for the same agent_id skip re-inference.
 # Also ensures IMP-02 session filter finds a valid entry for iteration-2 context injection.
@@ -212,7 +216,6 @@ if output:
 # P0-3: Belt-and-suspenders — also protect unknown worktree agents (agent_transcript_path
 # is only present for isolation:worktree agents). Covers the case where both registry lookup
 # AND P0-2 heuristic fail to resolve effective_agent_type.
-REVIEW_AGENTS = {"plan-reviewer", "code-reviewer"}
 
 is_review_agent = (
     effective_agent_type in REVIEW_AGENTS
