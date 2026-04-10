@@ -259,7 +259,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/scripts/save-review-checkpoint.sh"
+            "command": ".claude/scripts/save-review-checkpoint.sh",
+            "blocking": true
           }
         ]
       }
