@@ -16,8 +16,12 @@
 #
 # Verdict extraction (IMP-01, 2026-03-30):
 #   SubagentStop payload MAY contain last_assistant_message (added in v2.1.47).
-#   Transcript fallback provides more reliable extraction regardless.
-#   Strategy: try payload first → fallback to transcript_path JSONL → regex for VERDICT:.
+#   Transcript fallback: agent_transcript_path (agent-specific) checked first,
+#   transcript_path (parent session) as fallback.
+#   Strategy: try payload first → agent_transcript_path JSONL → transcript_path JSONL → regex for VERDICT:.
+#   P0-1 (2026-04-10): agent_transcript_path is the agent's own conversation; transcript_path is the
+#   parent session where agent output is a tool_result — role:assistant search finds orchestrator
+#   messages, not the reviewer's VERDICT output.
 #
 # Agent-ID Registry (IMP-01, 2026-04-10):
 #   When payload omits agent_type (e.g. code-reviewer with isolation:worktree),
@@ -94,15 +98,21 @@ if not effective_agent_type or effective_agent_type == "unknown":
 # Strategy 1: Try last_assistant_message from payload (may not exist in current Claude Code versions)
 output = data.get("last_assistant_message", "")
 
-# Strategy 2: Read transcript_path JSONL — find last assistant message
-# SubagentStop payload includes transcript_path but NOT last_assistant_message.
-# The transcript is a JSONL file with the full agent conversation.
+# Strategy 2: Read agent_transcript_path (agent-specific) first, transcript_path (parent) as fallback.
+# P0-1: agent_transcript_path contains the agent's own role:assistant messages with the VERDICT output.
+# transcript_path (parent session) embeds agent output as tool_result, not as role:assistant —
+# so reverse-searching role:assistant in parent finds orchestrator messages, missing the verdict.
+# Note: last_assistant_message IS present in SubagentStop payload but may be empty if the
+# agent's final turn was a tool call (e.g. memory save) rather than text output.
 transcript_used = False
+transcript_source = None
 if not output:
-    transcript_path = data.get("transcript_path", "")
-    if transcript_path and os.path.isfile(transcript_path):
+    for _path_key in ("agent_transcript_path", "transcript_path"):
+        _tp = data.get(_path_key, "")
+        if not _tp or not os.path.isfile(_tp):
+            continue
         try:
-            with open(transcript_path) as f:
+            with open(_tp) as f:
                 lines = f.readlines()
             # Search in reverse for last assistant message
             for line in reversed(lines):
@@ -123,11 +133,14 @@ if not output:
                             output = content
                         if output:
                             transcript_used = True
+                            transcript_source = _path_key
                             break
                 except (json.JSONDecodeError, KeyError):
                     continue
         except Exception as e:
-            print(f"save-review-checkpoint: transcript read failed: {e}", file=sys.stderr)
+            print(f"save-review-checkpoint: transcript read failed ({_path_key}): {e}", file=sys.stderr)
+        if output:
+            break
 
 verdict = "UNKNOWN"
 if output:
@@ -188,7 +201,8 @@ try:
         "session_id": session_id,
         "received_keys": sorted(data.keys()),
         "verdict_found": verdict != "UNKNOWN",
-        "verdict_source": "transcript" if transcript_used else ("payload" if data.get("last_assistant_message") else "none"),
+        "verdict_source": (("transcript:" + transcript_source) if transcript_used else ("payload" if data.get("last_assistant_message") else "none")),
+        "agent_transcript_path_present": bool(data.get("agent_transcript_path")),
         "transcript_path_present": bool(data.get("transcript_path")),
     }
     # Include raw payload fields (excluding last_assistant_message/transcript content — too large)
@@ -292,7 +306,7 @@ marker = {
 }
 # Include verdict source for debugging
 if transcript_used:
-    marker["verdict_source"] = "transcript"
+    marker["verdict_source"] = "transcript:" + (transcript_source or "unknown")
 # Include worktree_path and memory sync status in marker
 if worktree_path:
     marker["worktree_path"] = worktree_path
