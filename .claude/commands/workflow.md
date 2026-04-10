@@ -344,10 +344,11 @@ delegation_protocol:
     on_incomplete_output:
       step_1: "Check .claude/workflow-state/review-completions.jsonl — save-review-checkpoint.sh extracts verdict via regex on SubagentStop. If verdict found → use it, proceed with minimal handoff (verdict only, no detailed issues)."
       step_2: "If verdict found in review-completions.jsonl → extract it, proceed normally with minimal handoff"
-      step_3: "If no verdict in review-completions.jsonl → launch verdict-recovery agent (NOT full code-reviewer). verdict-recovery is a lightweight agent (maxTurns: 10, haiku, no memory, no skills, no TodoWrite) that reads the diff and outputs ONLY a verdict + brief handoff. See .claude/agents/verdict-recovery.md."
-      step_4: "If verdict-recovery also fails or returns no verdict → WARN user, show what information is available (review-completions.jsonl, agent output summary), ask for manual verdict decision"
+      step_3: "P3-1 direct transcript read — if no verdict in review-completions.jsonl, orchestrator reads agent transcript JSONL directly (agent_transcript_path from review-completions entry or worktree-events-debug.jsonl). Reverse-search role:assistant messages for VERDICT: regex. Defense-in-depth — orchestrator is self-reliant, not solely dependent on hook infrastructure."
+      step_4: "If still no verdict → launch verdict-recovery agent (NOT full code-reviewer). verdict-recovery is a lightweight agent (maxTurns: 10, haiku, no memory, no skills, no TodoWrite) that reads the diff and outputs ONLY a verdict + brief handoff. See .claude/agents/verdict-recovery.md."
+      step_5: "If verdict-recovery also fails or returns no verdict → WARN user, show what information is available (review-completions.jsonl, agent output summary), ask for manual verdict decision"
       max_retries: 1
-      note: "step_1 leverages save-review-checkpoint.sh which already runs on SubagentStop and extracts verdict via regex — no SendMessage needed. step_3 uses verdict-recovery agent instead of re-launching full code-reviewer — completes in ~30 seconds vs ~5 minutes, higher success rate due to focused scope (no memory/skills/checklist overhead)."
+      note: "step_1 leverages save-review-checkpoint.sh which already runs on SubagentStop and extracts verdict via regex. step_3 (P3-1) makes orchestrator independent of hook success — reads transcript directly. step_4 uses verdict-recovery agent instead of re-launching full code-reviewer — ~30s vs ~5min."
 
     common_causes:
       - "Agent exhausted maxTurns on memory operations (SEE RULE_5 in agent artifacts)"
