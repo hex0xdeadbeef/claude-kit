@@ -170,9 +170,16 @@ if output:
 # If verdict is UNKNOWN: block stop once to give agent another chance.
 # Track attempts via marker file to avoid infinite blocking.
 # Uses effective_agent_type (IMP-01) to handle payloads with empty agent_type.
+# P0-3: Belt-and-suspenders — also protect unknown worktree agents (agent_transcript_path
+# is only present for isolation:worktree agents). Covers the case where both registry lookup
+# AND P0-2 heuristic fail to resolve effective_agent_type.
 REVIEW_AGENTS = {"plan-reviewer", "code-reviewer"}
 
-if verdict == "UNKNOWN" and effective_agent_type in REVIEW_AGENTS and agent_id:
+is_review_agent = (
+    effective_agent_type in REVIEW_AGENTS
+    or (effective_agent_type == "unknown" and data.get("agent_transcript_path"))
+)
+if verdict == "UNKNOWN" and is_review_agent and agent_id:
     block_marker = os.path.join(STATE_DIR, f".verdict-block-{agent_id}")
     if not os.path.exists(block_marker):
         # First attempt — block stop, give agent one more chance
