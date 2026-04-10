@@ -129,9 +129,17 @@ if effective_agent_type in REVIEW_AGENTS and agent_id and effective_agent_type !
 # --- End P1-2 ---
 
 # --- P2-2: Anomaly detection — log when SubagentStart didn't fire ---
-# If this review agent has no registry entry from SubagentStart, the hook chain is degraded.
-# Log anomaly for diagnostics (NON_CRITICAL — does not block).
-if effective_agent_type in REVIEW_AGENTS and agent_id and effective_agent_type != agent_type:
+# Only log anomaly when type was recovered via P0-2 heuristic (agent_transcript_path),
+# NOT when recovered via IMP-01 registry (which means SubagentStart DID fire correctly).
+# CR-003: registry-recovered types (effective_agent_type != agent_type but found in registry)
+# are legitimate, not anomalies — avoid misleading "heuristic" message for them.
+_recovered_via_heuristic = (
+    effective_agent_type in REVIEW_AGENTS
+    and agent_id
+    and effective_agent_type != agent_type
+    and lookup_agent_registry(agent_id) is None  # not in registry → was P0-2 heuristic
+)
+if _recovered_via_heuristic:
     try:
         anomaly = {
             "timestamp": timestamp,
@@ -140,7 +148,7 @@ if effective_agent_type in REVIEW_AGENTS and agent_id and effective_agent_type !
             "effective_agent_type": effective_agent_type,
             "raw_agent_type": agent_type,
             "session_id": session_id,
-            "message": "SubagentStart hook did not fire — type recovered via heuristic (worktree isolation?)",
+            "message": "SubagentStart hook did not fire — type recovered via P0-2 heuristic (worktree isolation)",
         }
         with open(os.path.join(STATE_DIR, "anomalies.jsonl"), "a") as f:
             f.write(json.dumps(anomaly) + "\n")
@@ -217,6 +225,9 @@ if output:
 # is only present for isolation:worktree agents). Covers the case where both registry lookup
 # AND P0-2 heuristic fail to resolve effective_agent_type.
 
+# NOTE (CR-004): The agent_transcript_path heuristic assumes all worktree agents
+# are review agents. If a new non-review worktree agent is added, update
+# REVIEW_AGENTS and this condition to avoid false verdict-blocking.
 is_review_agent = (
     effective_agent_type in REVIEW_AGENTS
     or (effective_agent_type == "unknown" and data.get("agent_transcript_path"))

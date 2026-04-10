@@ -193,6 +193,9 @@ if agent_type == "plan-reviewer":
 elif agent_type == "code-reviewer":
     current_iter = code_review_iter
     review_phase = 4
+elif agent_type == "verdict-recovery":
+    current_iter = "recovery"
+    review_phase = 4  # verdict-recovery runs after code-review phase
 else:
     current_iter = "?/3"
     review_phase = 0
@@ -286,7 +289,8 @@ if issues:
 # P1-3: Preserve "unknown" entries as failed_attempts metadata for orchestrator recovery decisions
 # P3-3: Read from both primary and fallback locations — fallback written by IMP-06 when primary fails
 completions_file = os.path.join(state_dir, "review-completions.jsonl")
-fallback_file = os.path.join("/tmp", "claude-review-completions-fallback.jsonl")
+import tempfile
+fallback_file = os.path.join(tempfile.gettempdir(), "claude-review-completions-fallback.jsonl")
 
 comp_lines = []
 for _cf in (completions_file, fallback_file):
@@ -330,8 +334,9 @@ if comp_lines:
             for r in relevant[-3:]:  # Last 3
                 lines.append(f"  - {r.get('completed_at', '?')}: {r.get('verdict', '?')}")
         if failed_attempts:
-            lines.append(f"Prior failed attempts (unknown agent_type): {len(failed_attempts)}")
+            lines.append(f"prior_failed_attempts: {len(failed_attempts)}")
             lines.append(f"  Last failed at: {failed_attempts[-1].get('completed_at', '?')}")
+
     except Exception:
         pass
 

@@ -79,9 +79,9 @@ flowchart LR
 ```yaml
 phase_2_recovery:  # plan-reviewer
   step_1: "Read review-completions.jsonl → filter by session_id == current AND effective_agent_type == 'plan-reviewer'"
-  step_2: "If no matching entry → check prior_failed_attempts in injected context (P1-3)"
+  step_2: "If no matching entry → check injected context (P1-3) for line matching 'prior_failed_attempts: N' (where N is an integer)"
   step_2a: "If prior_failed_attempts > 0 → review ran but verdict was lost → try direct transcript read (P3-1) → if still missing, launch verdict-recovery (scope: plan)"
-  step_2b: "If prior_failed_attempts == 0 → genuine UNKNOWN, review never ran → launch verdict-recovery (scope: plan)"
+  step_2b: "If prior_failed_attempts == 0 or line absent → genuine UNKNOWN, review never ran → launch verdict-recovery (scope: plan)"
   step_3: "If matching entry has verdict != UNKNOWN → use it, proceed"
   step_4: "If matching entry has verdict == UNKNOWN → IMP-H already blocked once; try direct transcript read (P3-1) → if still missing, launch verdict-recovery"
   step_5_direct_read: "P3-1 direct transcript read: locate transcript_path from review-completions.jsonl entry or worktree-events-debug.jsonl → read JSONL → reverse-search role:assistant for VERDICT: regex. Orchestrator-owned, no hook dependency."
@@ -89,9 +89,9 @@ phase_2_recovery:  # plan-reviewer
 
 phase_4_recovery:  # code-reviewer
   step_1: "Read review-completions.jsonl → filter by session_id == current AND effective_agent_type == 'code-reviewer'"
-  step_2: "If no matching entry → check prior_failed_attempts in injected context (P1-3)"
+  step_2: "If no matching entry → check injected context (P1-3) for line matching 'prior_failed_attempts: N' (where N is an integer)"
   step_2a: "If prior_failed_attempts > 0 → review ran but verdict was lost → try direct transcript read (P3-1) → if still missing, launch verdict-recovery (scope: code)"
-  step_2b: "If prior_failed_attempts == 0 → genuine UNKNOWN, review never ran → launch verdict-recovery (scope: code)"
+  step_2b: "If prior_failed_attempts == 0 or line absent → genuine UNKNOWN, review never ran → launch verdict-recovery (scope: code)"
   step_3: "If matching entry has verdict != UNKNOWN → use it, proceed"
   step_4: "If matching entry has verdict == UNKNOWN → IMP-H already blocked once; try direct transcript read (P3-1) → if still missing, launch verdict-recovery"
   step_5_direct_read: "P3-1 direct transcript read: locate agent_transcript_path from review-completions.jsonl entry or worktree-events-debug.jsonl → read JSONL → reverse-search role:assistant for VERDICT: regex. For code-reviewer (worktree agent), agent_transcript_path is the primary source."
