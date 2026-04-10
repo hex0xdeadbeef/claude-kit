@@ -124,6 +124,26 @@ if effective_agent_type in REVIEW_AGENTS and agent_id and effective_agent_type !
         pass  # NON_CRITICAL
 # --- End P1-2 ---
 
+# --- P2-2: Anomaly detection — log when SubagentStart didn't fire ---
+# If this review agent has no registry entry from SubagentStart, the hook chain is degraded.
+# Log anomaly for diagnostics (NON_CRITICAL — does not block).
+if effective_agent_type in REVIEW_AGENTS and agent_id and effective_agent_type != agent_type:
+    try:
+        anomaly = {
+            "timestamp": timestamp,
+            "type": "MISSING_SUBAGENT_START",
+            "agent_id": agent_id,
+            "effective_agent_type": effective_agent_type,
+            "raw_agent_type": agent_type,
+            "session_id": session_id,
+            "message": "SubagentStart hook did not fire — type recovered via heuristic (worktree isolation?)",
+        }
+        with open(os.path.join(STATE_DIR, "anomalies.jsonl"), "a") as f:
+            f.write(json.dumps(anomaly) + "\n")
+    except Exception:
+        pass
+# --- End P2-2 ---
+
 
 # --- IMP-01: Extract verdict from agent's final response ---
 # Strategy 1: Try last_assistant_message from payload (may not exist in current Claude Code versions)
