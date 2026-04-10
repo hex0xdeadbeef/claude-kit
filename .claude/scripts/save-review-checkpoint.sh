@@ -27,6 +27,11 @@
 #   When payload omits agent_type (e.g. code-reviewer with isolation:worktree),
 #   recover it via agent-id-registry.jsonl written by track-task-lifecycle.sh at SubagentStart.
 #   effective_agent_type is used for IMP-H, worktree resolution, memory sync, and marker.
+#
+# P0-2 worktree heuristic (2026-04-10):
+#   SubagentStart does NOT fire for isolation:worktree agents (platform behavior),
+#   so the registry is empty for code-reviewer. Fallback: infer code-reviewer from
+#   agent_transcript_path presence in SubagentStop payload (only worktree agents have it).
 
 set -euo pipefail
 
@@ -92,6 +97,13 @@ if not effective_agent_type or effective_agent_type == "unknown":
     recovered = lookup_agent_registry(agent_id)
     if recovered:
         effective_agent_type = recovered
+    elif data.get("agent_transcript_path"):
+        # P0-2: Worktree-based heuristic — SubagentStart does NOT fire for isolation:worktree
+        # agents (platform behavior), so the registry is never populated for code-reviewer.
+        # agent_transcript_path is only present for worktree agents (confirmed in all SubagentStop
+        # payloads). In this pipeline, code-reviewer is the ONLY review agent with worktree
+        # isolation — plan-reviewer has no worktree and its agent_type is populated correctly.
+        effective_agent_type = "code-reviewer"
 # --- End IMP-01 registry ---
 
 # --- IMP-01: Extract verdict from agent's final response ---
