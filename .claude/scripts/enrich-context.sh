@@ -21,6 +21,7 @@ STATE_DIR = ".claude/workflow-state"
 PROMPTS_DIR = ".claude/prompts"
 
 parts = []
+session_title = None  # IMP-2: set below when checkpoint exists; drives nested vs flat output form
 
 # 1. Checkpoint state (highest priority)
 try:
@@ -55,7 +56,15 @@ try:
         verdict = data.get("verdict", "null")
         session_type = data.get("session_type", "ad-hoc")
 
-        parts.append(f"Checkpoint: {feature} | Phase: {phase} ({phase_num}/4) | Complexity: {complexity} | Route: {route} | Verdict: {verdict} | Session: {session_type}")
+        parts.append(f"Checkpoint: {feature} | Phase: {phase} ({phase_num}/5) | Complexity: {complexity} | Route: {route} | Verdict: {verdict} | Session: {session_type}")
+
+        # IMP-2: compute sessionTitle for /resume display (v2.1.94+)
+        if feature and complexity and complexity != "?":
+            try:
+                cur_phase = min(int(float(phase_num)) + 1, 5) if phase_num not in ("?", "") else 1
+            except (ValueError, TypeError):
+                cur_phase = 1
+            session_title = f"[WF] {feature[:40]} | Ph{cur_phase}/5 | {complexity}"
 except Exception:
     pass
 
@@ -138,13 +147,23 @@ except Exception:
     pass
 
 # Output — wrapped in try-except to guarantee valid JSON even on edge cases
+# Form selection (IMP-2):
+#   - session_title set → nested hookSpecificOutput form (required for sessionTitle, v2.1.94)
+#   - otherwise         → flat {"additionalContext": "..."} form (preserves pre-IMP-2 behavior,
+#                          avoids cosmetic first-message error from anthropics/claude-code#17550
+#                          on non-workflow sessions)
 try:
-    if parts:
-        context = "[Workflow State]\n" + "\n".join(parts)
-        print(json.dumps({"additionalContext": context}))
+    context = "[Workflow State]\n" + "\n".join(parts) if parts else ""
+    if session_title:
+        print(json.dumps({
+            "hookSpecificOutput": {
+                "hookEventName": "UserPromptSubmit",
+                "additionalContext": context,
+                "sessionTitle": session_title,
+            }
+        }))
     else:
-        # No state — empty context, no noise
-        print(json.dumps({"additionalContext": ""}))
+        print(json.dumps({"additionalContext": context}))
 except Exception:
     # Fallback: always output valid JSON
     print('{"additionalContext": ""}')
