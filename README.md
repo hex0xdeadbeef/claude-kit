@@ -249,8 +249,8 @@ The system is a **5-phase development pipeline** managed by the orchestrator (`/
 ```mermaid
 flowchart LR
     L1["opus — planning,<br/>orchestration"]
-    L2["sonnet — review,<br/>implementation"]
-    L3["haiku — fast search,<br/>monitoring"]
+    L2["opus — implementation,<br/>review"]
+    L3["haiku — fast search,<br/>fallback"]
     L4["completion,<br/>post-processing"]
     L5["blocking gate,<br/>stop condition"]
     L6["skills,<br/>context enrichment"]
@@ -306,7 +306,7 @@ flowchart TB
     CHECK_S -->|Yes| EVALUATE
     CHECK_S -->|No| PLAN_REVIEW
 
-    subgraph PHASE2 ["Phase 2: Plan Review — plan-reviewer (sonnet)"]
+    subgraph PHASE2 ["Phase 2: Plan Review — plan-reviewer (opus)"]
         PLAN_REVIEW["Read plan +<br/>check architecture"]
         PLAN_REVIEW --> VERDICT1{"Verdict?"}
     end
@@ -318,7 +318,7 @@ flowchart TB
     LOOP1 -->|Yes| PLANNER
     LOOP1 -->|"No: limit reached"| STOP2["STOP: show summary,<br/>request user help"]
 
-    subgraph PHASE3 ["Phase 3: Implementation — /coder (sonnet)"]
+    subgraph PHASE3 ["Phase 3: Implementation — /coder (opus)"]
         EVALUATE{"Evaluate plan:<br/>PROCEED / REVISE / RETURN"}
         EVALUATE -->|PROCEED| IMPLEMENT["Implement Parts<br/>in dependency order"]
         EVALUATE -->|REVISE| ADJUST["Note adjustments"] --> IMPLEMENT
@@ -334,7 +334,7 @@ flowchart TB
 
     HANDOFF3 --> CODE_REVIEW
 
-    subgraph PHASE4 ["Phase 4: Code Review — code-reviewer (sonnet, worktree)"]
+    subgraph PHASE4 ["Phase 4: Code Review — code-reviewer (opus, worktree)"]
         CODE_REVIEW["Read diff +<br/>check architecture, security,<br/>tests, style"]
         CODE_REVIEW --> VERDICT2{"Verdict?"}
     end
@@ -528,9 +528,12 @@ flowchart TB
 
 | Model | Effort | Components | MaxTurns | Purpose |
 |-------|--------|------------|----------|---------|
-| **opus** | high | `/workflow`, `/planner`, `/project-researcher`, `/meta-agent` | — | Deep reasoning, orchestration, planning |
-| **sonnet** | high | `/coder`, `plan-reviewer`, `code-reviewer`, `/db-explorer` | 30 | Implementation, review, execution |
-| **haiku** | medium | `code-researcher`, PR subagents (discovery, report) | 20 | Fast read-only search |
+| **opus** | max | `/workflow`, `/planner`, `/designer`, `/coder`, `/meta-agent`, `/project-researcher`, `plan-reviewer`, `code-reviewer` | 50–60 (agents) | Deep reasoning, orchestration, planning, implementation, review |
+| **haiku** | medium | `code-researcher`, PR subagents (discovery, report) | 20 | Fast read-only codebase exploration |
+| **haiku** | low | `verdict-recovery` | 10 | Lightweight verdict fallback when reviewers omit `VERDICT:` |
+| **sonnet** | — | `/db-explorer` | — | Database schema exploration (non-pipeline command) |
+
+> **Note (v2.1.94+):** Claude Code default effort is now `high` for API-key/Team/Enterprise users (changed from `medium` in v2.1.94). All workflow pipeline agents explicitly set `effort: max` (Opus 4.6 only) to enable maximum extended thinking budget. Reviewers and coder migrated sonnet → opus in v1.9.0 (commit `09acec9`) to satisfy the `effort: max` constraint. Pair with `CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING=1` (set globally) to prevent mid-task adaptive throttling.
 
 ### 📊 Complexity Routing
 
