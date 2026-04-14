@@ -354,6 +354,17 @@
           }
         ]
       }
+    ],
+    "PermissionDenied": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/scripts/log-permission-denied.sh"
+          }
+        ]
+      }
     ]
   },
   "worktree": {
