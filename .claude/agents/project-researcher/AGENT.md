@@ -1,6 +1,7 @@
 ---
 name: project-researcher
 model: opus
+effort: max
 meta:
   version: 4.3.0
   updated: 2026-02-24

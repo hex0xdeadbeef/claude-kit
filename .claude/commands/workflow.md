@@ -2,7 +2,7 @@
 name: workflow
 description: "Full development cycle: task-analysis → [/designer (L/XL)] → planner → plan-review (agent) → coder → code-review (agent)"
 model: opus
-effort: high
+effort: max
 ---
 
 role:

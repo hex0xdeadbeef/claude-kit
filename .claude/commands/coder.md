@@ -1,8 +1,8 @@
 ---
 name: coder
 description: Implements code strictly per approved plan
-model: sonnet
-effort: high
+model: opus
+effort: max
 ---
 
 # CODER

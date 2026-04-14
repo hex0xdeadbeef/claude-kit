@@ -1,6 +1,7 @@
 ---
 description: "Autonomous agent for deep project analysis and .claude/ configuration generation"
 model: opus
+effort: max
 version: 1.0.0
 updated: 2026-02-23
 tags: [research, onboarding, project-analysis]

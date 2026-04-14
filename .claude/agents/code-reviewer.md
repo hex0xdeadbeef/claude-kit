@@ -1,8 +1,8 @@
 ---
 name: code-reviewer
 description: Reviews code changes for architecture compliance, security, error handling, and test coverage. Use when code needs review before merge.
-model: sonnet
-effort: high
+model: opus
+effort: max
 tools:
   - Read
   - Grep

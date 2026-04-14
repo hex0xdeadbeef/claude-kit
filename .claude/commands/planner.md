@@ -2,7 +2,7 @@
 name: planner
 description: Researches codebase and creates detailed implementation plan
 model: opus
-effort: high
+effort: max
 ---
 
 # PLANNER

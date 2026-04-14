@@ -1,8 +1,8 @@
 ---
 name: plan-reviewer
 description: Reviews implementation plans for architecture compliance, completeness, and security. Use when a plan needs validation before coding begins.
-model: sonnet
-effort: high
+model: opus
+effort: max
 tools:
   - Read
   - Grep
