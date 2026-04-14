@@ -196,7 +196,16 @@
     ],
     "PreCompact": [
       {
-        "matcher": "",
+        "matcher": "manual",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/scripts/save-progress-before-compact.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "auto",
         "hooks": [
           {
             "type": "command",
