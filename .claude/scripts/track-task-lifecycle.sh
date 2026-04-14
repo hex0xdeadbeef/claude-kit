@@ -70,6 +70,30 @@ try:
         f.write(json.dumps(debug_entry) + "\n")
 except Exception:
     pass
+
+
+# IMP-5: Positive probe — log when SubagentStart fires for code-reviewer with
+# correctly-resolved agent_type. Pairs with P2-2 negative probe in
+# save-review-checkpoint.sh (MISSING_SUBAGENT_START).
+# Decision gate: if anomalies.jsonl accumulates SUBAGENT_START_FIRED entries for
+# code-reviewer across multiple /workflow runs AND zero MISSING_SUBAGENT_START,
+# the P0-2 worktree heuristic can be removed. Until then, P0-2 stays.
+if entry["agent_type"] == "code-reviewer" and entry["agent_id"]:
+    try:
+        anomaly = {
+            "timestamp": entry["timestamp"],
+            "type": "SUBAGENT_START_FIRED",
+            "agent_id": entry["agent_id"],
+            "agent_type": "code-reviewer",
+            "session_id": entry["session_id"],
+            "message": "SubagentStart fired for code-reviewer — P0-2 worktree heuristic may be obsolete",
+        }
+        with open(os.path.join(STATE_DIR, "anomalies.jsonl"), "a") as f:
+            f.write(json.dumps(anomaly) + "\n")
+    except Exception:
+        pass  # NON_CRITICAL — diagnostic only
+
+
 PYTHON_EOF
 
 exit 0
