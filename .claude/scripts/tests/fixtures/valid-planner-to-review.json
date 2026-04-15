@@ -1,0 +1,21 @@
+{
+  "$handoff_contract": "planner_to_plan_review",
+  "artifact": ".claude/prompts/my-feature.md",
+  "metadata": {
+    "task_type": "new_feature",
+    "complexity": "M",
+    "sequential_thinking_used": false,
+    "alternatives_considered": 2,
+    "spec_referenced": false,
+    "spec_artifact": null
+  },
+  "key_decisions": [
+    "Use standard repository pattern over Active Record — better domain-DB isolation"
+  ],
+  "known_risks": [
+    "Migration may conflict with existing index on users.email"
+  ],
+  "areas_needing_attention": [
+    "Part 2: complex state transition logic in service layer"
+  ]
+}

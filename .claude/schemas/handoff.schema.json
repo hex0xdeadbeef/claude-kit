@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://claude-kit/schemas/handoff.schema.json",
+  "title": "Claude Kit — Handoff Payload Schema",
+  "description": "Validates .claude/workflow-state/{feature}-handoff.json inter-phase payloads.",
+  "oneOf": [
+    { "$ref": "#/$defs/planner_to_plan_review" },
+    { "$ref": "#/$defs/plan_review_to_coder" }
+  ],
+  "$defs": {
+    "planner_to_plan_review": {
+      "title": "planner_to_plan_review",
+      "description": "Handoff from /planner to plan-reviewer agent.",
+      "type": "object",
+      "required": [
+        "$handoff_contract",
+        "artifact",
+        "metadata",
+        "key_decisions",
+        "known_risks",
+        "areas_needing_attention"
+      ],
+      "properties": {
+        "$handoff_contract": {
+          "const": "planner_to_plan_review",
+          "description": "Discriminator — must be 'planner_to_plan_review'."
+        },
+        "artifact": {
+          "type": "string",
+          "description": "Path to the plan file, e.g. .claude/prompts/{feature}.md"
+        },
+        "metadata": {
+          "type": "object",
+          "required": [
+            "task_type",
+            "complexity",
+            "sequential_thinking_used",
+            "alternatives_considered",
+            "spec_referenced"
+          ],
+          "properties": {
+            "task_type": {
+              "type": "string",
+              "enum": [
+                "new_feature",
+                "bug_fix",
+                "refactoring",
+                "config_change",
+                "documentation",
+                "performance",
+                "integration"
+              ]
+            },
+            "complexity": {
+              "type": "string",
+              "enum": ["S", "M", "L", "XL"]
+            },
+            "sequential_thinking_used": {
+              "type": "boolean"
+            },
+            "alternatives_considered": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "spec_referenced": {
+              "type": "boolean"
+            },
+            "spec_artifact": {
+              "type": ["string", "null"],
+              "description": "Path to spec file if spec_referenced=true, null otherwise."
+            }
+          },
+          "additionalProperties": false
+        },
+        "key_decisions": {
+          "type": "array",
+          "description": "Architectural decisions with rationale, one string per decision.",
+          "items": { "type": "string" }
+        },
+        "known_risks": {
+          "type": "array",
+          "description": "Known risks, one string per risk.",
+          "items": { "type": "string" }
+        },
+        "areas_needing_attention": {
+          "type": "array",
+          "description": "Parts/areas for reviewer to focus on, one string per area.",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "plan_review_to_coder": {
+      "title": "plan_review_to_coder",
+      "description": "Handoff from plan-reviewer agent to /coder.",
+      "type": "object",
+      "required": [
+        "$handoff_contract",
+        "artifact",
+        "verdict",
+        "issues_summary",
+        "approved_with_notes",
+        "iteration"
+      ],
+      "properties": {
+        "$handoff_contract": {
+          "const": "plan_review_to_coder",
+          "description": "Discriminator — must be 'plan_review_to_coder'."
+        },
+        "artifact": {
+          "type": "string",
+          "description": "Path to the plan file."
+        },
+        "verdict": {
+          "type": "string",
+          "enum": ["APPROVED", "NEEDS_CHANGES", "REJECTED"]
+        },
+        "issues_summary": {
+          "type": "object",
+          "required": ["blocker", "major", "minor"],
+          "properties": {
+            "blocker": { "type": "integer", "minimum": 0 },
+            "major":   { "type": "integer", "minimum": 0 },
+            "minor":   { "type": "integer", "minimum": 0 }
+          },
+          "additionalProperties": false
+        },
+        "approved_with_notes": {
+          "type": "array",
+          "description": "Notes for coder: areas requiring attention, one string per note.",
+          "items": { "type": "string" }
+        },
+        "iteration": {
+          "type": "string",
+          "description": "Review iteration counter, format N/3 where N in {1,2,3}.",
+          "pattern": "^[123]/3$"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -29,6 +29,7 @@ handoff_protocol:
       producer: "/planner"
       consumer: "plan-reviewer (agent)"
       payload:
+        "$handoff_contract": "planner_to_plan_review"  # IMP-01: discriminator for schema validation. Quote the $ key in YAML.
         artifact: ".claude/prompts/{feature}.md"
         metadata:
           task_type: "{new_feature|bug_fix|refactoring|...}"
@@ -48,6 +49,7 @@ handoff_protocol:
       producer: "plan-reviewer (agent)"
       consumer: "/coder"
       payload:
+        "$handoff_contract": "plan_review_to_coder"  # IMP-01: discriminator for schema validation. Quote the $ key in YAML.
         artifact: ".claude/prompts/{feature}.md"
         verdict: "APPROVED|NEEDS_CHANGES|REJECTED"
         issues_summary:
@@ -135,3 +137,20 @@ handoff_protocol:
         key_snippets: "max 3, each ≤15 lines"
         summary: "1-3 sentences"
       isolation: "Full — code-researcher runs in clean context via Task tool"
+
+  handoff_artifacts:
+    purpose: "Machine-readable handoff artifacts for automated validation (IMP-01)"
+    schema: ".claude/schemas/handoff.schema.json"
+    artifact_pattern: ".claude/workflow-state/{feature}-handoff.json"
+    validation_log: ".claude/workflow-state/handoff-validation.jsonl"
+    note: |
+      Since IMP-01: after receiving each producer's output, orchestrator writes a
+      dedicated JSON file {feature}-handoff.json in workflow-state/. The file is
+      auto-validated by .claude/scripts/validate-handoff.sh via PostToolUse hook.
+      Schema: JSON Schema draft-2020-12 with oneOf discriminated by $handoff_contract.
+      Mode controlled by env CLAUDE_HANDOFF_VALIDATION_MODE (warn|strict, default warn).
+    contracts_covered:
+      - "planner_to_plan_review — written in plan_review_delegation.pre_delegation step 0"
+      - "plan_review_to_coder — written in plan_review_delegation.post_delegation step 4.5"
+    contracts_not_yet_covered:
+      - "designer_to_planner, coder_to_code_review, code_review_to_completion → IMP-01.2"

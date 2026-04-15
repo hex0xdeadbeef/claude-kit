@@ -43,7 +43,8 @@
       "Edit(/.claude/skills/plan-review-rules/**)",
       "Edit(/.claude/skills/systematic-debugging/**)",
       "Bash(git worktree:*)",
-      "Bash(npx markdownlint-cli:*)"
+      "Bash(npx markdownlint-cli:*)",
+      "Bash(.claude/scripts/tests/*.sh)"
     ],
     "deny": [
       "Bash(rm -rf *)",
@@ -190,6 +191,21 @@
             "type": "command",
             "command": ".claude/agents/meta-agent/scripts/check-plan-drift.sh",
             "if": "Edit(.claude/**)"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/scripts/validate-handoff.sh",
+            "if": "Write(.claude/workflow-state/*-handoff.json)"
+          },
+          {
+            "type": "command",
+            "command": ".claude/scripts/validate-handoff.sh",
+            "if": "Edit(.claude/workflow-state/*-handoff.json)"
           }
         ]
       }

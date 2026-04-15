@@ -256,6 +256,25 @@ delegation_protocol:
       Iteration: {N}/3
     returns: "Verdict (APPROVED/NEEDS_CHANGES/REJECTED) + issues + handoff for coder"
     pre_delegation: |
+      STEP 0 (IMP-01): Write planner handoff to .claude/workflow-state/{feature}-handoff.json
+      before delegating to plan-reviewer. Hook auto-validates on write.
+      Format (must match .claude/schemas/handoff.schema.json, contract planner_to_plan_review):
+        {
+          "$handoff_contract": "planner_to_plan_review",
+          "artifact": ".claude/prompts/{feature}.md",
+          "metadata": {
+            "task_type": "{task_type}",
+            "complexity": "{S|M|L|XL}",
+            "sequential_thinking_used": true|false,
+            "alternatives_considered": N,
+            "spec_referenced": true|false,
+            "spec_artifact": "{path or null}"
+          },
+          "key_decisions": ["{decision + rationale}", ...],
+          "known_risks": ["{risk}", ...],
+          "areas_needing_attention": ["{Part N: reason}", ...]
+        }
+
       Before delegating to plan-reviewer (iteration 2+ only):
       1. If checkpoint.issues_history has a prior entry for phase 2 with resolved == []:
          - Populate resolved[] from planner handoff: summarize what planner changed
@@ -267,6 +286,16 @@ delegation_protocol:
       2. Extract verdict from VERDICT: header (first line)
       3. Append to checkpoint.issues_history: {phase: 2, iteration: N, verdict: {verdict}, issues: [extracted issues], resolved: []}
       4. Write checkpoint: phase_completed=2, verdict={extracted_verdict}
+      4.5 (IMP-01): Write reviewer handoff to .claude/workflow-state/{feature}-handoff.json
+          Hook auto-validates on write. Format (contract plan_review_to_coder):
+            {
+              "$handoff_contract": "plan_review_to_coder",
+              "artifact": ".claude/prompts/{feature}.md",
+              "verdict": "{APPROVED|NEEDS_CHANGES|REJECTED}",
+              "issues_summary": {"blocker": N, "major": N, "minor": N},
+              "approved_with_notes": ["{note}", ...],
+              "iteration": "{N}/3"
+            }
       5. If verdict is INCOMPLETE → follow output_validation.on_incomplete_output
 
   code_review_delegation:

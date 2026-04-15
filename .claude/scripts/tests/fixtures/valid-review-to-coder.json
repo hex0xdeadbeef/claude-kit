@@ -1,0 +1,14 @@
+{
+  "$handoff_contract": "plan_review_to_coder",
+  "artifact": ".claude/prompts/my-feature.md",
+  "verdict": "APPROVED",
+  "issues_summary": {
+    "blocker": 0,
+    "major": 0,
+    "minor": 1
+  },
+  "approved_with_notes": [
+    "Part 2: minor — add error context string in helper func"
+  ],
+  "iteration": "1/3"
+}

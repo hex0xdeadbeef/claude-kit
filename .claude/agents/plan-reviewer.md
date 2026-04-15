@@ -162,6 +162,11 @@ Issues: {N} BLOCKER, {N} MAJOR, {N} MINOR
 
 **Handoff for Coder (CRITICAL — MUST be formed on completion):**
 For handoff contract see [handoff-protocol.md] in workflow-protocols skill → plan_review_to_coder
+Schema: .claude/schemas/handoff.schema.json (contract: plan_review_to_coder) — orchestrator validates on write.
+Required fields: "$handoff_contract", artifact, verdict, issues_summary, approved_with_notes, iteration
+NOTE: The VERDICT: line at the top of your response is for orchestrator transcript extraction only — it is
+NOT a field in the JSON handoff. The JSON handoff only contains the lowercase "verdict" field (no colon).
+- "$handoff_contract": plan_review_to_coder   # YAML: quote keys starting with $
 - Artifact: .claude/prompts/{feature}.md
 - Verdict: {APPROVED|NEEDS_CHANGES|REJECTED}
 - Issues summary: {N} blocker, {N} major, {N} minor

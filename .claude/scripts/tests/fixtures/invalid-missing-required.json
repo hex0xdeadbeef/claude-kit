@@ -1,0 +1,4 @@
+{
+  "$handoff_contract": "planner_to_plan_review",
+  "artifact": ".claude/prompts/my-feature.md"
+}

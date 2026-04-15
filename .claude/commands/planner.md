@@ -59,18 +59,26 @@ output:
     severity: CRITICAL
     description: "MUST be formed on completion — passed to /plan-review"
     # For handoff contract see [handoff-protocol.md] in workflow-protocols skill → planner_to_plan_review
+    schema: ".claude/schemas/handoff.schema.json (contract: planner_to_plan_review)"
+    note: "Orchestrator writes this to .claude/workflow-state/{feature}-handoff.json and validates against schema."
+    required_fields: ["$handoff_contract", "artifact", "metadata", "key_decisions", "known_risks", "areas_needing_attention"]
     example: |
       Handoff → /plan-review:
+        "$handoff_contract": planner_to_plan_review   # YAML: quote keys starting with $
         artifact: .claude/prompts/{feature}.md
-        metadata: { task_type: new_feature, complexity: L, seq_thinking: true, alternatives: 3 }
+        metadata:
+          task_type: new_feature
+          complexity: L
+          sequential_thinking_used: true
+          alternatives_considered: 3
+          spec_referenced: true
+          spec_artifact: ".claude/prompts/{feature}-spec.md"
         key_decisions:
           - "Repository pattern over Active Record — better domain-DB isolation"
         known_risks:
           - "Migration may conflict with existing index"
         areas_needing_attention:
           - "Part 3: Controller — complex state transition logic"
-        spec_referenced: true|false
-        spec_artifact: ".claude/prompts/{feature}-spec.md"  # if applicable
 
 ## AUTONOMY
 autonomy:

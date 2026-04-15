@@ -1,0 +1,8 @@
+{
+  "$handoff_contract": "plan_review_to_coder",
+  "artifact": ".claude/prompts/my-feature.md",
+  "verdict": "PARTIAL_APPROVAL",
+  "issues_summary": { "blocker": 0, "major": 0, "minor": 0 },
+  "approved_with_notes": [],
+  "iteration": "1/3"
+}
