@@ -86,7 +86,7 @@ VALIDATION_OUTPUT=$("${VALIDATOR_CMD[@]}" \
 
 # ─── Log result ─────────────────────────────────────────────────────────────────
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-FEATURE=$(basename "${HANDOFF_FILE}" -handoff.json)
+FEATURE=$(basename "${HANDOFF_FILE}" .json | sed 's/-handoff$//')
 VALID_BOOL=$([ "${VALIDATION_RC}" -eq 0 ] && echo "true" || echo "false")
 LOG_ENTRY="{\"timestamp\":\"${TIMESTAMP}\",\"feature\":\"${FEATURE}\","
 LOG_ENTRY+="\"file\":\"${HANDOFF_FILE}\",\"valid\":${VALID_BOOL},"
