@@ -1,11 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://claude-kit/schemas/handoff.schema.json",
-  "title": "Claude Kit — Handoff Payload Schema",
-  "description": "Validates .claude/workflow-state/{feature}-handoff.json inter-phase payloads.",
+  "title": "Claude Kit — Handoff & Verdict Payload Schema",
+  "description": "Validates .claude/workflow-state/*-handoff.json inter-phase payloads AND structured review verdicts emitted by plan-reviewer / code-reviewer agents. oneOf switches on either $handoff_contract (handoff envelope) or $verdict_contract (verdict envelope).",
   "oneOf": [
     { "$ref": "#/$defs/planner_to_plan_review" },
-    { "$ref": "#/$defs/plan_review_to_coder" }
+    { "$ref": "#/$defs/plan_review_to_coder" },
+    { "$ref": "#/$defs/plan_review_verdict" },
+    { "$ref": "#/$defs/code_review_verdict" }
   ],
   "$defs": {
     "planner_to_plan_review": {
@@ -134,6 +136,92 @@
           "type": "string",
           "description": "Review iteration counter, format N/3 where N in {1,2,3}.",
           "pattern": "^[123]/3$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "plan_review_verdict": {
+      "title": "plan_review_verdict",
+      "description": "Structured verdict payload emitted by plan-reviewer inside a VERDICT_JSON: fenced block. Envelope contains the verdict itself plus an embedded plan_review_to_coder handoff.",
+      "type": "object",
+      "required": ["$verdict_contract", "verdict", "issues", "handoff"],
+      "properties": {
+        "$verdict_contract": {
+          "const": "plan_review_verdict",
+          "description": "Discriminator — must be 'plan_review_verdict'."
+        },
+        "verdict": {
+          "type": "string",
+          "enum": ["APPROVED", "NEEDS_CHANGES", "REJECTED"],
+          "description": "plan-reviewer verdict. APPROVED_WITH_COMMENTS / CHANGES_REQUESTED are code-reviewer-only values and MUST NOT appear here — use the discriminator to pick the right envelope."
+        },
+        "issues": {
+          "type": "array",
+          "description": "Review issues. Empty array is valid — zero issues is a legitimate APPROVED state.",
+          "items": {
+            "type": "object",
+            "required": ["id", "severity", "category", "problem"],
+            "properties": {
+              "id":         { "type": "string", "description": "Issue identifier, free-form PR-### for now. IMP-03 will tighten to PR-<sha256[:8]>." },
+              "severity":   { "type": "string", "enum": ["BLOCKER", "MAJOR", "MINOR", "NIT"] },
+              "category":   { "type": "string", "description": "Classification: architecture | security | error_handling | completeness | style | other." },
+              "location":   { "type": "string", "description": "Human-readable location (e.g. 'Part 3', 'file.go:42'). Optional." },
+              "problem":    { "type": "string" },
+              "suggestion": { "type": "string" },
+              "reference":  { "type": "string", "description": "RULE_N or external reference (OWASP-XXX). Optional." }
+            },
+            "additionalProperties": false
+          }
+        },
+        "handoff": {
+          "$ref": "#/$defs/plan_review_to_coder",
+          "description": "Embedded inter-phase handoff. Shape MUST match plan_review_to_coder — fully validated."
+        }
+      },
+      "additionalProperties": false
+    },
+    "code_review_verdict": {
+      "title": "code_review_verdict",
+      "description": "Structured verdict payload emitted by code-reviewer inside a VERDICT_JSON: fenced block. Envelope contains the verdict plus a MINIMUM-VIABLE embedded handoff; full code_review_to_completion contract is scoped to IMP-01.2.",
+      "type": "object",
+      "required": ["$verdict_contract", "verdict", "issues", "handoff"],
+      "properties": {
+        "$verdict_contract": {
+          "const": "code_review_verdict",
+          "description": "Discriminator — must be 'code_review_verdict'."
+        },
+        "verdict": {
+          "type": "string",
+          "enum": ["APPROVED", "APPROVED_WITH_COMMENTS", "CHANGES_REQUESTED", "NEEDS_CHANGES", "REJECTED"],
+          "description": "code-reviewer verdict. All five legacy variants preserved — legacy NEEDS_CHANGES / REJECTED and modern APPROVED_WITH_COMMENTS / CHANGES_REQUESTED both legal for cross-version compatibility."
+        },
+        "issues": {
+          "type": "array",
+          "description": "Review issues. Empty array is valid — zero issues is a legitimate APPROVED state.",
+          "items": {
+            "type": "object",
+            "required": ["id", "severity", "category", "problem"],
+            "properties": {
+              "id":         { "type": "string", "description": "Issue identifier, free-form CR-### for now. IMP-03 will tighten." },
+              "severity":   { "type": "string", "enum": ["BLOCKER", "MAJOR", "MINOR", "NIT"] },
+              "category":   { "type": "string" },
+              "location":   { "type": "string" },
+              "problem":    { "type": "string" },
+              "suggestion": { "type": "string" },
+              "reference":  { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "handoff": {
+          "type": "object",
+          "description": "MINIMUM-VIABLE embedded handoff (IMP-02 scope). Full code_review_to_completion shape is IMP-01.2. additionalProperties: true deliberately — accepts future fields without breaking.",
+          "required": ["verdict", "iteration"],
+          "properties": {
+            "verdict":   { "type": "string" },
+            "iteration": { "type": "string", "pattern": "^[123]/3$" }
+          },
+          "additionalProperties": true
         }
       },
       "additionalProperties": false
