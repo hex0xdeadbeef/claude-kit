@@ -215,18 +215,25 @@ verdict_payload = None        # the parsed JSON object (if any)
 verdict_mismatch_record = None
 
 def _extract_verdict_json(text):
-    """Return (parsed_dict_or_None, raw_json_str_or_None) from VERDICT_JSON:\\n```json\\n{...}\\n```."""
+    """Return (parsed_dict_or_None, raw_json_str_or_None) from VERDICT_JSON:\\n```json\\n{...}\\n```.
+
+    CR-001: use LAST match, not first. Agents may echo the instructional template
+    from their prompt (agents/plan-reviewer.md and code-reviewer.md include a
+    literal VERDICT_JSON example). The reviewer's actual verdict is emitted at
+    the END of the response, so the last match wins; the first would pick up the
+    echo and short-circuit to the template's stub values.
+    """
     if not text:
         return None, None
     # Sentinel-anchored at start of line. Group 1 = JSON body between fences.
-    m = _re_imp02.search(
+    matches = list(_re_imp02.finditer(
         r'^VERDICT_JSON:\s*\n```json\s*\n(.*?)\n```',
         str(text),
         _re_imp02.MULTILINE | _re_imp02.DOTALL,
-    )
-    if not m:
+    ))
+    if not matches:
         return None, None
-    raw = m.group(1)
+    raw = matches[-1].group(1)
     try:
         return json.loads(raw), raw
     except Exception:

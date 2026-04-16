@@ -53,7 +53,13 @@ run_hook() {
   # Discard stdout (hook prints "decision: block" JSON only when verdict UNKNOWN; our
   # tests engineer a verdict in every payload so block should never fire).
   echo "${payload}" | bash "${HOOK}" >/dev/null 2>&1 || true
+  # CR-002: unset both envs on every run so one test's sandbox/mode cannot leak
+  # into the next one's hook invocation. Without this, a test that runs in strict
+  # mode would carry the mode forward to subsequent warn-mode scenarios, and the
+  # sandbox path from the prior run would be read by the hook even though the
+  # caller believes it's been replaced.
   unset CLAUDE_VERDICT_VALIDATION_MODE
+  unset CLAUDE_WORKFLOW_STATE_DIR
   echo "${sandbox}"
 }
 

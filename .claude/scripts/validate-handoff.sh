@@ -71,6 +71,12 @@ if command -v jq &>/dev/null; then
   # discriminator read fails (e.g. malformed JSON that slipped past earlier guards).
   # Silent fall-through to "handoff" kind is safe but leaves no trace — the WARN
   # below gives the user one line to understand why strict-mode didn't engage.
+  #
+  # CR-004: bracket-index syntax .["$verdict_contract"] is REQUIRED — jq treats a
+  # $-prefix in .$foo as a variable reference (attempting to deref a jq variable
+  # named $foo), which errors out on an undefined variable. The bracket form is
+  # the only way to read a JSON object key that begins with a literal '$'. Same
+  # pattern mirrored on the handoff side (line below) — do not "simplify" either.
   _verdict_disc=$(jq -r '.["$verdict_contract"] // empty' "${HANDOFF_FILE}" 2>/dev/null)
   _jq_rc=$?
   if [[ "${_jq_rc}" -eq 0 && -n "${_verdict_disc}" ]]; then
