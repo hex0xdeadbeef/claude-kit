@@ -109,6 +109,83 @@ except FileNotFoundError:
 ' "${sb}/handoff-validation.jsonl" "${kind}"
 }
 
+# ─── Helper: read canonical_issue_ids from the latest marker (IMP-03) ──────────────────
+# Args: sandbox_dir  expr (one of: length | first_id | all_ids | first_prefix)
+canonical_ids_field() {
+  local sb="$1"
+  local expr="$2"
+  python3 -c '
+import json, sys
+try:
+    with open(sys.argv[1]) as f:
+        lines = [ln for ln in f if ln.strip()]
+    if not lines:
+        print("MISSING_FILE"); sys.exit(0)
+    marker = json.loads(lines[-1])
+    cids = marker.get("canonical_issue_ids") or []
+    expr = sys.argv[2]
+    if expr == "length":
+        print(len(cids))
+    elif expr == "first_id" and cids:
+        print(cids[0].get("id", "MISSING"))
+    elif expr == "all_ids":
+        print(",".join(c.get("id", "?") for c in cids))
+    elif expr == "first_prefix" and cids:
+        first = cids[0].get("id", "")
+        print(first[:3] if first else "EMPTY")
+    else:
+        print("UNKNOWN_EXPR")
+except FileNotFoundError:
+    print("MISSING_FILE")
+except Exception as e:
+    print(f"ERR:{e}")
+' "${sb}/review-completions.jsonl" "${expr}"
+}
+
+# ─── Helper: make plan-review or code-review payload with issues (IMP-03) ──────────────
+# Args: verdict_contract  agent_id  issues_json_array
+make_payload_with_issues() {
+  local contract="$1"
+  local aid="$2"
+  local issues_json="$3"
+  local agent_type="plan-reviewer"
+  if [[ "${contract}" == "code_review_verdict" ]]; then
+    agent_type="code-reviewer"
+  fi
+  python3 -c '
+import json, sys
+contract = sys.argv[1]
+aid = sys.argv[2]
+issues = json.loads(sys.argv[3])
+agent_type = sys.argv[4]
+
+if contract == "plan_review_verdict":
+    handoff = {"$handoff_contract": "plan_review_to_coder",
+               "artifact": ".claude/prompts/x.md",
+               "verdict": "APPROVED",
+               "issues_summary": {"blocker": 0, "major": 0, "minor": len(issues)},
+               "approved_with_notes": [],
+               "iteration": "1/3"}
+else:
+    handoff = {"verdict": "APPROVED", "iteration": "1/3"}
+
+verdict_json = {
+    "$verdict_contract": contract,
+    "verdict": "APPROVED",
+    "issues": issues,
+    "handoff": handoff,
+}
+msg = "VERDICT: APPROVED\n\nVERDICT_JSON:\n```json\n" + json.dumps(verdict_json) + "\n```"
+payload = {
+    "agent_type": agent_type,
+    "agent_id": aid,
+    "session_id": "test-session-imp03",
+    "last_assistant_message": msg,
+}
+print(json.dumps(payload))
+' "${contract}" "${aid}" "${issues_json}" "${agent_type}"
+}
+
 # ─── Helper: assert equality; track PASS/FAIL ──────────────────────────────────────────
 assert_eq() {
   local name="$1"
@@ -192,6 +269,66 @@ assert_eq "verdict is REJECTED (regex)"       "REJECTED"                       "
 assert_eq "verdict_source is regex_fallback"  "regex_fallback"                 "$(marker_field "${SCENARIO_5_SANDBOX}" verdict_source)"
 assert_eq "verdict_json_decode_error logged"  "YES"                            "$(validation_has_kind "${SCENARIO_5_SANDBOX}" verdict_json_decode_error)"
 rm -rf "${SCENARIO_5_SANDBOX}"
+echo
+
+# ─── Scenario 6: ID normalization (plan-review, PR- prefix) (IMP-03) ───────────────────
+# Advisory id "PR-001" → hook overwrites with canonical PR-<sha256[:8]>.
+SCENARIO_6_ISSUES='[{"id":"PR-001","severity":"MINOR","category":"style","location":"Part 3","problem":"missing test for edge case"}]'
+SCENARIO_6_SANDBOX=$(run_hook "$(make_payload_with_issues "plan_review_verdict" "aid-s6" "${SCENARIO_6_ISSUES}")")
+
+echo "Scenario 6: ID normalization (plan-review, PR- prefix)"
+assert_eq "verdict is APPROVED"                  "APPROVED"           "$(marker_field "${SCENARIO_6_SANDBOX}" verdict)"
+assert_eq "verdict_source structured_json"       "structured_json"    "$(marker_field "${SCENARIO_6_SANDBOX}" verdict_source)"
+assert_eq "canonical_issue_ids has 1 entry"      "1"                  "$(canonical_ids_field "${SCENARIO_6_SANDBOX}" length)"
+assert_eq "canonical id has PR- prefix"          "PR-"                "$(canonical_ids_field "${SCENARIO_6_SANDBOX}" first_prefix)"
+# Verify deterministic hash: sha256("style|Part 3|missing test for edge case")[:8]
+EXPECTED_HASH_6=$(python3 -c 'import hashlib; print(hashlib.sha256(b"style|Part 3|missing test for edge case").hexdigest()[:8])')
+assert_eq "canonical id matches expected hash"   "PR-${EXPECTED_HASH_6}" "$(canonical_ids_field "${SCENARIO_6_SANDBOX}" first_id)"
+rm -rf "${SCENARIO_6_SANDBOX}"
+echo
+
+# ─── Scenario 7: ID normalization (code-review, CR- prefix) (IMP-03) ───────────────────
+SCENARIO_7_ISSUES='[{"id":"CR-999","severity":"MAJOR","category":"error_handling","location":"internal/handler/user.go:Create","problem":"nil pointer not guarded"}]'
+SCENARIO_7_SANDBOX=$(run_hook "$(make_payload_with_issues "code_review_verdict" "aid-s7" "${SCENARIO_7_ISSUES}")")
+
+echo "Scenario 7: ID normalization (code-review, CR- prefix)"
+assert_eq "canonical_issue_ids has 1 entry"      "1"                  "$(canonical_ids_field "${SCENARIO_7_SANDBOX}" length)"
+assert_eq "canonical id has CR- prefix"          "CR-"                "$(canonical_ids_field "${SCENARIO_7_SANDBOX}" first_prefix)"
+EXPECTED_HASH_7=$(python3 -c 'import hashlib; print(hashlib.sha256(b"error_handling|internal/handler/user.go:Create|nil pointer not guarded").hexdigest()[:8])')
+assert_eq "canonical id matches expected hash"   "CR-${EXPECTED_HASH_7}"  "$(canonical_ids_field "${SCENARIO_7_SANDBOX}" first_id)"
+rm -rf "${SCENARIO_7_SANDBOX}"
+echo
+
+# ─── Scenario 8: Collision dedup + id_collision record (IMP-03) ────────────────────────
+# Three issues with identical category/location/problem → 1 canonical ID, collision logged.
+SCENARIO_8_ISSUES='[
+  {"id":"CR-001","severity":"MINOR","category":"style","location":"Part 3","problem":"trailing whitespace"},
+  {"id":"CR-002","severity":"MINOR","category":"style","location":"Part 3","problem":"trailing whitespace"},
+  {"id":"CR-003","severity":"MINOR","category":"style","location":"Part 3","problem":"trailing whitespace"}
+]'
+SCENARIO_8_SANDBOX=$(run_hook "$(make_payload_with_issues "code_review_verdict" "aid-s8" "${SCENARIO_8_ISSUES}")")
+
+echo "Scenario 8: Collision dedup"
+assert_eq "canonical_issue_ids deduplicated to 1"  "1"     "$(canonical_ids_field "${SCENARIO_8_SANDBOX}" length)"
+assert_eq "id_collision record logged"             "YES"   "$(validation_has_kind "${SCENARIO_8_SANDBOX}" id_collision)"
+rm -rf "${SCENARIO_8_SANDBOX}"
+echo
+
+# ─── Scenario 9: Backward compat — advisory free-form id normalised (IMP-03) ───────────
+# Agent emits id "arbitrary-advisory-tag" (non-canonical); hook replaces it with PR-<hash>
+# and schema validation passes in warn mode (default).
+SCENARIO_9_ISSUES='[{"id":"arbitrary-advisory-tag","severity":"MAJOR","category":"architecture","location":"Part 5","problem":"repository layer imports handler"}]'
+SCENARIO_9_SANDBOX=$(run_hook "$(make_payload_with_issues "plan_review_verdict" "aid-s9" "${SCENARIO_9_ISSUES}")")
+
+echo "Scenario 9: Backward compat — free-form advisory id normalised"
+assert_eq "verdict still APPROVED"              "APPROVED"          "$(marker_field "${SCENARIO_9_SANDBOX}" verdict)"
+assert_eq "verdict_source structured_json"      "structured_json"   "$(marker_field "${SCENARIO_9_SANDBOX}" verdict_source)"
+assert_eq "canonical_issue_ids has 1 entry"     "1"                 "$(canonical_ids_field "${SCENARIO_9_SANDBOX}" length)"
+assert_eq "canonical id has PR- prefix"         "PR-"               "$(canonical_ids_field "${SCENARIO_9_SANDBOX}" first_prefix)"
+# PR-003 strengthening: deterministic hash equality matches scenarios 6/7 pattern
+EXPECTED_HASH_9=$(python3 -c 'import hashlib; print(hashlib.sha256(b"architecture|Part 5|repository layer imports handler").hexdigest()[:8])')
+assert_eq "canonical id matches expected hash"  "PR-${EXPECTED_HASH_9}" "$(canonical_ids_field "${SCENARIO_9_SANDBOX}" first_id)"
+rm -rf "${SCENARIO_9_SANDBOX}"
 echo
 
 # ─── Summary ───────────────────────────────────────────────────────────────────────────

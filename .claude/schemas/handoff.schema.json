@@ -162,7 +162,11 @@
             "type": "object",
             "required": ["id", "severity", "category", "problem"],
             "properties": {
-              "id":         { "type": "string", "description": "Issue identifier, free-form PR-### for now. IMP-03 will tighten to PR-<sha256[:8]>." },
+              "id":         {
+                "type": "string",
+                "pattern": "^PR-[0-9a-f]{8}$",
+                "description": "Canonical issue identifier: PR-<first-8-hex-chars-of-sha256(category|location|problem)>. Computed by save-review-checkpoint.sh (IMP-03) before schema validation. Agents emit free-form advisory ids; hook overwrites them with the canonical form."
+              },
               "severity":   { "type": "string", "enum": ["BLOCKER", "MAJOR", "MINOR", "NIT"] },
               "category":   { "type": "string", "description": "Classification: architecture | security | error_handling | completeness | style | other." },
               "location":   { "type": "string", "description": "Human-readable location (e.g. 'Part 3', 'file.go:42'). Optional." },
@@ -202,7 +206,11 @@
             "type": "object",
             "required": ["id", "severity", "category", "problem"],
             "properties": {
-              "id":         { "type": "string", "description": "Issue identifier, free-form CR-### for now. IMP-03 will tighten." },
+              "id":         {
+                "type": "string",
+                "pattern": "^CR-[0-9a-f]{8}$",
+                "description": "Canonical issue identifier: CR-<first-8-hex-chars-of-sha256(category|location|problem)>. Computed by save-review-checkpoint.sh (IMP-03) before schema validation."
+              },
               "severity":   { "type": "string", "enum": ["BLOCKER", "MAJOR", "MINOR", "NIT"] },
               "category":   { "type": "string" },
               "location":   { "type": "string" },

@@ -26,6 +26,7 @@ SCHEMA_FILE="${REPO_ROOT}/.claude/schemas/handoff.schema.json"
 VALIDATION_LOG="${REPO_ROOT}/.claude/workflow-state/handoff-validation.jsonl"
 MODE_HANDOFF="${CLAUDE_HANDOFF_VALIDATION_MODE:-warn}"
 MODE_VERDICT="${CLAUDE_VERDICT_VALIDATION_MODE:-warn}"
+MODE_ISSUE_ID="${CLAUDE_ISSUE_ID_VALIDATION_MODE:-warn}"
 
 # ─── Get file path (dual-mode) ──────────────────────────────────────────────────
 DIRECT_MODE=0
@@ -81,7 +82,14 @@ if command -v jq &>/dev/null; then
   _jq_rc=$?
   if [[ "${_jq_rc}" -eq 0 && -n "${_verdict_disc}" ]]; then
     RECORD_KIND="verdict"
-    MODE="${MODE_VERDICT}"
+    # IMP-03: MODE_ISSUE_ID boosts verdict validation to strict when the id
+    # pattern constraint must block. MODE_VERDICT OR MODE_ISSUE_ID = strict
+    # means schema violations on the verdict record block the write.
+    if [[ "${MODE_VERDICT}" == "strict" || "${MODE_ISSUE_ID}" == "strict" ]]; then
+      MODE="strict"
+    else
+      MODE="${MODE_VERDICT}"
+    fi
   elif [[ "${_jq_rc}" -ne 0 ]]; then
     echo "[validate-handoff] WARN: jq failed (rc=${_jq_rc}) to read \$verdict_contract from ${HANDOFF_FILE} — defaulting to handoff kind" >&2
   else
@@ -93,7 +101,7 @@ if command -v jq &>/dev/null; then
     _handoff_disc=$(jq -r '.["$handoff_contract"] // empty' "${HANDOFF_FILE}" 2>/dev/null)
     if [[ -z "${_handoff_disc}" ]]; then
       RECORD_KIND="unknown"
-      if [[ "${MODE_HANDOFF}" == "strict" || "${MODE_VERDICT}" == "strict" ]]; then
+      if [[ "${MODE_HANDOFF}" == "strict" || "${MODE_VERDICT}" == "strict" || "${MODE_ISSUE_ID}" == "strict" ]]; then
         MODE="strict"
       fi
     fi

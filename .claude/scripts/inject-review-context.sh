@@ -266,7 +266,8 @@ if issues:
             k, _, v = stripped.partition(":")
             k = k.strip()
             v = v.strip().strip('"').strip("'")
-            if k in ("iteration", "verdict", "issues", "resolved"):
+            if k in ("iteration", "verdict", "issues", "resolved",
+                     "resolved_ids", "regression_ids", "canonical_issue_ids"):
                 current[k] = v
     if current:
         entries.append(current)
@@ -284,6 +285,22 @@ if issues:
             lines.append(f"  - Iteration {iter_num}: {verdict} — issues: {issues_str}")
             if resolved_str and resolved_str != "[]":
                 lines.append(f"    Addressed: {resolved_str}")
+            # IMP-03: auto set-diff projections from orchestrator post_delegation
+            resolved_ids_str = entry.get("resolved_ids", "[]")
+            regression_ids_str = entry.get("regression_ids", "[]")
+            if resolved_ids_str and resolved_ids_str != "[]":
+                lines.append(f"    Resolved IDs (auto set-diff): {resolved_ids_str}")
+            if regression_ids_str and regression_ids_str != "[]":
+                lines.append(f"    REGRESSION IDs (reappeared): {regression_ids_str}")
+        # IMP-03: prominent regression alert for current phase's most recent entry
+        # PR-002: ASCII bracket marker matches existing [Workflow Context ...] convention
+        _last_entry = phase_entries[-1] if phase_entries else None
+        if _last_entry:
+            _reg = _last_entry.get("regression_ids", "[]")
+            if _reg and _reg != "[]":
+                lines.insert(0, "")
+                lines.insert(0, f"[REGRESSION ALERT] previously-resolved issues reappeared: {_reg}")
+                lines.insert(0, "")
 
 # Prior verdicts from review-completions.jsonl (IMP-02: filter by session + effective_agent_type)
 # P1-3: Preserve "unknown" entries as failed_attempts metadata for orchestrator recovery decisions
@@ -333,6 +350,22 @@ if comp_lines:
             lines.append("Prior review completions (this pipeline):")
             for r in relevant[-3:]:  # Last 3
                 lines.append(f"  - {r.get('completed_at', '?')}: {r.get('verdict', '?')}")
+                # IMP-03: surface canonical IDs so reviewer can reference them in VERDICT_JSON
+                _cids = r.get("canonical_issue_ids") or []
+                if _cids:
+                    _id_list = [c.get("id", "?") for c in _cids if isinstance(c, dict)]
+                    if _id_list:
+                        lines.append(f"    Canonical IDs: {', '.join(_id_list)}")
+                    # Compact {id, category, location} rendering for the last entry only
+                    if r is relevant[-1]:
+                        lines.append("    (most recent issues by canonical id)")
+                        for _c in _cids[:5]:  # cap to 5 to stay within 10K context budget
+                            if isinstance(_c, dict):
+                                lines.append(
+                                    f"      - {_c.get('id', '?')} "
+                                    f"[{_c.get('category', '?')}] "
+                                    f"@{_c.get('location', 'n/a')}"
+                                )
         if failed_attempts:
             lines.append(f"prior_failed_attempts: {len(failed_attempts)}")
             lines.append(f"  Last failed at: {failed_attempts[-1].get('completed_at', '?')}")

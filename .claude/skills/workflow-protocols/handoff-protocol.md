@@ -178,6 +178,21 @@ handoff_protocol:
       malformed. The "validation sandwich" (prompt engineering + post-hoc schema validation)
       is the LEVEL 2 pattern — the best achievable without native structured output.
 
+      post_normalization_example: |
+        Agent emits (advisory IDs):
+          {"id": "PR-001", "category": "error_handling", "location": "Part 3",
+           "problem": "nil pointer not guarded in UserHandler.Create"}
+
+        Hook normalises before schema validation:
+          PREFIX = "PR-" (from $verdict_contract=plan_review_verdict)
+          sha256("error_handling|Part 3|nil pointer not guarded in UserHandler.Create")[:8]
+            = e.g. "ab12cd34"
+          canonical_id = "PR-ab12cd34"
+
+        Schema pattern ^PR-[0-9a-f]{8}$ validates "PR-ab12cd34" → PASS.
+        review-completions.jsonl canonical_issue_ids contains the canonical form;
+        agent's original "PR-001" is discarded.
+
     consumer: "save-review-checkpoint.sh (SubagentStop hook)"
     consumer_flow: |
       1. Extract agent's last_assistant_message from SubagentStop payload (or reverse-search
@@ -225,3 +240,53 @@ handoff_protocol:
       - code: "verdict_json_missing_fence"
         meaning: "Sentinel VERDICT_JSON: not found, or fence not closed before end-of-message"
         action: "Silent fall-back to regex (expected for pre-IMP-02 agents or runtime-aborted agents)"
+
+  id_normalization:
+    purpose: "Canonical issue ID normalization via hook-side SHA-256 (IMP-03)"
+    formula: |
+      canonical_id = PREFIX + sha256(category + "|" + (location or "") + "|" + problem)[0:8]
+      PREFIX = "PR-" for plan_review_verdict
+      PREFIX = "CR-" for code_review_verdict
+    computed_by: "save-review-checkpoint.sh — runs BEFORE schema validation"
+    schema_pattern: "^[PC]R-[0-9a-f]{8}$ (enforced in plan_review_verdict + code_review_verdict $defs)"
+    rationale: |
+      Agent-emitted IDs (e.g. "PR-001") are advisory — they reference a POSITION in the
+      review's issue list, not the ISSUE itself. Hook-side sha256 normalization produces
+      a deterministic content-addressed ID: same category|location|problem across
+      iterations → same canonical ID, enabling automatic resolved/regression detection
+      at the orchestrator layer.
+
+      LLM constraint: review agents cannot compute sha256 reliably (>50% error rate
+      on tested Claude models). Python in the hook runs it deterministically.
+
+    storage: |
+      canonical_issue_ids field in review-completions.jsonl marker:
+        [{"id": "PR-ab12cd34", "category": "error_handling",
+          "location": "Part 3", "problem": "nil pointer not guarded"}, ...]
+      Dedup applied — collisions logged as record_kind="id_collision" in handoff-validation.jsonl.
+
+    consumer_flow: |
+      1. save-review-checkpoint.sh computes canonical_id per issue, overwrites issues[].id
+         in parsed VERDICT_JSON, re-serialises raw_json, invokes validate-handoff.sh.
+      2. validate-handoff.sh validates the normalised payload against the pattern constraint.
+      3. Marker appended to review-completions.jsonl with canonical_issue_ids array.
+      4. Orchestrator (post_delegation) reads canonical_issue_ids, computes:
+         resolved_ids = prior - current   (set-diff)
+         regression_ids = current ∩ union(prior.resolved_ids)   (intersection)
+      5. inject-review-context.sh on iteration 2+ passes canonical IDs + regression
+         alerts into additionalContext for the next review.
+
+    mode_env: "CLAUDE_ISSUE_ID_VALIDATION_MODE (warn|strict, default warn) — independent toggle. Strict boosts MODE_VERDICT to strict for verdict records."
+
+    stability_guidance:
+      - "category is a schema-enum — always stable (high confidence)"
+      - "location should be function/symbol name, not bare line number (KD-8 mitigation)"
+      - "problem should be a concise invariant statement (≤15 words, imperative voice)"
+
+    fail_modes:
+      - code: "id_collision"
+        meaning: "Two issues produce the same canonical_id after normalization (same category + location + problem text)"
+        action: "First entry kept in canonical_issue_ids; collision logged to handoff-validation.jsonl. parsed['issues'] / raw_json retain both entries (schema allows duplicate IDs)."
+      - code: "prefix_unknown"
+        meaning: "$verdict_contract is neither plan_review_verdict nor code_review_verdict"
+        action: "Prefix falls back to 'XX-', schema pattern FAIL, warn-mode logs + regex fallback. Strict mode blocks."

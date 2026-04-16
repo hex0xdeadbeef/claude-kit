@@ -250,6 +250,16 @@ Rules:
 
 Why dual emission: The human-readable `VERDICT:` line is a defense-in-depth fallback for graceful degradation (IMP-01 warn-default philosophy). Both the top-of-response `VERDICT:` line AND the bottom-of-response `VERDICT_JSON:` block are required.
 
+### Canonical IDs (IMP-03)
+
+The `id` field in each issue is **normalized by the save-review-checkpoint.sh hook** into its canonical form `CR-<first-8-hex-chars-of-sha256(category|location|problem)>` BEFORE schema validation. You may emit any advisory string (e.g. `"CR-001"`) — the hook will overwrite it with the canonical form. The canonical form is what downstream consumers (orchestrator `resolved_ids`, injector's REGRESSION ALERT, `review-completions.jsonl`) reference.
+
+**Location-stability guidance (IMP-03 KD-8):** prefer function / symbol name over line number in the `location` field. Line numbers shift when code is edited, which changes the hash → breaks ID continuity across iterations. Examples:
+- PREFER: `"internal/service/user.go:Update"` or `"handler/auth.go:login_handler"` (stable across edits)
+- AVOID: `"user.go:42"` alone (drift-prone)
+
+**Iteration 2+ context:** `inject-review-context.sh` passes canonical IDs from the prior iteration into your `additionalContext`. When referencing a carried-over issue, write the exact canonical ID (e.g. `CR-ab12cd34`) in both your human-readable output and the VERDICT_JSON `id` field — the hook will still re-normalise, but using the canonical form directly eliminates churn.
+
 ## MCP Tools
 - **Sequential Thinking:** Use for large diffs (>100 lines, >5 files, 3+ layers). SKIP for simple changes.
 - **Context7:** Use when new external library found in diff. Verify correct usage patterns.
