@@ -216,6 +216,40 @@ For handoff contract see [handoff-protocol.md] in workflow-protocols skill → c
 
 **Ready for:** merge | /coder (if CHANGES_REQUESTED)
 
+**VERDICT_JSON (MANDATORY — structured verdict marker, IMP-02):**
+
+After all above output is complete, emit a fenced JSON block prefixed by the literal sentinel `VERDICT_JSON:` on its own line. The hook (`save-review-checkpoint.sh`) parses this JSON and validates it against `.claude/schemas/handoff.schema.json` (contract `code_review_verdict`) for reliable verdict extraction. The human-readable `VERDICT:` line at the top of your response is preserved as a regex fallback.
+
+Emit EXACTLY this form as the **last content** of your response (no prose after the closing fence):
+
+````
+VERDICT_JSON:
+```json
+{
+  "$verdict_contract": "code_review_verdict",
+  "verdict": "APPROVED_WITH_COMMENTS",
+  "issues": [
+    {"id": "CR-001", "severity": "MINOR", "category": "style", "location": "internal/service/foo.go:42", "problem": "…"}
+  ],
+  "handoff": {
+    "verdict": "APPROVED_WITH_COMMENTS",
+    "iteration": "1/3"
+  }
+}
+```
+````
+
+Rules:
+- `"$verdict_contract"` MUST be the literal string `"code_review_verdict"`.
+- `"verdict"` enum for code-review (5 values): `APPROVED` | `APPROVED_WITH_COMMENTS` | `CHANGES_REQUESTED` | `NEEDS_CHANGES` | `REJECTED` (MUST match the `VERDICT:` line above — hook logs a warning on mismatch).
+- `"issues"` is an array; use `[]` if none (empty array is legal — required when verdict is APPROVED with no findings).
+- `"handoff"` object: minimally `{"verdict": "…", "iteration": "N/3"}`. The code-review-to-completion contract is less strict than plan-review-to-coder because completion is a terminal node (no further review consumer).
+- Do NOT wrap the block in markdown preamble ("Here is the JSON…") — the `VERDICT_JSON:` sentinel is the only anchor the hook searches for.
+- Do NOT emit any prose, bullet points, or additional text after the closing triple-backtick fence. The hook parses up to end-of-message.
+- If the JSON block is malformed, missing, or fails schema validation, the hook falls back to regex on the `VERDICT:` line — your review is still captured, but `verdict_source` in `review-completions.jsonl` will record `regex_fallback` instead of `structured_json`.
+
+Why dual emission: The human-readable `VERDICT:` line is a defense-in-depth fallback for graceful degradation (IMP-01 warn-default philosophy). Both the top-of-response `VERDICT:` line AND the bottom-of-response `VERDICT_JSON:` block are required.
+
 ## MCP Tools
 - **Sequential Thinking:** Use for large diffs (>100 lines, >5 files, 3+ layers). SKIP for simple changes.
 - **Context7:** Use when new external library found in diff. Verify correct usage patterns.

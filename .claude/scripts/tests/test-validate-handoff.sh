@@ -115,6 +115,54 @@ run_hook_test \
   0 "warn" \
   "${HOOK_VALID_FIXTURE}"
 
+# ─── Verdict-envelope tests (IMP-02) ────────────────────────────────────────────
+# Mirrors run_test pattern but drives CLAUDE_VERDICT_VALIDATION_MODE instead of
+# CLAUDE_HANDOFF_VALIDATION_MODE. Unsets handoff mode to prevent env leakage if
+# a prior IMP-01 test left CLAUDE_HANDOFF_VALIDATION_MODE=strict.
+run_verdict_test() {
+  local name="$1"
+  local expected_exit="$2"
+  local mode="$3"
+  local file="$4"
+
+  export CLAUDE_VERDICT_VALIDATION_MODE="${mode}"
+  unset CLAUDE_HANDOFF_VALIDATION_MODE
+  actual_exit=0
+  bash "${VALIDATE}" "${file}" >/dev/null 2>&1 || actual_exit=$?
+
+  if [[ "${actual_exit}" -eq "${expected_exit}" ]]; then
+    echo "  PASS: ${name} (exit=${actual_exit})"
+    PASS=$((PASS + 1))
+  else
+    echo "  FAIL: ${name} (expected exit=${expected_exit}, got exit=${actual_exit})"
+    FAIL=$((FAIL + 1))
+  fi
+}
+
+echo ""
+echo "─── Verdict-envelope tests (IMP-02) ───"
+
+run_verdict_test "valid plan_review_verdict (warn)" \
+  0 "warn" "${FIXTURES}/valid-plan-verdict.json"
+
+run_verdict_test "valid code_review_verdict (warn)" \
+  0 "warn" "${FIXTURES}/valid-code-verdict.json"
+
+run_verdict_test "valid empty issues APPROVED (strict)" \
+  0 "strict" "${FIXTURES}/valid-empty-issues-verdict.json"
+
+run_verdict_test "invalid wrong enum for plan (strict)" \
+  2 "strict" "${FIXTURES}/invalid-wrong-enum-for-plan.json"
+
+run_verdict_test "invalid missing \$verdict_contract (strict)" \
+  2 "strict" "${FIXTURES}/invalid-missing-verdict-contract.json"
+
+run_verdict_test "invalid malformed fields (strict)" \
+  2 "strict" "${FIXTURES}/invalid-malformed-verdict-fields.json"
+
+run_verdict_test "invalid wrong enum (warn mode → non-blocking)" \
+  0 "warn" "${FIXTURES}/invalid-wrong-enum-for-plan.json"
+
 # Summary
 echo ""
 echo "Results: ${PASS} PASS, ${FAIL} FAIL"

@@ -20,7 +20,9 @@ Optional tools used by hooks. Missing tools → graceful degradation (warn, non-
 | ------------------ | ----------------------------------------- | ------------------------------------------------------------------ |
 | `check-jsonschema` | `pipx install 'check-jsonschema==0.37.*'` | `validate-handoff.sh` — JSON Schema validation of handoff payloads |
 
-**Strict mode:** set `CLAUDE_HANDOFF_VALIDATION_MODE=strict` in `.claude/settings.local.json` env section to make handoff validation failures block the write (exit 2). Default: `warn` (non-blocking, logs to `workflow-state/handoff-validation.jsonl`).
+**Strict mode (handoff payloads — IMP-01):** set `CLAUDE_HANDOFF_VALIDATION_MODE=strict` in `.claude/settings.local.json` env section to make handoff validation failures block the write (exit 2). Default: `warn` (non-blocking, logs to `workflow-state/handoff-validation.jsonl`).
+
+**Strict mode (verdict envelopes — IMP-02):** set `CLAUDE_VERDICT_VALIDATION_MODE=strict` to make VERDICT_JSON schema failures fall through to regex-fallback only when the parsed JSON fails validation. Default: `warn` (non-blocking — invalid structured JSON silently falls back to regex, logs `verdict_source=regex_fallback` and `schema_failure_reason` in `workflow-state/review-completions.jsonl`). Mirrors the handoff mode — both envs are independent and can be flipped separately. Fail-closed guarantee: when a handoff JSON lacks both `$handoff_contract` and `$verdict_contract` discriminators, `validate-handoff.sh` treats the record as strict if EITHER env is strict, preventing ambiguous payloads from sneaking past a strict caller.
 
 ## Error Handling (All Agents)
 

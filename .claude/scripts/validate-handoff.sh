@@ -24,7 +24,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 SCHEMA_FILE="${REPO_ROOT}/.claude/schemas/handoff.schema.json"
 VALIDATION_LOG="${REPO_ROOT}/.claude/workflow-state/handoff-validation.jsonl"
-MODE="${CLAUDE_HANDOFF_VALIDATION_MODE:-warn}"
+MODE_HANDOFF="${CLAUDE_HANDOFF_VALIDATION_MODE:-warn}"
+MODE_VERDICT="${CLAUDE_VERDICT_VALIDATION_MODE:-warn}"
 
 # ─── Get file path (dual-mode) ──────────────────────────────────────────────────
 DIRECT_MODE=0
@@ -60,6 +61,39 @@ if [[ ! -f "${HANDOFF_FILE}" ]]; then
   exit 0
 fi
 
+# ─── Detect record kind via discriminator field (IMP-02) ───────────────────────
+# Default: "handoff" for legacy compatibility. If $verdict_contract is present,
+# switch RECORD_KIND to "verdict" and MODE to MODE_VERDICT.
+RECORD_KIND="handoff"
+MODE="${MODE_HANDOFF}"
+if command -v jq &>/dev/null; then
+  # PR-006: capture jq exit code explicitly so we can emit a breadcrumb when the
+  # discriminator read fails (e.g. malformed JSON that slipped past earlier guards).
+  # Silent fall-through to "handoff" kind is safe but leaves no trace — the WARN
+  # below gives the user one line to understand why strict-mode didn't engage.
+  _verdict_disc=$(jq -r '.["$verdict_contract"] // empty' "${HANDOFF_FILE}" 2>/dev/null)
+  _jq_rc=$?
+  if [[ "${_jq_rc}" -eq 0 && -n "${_verdict_disc}" ]]; then
+    RECORD_KIND="verdict"
+    MODE="${MODE_VERDICT}"
+  elif [[ "${_jq_rc}" -ne 0 ]]; then
+    echo "[validate-handoff] WARN: jq failed (rc=${_jq_rc}) to read \$verdict_contract from ${HANDOFF_FILE} — defaulting to handoff kind" >&2
+  else
+    # Neither $verdict_contract nor $handoff_contract discriminator is a guaranteed
+    # signal here — check handoff side too. If BOTH are absent, the file is an
+    # ambiguous payload that the schema's oneOf will reject. Fail-closed on ambiguity
+    # when EITHER mode is strict: prevents a malformed record from sneaking past a
+    # strict-mode caller just because the default-handoff fallback uses warn.
+    _handoff_disc=$(jq -r '.["$handoff_contract"] // empty' "${HANDOFF_FILE}" 2>/dev/null)
+    if [[ -z "${_handoff_disc}" ]]; then
+      RECORD_KIND="unknown"
+      if [[ "${MODE_HANDOFF}" == "strict" || "${MODE_VERDICT}" == "strict" ]]; then
+        MODE="strict"
+      fi
+    fi
+  fi
+fi
+
 # ─── Guard: schema must exist ───────────────────────────────────────────────────
 if [[ ! -f "${SCHEMA_FILE}" ]]; then
   echo "[validate-handoff] WARN: schema not found at ${SCHEMA_FILE} — validation skipped" >&2
@@ -90,7 +124,8 @@ FEATURE=$(basename "${HANDOFF_FILE}" .json | sed 's/-handoff$//')
 VALID_BOOL=$([ "${VALIDATION_RC}" -eq 0 ] && echo "true" || echo "false")
 LOG_ENTRY="{\"timestamp\":\"${TIMESTAMP}\",\"feature\":\"${FEATURE}\","
 LOG_ENTRY+="\"file\":\"${HANDOFF_FILE}\",\"valid\":${VALID_BOOL},"
-LOG_ENTRY+="\"mode\":\"${MODE}\",\"rc\":${VALIDATION_RC}}"
+LOG_ENTRY+="\"mode\":\"${MODE}\",\"rc\":${VALIDATION_RC},"
+LOG_ENTRY+="\"record_kind\":\"${RECORD_KIND}\"}"
 echo "${LOG_ENTRY}" >> "${VALIDATION_LOG}" 2>/dev/null || true
 
 # ─── Return result ───────────────────────────────────────────────────────────────

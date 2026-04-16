@@ -40,7 +40,7 @@ command -v python3 >/dev/null 2>&1 || {
   exit 2
 }
 
-STATE_DIR=".claude/workflow-state"
+STATE_DIR="${CLAUDE_WORKFLOW_STATE_DIR:-.claude/workflow-state}"
 mkdir -p "$STATE_DIR"
 
 # Read stdin JSON, parse once, write JSONL marker
@@ -51,7 +51,7 @@ python3 << 'PYTHON_EOF'
 import json, sys, re, os
 from datetime import datetime, timezone
 
-STATE_DIR = ".claude/workflow-state"
+STATE_DIR = os.environ.get("CLAUDE_WORKFLOW_STATE_DIR", ".claude/workflow-state")
 DEBUG_FILE = os.path.join(STATE_DIR, "worktree-events-debug.jsonl")
 
 try:
@@ -205,16 +205,147 @@ if not output:
         if output:
             break
 
+# --- IMP-02: Structured verdict JSON extraction (primary path) ---
+import re as _re_imp02
+import subprocess as _subprocess_imp02
+import tempfile as _tempfile_imp02
+
+verdict_source = "none"       # HOW the verdict was extracted (new field)
+verdict_payload = None        # the parsed JSON object (if any)
+verdict_mismatch_record = None
+
+def _extract_verdict_json(text):
+    """Return (parsed_dict_or_None, raw_json_str_or_None) from VERDICT_JSON:\\n```json\\n{...}\\n```."""
+    if not text:
+        return None, None
+    # Sentinel-anchored at start of line. Group 1 = JSON body between fences.
+    m = _re_imp02.search(
+        r'^VERDICT_JSON:\s*\n```json\s*\n(.*?)\n```',
+        str(text),
+        _re_imp02.MULTILINE | _re_imp02.DOTALL,
+    )
+    if not m:
+        return None, None
+    raw = m.group(1)
+    try:
+        return json.loads(raw), raw
+    except Exception:
+        return None, raw  # raw for malformed-snippet logging
+
 verdict = "UNKNOWN"
 if output:
+    parsed, raw_json = _extract_verdict_json(output)
+    if parsed is not None and isinstance(parsed, dict) and "verdict" in parsed:
+        # Write to temp file, invoke validate-handoff.sh in direct mode with timeout.
+        schema_ok = False
+        _tf_path = None
+        try:
+            with _tempfile_imp02.NamedTemporaryFile(
+                mode="w", suffix="-verdict.json", delete=False
+            ) as _tf:
+                _tf.write(raw_json)
+                _tf_path = _tf.name
+            validator_rc = 1
+            try:
+                _result = _subprocess_imp02.run(
+                    ["bash", ".claude/scripts/validate-handoff.sh", _tf_path],
+                    capture_output=True, text=True, timeout=5,
+                )
+                validator_rc = _result.returncode
+            except Exception as _e:
+                # subprocess failure (timeout, missing bash, etc.) — treat as schema-invalid.
+                print(f"save-review-checkpoint: validator invocation failed: {_e}", file=sys.stderr)
+                validator_rc = 1
+            schema_ok = (validator_rc == 0)
+        finally:
+            if _tf_path:
+                try:
+                    os.remove(_tf_path)
+                except Exception:
+                    pass
+
+        if schema_ok:
+            verdict = str(parsed["verdict"]).upper()
+            verdict_source = "structured_json"
+            verdict_payload = parsed
+            # Dual-VERDICT mismatch detection — non-blocking observability signal.
+            _human_m = _re_imp02.search(
+                r'(?i)verdict:\s*(APPROVED_WITH_COMMENTS|APPROVED|CHANGES_REQUESTED|NEEDS_CHANGES|REJECTED)',
+                str(output),
+            )
+            if _human_m:
+                _human_v = _human_m.group(1).upper()
+                if _human_v != verdict:
+                    verdict_mismatch_record = {
+                        "timestamp": timestamp,
+                        "record_kind": "verdict_mismatch",
+                        "agent": effective_agent_type,
+                        "agent_id": agent_id,
+                        "session_id": session_id,
+                        "human_verdict": _human_v,
+                        "json_verdict": verdict,
+                        "preferred": "json",
+                    }
+        else:
+            # JSON parsed but schema validation failed.
+            verdict_source = "structured_json_schema_invalid"
+            # Preserve malformed snippet (first 400 chars) for post-mortem.
+            try:
+                with open(
+                    os.path.join(STATE_DIR, "handoff-validation.jsonl"),
+                    "a",
+                ) as _lf:
+                    _lf.write(json.dumps({
+                        "timestamp": timestamp,
+                        "record_kind": "verdict_schema_invalid",
+                        "agent": effective_agent_type,
+                        "session_id": session_id,
+                        "snippet": (raw_json or "")[:400],
+                    }) + "\n")
+            except Exception:
+                pass
+    elif parsed is None and raw_json is not None:
+        # Sentinel + fence matched but json.loads failed. Distinct failure mode from
+        # "no sentinel" — log the malformed snippet so operators can diff the payload.
+        # verdict_source stays "none"; regex fallback rescues below.
+        try:
+            with open(
+                os.path.join(STATE_DIR, "handoff-validation.jsonl"),
+                "a",
+            ) as _lf:
+                _lf.write(json.dumps({
+                    "timestamp": timestamp,
+                    "record_kind": "verdict_json_decode_error",
+                    "agent": effective_agent_type,
+                    "session_id": session_id,
+                    "snippet": raw_json[:400],
+                }) + "\n")
+        except Exception:
+            pass
+    # else: no sentinel at all — verdict_source stays "none"; regex handles it below.
+# --- End IMP-02 structured extraction ---
+
+# Short-circuit ternary: verdict is already bound to the structured-JSON value
+# above if verdict_source == "structured_json"; otherwise reset to UNKNOWN so the
+# regex fallback below can promote it. (The ternary's else-branch returns "UNKNOWN"
+# without re-evaluating the left `verdict`.)
+verdict = verdict if verdict_source == "structured_json" else "UNKNOWN"
+if verdict == "UNKNOWN" and output:
     match = re.search(
         r'(?i)verdict:\s*(APPROVED_WITH_COMMENTS|APPROVED|CHANGES_REQUESTED|NEEDS_CHANGES|REJECTED)',
         str(output)
     )
     if match:
         verdict = match.group(1).upper()
+        # Only promote source if we weren't already tagged schema-invalid.
+        if verdict_source == "none":
+            verdict_source = "regex_fallback"
+        # If verdict_source == "structured_json_schema_invalid", KEEP IT — the JSON
+        # was present but invalid; regex rescued the verdict but we want to preserve
+        # the signal that the JSON path malfunctioned.
+# verdict_source stays "none" iff both paths failed → IMP-H will block stop.
 
-# --- End IMP-01 ---
+# --- End IMP-01 / IMP-02 ---
 
 # --- IMP-H: Verdict protection — block agent stop if no verdict found ---
 # Review agents (plan-reviewer, code-reviewer) MUST output a verdict.
@@ -273,7 +404,7 @@ try:
         "session_id": session_id,
         "received_keys": sorted(data.keys()),
         "verdict_found": verdict != "UNKNOWN",
-        "verdict_source": (("transcript:" + transcript_source) if transcript_used else ("payload" if data.get("last_assistant_message") else "none")),
+        "verdict_transcript_source": (("transcript:" + transcript_source) if transcript_used else ("payload" if data.get("last_assistant_message") else "none")),
         "agent_transcript_path_present": bool(data.get("agent_transcript_path")),
         "transcript_path_present": bool(data.get("transcript_path")),
     }
@@ -375,10 +506,11 @@ marker = {
     "completed_at": timestamp,
     "session_id": session_id,
     "verdict": verdict,
+    "verdict_source": verdict_source,          # IMP-02: HOW verdict was extracted
 }
-# Include verdict source for debugging
+# IMP-02: WHERE the transcript was read from (debug-only provenance, renamed from verdict_source)
 if transcript_used:
-    marker["verdict_source"] = "transcript:" + (transcript_source or "unknown")
+    marker["verdict_transcript_source"] = "transcript:" + (transcript_source or "unknown")
 # Include worktree_path and memory sync status in marker
 if worktree_path:
     marker["worktree_path"] = worktree_path
@@ -390,7 +522,7 @@ if memory_sync_result:
 # --- IMP-06: Defensive fallback for marker write ---
 # Primary write to review-completions.jsonl; on failure, fallback to /tmp.
 # Logging failure should not block agent completion — only exit 2 if both fail.
-completions_file = ".claude/workflow-state/review-completions.jsonl"
+completions_file = os.path.join(STATE_DIR, "review-completions.jsonl")
 try:
     with open(completions_file, "a") as f:
         f.write(json.dumps(marker) + "\n")
@@ -404,4 +536,12 @@ except Exception as e:
     except Exception as e2:
         print(f"ERROR: Both primary and fallback write failed: {e} / {e2}", file=sys.stderr)
         sys.exit(2)
+
+# --- IMP-02: Append verdict_mismatch log if dual-VERDICT mismatch detected above ---
+if verdict_mismatch_record is not None:
+    try:
+        with open(os.path.join(STATE_DIR, "handoff-validation.jsonl"), "a") as _lf:
+            _lf.write(json.dumps(verdict_mismatch_record) + "\n")
+    except Exception:
+        pass  # NON_CRITICAL
 PYTHON_EOF

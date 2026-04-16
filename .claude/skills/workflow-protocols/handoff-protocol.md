@@ -154,3 +154,55 @@ handoff_protocol:
       - "plan_review_to_coder — written in plan_review_delegation.post_delegation step 4.5"
     contracts_not_yet_covered:
       - "designer_to_planner, coder_to_code_review, code_review_to_completion → IMP-01.2"
+
+  verdict_envelopes:
+    purpose: "Structured VERDICT_JSON envelopes emitted by review agents (IMP-02)"
+    schema: ".claude/schemas/handoff.schema.json (top-level oneOf includes verdict variants)"
+    emitted_by:
+      - "plan-reviewer — emits plan_review_verdict envelope (enum: APPROVED, NEEDS_CHANGES, REJECTED)"
+      - "code-reviewer — emits code_review_verdict envelope (enum: APPROVED, APPROVED_WITH_COMMENTS, CHANGES_REQUESTED, NEEDS_CHANGES, REJECTED)"
+    discriminator: "$verdict_contract (const: plan_review_verdict | code_review_verdict)"
+    transport: |
+      The envelope is emitted as the LAST content of the agent's assistant message, using the
+      sentinel-prefix fenced JSON pattern:
+
+        VERDICT_JSON:
+        ```json
+        {"$verdict_contract": "...", "verdict": "...", "issues": [...], "handoff": {...}}
+        ```
+
+      Rationale for sentinel prefix (dev.to/pockit-tools 2026 best practice): LLM subagents
+      cannot invoke native structured-output APIs (Anthropic tool_use with constrained
+      decoding) — they emit free text captured via SubagentStop transcript read. The
+      sentinel is the only stable anchor the hook regex can pin to, even if the fence is
+      malformed. The "validation sandwich" (prompt engineering + post-hoc schema validation)
+      is the LEVEL 2 pattern — the best achievable without native structured output.
+
+    consumer: "save-review-checkpoint.sh (SubagentStop hook)"
+    consumer_flow: |
+      1. Extract agent's last_assistant_message from SubagentStop payload (or reverse-search
+         transcript JSONL for role:assistant)
+      2. Search for sentinel VERDICT_JSON: followed by fenced ```json ... ``` block
+      3. If found: decode JSON → write to tempfile → invoke validate-handoff.sh in direct mode
+         (timeout: 5s) → on validation PASS, use verdict from structured source
+      4. On any failure (missing fence, JSON decode error, schema invalid, subprocess error):
+         fall back to regex extraction from human-readable VERDICT: line
+      5. Emit marker line in .claude/workflow-state/review-completions.jsonl with verdict_source
+         field: "structured_json" | "regex_fallback" | "none"
+    mode_env: "CLAUDE_VERDICT_VALIDATION_MODE (warn|strict, default warn) — mirrors handoff mode. Independent toggle."
+    graceful_degradation: |
+      IMP-02 is 100% additive: if an agent omits the VERDICT_JSON block entirely, the regex
+      fallback on the human-readable VERDICT: line continues to work exactly as before
+      IMP-02 landed. Zero-blast rollout — strict mode is opt-in. Fail-closed on ambiguous
+      payloads: validate-handoff.sh treats records with neither $handoff_contract nor
+      $verdict_contract discriminator as strict if EITHER env is set to strict.
+    fail_modes:
+      - code: "structured_json_schema_invalid"
+        meaning: "VERDICT_JSON block parsed cleanly but failed JSON Schema validation (e.g., wrong enum, missing required field)"
+        action: "Fall back to regex; record schema_failure_reason in marker line"
+      - code: "verdict_json_decode_error"
+        meaning: "Block found by sentinel but JSON.decode failed (truncation, escaping issue)"
+        action: "Fall back to regex; record schema_failure_reason"
+      - code: "verdict_json_missing_fence"
+        meaning: "Sentinel VERDICT_JSON: not found, or fence not closed before end-of-message"
+        action: "Silent fall-back to regex (expected for pre-IMP-02 agents or runtime-aborted agents)"

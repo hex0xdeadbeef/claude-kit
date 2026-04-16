@@ -43,8 +43,31 @@ files:
       - "Orchestrator — output_validation fallback (when agent returns incomplete)"
     schema:
       required: "{agent, effective_agent_type, completed_at, session_id, verdict}"
-      optional: "{verdict_source, worktree_path, worktree_resolution, memory_sync, memory_files_synced}"
+      optional: "{verdict_source, verdict_transcript_source, verdict_mismatch_warning, schema_failure_reason, worktree_path, worktree_resolution, memory_sync, memory_files_synced}"
       note: "agent=raw payload agent_type (may be 'unknown'); effective_agent_type=post-registry-recovery value (always present)"
+    imp02_fields:
+      purpose: "IMP-02 structured verdict extraction — disambiguate HOW the verdict was parsed vs WHERE the transcript came from"
+      verdict_source:
+        type: "string"
+        semantics: "HOW the verdict was extracted from the transcript"
+        values:
+          - "structured_json — VERDICT_JSON fenced block parsed and validated against .claude/schemas/handoff.schema.json (plan_review_verdict | code_review_verdict). Primary path (IMP-02)."
+          - "regex_fallback — VERDICT_JSON block missing, malformed, or failed schema validation; hook fell back to regex on the human-readable VERDICT: line. Defense-in-depth, non-fatal."
+          - "none — no verdict recovered by either path; orchestrator must invoke on_incomplete_output chain (step_0..step_5 in workflow.md)."
+      verdict_transcript_source:
+        type: "string"
+        semantics: "WHERE the transcript data came from (reverse-search path)"
+        values:
+          - "last_assistant_message — raw payload last_assistant_message field (fast path)"
+          - "transcript_reverse_search — scanned transcript JSONL in reverse for role:assistant (fallback when payload lacks last_assistant_message)"
+          - "not_searched — payload had a direct verdict field, no transcript scan needed"
+      verdict_mismatch_warning:
+        type: "string (optional)"
+        semantics: "Present when structured JSON verdict differs from human-readable VERDICT: line. Non-fatal — structured value wins per RULE_5. Logged for drift detection."
+        example: "structured=APPROVED vs regex=NEEDS_CHANGES"
+      schema_failure_reason:
+        type: "string (optional)"
+        semantics: "Populated when verdict_source == regex_fallback due to schema validation failure (as opposed to missing/malformed fence). One of: structured_json_schema_invalid | verdict_json_decode_error | verdict_json_missing_fence."
     lifecycle: session-specific
     cleanup: "Phase 5 completion"
 

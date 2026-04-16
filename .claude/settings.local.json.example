@@ -9,8 +9,15 @@
     "  - Override model for local development",
     "  - Configure worktree.sparsePaths for monorepo optimization"
   ],
+  "_env_comment": [
+    "CLAUDE_HANDOFF_VALIDATION_MODE  (IMP-01) warn|strict — strict blocks writes of invalid handoff JSON",
+    "CLAUDE_VERDICT_VALIDATION_MODE  (IMP-02) warn|strict — strict forces VERDICT_JSON schema pass (falls back to regex otherwise)",
+    "Both envs are independent. Default: warn on both. Set both to strict for full schema enforcement."
+  ],
   "env": {
-    "GIT_STRIP_CO_AUTHOR": "false"
+    "GIT_STRIP_CO_AUTHOR": "false",
+    "_CLAUDE_HANDOFF_VALIDATION_MODE": "strict",
+    "_CLAUDE_VERDICT_VALIDATION_MODE": "strict"
   },
   "permissions": {
     "allow": [],

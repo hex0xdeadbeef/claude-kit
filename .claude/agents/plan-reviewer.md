@@ -183,6 +183,44 @@ NOT a field in the JSON handoff. The JSON handoff only contains the lowercase "v
 
 **Ready for:** /coder | /planner (if NEEDS_CHANGES) | re-plan (if REJECTED)
 
+**VERDICT_JSON (MANDATORY — structured verdict marker, IMP-02):**
+
+After all above output is complete, emit a fenced JSON block prefixed by the literal sentinel `VERDICT_JSON:` on its own line. The hook (`save-review-checkpoint.sh`) parses this JSON and validates it against `.claude/schemas/handoff.schema.json` (contract `plan_review_verdict`) for reliable verdict extraction. The human-readable `VERDICT:` line at the top of your response is preserved as a regex fallback.
+
+Emit EXACTLY this form as the **last content** of your response (no prose after the closing fence):
+
+````
+VERDICT_JSON:
+```json
+{
+  "$verdict_contract": "plan_review_verdict",
+  "verdict": "APPROVED",
+  "issues": [
+    {"id": "PR-001", "severity": "MINOR", "category": "style", "location": "Part 3", "problem": "…"}
+  ],
+  "handoff": {
+    "$handoff_contract": "plan_review_to_coder",
+    "artifact": ".claude/prompts/{feature}.md",
+    "verdict": "APPROVED",
+    "issues_summary": {"blocker": 0, "major": 0, "minor": 1},
+    "approved_with_notes": ["Part 3 style note"],
+    "iteration": "1/3"
+  }
+}
+```
+````
+
+Rules:
+- `"$verdict_contract"` MUST be the literal string `"plan_review_verdict"`.
+- `"verdict"` enum for plan-review: `APPROVED` | `NEEDS_CHANGES` | `REJECTED` (MUST match the `VERDICT:` line above — hook logs a warning on mismatch).
+- `"issues"` is an array; use `[]` if none (empty array is legal — required when verdict is APPROVED with no findings).
+- `"handoff"` mirrors the `plan_review_to_coder` contract fields exactly (same schema used by orchestrator in Phase 2 post-delegation).
+- Do NOT wrap the block in markdown preamble ("Here is the JSON…") — the `VERDICT_JSON:` sentinel is the only anchor the hook searches for.
+- Do NOT emit any prose, bullet points, or additional text after the closing triple-backtick fence. The hook parses up to end-of-message.
+- If the JSON block is malformed, missing, or fails schema validation, the hook falls back to regex on the `VERDICT:` line — your review is still captured, but `verdict_source` in `review-completions.jsonl` will record `regex_fallback` instead of `structured_json`.
+
+Why dual emission: The human-readable `VERDICT:` line is a defense-in-depth fallback for graceful degradation (IMP-01 warn-default philosophy). Both the top-of-response `VERDICT:` line AND the bottom-of-response `VERDICT_JSON:` block are required.
+
 ## MCP Tools
 - **Sequential Thinking:** Use for complex plans (4+ Parts, 3+ layers, >150 lines). SKIP for S/M complexity.
 
