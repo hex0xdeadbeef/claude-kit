@@ -3,3 +3,4 @@
 [2026-04-15T22:39:53Z] protect-files: BLOCKED settings.json — Workflow config (.claude/settings.json). Changes must be made by user, not by agent.
 [2026-04-15T22:57:22Z] protect-files: BLOCKED validate-handoff.sh — Hook script (.claude/scripts/). Changes must be made by user, not by agent.
 [2026-04-16T08:43:24Z] protect-files: BLOCKED validate-handoff.sh — Hook script (.claude/scripts/). Changes must be made by user, not by agent.
+[2026-04-16T09:22:06Z] protect-files: BLOCKED protect-files.sh — Hook script (.claude/scripts/). Changes must be made by user, not by agent.
