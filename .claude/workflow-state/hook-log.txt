@@ -1,6 +1,9 @@
-[2026-04-15T22:38:00Z] protect-files: BLOCKED validate-handoff.sh — Hook script (.claude/scripts/). Changes must be made by user, not by agent.
-[2026-04-15T22:39:00Z] protect-files: BLOCKED valid-planner-to-review.json — Hook script (.claude/scripts/). Changes must be made by user, not by agent.
-[2026-04-15T22:39:53Z] protect-files: BLOCKED settings.json — Workflow config (.claude/settings.json). Changes must be made by user, not by agent.
-[2026-04-15T22:57:22Z] protect-files: BLOCKED validate-handoff.sh — Hook script (.claude/scripts/). Changes must be made by user, not by agent.
-[2026-04-16T08:43:24Z] protect-files: BLOCKED validate-handoff.sh — Hook script (.claude/scripts/). Changes must be made by user, not by agent.
-[2026-04-16T09:22:06Z] protect-files: BLOCKED protect-files.sh — Hook script (.claude/scripts/). Changes must be made by user, not by agent.
+[2026-04-16T20:50:18Z] block-dangerous: BLOCKED [set -e
+TMP=$(mktemp -d)
+# Positive case: canonical PR-<hex8>
+cat > "$TMP/good.json" <<'JSON'
+{
+  "$verdict_contract": "plan_review_verdict",
+  "verdict": "APPROVED",
+  "issues": [
+    {"id": "PR-ab12c] — Destructive rm command (rm -rf). Remove specific files instead: rm file.go
