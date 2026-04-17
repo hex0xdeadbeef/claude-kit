@@ -180,6 +180,14 @@
         "handoff": {
           "$ref": "#/$defs/plan_review_to_coder",
           "description": "Embedded inter-phase handoff. Shape MUST match plan_review_to_coder — fully validated."
+        },
+        "parts_validated": {
+          "type": "array",
+          "description": "IMP-04: optional list of Part IDs that received full architecture validation on iter 2+. UNCHANGED Parts are NOT in this list. Absent on iter 1 (backward compat — section-absence signal).",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
         }
       },
       "additionalProperties": false

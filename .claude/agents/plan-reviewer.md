@@ -76,7 +76,7 @@ role:
      - Missing: [list or "none"]
      ```
 
-3. **VALIDATE ARCHITECTURE**
+3. **VALIDATE ARCHITECTURE** (IMP-04: Part-selective on iter 2+)
    - Check import matrix compliance (handler → service → repository → models)
    - Check domain purity (no encoding/json tags in entities)
    - Check error handling patterns (wrap with %w, no log+return)
@@ -84,14 +84,51 @@ role:
    - If complexity L/XL and plan does NOT use Sequential Thinking → add MAJOR issue
    - Reference: For details see [architecture-checks.md] in plan-review-rules skill
    - Reference: Read [sequential-thinking-guide.md] in planner-rules skill if complexity L/XL
+
+   **IMP-04 — Part-selective scope (iter 2+ only):**
+   - Check if the plan contains a `## Diff vs prior iteration` / `diff_vs_prior_iteration:` section.
+   - **If section ABSENT** (iter 1 OR KD-6 fallback OR contract-break reroute): run FULL architecture validation across ALL Parts (backward-compat path, AC-8). Do NOT emit `parts_validated` in VERDICT_JSON.
+   - **If section PRESENT**: parse `parts_diff[]`. For each entry:
+     - `status == "UNCHANGED"` → SKIP full architecture scan for this Part (trust preservation contract from planner phase_0.8). Only cheap integrity check: the Part's body in the current plan matches the Part's body in prior plan byte-for-byte.
+     - `status == "NEEDS_UPDATE"` or `status == "NEW"` → run FULL architecture validation on this Part.
+   - Record validated Part IDs (NEEDS_UPDATE + NEW) in a local list → emit as `parts_validated[]` in VERDICT_JSON (step 7, Output Format).
+   - Contract-break detection is delegated to step 3.5 (see below). This step only scopes architecture validation; it does NOT re-run contract detection.
    - Output:
      ```
      ## VALIDATE ARCHITECTURE ✓
      - Mode: [manual/sequential-thinking]
+     - Scope: [FULL (iter 1 or fallback) | PART_SELECTIVE (iter 2+)]
+     - Parts validated: [list of Part IDs or "ALL"]
+     - Parts skipped UNCHANGED: [list of Part IDs or "none"]
      - Sequential Thinking: [used/not needed]
      - Import Matrix: [PASS/FAIL]
      - Clean Domain: [PASS/FAIL]
      - Error Handling: [PASS/FAIL]
+     ```
+
+3.5. **CONTRACT-BREAK GUARD (IMP-04 — canonical detection, iter 2+ only)**
+   - Purpose: Detect cases where a Part marked UNCHANGED in `parts_diff[]` has its upstream contract (imports, function signatures, exported types) invalidated by a NEEDS_UPDATE or NEW Part.
+   - Skip conditions: iter 1 OR `## Diff vs prior iteration` section ABSENT.
+   - Procedure:
+     1. Build dependency map for the current plan: for each Part, list (a) types/functions it exports, (b) types/functions it imports from other Parts in the same plan.
+     2. For each UNCHANGED Part U: look up U's imports. For each imported symbol S:
+        - Find the Part P that owns S in the current plan.
+        - If P.status == NEEDS_UPDATE or P.status == NEW AND S's signature/shape differs from the prior plan's S → CONTRACT BREAK.
+     3. For each contract break found, emit a BLOCKER issue with:
+        - `severity`: `BLOCKER`
+        - `category`: `architecture`
+        - `location`: `Part {U.id}: {U.name}`
+        - `problem`: MUST start with the EXACT literal prefix `"IMP-04 contract break: Part "` followed by `{U.id} depends on Part {P.id}:{symbol} whose signature changed in iter {N}`
+        - `suggestion`: `Re-mark Part {U.id} as NEEDS_UPDATE and propagate the contract change, or revert Part {P.id} signature`
+        - `reference`: `KD-4`
+   - Rationale for literal prefix: orchestrator `workflow.md` post_delegation step 2.5 matches this exact string to trigger full re-plan routing. Prefix MUST be preserved verbatim — do not rephrase.
+   - Canonical-detection rule: step 3.5 is the ONLY place that emits IMP-04 contract-break BLOCKERs. Step 3 (VALIDATE ARCHITECTURE) does NOT duplicate detection — it only scopes architecture validation.
+   - Output:
+     ```
+     ## CONTRACT-BREAK GUARD ✓
+     - Scope: [SKIP (iter 1 / section absent) | ACTIVE (iter 2+)]
+     - Dependency edges inspected: N
+     - Contract breaks detected: N (see BLOCKER issues above)
      ```
 
 4. **VALIDATE COMPLETENESS**
@@ -196,8 +233,9 @@ VERDICT_JSON:
   "$verdict_contract": "plan_review_verdict",
   "verdict": "APPROVED",
   "issues": [
-    {"id": "PR-001", "severity": "MINOR", "category": "style", "location": "Part 3", "problem": "…"}
+    {"id": "PR-001", "severity": "MINOR", "category": "style", "location": "Part 3: StyleCheck", "problem": "…"}
   ],
+  "parts_validated": [2, 3],
   "handoff": {
     "$handoff_contract": "plan_review_to_coder",
     "artifact": ".claude/prompts/{feature}.md",
@@ -210,6 +248,8 @@ VERDICT_JSON:
 ```
 ````
 
+Notes on the example: `parts_validated: [2, 3]` indicates Parts 2 and 3 had status NEEDS_UPDATE or NEW and received full architecture validation. Omit the field entirely on iter 1 or when `## Diff vs prior iteration` is absent — do NOT emit `"parts_validated": []` on iter 1 (the orchestrator relies on section-absence vs explicit empty array as distinct signals for backward-compat).
+
 Rules:
 - `"$verdict_contract"` MUST be the literal string `"plan_review_verdict"`.
 - `"verdict"` enum for plan-review: `APPROVED` | `NEEDS_CHANGES` | `REJECTED` (MUST match the `VERDICT:` line above — hook logs a warning on mismatch).
@@ -218,6 +258,8 @@ Rules:
 - Do NOT wrap the block in markdown preamble ("Here is the JSON…") — the `VERDICT_JSON:` sentinel is the only anchor the hook searches for.
 - Do NOT emit any prose, bullet points, or additional text after the closing triple-backtick fence. The hook parses up to end-of-message.
 - If the JSON block is malformed, missing, or fails schema validation, the hook falls back to regex on the `VERDICT:` line — your review is still captured, but `verdict_source` in `review-completions.jsonl` will record `regex_fallback` instead of `structured_json`.
+- **IMP-04 — `parts_validated[]` optional field:** on iter 2+ when the plan contains `## Diff vs prior iteration`, include `"parts_validated": [<int>, ...]` listing the Part IDs that received FULL architecture validation (NEEDS_UPDATE + NEW statuses). UNCHANGED Parts MUST NOT appear in this list. The field is optional — absent on iter 1 or when the diff section is missing (backward-compat section-absence signal, AC-8).
+- **IMP-04 — `parts_validated[]` emission is verdict-independent:** emit `parts_validated[]` on iter ≥2 REGARDLESS of verdict outcome (APPROVED, NEEDS_CHANGES, or REJECTED). The field tracks validation SCOPE, not pass/fail. Pipeline metrics (`parts_skipped_unchanged`) are derived from `prior_parts - parts_validated`, so consistent emission is required across verdicts.
 
 Why dual emission: The human-readable `VERDICT:` line is a defense-in-depth fallback for graceful degradation (IMP-01 warn-default philosophy). Both the top-of-response `VERDICT:` line AND the bottom-of-response `VERDICT_JSON:` block are required.
 
@@ -230,6 +272,29 @@ The `id` field in each issue is **normalized by the save-review-checkpoint.sh ho
 - AVOID: `"handler.go:42"` alone (drift-prone)
 
 **Iteration 2+ context:** `inject-review-context.sh` passes canonical IDs from the prior iteration into your `additionalContext`. When referencing a carried-over issue, write the exact canonical ID (e.g. `PR-ab12cd34`) in both your human-readable output and the VERDICT_JSON `id` field — the hook will still re-normalise, but using the canonical form directly eliminates churn.
+
+### Pipeline Metrics (IMP-04)
+
+On iteration ≥2 with a `## Diff vs prior iteration` section present, the orchestrator (via post-delegation) appends a record to `.claude/workflow-state/pipeline-metrics.jsonl` containing:
+
+```json
+{
+  "ts": "<iso8601>",
+  "feature": "<feature-name>",
+  "phase": "plan_review",
+  "iteration": 2,
+  "parts_total": 9,
+  "parts_validated": 4,
+  "parts_skipped_unchanged": 5,
+  "verdict": "APPROVED"
+}
+```
+
+- `parts_total` — count from prior plan's `parts_diff[]` plus NEW Parts in current plan.
+- `parts_validated` — length of `parts_validated[]` in VERDICT_JSON (NEEDS_UPDATE + NEW).
+- `parts_skipped_unchanged` — `parts_total - parts_validated`; this is the measurable budget-savings signal (closes P-04 target of 50–70% file-read reduction on iter 2+).
+
+No threshold is enforced in IMP-04. Trend analysis runs post-landing — low `parts_skipped_unchanged` ratios flag manifest-build drift or KD-6 fallback overuse.
 
 ## MCP Tools
 - **Sequential Thinking:** Use for complex plans (4+ Parts, 3+ layers, >150 lines). SKIP for S/M complexity.

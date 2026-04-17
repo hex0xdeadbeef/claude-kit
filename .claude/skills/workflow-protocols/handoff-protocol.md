@@ -290,3 +290,94 @@ handoff_protocol:
       - code: "prefix_unknown"
         meaning: "$verdict_contract is neither plan_review_verdict nor code_review_verdict"
         action: "Prefix falls back to 'XX-', schema pattern FAIL, warn-mode logs + regex fallback. Strict mode blocks."
+
+  diff_based_replan:
+    purpose: "Part-selective plan re-validation on iter 2+ (IMP-04)"
+    closes: "P-04 — planner rewrite-from-scratch on iter 2+ wastes file-read budget and invites regressions"
+    approach: "Approach D — Issue-Addressed Diff via IMP-03 canonical_issue_ids"
+    depends_on:
+      - "IMP-03: canonical_issue_ids + location format 'Part N: Symbol' (KD-8)"
+      - "IMP-02: VERDICT_JSON envelope (parts_validated[] rides as optional field)"
+      - "IMP-01: handoff-validation.jsonl (imp04_unmapped_location, imp04_cross_cutting_issue, imp04_contract_break_reroute record kinds)"
+
+    flow: |
+      Iter N (N >= 2) pipeline steps:
+        1. Orchestrator pre_delegation STEP 0.5 — build diff-manifest.json:
+           - Read prior review's canonical_issue_ids from review-completions.jsonl
+           - Read prior plan's Part headings (.claude/prompts/{feature}.md)
+           - Map each unresolved issue to a Part via regex '^Part (\d+):'
+           - For each prior Part: NEEDS_UPDATE if mapped issues exist, else UNCHANGED
+           - KD-6 fallback: if ANY issue's location is unmappable (no 'Part N:' prefix),
+             flip ALL UNCHANGED entries to NEEDS_UPDATE (conservative) and log record_kind=
+             imp04_unmapped_location to handoff-validation.jsonl
+           - Write .claude/workflow-state/{feature}-diff-manifest.json (gitignored runtime artifact)
+        2. Orchestrator re-invokes /planner with manifest reference prompt fragment
+        3. Planner phase_0_8_prior_review_digest:
+           - Reads prior plan + diff manifest (budget: 2 reads, 4 tool_calls)
+           - Computes NEW Parts via Part-name set-diff
+           - Preserves UNCHANGED Part bodies verbatim (byte-for-byte)
+           - Addresses NEEDS_UPDATE Parts using manifest.reason active_issues
+           - Emits '## Diff vs prior iteration' block at top of plan (MANDATORY iter 2+)
+        4. Plan-reviewer step 3 (VALIDATE ARCHITECTURE):
+           - Parses diff section; runs FULL validation only on NEEDS_UPDATE + NEW Parts
+           - SKIPS architecture scan on UNCHANGED Parts (byte-for-byte integrity check only)
+           - Emits parts_validated[] in VERDICT_JSON (IDs with full validation)
+        5. Plan-reviewer step 3.5 (CONTRACT-BREAK GUARD):
+           - Detects cross-Part signature changes (NEEDS_UPDATE Part signature flipped,
+             UNCHANGED Part imports broken)
+           - Emits BLOCKER with literal prefix 'IMP-04 contract break: Part '
+        6. Orchestrator post_delegation step 2.5 — BLOCKER reroute:
+           - Scan issues for BLOCKER with literal prefix 'IMP-04 contract break: Part '
+           - On match: delete diff-manifest.json, log imp04_contract_break_reroute,
+             re-route to Phase 1 with FULL RE-PLAN (iter counter NOT incremented —
+             contract break is a routing step, not a new review iteration)
+        7. Orchestrator appends pipeline-metrics.jsonl record with parts_total,
+           parts_validated, parts_skipped_unchanged
+
+    artifacts:
+      diff_manifest:
+        path: ".claude/workflow-state/{feature}-diff-manifest.json"
+        lifetime: "runtime — regenerated every iter ≥2, deleted on contract-break reroute, gitignored"
+        shape: |
+          [
+            {"part_id": int, "name": str, "status": "UNCHANGED"|"NEEDS_UPDATE"|"NEW", "reason": str},
+            ...
+          ]
+      plan_diff_section:
+        path: ".claude/prompts/{feature}.md (## Diff vs prior iteration block)"
+        template: ".claude/templates/plan-template.md → diff_vs_prior_iteration"
+        format: "YAML under diff_vs_prior_iteration key with prior_plan_ref + parts_diff[]"
+      verdict_field:
+        field: "parts_validated"
+        schema: ".claude/schemas/handoff.schema.json → plan_review_verdict.properties.parts_validated"
+        shape: "array of integers (Part IDs); optional; absent on iter 1 (section-absence signal)"
+      metrics_record:
+        path: ".claude/workflow-state/pipeline-metrics.jsonl"
+        emitted_by: "orchestrator post_delegation on iter ≥2"
+        fields: ["ts", "feature", "phase", "iteration", "parts_total", "parts_validated", "parts_skipped_unchanged", "verdict"]
+
+    backward_compat:
+      principle: "Section-absence signal — no env gate needed (KD-9)"
+      iter_1_path: "No diff section in plan → plan-reviewer runs FULL architecture validation (AC-8). parts_validated[] absent from VERDICT_JSON."
+      missing_manifest_path: "If {feature}-diff-manifest.json missing on iter 2+ (e.g. first run after feature rollout, or contract-break reroute), planner SKIPS phase_0.8 and writes iter-1-style plan → plan-reviewer runs FULL validation."
+      schema_compat: "parts_validated[] is OPTIONAL in plan_review_verdict schema — prior VERDICT_JSON payloads continue to validate unchanged."
+
+    fail_modes:
+      - code: "imp04_unmapped_location"
+        meaning: "Prior issue's location is NON-EMPTY but does not match '^Part (\\d+):' regex — reviewer-side KD-8 non-compliance (actionable)"
+        action: "KD-6 conservative fallback: flip ALL UNCHANGED entries in manifest to NEEDS_UPDATE. Record written to handoff-validation.jsonl. Trend watch: high rate signals IMP-03 KD-8 location-format drift."
+      - code: "imp04_cross_cutting_issue"
+        meaning: "Prior issue has an EMPTY location — legitimate plan-wide/cross-cutting concern (informational, reviewer-correct)"
+        action: "Same KD-6 fallback effect (all Parts → NEEDS_UPDATE), but record split from imp04_unmapped_location so telemetry can distinguish reviewer-bug from reviewer-correct-but-cross-cutting emissions. Informational only — no action required on elevated rate."
+      - code: "imp04_contract_break_reroute"
+        meaning: "Plan-reviewer step 3.5 detected cross-Part contract break; BLOCKER with literal prefix 'IMP-04 contract break: Part ' triggers orchestrator reroute"
+        action: "Delete diff-manifest.json, re-route to Phase 1 with FULL RE-PLAN. iter counter NOT incremented (routing step, not review iteration). Log to handoff-validation.jsonl."
+      - code: "missing_diff_section_iter2plus"
+        meaning: "Iter ≥2 plan missing '## Diff vs prior iteration' section despite manifest presence"
+        action: "Plan-reviewer runs FULL architecture validation (AC-8 backward-compat path). parts_validated[] absent from VERDICT_JSON. Planner plan-drift hook may log warning."
+
+    metrics_guidance:
+      - "parts_skipped_unchanged / parts_total — target: 50–70% on stable iter 2+ cycles (matches P-04 budget-savings estimate)"
+      - "imp04_unmapped_location rate — target: <10% of iter-2 invocations (signals IMP-03 KD-8 compliance — reviewer-side actionable)"
+      - "imp04_cross_cutting_issue rate — informational only (no target; legitimate plan-wide concerns)"
+      - "imp04_contract_break_reroute rate — target: <5% of iter-2 invocations (high rate signals planner phase_0.8 correctness bug)"

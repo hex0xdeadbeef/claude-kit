@@ -7,3 +7,4 @@ cat > "$TMP/good.json" <<'JSON'
   "verdict": "APPROVED",
   "issues": [
     {"id": "PR-ab12c] — Destructive rm command (rm -rf). Remove specific files instead: rm file.go
+[2026-04-17T08:35:09Z] protect-files: BLOCKED test-imp04-diff-based-replan.sh — Hook script (.claude/scripts/). Changes must be made by user, not by agent.
