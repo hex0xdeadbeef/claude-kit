@@ -213,6 +213,8 @@ import tempfile as _tempfile_imp02
 verdict_source = "none"       # HOW the verdict was extracted (new field)
 verdict_payload = None        # the parsed JSON object (if any)
 verdict_mismatch_record = None
+canonical_issue_ids = []      # IMP-03: populated in normalization block below;
+                              # stays [] on regex_fallback / no structured JSON paths
 
 def _extract_verdict_json(text):
     """Return (parsed_dict_or_None, raw_json_str_or_None) from VERDICT_JSON:\\n```json\\n{...}\\n```.
@@ -239,10 +241,99 @@ def _extract_verdict_json(text):
     except Exception:
         return None, raw  # raw for malformed-snippet logging
 
+
+def _compute_canonical_id(prefix, category, location, problem):
+    """Deterministic content-addressed ID per spec KD-2.
+
+    Canonical form: {prefix}{sha256(category + '|' + (location or '') + '|' + problem)[:8]}
+    - prefix:   'PR-' for plan-review verdicts, 'CR-' for code-review verdicts
+    - category: schema-enum-like string (architecture | security | error_handling | ...)
+    - location: optional human-readable reference; None/'' treated as empty string
+    - problem:  free-form issue description
+
+    The '|' separator prevents field-boundary ambiguity (hash('ab'+'cd') != hash('a'+'bcd')).
+    """
+    import hashlib as _hashlib
+    src = f"{category}|{location or ''}|{problem}"
+    h = _hashlib.sha256(src.encode("utf-8")).hexdigest()[:8]
+    return f"{prefix}{h}"
+
+
+def _resolve_prefix(verdict_contract):
+    """Map $verdict_contract discriminator to canonical ID prefix."""
+    return {
+        "plan_review_verdict": "PR-",
+        "code_review_verdict": "CR-",
+    }.get(verdict_contract, "XX-")  # XX- is a sentinel for schema FAIL in strict mode
+
+
 verdict = "UNKNOWN"
 if output:
     parsed, raw_json = _extract_verdict_json(output)
     if parsed is not None and isinstance(parsed, dict) and "verdict" in parsed:
+
+        # --- IMP-03: Normalize issues[].id to canonical sha256-prefixed form ---
+        # Must run BEFORE validate-handoff.sh so the schema sees canonical IDs.
+        # Collision dedup: if two issues hash to the same canonical ID, keep the
+        # first in canonical_issue_ids and log an id_collision record.
+        #
+        # CRITICAL CR-004 regression guard: do NOT move the insertion point outside
+        # the `if parsed is not None and isinstance(parsed, dict) and "verdict" in parsed:`
+        # block (lines 274-331 of the pre-IMP-03 file). The normalization mutates
+        # parsed["issues"][*]["id"] and re-serialises raw_json so the tempfile write
+        # and validate-handoff.sh below operate on canonical IDs.
+        _issues = parsed.get("issues")
+        if isinstance(_issues, list) and _issues:
+            _prefix = _resolve_prefix(parsed.get("$verdict_contract", ""))
+            _seen_ids = {}
+            for _issue in _issues:
+                if not isinstance(_issue, dict):
+                    continue
+                _cat = _issue.get("category", "")
+                _loc = _issue.get("location", "")
+                _prob = _issue.get("problem", "")
+                _cid = _compute_canonical_id(_prefix, _cat, _loc, _prob)
+                _issue["id"] = _cid  # overwrite advisory id — schema sees canonical
+                if _cid in _seen_ids:
+                    _seen_ids[_cid] += 1
+                else:
+                    _seen_ids[_cid] = 1
+                    canonical_issue_ids.append({
+                        "id": _cid,
+                        "category": _cat,
+                        "location": _loc,
+                        "problem": _prob,
+                    })
+            # Dedup signalling — R-4 mitigation
+            _dup_ids = [cid for cid, count in _seen_ids.items() if count > 1]
+            if _dup_ids:
+                try:
+                    with open(
+                        os.path.join(STATE_DIR, "handoff-validation.jsonl"),
+                        "a",
+                    ) as _lf:
+                        for _dup in _dup_ids:
+                            _lf.write(json.dumps({
+                                "timestamp": timestamp,
+                                "record_kind": "id_collision",
+                                "agent": effective_agent_type,
+                                "session_id": session_id,
+                                "canonical_id": _dup,
+                                "count": _seen_ids[_dup],
+                            }) + "\n")
+                except Exception:
+                    pass  # NON_CRITICAL
+            # Re-serialise raw_json so the tempfile written below contains the
+            # normalised IDs. validate-handoff.sh will now see canonical form.
+            try:
+                raw_json = json.dumps(parsed)
+            except Exception as _e:
+                print(
+                    f"save-review-checkpoint: re-serialise after normalization failed: {_e}",
+                    file=sys.stderr,
+                )
+        # --- End IMP-03 normalization ---
+
         # Write to temp file, invoke validate-handoff.sh in direct mode with timeout.
         schema_ok = False
         _tf_path = None
@@ -514,6 +605,7 @@ marker = {
     "session_id": session_id,
     "verdict": verdict,
     "verdict_source": verdict_source,          # IMP-02: HOW verdict was extracted
+    "canonical_issue_ids": canonical_issue_ids,  # IMP-03: dedup'd canonical IDs
 }
 # IMP-02: WHERE the transcript was read from (debug-only provenance, renamed from verdict_source)
 if transcript_used:

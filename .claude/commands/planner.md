@@ -154,6 +154,19 @@ startup:
       file: ".claude/templates/plan-template.md"
       description: "load plan template"
 
+    - step: 3
+      action: "IMP-04: detect iteration 2+ re-plan context"
+      purpose: "Enable diff-based re-plan protocol on replay iterations"
+      detection_only: true
+      check: |
+        If iteration_counters.plan_review >= 2 in checkpoint.yaml
+        AND .claude/workflow-state/{feature}-diff-manifest.json exists,
+        load phase_0_8_prior_review_digest instructions.
+      note: |
+        This step is DETECTION-ONLY — do NOT evaluate trigger conditions here.
+        All condition/skip_when logic lives exclusively in phase_0_8_prior_review_digest body
+        (single source of truth — PR-5538b4a4 fix).
+
 ## WORKFLOW
 workflow:
   summary: "STARTUP (task_analysis) → UNDERSTAND → DATA_FLOW → RESEARCH → DESIGN → DOCUMENT"
@@ -174,6 +187,62 @@ phases:
       L: "full flow, Sequential Thinking recommended"
       XL: "full flow, Sequential Thinking REQUIRED"
     warning: "NEVER skip TASK ANALYSIS — wrong routing = wasted time"
+
+  phase_0_8_prior_review_digest:
+    name: "PRIOR REVIEW DIGEST (IMP-04)"
+    purpose: "Iteration 2+ only — read prior plan + diff manifest, preserve UNCHANGED Parts verbatim, target updates to NEEDS_UPDATE/NEW Parts"
+    condition: "Active ONLY when iteration_counters.plan_review >= 2 AND .claude/workflow-state/{feature}-diff-manifest.json exists"
+    skip_when:
+      - "iteration_counters.plan_review == 1 (first run — no prior plan exists)"
+      - "diff-manifest.json missing (contract-break reroute path — full re-plan required, manifest deleted by workflow.md post_delegation step 2.5)"
+      - "--minimal mode (lightweight plans do not participate in diff-based replan)"
+    budget:
+      file_reads: 2
+      tool_calls: 4
+      note: "Tight budget — prior plan + manifest are the ONLY inputs. No new research here. This phase is a rewrite digest, not exploration."
+    reference_contract: "SEE [handoff-protocol.md] → diff_based_replan in workflow-protocols skill"
+    steps:
+      - step: 1
+        action: "Read prior plan"
+        file: ".claude/prompts/{feature}.md"
+        purpose: "Load full prior plan body — parts[] array is the authoritative source for preserved Part content"
+      - step: 2
+        action: "Read diff manifest"
+        file: ".claude/workflow-state/{feature}-diff-manifest.json"
+        format: |
+          [
+            {"part_id": 1, "name": "...", "status": "UNCHANGED", "reason": "no active issues"},
+            {"part_id": 2, "name": "...", "status": "NEEDS_UPDATE", "reason": "active issues: PR-abc12345, PR-def67890"},
+            {"part_id": 3, "name": "...", "status": "NEW", "reason": "new Part added in iter 2"}
+          ]
+        purpose: "Manifest is orchestrator-built (workflow.md pre_delegation STEP 0.5) — do NOT rebuild; trust the input"
+      - step: 3
+        action: "Detect NEW Parts via set-diff on Part names"
+        logic: |
+          prior_part_names = {p.name for p in prior_plan.parts}
+          new_plan_parts = (determined in phase_4_design)
+          for part in new_plan_parts:
+            if part.name not in prior_part_names:
+              part.status = "NEW"
+              part.reason = "new Part added in iter {N}"
+          Manifest's NEW entries MUST match this computation — divergence is a planner bug.
+      - step: 4
+        action: "Preserve UNCHANGED Parts verbatim"
+        rule: "For every manifest entry with status=UNCHANGED, copy the Part body byte-for-byte from prior plan. DO NOT rephrase, re-order fields, or regenerate code blocks."
+        rationale: "Content drift on UNCHANGED Parts defeats the purpose of diff-based replan. Plan-reviewer's architecture scan is skipped on UNCHANGED Parts — silent rewrite would be a governance bypass."
+        guard: "If a UNCHANGED Part's upstream contract flipped (e.g. its dependency's signature changed in a NEEDS_UPDATE Part), emit a BLOCKER with EXACT prefix 'IMP-04 contract break: Part ' — plan-reviewer step 3.5 normalises; orchestrator step 2.5 reroutes to full re-plan."
+      - step: 5
+        action: "Address NEEDS_UPDATE Parts using manifest.reason"
+        rule: "Each NEEDS_UPDATE entry's reason field contains active_issues ID list. Resolve those canonical issue IDs in the updated Part body. Use issues_history[] from checkpoint for full issue text (category, location, problem, suggestion)."
+      - step: 6
+        action: "Emit '## Diff vs prior iteration' section at top of new plan"
+        format: "SEE .claude/templates/plan-template.md → diff_vs_prior_iteration"
+        rule: "Section is MANDATORY on iter 2+. Absent section signals 'iter 1 or KD-6 fallback' — plan-reviewer runs full architecture validation (AC-8 backward-compat path)."
+        parts_diff_content: "Mirror manifest[].part_id / .name / .status / .reason verbatim (plus NEW Parts discovered in step 3)"
+    warning: |
+      NEVER rewrite UNCHANGED Parts from scratch — closes P-04 (rewrite-from-scratch defeats budget savings).
+      NEVER skip emitting diff section on iter 2+ — absence triggers full validation path (AC-8).
+      NEVER invent Part statuses — manifest is authoritative for UNCHANGED/NEEDS_UPDATE; planner only computes NEW via set-diff.
 
   phase_1_understand:
     name: "UNDERSTAND"

@@ -162,7 +162,11 @@
             "type": "object",
             "required": ["id", "severity", "category", "problem"],
             "properties": {
-              "id":         { "type": "string", "description": "Issue identifier, free-form PR-### for now. IMP-03 will tighten to PR-<sha256[:8]>." },
+              "id":         {
+                "type": "string",
+                "pattern": "^PR-[0-9a-f]{8}$",
+                "description": "Canonical issue identifier: PR-<first-8-hex-chars-of-sha256(category|location|problem)>. Computed by save-review-checkpoint.sh (IMP-03) before schema validation. Agents emit free-form advisory ids; hook overwrites them with the canonical form."
+              },
               "severity":   { "type": "string", "enum": ["BLOCKER", "MAJOR", "MINOR", "NIT"] },
               "category":   { "type": "string", "description": "Classification: architecture | security | error_handling | completeness | style | other." },
               "location":   { "type": "string", "description": "Human-readable location (e.g. 'Part 3', 'file.go:42'). Optional." },
@@ -176,6 +180,14 @@
         "handoff": {
           "$ref": "#/$defs/plan_review_to_coder",
           "description": "Embedded inter-phase handoff. Shape MUST match plan_review_to_coder — fully validated."
+        },
+        "parts_validated": {
+          "type": "array",
+          "description": "IMP-04: optional list of Part IDs that received full architecture validation on iter 2+. UNCHANGED Parts are NOT in this list. Absent on iter 1 (backward compat — section-absence signal).",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
         }
       },
       "additionalProperties": false
@@ -202,7 +214,11 @@
             "type": "object",
             "required": ["id", "severity", "category", "problem"],
             "properties": {
-              "id":         { "type": "string", "description": "Issue identifier, free-form CR-### for now. IMP-03 will tighten." },
+              "id":         {
+                "type": "string",
+                "pattern": "^CR-[0-9a-f]{8}$",
+                "description": "Canonical issue identifier: CR-<first-8-hex-chars-of-sha256(category|location|problem)>. Computed by save-review-checkpoint.sh (IMP-03) before schema validation."
+              },
               "severity":   { "type": "string", "enum": ["BLOCKER", "MAJOR", "MINOR", "NIT"] },
               "category":   { "type": "string" },
               "location":   { "type": "string" },

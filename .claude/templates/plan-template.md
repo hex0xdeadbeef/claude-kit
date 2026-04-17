@@ -9,6 +9,28 @@ plan:
   context:
     summary: "{Brief description and business value}"
 
+  # ===== IMP-04: optional iter 2+ only =====
+  # diff_vs_prior_iteration is OMITTED on iter 1 (no prior plan exists).
+  # Present on iter 2+ written by planner phase_0.8_prior_review_digest.
+  # plan-reviewer uses this to determine Part-selective validation scope.
+  # Section absent -> full validation (backward compat, AC-8).
+  diff_vs_prior_iteration:  # OPTIONAL — iter 2+ only
+    prior_plan_ref: ".claude/prompts/{feature}.md@iter{N-1}"
+    parts_diff:
+      - part_id: 1
+        name: "{Part name}"
+        status: "UNCHANGED"       # [UNCHANGED | NEEDS_UPDATE | NEW]
+        reason: "no active issues"
+      - part_id: 2
+        name: "{Part name}"
+        status: "NEEDS_UPDATE"
+        reason: "active issues: PR-ab12cd34, PR-ef456789"
+      - part_id: 3
+        name: "{Part name}"
+        status: "NEW"
+        reason: "new Part added in iter 2"
+  # ===== end IMP-04 =====
+
   scope:
     in:
       - "{Functionality 1}"
