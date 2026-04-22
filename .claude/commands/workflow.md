@@ -634,6 +634,12 @@ hooks:
       behavior: "Appends review completion marker to .claude/workflow-state/review-completions.jsonl"
       blocking: true
 
+    - event: PostToolUse
+      script: ".claude/scripts/validate-handoff.sh"
+      if: "Write(.claude/workflow-state/*-handoff.json) | Edit(.claude/workflow-state/*-handoff.json)"
+      behavior: "Validates handoff JSON against .claude/schemas/handoff.schema.json (IMP-01). Non-blocking by default; set CLAUDE_HANDOFF_VALIDATION_MODE=strict to block on failure."
+      blocking: false
+
     - event: WorktreeCreate
       script: ".claude/scripts/prepare-worktree.sh"
       behavior: "Prepares worktree environment (env vars, Go deps, analytics logging)"
