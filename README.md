@@ -113,15 +113,18 @@ The main command that orchestrates the entire development process. Executes all 
 
 **Phases:**
 
-| # | Phase | Description |
-|---|-------|-------------|
-| 1 | Task Analysis | Complexity classification (S/M/L/XL) and route selection |
-| 1.5 | Design | Requirements exploration + approach selection *(L/XL only, optional for M new_feature/integration)* |
-| 2 | Planning | Codebase research, implementation plan creation |
-| 3 | Plan Review | Plan validation against architecture *(skipped for S-complexity)* |
-| 4 | Implementation | Code writing strictly per approved plan, running tests |
-| 5 | Code Review | Change review: architecture, security, quality |
-| 6 | Completion | Git commit + lessons learned *(if non-trivial)* |
+| User # | Internal # | Phase | `--from-phase` | Description |
+|--------|------------|-------|----------------|-------------|
+| — | 0.5 | Task Analysis | — | Complexity classification (S/M/L/XL) and route selection |
+| — | 0.7 | Design | `0.7` | Requirements exploration + approach selection *(L/XL only; optional for M new_feature/integration)* |
+| 1 | 1 | Planning | `1` | Codebase research, implementation plan creation |
+| 2 | 2 | Plan Review | `2` | Plan validation against architecture *(skipped for S-complexity)* |
+| 3 | 3 | Implementation | `3` | Code writing strictly per approved plan, running tests |
+| — | 3.5 | Spec Check | — | Inline compliance gate inside Implementation *(not resumable via --from-phase)* |
+| 4 | 4 | Code Review | `4` | Change review: architecture, security, quality |
+| 5 | 5 | Completion | — | Git commit + lessons learned *(if non-trivial)* |
+
+> Use `Internal #` values with `--from-phase`. Phases with `—` are automatic or not independently resumable.
 
 </details>
 
