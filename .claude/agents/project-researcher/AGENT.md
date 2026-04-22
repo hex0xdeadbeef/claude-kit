@@ -40,11 +40,10 @@ triggers:
     then: "Load project-researcher agent"
 prerequisites:
   required:
-    - "uv — install once: curl -LsSf https://astral.sh/uv/install.sh | sh"
+    - "uv — install once: curl -LsSf https://astral.sh/uv/install.sh | sh (provides uvx, which auto-installs the tree-sitter MCP server on first tool call)"
   optional:
     - "ast-grep (analysis fallback): npm install -g @ast-grep/cli"
     - "PostgreSQL MCP server (database analysis phase): see README.md"
-  tree_sitter_mcp: "Auto-installed via uvx on first tool call. No manual setup required."
 ---
 
 # ════════════════════════════════════════════════════════════════════════════════

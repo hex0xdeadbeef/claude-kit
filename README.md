@@ -635,7 +635,14 @@ Install `uv`, then the server auto-installs on first tool call via the `uvx` tra
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-No additional configuration needed — `.mcp.json` already contains:
+`.mcp.json` is not committed (personal per-machine config). Copy the shipped example or merge its `tree_sitter` entry into your existing `.mcp.json`:
+
+```bash
+cp .mcp.json.example .mcp.json   # fresh setup
+# — or merge the tree_sitter block into an existing .mcp.json
+```
+
+The example contains:
 ```json
 {
   "mcpServers": {
