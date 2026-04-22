@@ -3,8 +3,8 @@ name: project-researcher
 model: opus
 effort: max
 meta:
-  version: 4.3.0
-  updated: 2026-02-24
+  version: 4.3.1
+  updated: 2026-04-22
   changelog: "SEE: deps/changelog.md"
 description: |
   Autonomous orchestrator agent for deep analysis of any project and generation of .claude/ configuration.
@@ -38,6 +38,13 @@ triggers:
     then: "Load project-researcher agent"
   - if: "user mentions 'bootstrap claude', 'research project', 'analyze project'"
     then: "Load project-researcher agent"
+prerequisites:
+  required:
+    - "uv — install once: curl -LsSf https://astral.sh/uv/install.sh | sh"
+  optional:
+    - "ast-grep (analysis fallback): npm install -g @ast-grep/cli"
+    - "PostgreSQL MCP server (database analysis phase): see README.md"
+  tree_sitter_mcp: "Auto-installed via uvx on first tool call. No manual setup required."
 ---
 
 # ════════════════════════════════════════════════════════════════════════════════
@@ -346,8 +353,11 @@ troubleshooting:
     cause: "Previous subagent didn't populate required fields"
     fix: "Re-run failed subagent. Check deps/state-contract.md."
   - problem: "tree-sitter MCP not available"
-    cause: "MCP server not configured or not running"
-    fix: "Configure tree-sitter MCP server. Falls back to ast-grep CLI, then grep."
+    cause: "uv not installed, or MCP server not configured"
+    fix: |
+      Install uv: curl -LsSf https://astral.sh/uv/install.sh | sh
+      .mcp.json uses uvx transport — server auto-installs on first tool call.
+      Falls back to ast-grep CLI, then grep if MCP unavailable.
   - problem: "ast-grep not available"
     cause: "Not installed on system"
     fix: "Install: npm install -g @ast-grep/cli. Or configure tree-sitter MCP (preferred). Last resort: grep fallback."

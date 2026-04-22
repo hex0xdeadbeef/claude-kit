@@ -628,24 +628,26 @@ Configure in `~/.claude/mcp.json`:
 <details>
 <summary>🔧 Installing tree_sitter MCP Server</summary>
 
-The original `mcp-server-tree-sitter` v0.5.1 is incompatible with `py-tree-sitter >= 0.24` (removed `Query.captures()` API). Use the patched fork:
+Install `uv`, then the server auto-installs on first tool call via the `uvx` transport configured in `.mcp.json`:
 
 ```bash
-pipx install git+ssh://git@github.com/hex0xdeadbeef/mcp-server-tree-sitter.git
+# Install uv (once, any macOS/Linux machine)
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-Then add to `~/.claude/mcp.json`:
-
+No additional configuration needed — `.mcp.json` already contains:
 ```json
 {
   "mcpServers": {
     "tree_sitter": {
-      "command": "mcp-server-tree-sitter",
-      "args": ["--stdio"]
+      "command": "uvx",
+      "args": ["mcp-server-tree-sitter"]
     }
   }
 }
 ```
+
+> **Note:** The patched fork is no longer needed. PR#29 (tree-sitter 0.24+ API compat) was merged into the official wrale/mcp-server-tree-sitter upstream on 2026-04-09.
 
 </details>
 
