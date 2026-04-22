@@ -7,7 +7,7 @@
 ## v4.3.1: Upstream wrale migration (2026-04-22)
 - Migrated tree-sitter MCP server from local fork to official upstream wrale/mcp-server-tree-sitter
 - Transport: hard-coded binary path → `uvx mcp-server-tree-sitter` (portable, PyPI-sourced, no manual install)
-- Tool names realigned with upstream v0.5.1: `register_project` → `register_project_tool` (4 doc occurrences)
+- Tool names realigned with upstream v0.5.1: 4 occurrences updated to `register_project_tool` (upstream `_tool` suffix naming convention)
 - KNOWN ISSUES status updated: patching pipx venv no longer required (fix is upstream via PR#29)
 - Added soft version probe via `diagnose_config` at detection tier-0 startup (Section 2.0, non-blocking)
 - AGENT.md: added prerequisites section with uvx one-liner; updated troubleshooting entry
