@@ -6,8 +6,8 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Claude_Code-config_kit-5A45FF?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDJMMiAxOWgyMEwxMiAyeiIgZmlsbD0id2hpdGUiLz48L3N2Zz4=" alt="Claude Code Config Kit"/>
   <img src="https://img.shields.io/badge/agents-5_pipeline-1a73e8?style=flat-square" alt="Agents"/>
-  <img src="https://img.shields.io/badge/skills-6_packages-f9ab00?style=flat-square" alt="Skills"/>
-  <img src="https://img.shields.io/badge/hooks-19_scripts-0d904f?style=flat-square" alt="Hooks"/>
+  <img src="https://img.shields.io/badge/skills-8_packages-f9ab00?style=flat-square" alt="Skills"/>
+  <img src="https://img.shields.io/badge/hooks-24_scripts-0d904f?style=flat-square" alt="Hooks"/>
   <img src="https://img.shields.io/badge/languages-31_via_tree--sitter-00897b?style=flat-square" alt="Languages"/>
 </p>
 
@@ -291,8 +291,11 @@ flowchart TB
 
     ROUTE_S --> PLANNER
     ROUTE_M --> PLANNER
-    ROUTE_L --> PLANNER
-    ROUTE_XL --> PLANNER
+    ROUTE_M -.->|"new/integ optional"| DES
+    ROUTE_L --> DES
+    ROUTE_XL --> DES
+
+    DES["/designer<br/>Phase 0.7"] --> PLANNER
 
     subgraph PHASE1 ["Phase 1: Planning — /planner (opus)"]
         PLANNER["Understand scope"] --> RESEARCH["Research codebase"]
@@ -324,7 +327,9 @@ flowchart TB
         EVALUATE -->|REVISE| ADJUST["Note adjustments"] --> IMPLEMENT
         IMPLEMENT --> SIMPLIFY{"SIMPLIFY<br/>(L/XL, ≥5 parts)"}
         SIMPLIFY -->|"applied / skipped"| VERIFY{"fmt + lint + test"}
-        VERIFY -->|PASS| HANDOFF3["Form handoff"]
+        VERIFY -->|PASS| SPECCHECK["Spec Check<br/>Phase 3.5"]
+        SPECCHECK -->|"PASS / PARTIAL"| HANDOFF3["Form handoff"]
+        SPECCHECK -->|"FAIL (max 1x)"| VERIFY
         VERIFY -->|"FAIL (max 3x)"| STOP3["STOP: test failures,<br/>request manual fix"]
     end
 
@@ -354,6 +359,7 @@ flowchart TB
     end
 
     style STARTUP fill:#e0e0e0,color:#333,stroke:#999
+    style DES fill:#1a73e8,color:#fff,stroke:#1557b0
     style PHASE1 fill:#1a73e8,color:#fff,stroke:#1557b0
     style PHASE2 fill:#9334e6,color:#fff,stroke:#7627bb
     style PHASE3 fill:#9334e6,color:#fff,stroke:#7627bb
@@ -363,6 +369,7 @@ flowchart TB
     style STOP2 fill:#d93025,color:#fff,stroke:#b3261e
     style STOP3 fill:#d93025,color:#fff,stroke:#b3261e
     style STOP4 fill:#d93025,color:#fff,stroke:#b3261e
+    style SPECCHECK fill:#9334e6,color:#fff,stroke:#7627bb
     style CRES fill:#00897b,color:#fff,stroke:#00695c
 ```
 
@@ -427,18 +434,22 @@ flowchart LR
 ```mermaid
 flowchart LR
     subgraph SKILLS ["Skills (on-demand loading)"]
-        WP["workflow-protocols · 9 files"]
+        WP["workflow-protocols · 11 files"]
         PLR["planner-rules · 8 files"]
-        CDR["coder-rules · 5 files"]
+        CDR["coder-rules · 7 files"]
         PRR["plan-review-rules · 5 files"]
         CRR["code-review-rules · 5 files"]
         TDD["tdd-go · 3 files"]
+        DR["design-rules · 3 files"]
+        SDB["systematic-debugging · 4 files"]
     end
 
     WF2["/workflow"] --> WP
     PL2["/planner"] --> PLR
     CO2["/coder"] --> CDR
     CO2 -->|"if TDD in plan"| TDD
+    CO2 -.->|"3x VERIFY fail"| SDB
+    DES2["/designer (opus)"] --> DR
     PREV["plan-reviewer"] --> PRR
     CREV["code-reviewer"] --> CRR
 
@@ -452,6 +463,7 @@ flowchart LR
     style SKILLS fill:#f9ab00,color:#333,stroke:#e69500
     style WF2 fill:#1a73e8,color:#fff,stroke:#1557b0
     style PL2 fill:#1a73e8,color:#fff,stroke:#1557b0
+    style DES2 fill:#1a73e8,color:#fff,stroke:#1557b0
     style CO2 fill:#9334e6,color:#fff,stroke:#7627bb
     style PREV fill:#9334e6,color:#fff,stroke:#7627bb
     style CREV fill:#9334e6,color:#fff,stroke:#7627bb
@@ -625,7 +637,7 @@ Then add to `~/.claude/mcp.json`:
 │   └── tdd-go/            # TDD workflow for Go projects
 ├── templates/             # Templates for creating new artifacts
 ├── prompts/               # Generated implementation plans
-├── scripts/               # Lifecycle hook scripts (15 scripts)
+├── scripts/               # Lifecycle hook scripts (23 scripts + 3 tests)
 ├── rules/                 # Cross-cutting constraints (architecture rules)
 ├── workflow-state/        # Runtime state (gitignored, generated during workflow)
 ├── agent-memory/          # Agent-specific persistent memory
@@ -663,6 +675,12 @@ Configured in `.claude/settings.json`. Enforce quality automatically:
 | `session-analytics.sh` | SessionEnd | Record session analytics |
 | `log-stop-failure.sh` | StopFailure | Log API errors to session analytics |
 | `notify-user.sh` | Notification | Desktop notifications for agent events |
+| `inject-review-context.sh` | SubagentStart (plan-reviewer / code-reviewer) | Inject accumulated review context into reviewer agent on start |
+| `validate-handoff.sh` | PostToolUse (Write / Edit) | Validate handoff JSON against schema on write to `workflow-state/*-handoff.json` |
+| `track-task-lifecycle.sh` | SubagentStart (code-researcher / plan-reviewer / code-reviewer) | Track subagent task lifecycle events for pipeline metrics |
+| `audit-config-change.sh` | ConfigChange | Audit config changes; block writes during active workflow |
+| `log-permission-denied.sh` | PermissionDenied | Log tool-call denials by auto-mode classifier (not explicit deny rules) |
+| import matrix enforcer (type: prompt) | PreToolUse (Write / Edit `if: internal/**/*.go`) | Enforce Go architecture import matrix via LLM evaluation — fires only on internal Go files |
 
 ---
 
