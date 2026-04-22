@@ -244,7 +244,7 @@ Displays the code review checklist: architecture, security (OWASP), code quality
 
 ## 🏗 Architecture
 
-The system is a **5-phase development pipeline** managed by the orchestrator (`/workflow`), which sequentially delegates work to specialized agents. Each agent has a strictly defined responsibility zone, model assignment, and skill set.
+The system is a **multi-phase development pipeline** managed by the orchestrator (`/workflow`), which sequentially delegates work to specialized agents. Active phases depend on complexity: **S=4** (skips Design and Plan Review) · **M=6** · **L/XL=8** (all phases including Design and Spec Check). Each agent has a strictly defined responsibility zone, model assignment, and skill set.
 
 <details>
 <summary>🎨 Color Legend</summary>
@@ -716,6 +716,20 @@ Configured in `.claude/settings.json`. Enforce quality automatically:
 | `audit-config-change.sh` | ConfigChange | Audit config changes; block writes during active workflow |
 | `log-permission-denied.sh` | PermissionDenied | Log tool-call denials by auto-mode classifier (not explicit deny rules) |
 | import matrix enforcer (type: prompt) | PreToolUse (Write / Edit `if: internal/**/*.go`) | Enforce Go architecture import matrix via LLM evaluation — fires only on internal Go files |
+
+### 🔌 Extension Points
+
+Supported Claude Code hook events not yet leveraged in the kit — available for customization:
+
+| Event | Potential use in claude-kit |
+|-------|----------------------------|
+| `SessionStart` | Initialize workflow-state at session start; load environment from checkpoint |
+| `FileChanged` | Watch `prompts/{feature}.md` for mid-session drift detection |
+| `WorktreeRemove` | Cleanup `workflow-state/` artifacts after code-review worktree is removed |
+| `TaskCreated` / `TaskCompleted` | Track `TodoWrite` task lifecycle in `pipeline-metrics.jsonl` |
+| `PostToolUseFailure` | Log failed tool calls for debugging and session analytics |
+| `PermissionRequest` | Pre-audit tool permission requests before user sees the dialog |
+| `UserPromptExpansion` | Track slash command invocation frequency in `session-analytics.sh` |
 
 ---
 
