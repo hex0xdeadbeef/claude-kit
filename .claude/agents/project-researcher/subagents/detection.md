@@ -11,6 +11,57 @@
 
 The DETECT phase analyzes project code to identify languages, frameworks, build tools, and testing infrastructure.
 
+### 2.0 Version Probe (v4.3.1)
+
+Before selecting the analysis method, probe the tree-sitter MCP server version.
+This is a **non-blocking soft check** — failure NEVER gates execution.
+
+**Guard:** If `state.detect.version_check_suppressed == true` → skip this section entirely, proceed to 2.1.
+
+**Step 1: Invoke diagnose_config**
+
+Call `diagnose_config` (no parameters). Capture the full response text.
+
+**Step 2: Parse and evaluate**
+
+```yaml
+version_check:
+  on_success:
+    parse_version: "Extract version string from response (e.g. '0.5.1', 'v0.5.1')"
+    evaluation_order: |
+      1. If parsed version found AND >= [0, 5, 1] → pass silent (proceed to 2.1, no action)
+      2. If parsed version found AND < [0, 5, 1] → warn (even if response contains 'wrale'):
+           Append: "tree-sitter MCP version below 0.5.1. Expected upstream wrale ≥ 0.5.1.
+                    Upgrade: uvx mcp-server-tree-sitter (ensure uv is installed)."
+           Proceed to 2.1 (non-fatal).
+      3. If no parseable version found → tiebreaker: check if response contains 'wrale':
+           If yes → pass silent (upstream response, version field just absent)
+           If no  → append warning as in case 2, proceed to 2.1 (non-fatal)
+
+  on_failure:
+    # diagnose_config tool unavailable or returned an error
+    increment: "state.detect.version_check_failures += 1 (session-scoped)"
+    suppress_if: "version_check_failures >= 2 → set state.detect.version_check_suppressed = true"
+    append_warning: |
+      "diagnose_config unavailable — cannot verify tree-sitter MCP server version."
+      (Omit if self-suppressed — do not flood warnings on repeated failure.)
+    continue: "Proceed to 2.1 regardless (non-fatal)"
+```
+
+**State fields added by this section:**
+```yaml
+state.detect:
+  warnings: []                         # appended, not replaced
+  version_check_failures: 0            # session counter
+  version_check_suppressed: false      # suppress flag
+```
+**Initialization:** All three fields are lazily initialized by detection.md on first
+Version Probe invocation. `state.detect` is a free-form dict — no orchestrator-level
+schema change is required. If the guard reads `state.detect.version_check_suppressed`
+before it is written, treat missing key as `false`.
+
+---
+
 ### 2.1 Analysis Method Check (v4.2)
 
 Determine the best available analysis method using a 3-tier fallback chain:
