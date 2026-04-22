@@ -571,7 +571,39 @@ flowchart TB
 - **Re-Routing** — pipeline adjusts route on complexity mismatch (downgrade/upgrade)
 - **Cron Auto-Save** — periodic checkpoint auto-save for L/XL tasks via CronCreate (every 10min)
 - **Simplify Protocol** — optional code simplification before review (L/XL, ≥5 parts, 30% guard)
-- **Worktree Optimization** — sparse checkout via `worktree.sparsePaths` reduces worktree size in monorepos
+- **Worktree Optimization** — sparse checkout via `worktree.sparsePaths` reduces worktree size in monorepos. Configure for your project structure in `.claude/settings.json`:
+  ```json
+  "worktree": {
+    "sparsePaths": [".claude/", "src/", "tests/", "package.json"]
+  }
+  ```
+  Default paths are Go-specific: `.claude/`, `internal/`, `cmd/`, `go.mod`, `go.sum`, `Makefile`, `CLAUDE.md`.
+
+<details>
+<summary>⚙️ Infrastructure Protocols</summary>
+
+Architectural improvements layered onto the pipeline since v1.9.0. These protocols operate transparently — no user action required.
+
+| Protocol | What it does | Key artifact |
+|----------|-------------|--------------|
+| **IMP-01** Handoff Validation | JSON Schema validation of typed handoff payloads on write via PostToolUse hook | `.claude/schemas/handoff.schema.json` |
+| **IMP-02** Structured Verdict | VERDICT_JSON fenced block enables structured extraction; regex fallback on parse failure | `workflow-state/review-completions.jsonl` |
+| **IMP-03** Issue ID Normalization | Canonical IDs `^[PC]R-[0-9a-f]{8}$` enable cross-iteration set-diff (resolved vs regressed) | `review-completions.jsonl` |
+| **IMP-04** Diff-based Re-plan | On iteration 2+, planner receives a diff-manifest — only NEEDS_UPDATE parts are rewritten | `workflow-state/{feature}-diff-manifest.json` |
+| **IMP-05** Effective Agent Type | Post-registry recovery resolves agent identity from transcript when SubagentStop fires without registration | `review-completions.jsonl` field `effective_agent_type` |
+| **IMP-06** UNKNOWN Verdict Resolution | Tiered recovery: checkpoint → direct transcript read → verdict-recovery agent → manual user verdict | `orchestration-core.md` phases 2/4 |
+
+Enable strict validation via `.claude/settings.local.json`:
+```json
+{
+  "env": {
+    "CLAUDE_HANDOFF_VALIDATION_MODE": "strict",
+    "CLAUDE_VERDICT_VALIDATION_MODE": "strict"
+  }
+}
+```
+
+</details>
 
 ---
 
