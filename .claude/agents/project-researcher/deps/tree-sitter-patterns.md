@@ -34,7 +34,7 @@ tree_sitter_check:
 
 | Tool | Phase | Purpose |
 |------|-------|---------|
-| `register_project` | DETECT | Register project for analysis |
+| `register_project_tool` | DETECT | Register project for analysis |
 | `list_languages` | DETECT | Verify language support |
 | `get_symbols` | DETECT, GRAPH | Extract functions, classes, interfaces per file |
 | `find_usage` | GRAPH | Find all references to a symbol |
@@ -48,7 +48,7 @@ tree_sitter_check:
 
 ```yaml
 # At detection subagent startup:
-register_project:
+register_project_tool:
   path: "{state.validate.path}"
   name: "{project_name}"
   description: "Project analysis for project-researcher"
@@ -626,11 +626,11 @@ Predicates:
 
 **Root cause:** `mcp-server-tree-sitter ≤0.5.1` calls `query.captures(node)` which was removed in `tree-sitter 0.24+`. New API: `QueryCursor(query).captures(node)`.
 
-**Status:** Fixed by patching `analysis.py` / `search.py` in the pipx venv. But may recur after `pipx upgrade`.
+**Status:** Fixed upstream in wrale v0.5.1 (PR#29, merged 2026-04-09). No manual patching required when using `uvx mcp-server-tree-sitter`.
 
 **Affected tools:** `get_symbols`, `get_dependencies`, `run_query`
 
-**NOT affected:** `register_project`, `list_languages`, `list_files`, `get_ast`, `get_file`, `find_text`
+**NOT affected:** `register_project_tool`, `list_languages`, `list_files`, `get_ast`, `get_file`, `find_text`
 
 **Fallback when symptoms appear:**
 

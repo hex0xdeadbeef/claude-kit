@@ -22,7 +22,7 @@ If available: `analysis_method = "tree-sitter-mcp"`, register project.
 
 ```yaml
 # Register project with tree-sitter MCP:
-register_project:
+register_project_tool:
   path: "{state.validate.path}"
   name: "{project_name}"
 ```
