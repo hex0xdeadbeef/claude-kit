@@ -27,7 +27,9 @@
       "Bash(head *)",
       "Bash(tail *)",
       "Bash(wc *)",
-      "Bash(find *)",
+      "Bash(find . -name *)",
+      "Bash(find . -type *)",
+      "Bash(find . -maxdepth *)",
       "Bash(echo *)",
       "Bash(mkdir *)",
       "Bash(cp *)",
@@ -61,7 +63,9 @@
       "Bash(dd if=*)",
       "Bash(mkfs.*)",
       "Bash(truncate *)",
-      "Read(.env)"
+      "Read(.env)",
+      "Bash(find * -exec *)",
+      "Bash(find * -delete)"
     ],
     "additionalDirectories": [
       "/tmp",

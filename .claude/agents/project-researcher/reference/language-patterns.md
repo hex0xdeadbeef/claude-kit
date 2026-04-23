@@ -265,7 +265,7 @@ grep -E "spring-boot|quarkus|micronaut" pom.xml build.gradle 2>/dev/null
 grep -E "java.version|sourceCompatibility" pom.xml build.gradle 2>/dev/null
 
 # Main class
-find . -name "*.java" -exec grep -l "public static void main" {} \;
+find . -name "*.java" | xargs grep -l "public static void main" 2>/dev/null
 ```
 
 ---
