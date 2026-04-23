@@ -689,7 +689,7 @@ The example contains:
 ├── worktrees/             # Git worktree management
 ├── settings.json          # Claude Code project settings + hooks (git-committed)
 ├── settings.local.json.example  # Template for personal overrides
-└── .claude/PROJECT-KNOWLEDGE.md   # Auto-generated project knowledge base
+└── ./PROJECT-KNOWLEDGE.md    # Auto-generated project knowledge base
 ```
 
 ---

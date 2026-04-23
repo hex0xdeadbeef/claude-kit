@@ -261,7 +261,7 @@ None - all phases completed successfully with HIGH confidence.
 ```
 .claude/
 ├── CLAUDE.md (N lines)
-├── .claude/PROJECT-KNOWLEDGE.md (N lines)
+├── ./PROJECT-KNOWLEDGE.md (N lines)
 ├── memory.json (MCP persistent context)
 ├── skills/
 │   ├── {arch-pattern}/SKILL.md (N lines)

@@ -24,20 +24,34 @@ if [[ "$FILE_PATH" == *"agent-memory"* ]]; then
 fi
 
 # --- PK-01: PROJECT-KNOWLEDGE.md canonical path check ---
-# Canonical path is `.claude/PROJECT-KNOWLEDGE.md` (SEE .claude/rules/workflow.md → Path Conventions).
-# Detects bare `PROJECT-KNOWLEDGE.md` without `.claude/` prefix.
+# Canonical path is the canonical form (SEE .claude/rules/workflow.md → Path Conventions).
+# Detects the bare form (no `.claude/` prefix) and logs to stdout.
 # Runs for ANY file type (this block is BEFORE the .md-only filter below).
-# Output: stdout (consistent with existing ❌/✅ pattern in this script).
-# Exit: 0 (non-blocking WARN). Strict mode via CLAUDE_PK_PATH_MODE=strict (opt-in).
+# Output: stdout (consistent with existing ❌/✅/⚠️ pattern in this script).
+# Exit: 0 (non-blocking WARN) by default. Strict mode via CLAUDE_PK_PATH_MODE=strict (opt-in, exit 2).
 # Implementation note: uses perl instead of `grep -P` because BSD grep on macOS does
 # not support PCRE lookbehind; perl 5.x is preinstalled on macOS/Linux and supports it natively.
-# Self-reference note: this file intentionally contains the regex literal; AC-1 verifier excludes it.
-if [[ -f "$FILE_PATH" ]]; then
+#
+# Exemption list (files that legitimately contain the bare-form literal):
+#   - this script (check-references.sh) — regex literal appears in comments + echo
+#   - .claude/rules/workflow.md — canonical rule doc describing the forbidden form
+# Without these exemptions the hook self-fires and blocks its own maintenance (strict mode).
+PK_SKIP=false
+case "$FILE_PATH" in
+  *check-references.sh|*.claude/rules/workflow.md|.claude/rules/workflow.md)
+    PK_SKIP=true
+    ;;
+esac
+if [[ "$PK_SKIP" == "false" ]] && [[ -f "$FILE_PATH" ]]; then
   PK_BARE_LINES=$(perl -ne 'print "$.:$_" if /(?<![\/.])PROJECT-KNOWLEDGE\.md/' "$FILE_PATH" 2>/dev/null || true)
   if [[ -n "$PK_BARE_LINES" ]]; then
-    echo "❌ PK path validation FAILED for ${FILE_PATH}:"
+    if [[ "${CLAUDE_PK_PATH_MODE:-warn}" == "strict" ]]; then
+      echo "❌ PK path validation FAILED for ${FILE_PATH}:"
+    else
+      echo "⚠️  PK path validation WARN for ${FILE_PATH}:"
+    fi
     while IFS= read -r occurrence; do
-      echo "  - PK_PATH: Bare 'PROJECT-KNOWLEDGE.md' — use '.claude/PROJECT-KNOWLEDGE.md' (${occurrence})"
+      echo "  - PK_PATH: bare form detected — use the canonical '.claude/' prefix (${occurrence})"
     done <<< "$PK_BARE_LINES"
     if [[ "${CLAUDE_PK_PATH_MODE:-warn}" == "strict" ]]; then
       exit 2

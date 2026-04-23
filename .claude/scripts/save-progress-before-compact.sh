@@ -22,7 +22,9 @@ command -v python3 >/dev/null 2>&1 || {
 
 export HOOK_INPUT="$INPUT"
 
-python3 << 'PYTHON_EOF'
+STATE_DIR="${CLAUDE_WORKFLOW_STATE_DIR:-.claude/workflow-state}"
+
+OUTPUT=$(python3 << 'PYTHON_EOF'
 import json, os, glob, time
 from datetime import datetime, timezone
 
@@ -256,3 +258,22 @@ if blocked:
 else:
     print(json.dumps({"additionalContext": build_additional_context(feature, content)}))
 PYTHON_EOF
+)
+
+# P1-09: Pre-emit size guard — explicit overflow control (50K platform threshold)
+SIZE=${#OUTPUT}
+if [[ $SIZE -gt 40000 ]]; then
+    mkdir -p "$STATE_DIR"
+    # compact-overflow-{unix_timestamp}-{pid}.log — PID suffix prevents collision if two hooks
+    # fire in the same second (same-second timestamp is the only realistic collision window)
+    OVERFLOW_FILE="${STATE_DIR}/compact-overflow-$(date -u +%s)-$$.log"
+    printf '%s' "$OUTPUT" > "$OVERFLOW_FILE"
+    echo "[save-progress-before-compact] WARN: output ${SIZE} chars > 40K, saved to ${OVERFLOW_FILE}" >&2
+    # head -c 1000 counts bytes, not chars — acceptable for informational preview (UTF-8 mojibake
+    # in preview does not affect the full file written above)
+    PREVIEW=$(printf '%s' "$OUTPUT" | head -c 1000)
+    jq -n --arg ref "$OVERFLOW_FILE" --arg preview "$PREVIEW" --arg size "$SIZE" \
+      '{"additionalContext": ("[Overflow] Full output (\($size) chars) saved to \($ref). Preview:\n" + $preview + "\n…")}'
+else
+    printf '%s\n' "$OUTPUT"
+fi
