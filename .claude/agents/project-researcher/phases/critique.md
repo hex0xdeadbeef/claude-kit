@@ -1,10 +1,10 @@
-# PHASE 8: CRITIQUE (Self-Adversarial Review)
+# PHASE 7: CRITIQUE (Self-Adversarial Review)
 
 ## 7.1 PURPOSE
 
 **Goal:** Adversarial review planned artifacts BEFORE generation. Not just checking boxes — actively looking for counterarguments and weak spots.
 
-**When:** After MAP/DATABASE, before GENERATE
+**When:** After MAP, before GENERATE
 
 **Required state:** `state.detect.*`, `state.analyze.*`, `state.map.*`
 **Optional state:** `state.graph.*` (may be absent if graph phase failed — graceful degradation per orchestration.md)

@@ -563,7 +563,7 @@ merge_validation:
 After each subagent call, the orchestrator outputs:
 
 ```
-[PHASE {n}/10] {NAME} — DONE
+[PHASE {n}/9] {NAME} — DONE
 State: {key_field=value, ...}
 ```
 

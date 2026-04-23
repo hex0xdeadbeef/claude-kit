@@ -118,23 +118,6 @@ internal/{repository_layer} → internal/{domain_layer}
 
 ---
 
-## DATABASE ANALYSIS
-
-**Schema:** {database}
-**Tables:** N
-**Confidence:** HIGH (entity-table mapping 100%)
-
-| Entity | Table | Columns | Indexes |
-|--------|-------|---------|---------|
-| {Entity1} | {table_1} | N | N |
-| {Entity2} | {table_2} | N | N |
-| {Entity3} | {table_3} | N | N |
-| {Entity4} | {table_4} | N | N |
-
-**Alignment:** Perfect (all entities have corresponding tables)
-
----
-
 ## GENERATED ARTIFACTS
 
 ### CLAUDE.md
@@ -172,7 +155,7 @@ Path-triggered rules for each layer:
 
 ### .claude/PROJECT-KNOWLEDGE.md
 - **Size:** N lines
-- **Sections:** Project Overview, Tech Stack, Architecture, Layers, Patterns, Database Schema, Testing Strategy
+- **Sections:** Project Overview, Tech Stack, Architecture, Layers, Patterns, Testing Strategy
 
 ---
 
@@ -185,7 +168,6 @@ Path-triggered rules for each layer:
 | DETECT | 3.1s | ✅ PASS | 5/5 |
 | ANALYZE | 8.7s | ✅ PASS | 6/6 |
 | MAP | 12.4s | ✅ PASS | 4/4 |
-| DATABASE | 5.2s | ✅ PASS | 3/3 |
 | CRITIQUE | 2.8s | ✅ PASS | 4/4 |
 | GENERATE | 11.6s | ✅ PASS | N/A |
 | VERIFY | 3.3s | ✅ PASS | 5/5 |

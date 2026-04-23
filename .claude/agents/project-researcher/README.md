@@ -17,7 +17,7 @@ subagents:
   discovery: { file: "subagents/discovery.md", model: haiku, phases: "VALIDATE + DISCOVER" }
   detection: { file: "subagents/detection.md", model: sonnet, phases: "DETECT", parallelizable: true }
   graph: { file: "subagents/graph.md", model: sonnet, phases: "GRAPH (symbols + repo-map)", parallelizable: true }
-  analysis: { file: "subagents/analysis.md", model: opus, phases: "ANALYZE + MAP + DATABASE", parallelizable: true }
+  analysis: { file: "subagents/analysis.md", model: opus, phases: "ANALYZE + MAP", parallelizable: true }
   generation: { file: "subagents/generation.md", model: sonnet, phases: "GENERATE" }
   verification: { file: "subagents/verification.md", model: sonnet, phases: "VERIFY", gate: blocking }
   report: { file: "subagents/report.md", model: haiku, phases: "REPORT" }

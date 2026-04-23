@@ -115,9 +115,9 @@ orchestration:
     prompt_pattern: "Read {AGENT_ROOT}/subagents/{name}.md and execute. Project path: {path}. State: {serialize(required_state_fields)}"
 
   # NOTE: Two numbering schemes coexist:
-  # - PIPELINE (lines 84-91): logical phase IDs (1-9), used in total_phases: 10 counting
+  # - PIPELINE (lines 84-91): logical phase IDs (1-9), used in total_phases: 9 counting
   # - ORCHESTRATION (below): execution step IDs, where steps 2-4 are grouped
-  # Pipeline phase IDs are authoritative for progress reporting ("[PHASE N/10]").
+  # Pipeline phase IDs are authoritative for progress reporting ("[PHASE N/9]").
   # Orchestration step IDs reflect execution grouping (strategy-dependent).
   steps:
     - step: 1
