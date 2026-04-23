@@ -49,6 +49,7 @@ curl -sL https://raw.githubusercontent.com/hex0xdeadbeef/claude-kit/main/install
 - `.claude/skills/<custom>/` — custom skills not shipped in the kit
 - `.claude/commands/<custom>.md`, `.claude/agents/<custom>.md` — user-added files
 - Custom skills in `agents`/`commands` frontmatter `skills:` lists (deduplicated, idempotent)
+- `.claude/PROJECT-KNOWLEDGE.md` — generated per-project by `/project-researcher`
 
 **Backup:** A timestamped copy is created at `.claude.backup.YYYYMMDD_HHMMSS/` before the update.
 **Soft dep:** `python3` is used to merge frontmatter skills. If absent, the update warns and proceeds without that step.

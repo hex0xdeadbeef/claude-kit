@@ -272,6 +272,31 @@ else
     PASS=$((PASS + 1))
 fi
 
+# ── T13: restore_project_knowledge copies .claude/PROJECT-KNOWLEDGE.md ─────────
+# Generated per-project by /project-researcher — archive never ships it, so the
+# only concern is bringing it back from backup after the --update wipe.
+echo "T13: restore_project_knowledge from backup"
+FIX="${TMP_ROOT}/t13a"; build_fixture "$FIX"
+printf 'project-knowledge body\n' > "$FIX/backup/PROJECT-KNOWLEDGE.md"
+out=$(restore_project_knowledge "$FIX/backup" "$FIX/target")
+assert_eq "T13.present-counts" "restored=1" "$out"
+assert_file_exists "T13.present-target-exists" "$FIX/target/.claude/PROJECT-KNOWLEDGE.md"
+assert_eq "T13.present-content-identical" \
+    "$(cat "$FIX/backup/PROJECT-KNOWLEDGE.md")" \
+    "$(cat "$FIX/target/.claude/PROJECT-KNOWLEDGE.md")"
+
+echo "T13: restore_project_knowledge when backup absent"
+FIX="${TMP_ROOT}/t13b"; build_fixture "$FIX"
+out=$(restore_project_knowledge "$FIX/backup" "$FIX/target")
+assert_eq "T13.absent-counts" "restored=0" "$out"
+if [ ! -e "$FIX/target/.claude/PROJECT-KNOWLEDGE.md" ]; then
+    echo "  PASS: T13.absent-no-target-created"
+    PASS=$((PASS + 1))
+else
+    echo "  FAIL: T13.absent-no-target-created (file unexpectedly present)"
+    FAIL=$((FAIL + 1))
+fi
+
 # ── Summary ────────────────────────────────────────────────────────────────────
 echo ""
 echo "Total: PASS=${PASS} FAIL=${FAIL}"
