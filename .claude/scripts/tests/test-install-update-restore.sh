@@ -208,6 +208,70 @@ assert_eq "T8.no-skills" "restored=0" "$out"
 out=$(restore_custom_files "$FIX/backup" "$FIX/src" "$FIX/target")
 assert_eq "T8.no-files" "restored=0" "$out"
 
+# ── T9: paths with spaces (CR-002) ─────────────────────────────────────────────
+# Defense-in-depth regression for the quoting contract (literal-pattern strip
+# + all double-quoted path expansions throughout install.sh).
+echo "T9: paths with spaces"
+FIX="${TMP_ROOT}/t9 with space"; build_fixture "$FIX"
+out=$(restore_prompts "$FIX/backup" "$FIX/target")
+assert_eq "T9.prompts-counts" "restored=1 collisions=1" "$out"
+out=$(restore_custom_skills "$FIX/backup" "$FIX/src" "$FIX/target")
+assert_eq "T9.skills-counts" "restored=1" "$out"
+out=$(restore_custom_files "$FIX/backup" "$FIX/src" "$FIX/target")
+assert_eq "T9.files-counts" "restored=2" "$out"
+out=$(merge_frontmatter_skills "$FIX/backup" "$FIX/src" "$FIX/target")
+assert_grep_str "T9.merge-frontmatter-ran" "merged=" "$out"
+assert_grep "T9.merged-custom-skill" "- my-custom-skill" "$FIX/target/.claude/agents/code-reviewer.md"
+
+# ── T10: parse_kv micro-test (CR-003) ──────────────────────────────────────────
+# Direct contract verification of the awk-based positional extractor.
+# ANSI-C quoting ($'...') avoids multi-line literal indentation traps.
+echo "T10: parse_kv micro-test"
+assert_eq "T10.two-field" $'3\n1' "$(parse_kv "restored=3 collisions=1")"
+assert_eq "T10.one-field" "5" "$(parse_kv "restored=5")"
+assert_eq "T10.zeros" $'0\n0' "$(parse_kv "merged=0 skills_added=0")"
+# Value containing = (awk split takes LAST field per design — kv[n])
+assert_eq "T10.eq-in-value" "token" "$(parse_kv "key=base64=token")"
+
+# ── T11: restore_custom_skills idempotency (CR-004) ────────────────────────────
+# Verifies the explicit "rm -rf + cp -r" branch handles re-runs cleanly.
+echo "T11: restore_custom_skills idempotency"
+FIX="${TMP_ROOT}/t11"; build_fixture "$FIX"
+out=$(restore_custom_skills "$FIX/backup" "$FIX/src" "$FIX/target")
+assert_eq "T11.run1-counts" "restored=1" "$out"
+first_content=$(cat "$FIX/target/.claude/skills/my-team-skill/SKILL.md")
+out=$(restore_custom_skills "$FIX/backup" "$FIX/src" "$FIX/target")
+assert_eq "T11.run2-counts" "restored=1" "$out"
+second_content=$(cat "$FIX/target/.claude/skills/my-team-skill/SKILL.md")
+assert_eq "T11.content-identical" "$first_content" "$second_content"
+
+# ── T12: merge_frontmatter_skills tolerates inline YAML comments (CR-001) ──────
+# Regression for the regex relaxation: ITEM_RE + SKILLS_RE accept optional
+# `  # comment` on each skill item; on rewrite, comments are dropped.
+echo "T12: merge_frontmatter_skills with inline YAML comments"
+FIX="${TMP_ROOT}/t12"; build_fixture "$FIX"
+cat > "$FIX/backup/agents/code-reviewer.md" <<'EOF'
+---
+name: code-reviewer
+skills:
+  - code-review-rules  # shipped with kit
+  - my-custom-skill  # team-specific, added 2026-01
+---
+body
+EOF
+out=$(merge_frontmatter_skills "$FIX/backup" "$FIX/src" "$FIX/target")
+assert_grep_str "T12.merge-ran" "merged=" "$out"
+assert_grep "T12.base-preserved" "- code-review-rules" "$FIX/target/.claude/agents/code-reviewer.md"
+assert_grep "T12.custom-added" "- my-custom-skill" "$FIX/target/.claude/agents/code-reviewer.md"
+# Narrow check: no `# comment` on any skills item line (body '#' is allowed — future-proof).
+if grep -E "^[ \t]+-.*#" "$FIX/target/.claude/agents/code-reviewer.md" >/dev/null; then
+    echo "  FAIL: T12.comments-dropped-on-rewrite (# found on skills item)"
+    FAIL=$((FAIL + 1))
+else
+    echo "  PASS: T12.comments-dropped-on-rewrite"
+    PASS=$((PASS + 1))
+fi
+
 # ── Summary ────────────────────────────────────────────────────────────────────
 echo ""
 echo "Total: PASS=${PASS} FAIL=${FAIL}"

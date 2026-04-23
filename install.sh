@@ -204,6 +204,16 @@ get_base_skills() {
     find "$skills_dir" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort
 }
 
+# ── Parse key=value pairs from restore-function output ─────────────────────────
+# Each restore function emits exactly ONE line of "key1=val1 key2=val2 ..." to
+# stdout. parse_kv extracts the values in order, one per line, for `read -r`
+# consumption. awk's split() with n=split(...) returns the last field (kv[n]),
+# so values containing `=` (unlikely but possible) are handled correctly.
+# Example: parse_kv "restored=3 collisions=1" → "3\n1\n"
+parse_kv() {
+    awk '{ for (i = 1; i <= NF; i++) { n = split($i, kv, "="); print kv[n] } }' <<<"$1"
+}
+
 # ── Restore user prompts from backup ───────────────────────────────────────────
 # Copies files from backup_dir/prompts/ into target_dir/.claude/prompts/.
 # Collision: keep new archive file; backup file is restored with -old suffix
@@ -396,11 +406,15 @@ target_path = sys.argv[1]
 backup_path = sys.argv[2]
 base_skills = set(sys.argv[3].split())
 
+# SKILLS_RE: each item line is `  - name` optionally followed by `  # comment`.
+# ITEM_RE captures only the skill name; comment portion is non-capturing.
+# NOTE: inline comments are PRESERVED during read (regex accepts them) but
+# DROPPED on rewrite — the merged skills list is emitted in plain form.
 SKILLS_RE = re.compile(
-    r'^skills:[ \t]*\n((?:[ \t]+-[ \t]+\S+[ \t]*\n)+)',
+    r'^skills:[ \t]*\n((?:[ \t]+-[ \t]+\S+(?:[ \t]+#[^\n]*)?[ \t]*\n)+)',
     re.MULTILINE,
 )
-ITEM_RE = re.compile(r'^[ \t]+-[ \t]+(\S+)[ \t]*$', re.MULTILINE)
+ITEM_RE = re.compile(r'^[ \t]+-[ \t]+(\S+)(?:[ \t]+#[^\n]*)?[ \t]*$', re.MULTILINE)
 FM_RE = re.compile(r'^---\n(.*?)\n---\n?(.*)', re.DOTALL)
 
 
@@ -575,12 +589,6 @@ main() {
     local custom_files_restored=0
     local fm_files_merged=0 fm_skills_added=0
     local _result
-
-    # Local helper: prints each `=`-separated value on its own line.
-    # Example: "restored=3 collisions=1" → "3\n1\n"
-    parse_kv() {
-        awk '{ for (i = 1; i <= NF; i++) { n = split($i, kv, "="); print kv[n] } }' <<<"$1"
-    }
 
     if [ "$update_mode" = true ] && [ -n "$backup_dir" ]; then
         _result=$(restore_prompts "$backup_dir" "$target_dir") || _result="restored=0 collisions=0"
