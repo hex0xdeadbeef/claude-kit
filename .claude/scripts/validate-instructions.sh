@@ -104,6 +104,20 @@ try:
 except Exception:
     pass  # Non-critical
 
+# Version floor check (P0-01): CLAUDE.md must retain the >= 2.1.113 marker
+try:
+    if os.path.isfile("CLAUDE.md"):
+        with open("CLAUDE.md") as f:
+            claude_md_text = f.read()
+        if "2.1.113" not in claude_md_text:
+            warnings.append(
+                "VERSION FLOOR: CLAUDE.md does not mention Claude Code >= 2.1.113 — "
+                "exec-wrapper deny-rule matching (env/sudo/watch/ionice/setsid) requires this version. "
+                "Re-add the minimum version note to the Soft Prerequisites section."
+            )
+except Exception:
+    pass  # Non-critical
+
 if warnings:
     text = "## Instructions Validation Warning\n" + "\n".join(warnings)
     text += "\n\nHint: check .claude/rules/ directory and CLAUDE.md file exist and are readable."
