@@ -643,4 +643,29 @@ if verdict_mismatch_record is not None:
             _lf.write(json.dumps(verdict_mismatch_record) + "\n")
     except Exception:
         pass  # NON_CRITICAL
+
+# --- P0-04: Clear .iteration-in-flight on review agent completion ---
+# Runs on the successful-completion path only. IMP-H's first-attempt block (sys.exit(0)
+# above) never reaches here, so the flag stays alive while the agent is being retried.
+# Deletion fires when the agent truly stops: verdict found, second IMP-H attempt, or
+# verdict-recovery stop. Failure is NON_CRITICAL — stale check in save-progress-before-
+# compact.sh self-heals within 30 min.
+_iter_file = os.path.join(STATE_DIR, ".iteration-in-flight")
+if os.path.isfile(_iter_file):
+    try:
+        os.remove(_iter_file)
+        with open(DEBUG_FILE, "a") as _df:
+            _df.write(json.dumps({
+                "timestamp": timestamp,
+                "hook": "SubagentStop",
+                "event": "iteration_in_flight_cleared",
+                "effective_agent_type": effective_agent_type,
+                "session_id": session_id,
+            }) + "\n")
+    except Exception as _e:
+        print(
+            f"save-review-checkpoint: failed to clear .iteration-in-flight: {_e}",
+            file=sys.stderr,
+        )
+# --- End P0-04 ---
 PYTHON_EOF

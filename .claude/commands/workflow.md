@@ -256,6 +256,12 @@ delegation_protocol:
       Iteration: {N}/3
     returns: "Verdict (APPROVED/NEEDS_CHANGES/REJECTED) + issues + handoff for coder"
     pre_delegation: |
+      STEP -1 (P0-04): Write .claude/workflow-state/.iteration-in-flight BEFORE delegating.
+      Use Write tool (auto-allowed). Content (JSON, one file per session):
+        {"agent": "plan-reviewer", "started_at": "{ISO-8601 UTC timestamp, e.g. 2026-04-23T14:30:00Z}", "feature": "{feature}", "iteration": {N}}
+      Lifecycle: created here → auto-deleted by save-review-checkpoint.sh on SubagentStop.
+      Purpose: prevents auto-compaction from fragmenting the verdict narrative mid-review.
+
       STEP 0 (IMP-01): Write planner handoff to .claude/workflow-state/{feature}-handoff.json
       before delegating to plan-reviewer. Hook auto-validates on write.
       Format (must match .claude/schemas/handoff.schema.json, contract planner_to_plan_review):
@@ -490,6 +496,12 @@ delegation_protocol:
       Iteration: {N}/3
     returns: "Verdict (APPROVED/APPROVED_WITH_COMMENTS/CHANGES_REQUESTED) + issues + handoff for completion"
     pre_delegation: |
+      STEP -1 (P0-04): Write .claude/workflow-state/.iteration-in-flight BEFORE delegating.
+      Use Write tool (auto-allowed). Content (JSON, one file per session):
+        {"agent": "code-reviewer", "started_at": "{ISO-8601 UTC timestamp, e.g. 2026-04-23T14:30:00Z}", "feature": "{feature}", "iteration": {N}}
+      Lifecycle: created here → auto-deleted by save-review-checkpoint.sh on SubagentStop.
+      Purpose: prevents auto-compaction from fragmenting the verdict narrative mid-review.
+
       Before delegating to code-reviewer (iteration 2+ only):
       1. Read .claude/workflow-state/review-completions.jsonl for the most recent entry
          where effective_agent_type == "code-reviewer" in this session_id.

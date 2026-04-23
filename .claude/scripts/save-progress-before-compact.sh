@@ -3,10 +3,12 @@
 # Purpose:
 #   1. ALWAYS (any trigger): save workflow state → additionalContext so it survives compaction
 #   2. AUTO trigger only: BLOCK mid-Part Phase 3 compaction (up to MAX_BLOCKS_PER_PART times)
+#   3. AUTO trigger only: BLOCK during review iteration if .iteration-in-flight flag exists (P0-04)
 #
 # Platform: Claude Code v2.1.105 (PreCompact matcher semantics + decision:block)
 # Manual trigger is ALWAYS pass-through — user-invoked /compact must never be blocked.
 # Safety valve: MAX_BLOCKS_PER_PART prevents context explosion if implementation stalls.
+# Safety valve (P0-04): stale .iteration-in-flight (> 30 min mtime) is auto-deleted and not blocked.
 
 set -euo pipefail
 
@@ -21,10 +23,10 @@ command -v python3 >/dev/null 2>&1 || {
 export HOOK_INPUT="$INPUT"
 
 python3 << 'PYTHON_EOF'
-import json, os, glob
+import json, os, glob, time
 from datetime import datetime, timezone
 
-STATE_DIR = ".claude/workflow-state"
+STATE_DIR = os.environ.get("CLAUDE_WORKFLOW_STATE_DIR", ".claude/workflow-state")
 LOG_FILE = os.path.join(STATE_DIR, "hook-log.txt")
 BLOCK_STATE_FILE = os.path.join(STATE_DIR, "precompact-block-state.json")
 MAX_BLOCKS_PER_PART = 3
@@ -176,39 +178,77 @@ blocked = False
 reason = None
 
 if trigger == "auto":
-    current_part = check_midpart(content)
-    if current_part is not None:
-        state = load_block_state()
-        # Reset counter on (feature, current_part) change
-        if state.get("feature") != feature or state.get("current_part") != current_part:
-            state = {"feature": feature, "current_part": current_part, "block_count": 0}
-        if state["block_count"] < MAX_BLOCKS_PER_PART:
-            state["block_count"] += 1
-            save_block_state(state)
+    # --- P0-04: Iteration-in-flight check (review cycle running) ---
+    # Orchestrator writes .iteration-in-flight before delegating to plan-reviewer/code-reviewer.
+    # save-review-checkpoint.sh (SubagentStop) deletes it when the agent truly finishes.
+    # Stale safety valve: file older than 30 min is a crash artifact — delete and proceed.
+    ITERATION_FILE = os.path.join(STATE_DIR, ".iteration-in-flight")
+    if os.path.isfile(ITERATION_FILE):
+        try:
+            age_seconds = time.time() - os.path.getmtime(ITERATION_FILE)
+        except OSError:
+            age_seconds = 0
+        if age_seconds > 30 * 60:
+            try:
+                os.remove(ITERATION_FILE)
+                append_log("deleted stale .iteration-in-flight (age > 30 min)")
+            except OSError:
+                pass
+        else:
+            try:
+                with open(ITERATION_FILE) as _f:
+                    _info = json.load(_f)
+                _agent = _info.get("agent", "review agent")
+            except Exception:
+                _agent = "review agent"
             blocked = True
             reason = (
-                f"Workflow active: Phase 3 Part {current_part}/{feature} in progress. "
-                f"Auto-compaction would discard mid-Part implementation context. "
-                f"Blocked {state['block_count']}/{MAX_BLOCKS_PER_PART} times for this Part. "
-                f"After {MAX_BLOCKS_PER_PART} blocks, compaction will proceed to prevent session failure."
+                f"Review iteration in progress ({_agent}). Auto-compaction would "
+                f"fragment the reviewer's verdict narrative. Wait for the review to "
+                f"complete, then /compact manually if needed. Block lifts automatically "
+                f"when the review agent stops."
             )
-            append_log(
-                f"BLOCKED auto-compact feature={feature} part={current_part} "
-                f"count={state['block_count']}/{MAX_BLOCKS_PER_PART}"
-            )
+            append_log(f"BLOCKED auto-compact: .iteration-in-flight ({_agent})")
+    # --- End P0-04 ---
+
+    # Guard: when iteration-in-flight blocks, skip mid-Part check. The counter-clear
+    # else branch is safe to skip here — during review (Phase 2/4) check_midpart returns
+    # None anyway, and the (feature, current_part) scoping auto-resets stale state on the
+    # next mid-Part event.
+    if not blocked:
+        current_part = check_midpart(content)
+        if current_part is not None:
+            state = load_block_state()
+            # Reset counter on (feature, current_part) change
+            if state.get("feature") != feature or state.get("current_part") != current_part:
+                state = {"feature": feature, "current_part": current_part, "block_count": 0}
+            if state["block_count"] < MAX_BLOCKS_PER_PART:
+                state["block_count"] += 1
+                save_block_state(state)
+                blocked = True
+                reason = (
+                    f"Workflow active: Phase 3 Part {current_part}/{feature} in progress. "
+                    f"Auto-compaction would discard mid-Part implementation context. "
+                    f"Blocked {state['block_count']}/{MAX_BLOCKS_PER_PART} times for this Part. "
+                    f"After {MAX_BLOCKS_PER_PART} blocks, compaction will proceed to prevent session failure."
+                )
+                append_log(
+                    f"BLOCKED auto-compact feature={feature} part={current_part} "
+                    f"count={state['block_count']}/{MAX_BLOCKS_PER_PART}"
+                )
+            else:
+                append_log(
+                    f"PASS auto-compact feature={feature} part={current_part} "
+                    f"safety-valve triggered, blocks={state['block_count']}/{MAX_BLOCKS_PER_PART}"
+                )
         else:
-            append_log(
-                f"PASS auto-compact feature={feature} part={current_part} "
-                f"safety-valve triggered, blocks={state['block_count']}/{MAX_BLOCKS_PER_PART}"
-            )
-    else:
-        # Not mid-Part anymore: clear counter — no longer in a Part that needs protection.
-        # Fires on any auto-compact while NOT mid-Part (phase != 2, or current_part == 0,
-        # or no checkpoint). Safe to wipe because the counter is only meaningful mid-Part;
-        # the next mid-Part event will allocate a fresh (feature, current_part, 0) state.
-        state = load_block_state()
-        if state.get("feature") is not None:
-            save_block_state({"feature": None, "current_part": None, "block_count": 0})
+            # Not mid-Part anymore: clear counter — no longer in a Part that needs protection.
+            # Fires on any auto-compact while NOT mid-Part (phase != 2, or current_part == 0,
+            # or no checkpoint). Safe to wipe because the counter is only meaningful mid-Part;
+            # the next mid-Part event will allocate a fresh (feature, current_part, 0) state.
+            state = load_block_state()
+            if state.get("feature") is not None:
+                save_block_state({"feature": None, "current_part": None, "block_count": 0})
 
 # --- Emit output ---
 if blocked:
