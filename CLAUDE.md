@@ -28,6 +28,26 @@ Optional tools used by hooks. Missing tools → graceful degradation (warn, non-
 
 **Strict mode (issue ID normalization — IMP-03):** set `CLAUDE_ISSUE_ID_VALIDATION_MODE=strict` to block verdict records whose `issues[].id` fails the canonical pattern `^[PC]R-[0-9a-f]{8}$`. Default: `warn` — schema violations log to `workflow-state/handoff-validation.jsonl` as `record_kind="verdict_schema_invalid"` and the regex fallback still rescues the verdict. Strict mode boosts `MODE_VERDICT` to strict for verdict records (independent of `CLAUDE_VERDICT_VALIDATION_MODE`). Note: `save-review-checkpoint.sh` normalises IDs BEFORE schema validation, so schema failures occur only when the normalisation path is bypassed (e.g. direct-mode writes to `*-handoff.json` that already contain free-form advisory IDs). `canonical_issue_ids` remains populated in `review-completions.jsonl` regardless of mode — orchestrator's `resolved_ids` / `regression_ids` auto-population is unaffected.
 
+## Prompt Cache Policy
+
+Claude Code v2.1.108 introduced a 1-hour prompt cache TTL option. XL workflows span
+5-10 phase transitions (5-30 min each) — with the 5-min default, API-key/Bedrock/Vertex/Foundry
+users hit ~50% cache-miss rate, multiplying token costs.
+
+| Platform | Default TTL | To get 1H TTL |
+| -------- | ----------- | -------------- |
+| Subscription (Pro/Max/Team) | 1H | automatic — no action needed |
+| API-key, Bedrock, Vertex, Foundry | 5 min | set `ENABLE_PROMPT_CACHING_1H=1` in `settings.local.json` env |
+
+**Cache TTL variables (v2.1.108):**
+
+| Variable | Effect |
+| -------- | ------ |
+| `ENABLE_PROMPT_CACHING_1H=1` | Extend TTL 5 min → 1H (API-key/Bedrock/Vertex/Foundry only) |
+| `FORCE_PROMPT_CACHING_5M=1` | Force 5-min TTL regardless of tier (cost control for non-XL) |
+
+See `settings.local.json.example` for the opt-in env block template.
+
 ## Error Handling (All Agents)
 
 | Error                                                                                  | Severity            | Action                                                                                         |

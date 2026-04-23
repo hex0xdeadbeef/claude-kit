@@ -104,16 +104,25 @@ try:
 except Exception:
     pass  # Non-critical
 
-# Version floor check (P0-01): CLAUDE.md must retain the >= 2.1.113 marker
+# CLAUDE.md static checks (P0-01, P1-03): version floor + cache policy
 try:
     if os.path.isfile("CLAUDE.md"):
         with open("CLAUDE.md") as f:
             claude_md_text = f.read()
+        # Version floor check (P0-01): CLAUDE.md must retain the >= 2.1.113 marker
         if "2.1.113" not in claude_md_text:
             warnings.append(
                 "VERSION FLOOR: CLAUDE.md does not mention Claude Code >= 2.1.113 — "
                 "exec-wrapper deny-rule matching (env/sudo/watch/ionice/setsid) requires this version. "
                 "Re-add the minimum version note to the Soft Prerequisites section."
+            )
+        # Cache policy check (P1-03): cache policy documented (v2.1.108)
+        if "Prompt Cache Policy" not in claude_md_text:
+            warnings.append(
+                "CACHE POLICY: CLAUDE.md does not contain the 'Prompt Cache Policy' section — "
+                "v2.1.108 introduced ENABLE_PROMPT_CACHING_1H and FORCE_PROMPT_CACHING_5M "
+                "which this section documents for XL workflows. "
+                "Re-add the section after Soft Prerequisites."
             )
 except Exception:
     pass  # Non-critical

@@ -272,3 +272,28 @@ TEST                                         # Tests pass? (Go default: make tes
 **Note:** If checkpoint shows `phase_completed: 4` with `verdict: APPROVED` → resume from Phase 5 (Completion).
 
 **Checkpoint format:** `{feature}-checkpoint.yaml` with fields: feature, phase_completed, phase_name, iteration (plan_review N/3, code_review N/3), verdict, timestamp, complexity, route, handoff_payload, issues_history. Full specification: SEE [checkpoint-protocol.md] in workflow-protocols skill.
+
+---
+
+## Cost Optimization
+
+**Prompt cache TTL for XL sessions (v2.1.108):**
+
+XL workflows span 5-10 phase transitions (5-30 min each). With the 5-min default cache TTL,
+each phase boundary is a cache-miss for API-key/Bedrock/Vertex/Foundry users — ~50% miss rate
+multiplies token costs proportionally.
+
+| Platform | Default TTL | Action |
+| -------- | ----------- | ------ |
+| Subscription (Pro/Max/Team) | 1H | No action — 1H is the default |
+| API-key, Bedrock, Vertex, Foundry | 5 min | Set `ENABLE_PROMPT_CACHING_1H=1` in `settings.local.json` |
+
+**Warm-up tip:** At `/workflow` start, a single CLAUDE.md read populates the cache.
+All subsequent phase transitions within the same 1H window then hit the cache — no
+additional warm-up steps needed; the startup reads are sufficient.
+
+**Override:** Set `FORCE_PROMPT_CACHING_5M=1` to revert to 5-min TTL
+(e.g., for non-XL sessions where 1H caching is unnecessary cost).
+
+See `settings.local.json.example` for the opt-in env block template. See CLAUDE.md
+`## Prompt Cache Policy` for full variable reference.
