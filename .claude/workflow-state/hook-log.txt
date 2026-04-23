@@ -1,0 +1,7 @@
+[2026-04-23T09:03:27Z] protect-files: BLOCKED settings.json — Workflow config (.claude/settings.json). Changes must be made by user, not by agent.
+[2026-04-23T10:25:16Z] save-progress-before-compact: BLOCKED auto-compact: .iteration-in-flight (code-reviewer)
+[2026-04-23T10:47:45Z] save-progress-before-compact: BLOCKED auto-compact: .iteration-in-flight (code-reviewer)
+[2026-04-23T12:04:25Z] protect-files: BLOCKED settings.json — Workflow config (.claude/settings.json). Changes must be made by user, not by agent.
+[2026-04-23T12:14:39Z] save-progress-before-compact: BLOCKED auto-compact: .iteration-in-flight (code-reviewer)
+[2026-04-23T12:16:17Z] protect-files: BLOCKED settings.json — Workflow config (.claude/settings.json). Changes must be made by user, not by agent.
+[2026-04-23T12:16:34Z] save-progress-before-compact: BLOCKED auto-compact: .iteration-in-flight (code-reviewer)
