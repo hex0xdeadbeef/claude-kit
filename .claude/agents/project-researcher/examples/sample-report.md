@@ -170,7 +170,7 @@ Path-triggered rules for each layer:
 
 **Total:** N lines
 
-### PROJECT-KNOWLEDGE.md
+### .claude/PROJECT-KNOWLEDGE.md
 - **Size:** N lines
 - **Sections:** Project Overview, Tech Stack, Architecture, Layers, Patterns, Database Schema, Testing Strategy
 
@@ -226,7 +226,7 @@ Path-triggered rules for each layer:
 
 ### Maintenance
 - Re-run in UPDATE mode after significant architecture changes
-- Update PROJECT-KNOWLEDGE.md when adding new layers/patterns
+- Update .claude/PROJECT-KNOWLEDGE.md when adding new layers/patterns
 - Regenerate skills if adding new frameworks
 
 ---
@@ -261,7 +261,7 @@ None - all phases completed successfully with HIGH confidence.
 ```
 .claude/
 ├── CLAUDE.md (N lines)
-├── PROJECT-KNOWLEDGE.md (N lines)
+├── .claude/PROJECT-KNOWLEDGE.md (N lines)
 ├── memory.json (MCP persistent context)
 ├── skills/
 │   ├── {arch-pattern}/SKILL.md (N lines)

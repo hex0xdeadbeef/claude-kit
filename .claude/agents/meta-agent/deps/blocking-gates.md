@@ -17,7 +17,7 @@ RESEARCH_GATE:
 
 EXPLORE_GATE:
   when: "before ANALYZE (enhance)"
-  checks: ["PROJECT-KNOWLEDGE.md read", "current artifact read", "new findings documented"]
+  checks: [".claude/PROJECT-KNOWLEDGE.md read", "current artifact read", "new findings documented"]
   on_fail: "STOP: Cannot enhance without exploring project first"
 
 CONSTITUTE_GATE:

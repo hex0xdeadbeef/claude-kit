@@ -11,12 +11,12 @@ troubleshooting:
 
   - problem: "Import matrix violation detected by hooks"
     cause: "Didn't check architecture rules before implementation"
-    fix: "Review import matrix from PROJECT-KNOWLEDGE.md, refactor imports to follow layer dependencies"
+    fix: "Review import matrix from .claude/PROJECT-KNOWLEDGE.md, refactor imports to follow layer dependencies"
     lesson: "Architecture violations caught early prevent major refactoring later"
 
   - problem: "Hook blocks edit - generated file"
     cause: "Attempted to edit generated files (GENERATED/MOCKS — Go default: *_gen.go, mocks/*.go) directly"
-    fix: "Regenerate via project's code generation commands (SEE: PROJECT-KNOWLEDGE.md or Makefile), edit source files instead"
+    fix: "Regenerate via project's code generation commands (SEE: .claude/PROJECT-KNOWLEDGE.md or Makefile), edit source files instead"
     lesson: "Generated files must be regenerated, not manually edited"
 
   - problem: "New library used without Context7"

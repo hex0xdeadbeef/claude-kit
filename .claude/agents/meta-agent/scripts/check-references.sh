@@ -23,6 +23,29 @@ if [[ "$FILE_PATH" == *"agent-memory"* ]]; then
   exit 0
 fi
 
+# --- PK-01: PROJECT-KNOWLEDGE.md canonical path check ---
+# Canonical path is `.claude/PROJECT-KNOWLEDGE.md` (SEE .claude/rules/workflow.md → Path Conventions).
+# Detects bare `PROJECT-KNOWLEDGE.md` without `.claude/` prefix.
+# Runs for ANY file type (this block is BEFORE the .md-only filter below).
+# Output: stdout (consistent with existing ❌/✅ pattern in this script).
+# Exit: 0 (non-blocking WARN). Strict mode via CLAUDE_PK_PATH_MODE=strict (opt-in).
+# Implementation note: uses perl instead of `grep -P` because BSD grep on macOS does
+# not support PCRE lookbehind; perl 5.x is preinstalled on macOS/Linux and supports it natively.
+# Self-reference note: this file intentionally contains the regex literal; AC-1 verifier excludes it.
+if [[ -f "$FILE_PATH" ]]; then
+  PK_BARE_LINES=$(perl -ne 'print "$.:$_" if /(?<![\/.])PROJECT-KNOWLEDGE\.md/' "$FILE_PATH" 2>/dev/null || true)
+  if [[ -n "$PK_BARE_LINES" ]]; then
+    echo "❌ PK path validation FAILED for ${FILE_PATH}:"
+    while IFS= read -r occurrence; do
+      echo "  - PK_PATH: Bare 'PROJECT-KNOWLEDGE.md' — use '.claude/PROJECT-KNOWLEDGE.md' (${occurrence})"
+    done <<< "$PK_BARE_LINES"
+    if [[ "${CLAUDE_PK_PATH_MODE:-warn}" == "strict" ]]; then
+      exit 2
+    fi
+  fi
+fi
+# --- end PK-01 ---
+
 # Only check .claude/ artifact files
 if [[ ! "$FILE_PATH" =~ \.claude/ ]] || [[ ! "$FILE_PATH" =~ \.md$ ]]; then
   exit 0

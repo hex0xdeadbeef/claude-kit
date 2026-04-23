@@ -14,7 +14,7 @@ checklist:
     - item: "Format matches plan-template.md"
 
   phase_3_validate_architecture:
-    - item: "Package imports verified (SEE: PROJECT-KNOWLEDGE.md#Dependency Matrix)"
+    - item: "Package imports verified (SEE: .claude/PROJECT-KNOWLEDGE.md#Dependency Matrix)"
     - item: "Models have no extra tags (domain entities pure)"
     - item: "API layer does not import data access directly (uses service/controller layer)"
     - item: "Protected files not edited"

@@ -42,7 +42,7 @@ jobs:
           echo "=== Checking excluded paths are absent ==="
           # These paths must NOT appear in the tarball
           EXCLUDED=(
-            "PROJECT-KNOWLEDGE.md"
+            ".claude/PROJECT-KNOWLEDGE.md"
             "workflow-state/"
             "prompts/"
             "agent-memory/"

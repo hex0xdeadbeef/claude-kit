@@ -511,7 +511,7 @@ IF subagent_result.status == "failure":
 On retry:
 - `detection`: exclude secondary languages, focus on primary
 - `analysis`: exclude violation detection, focus on architecture + layers
-- `generation`: reduce the number of artifacts (only CLAUDE.md + PROJECT-KNOWLEDGE.md)
+- `generation`: reduce the number of artifacts (only CLAUDE.md + .claude/PROJECT-KNOWLEDGE.md)
 
 ---
 

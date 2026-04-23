@@ -42,7 +42,7 @@ Review the planned artifact generation against these criteria:
 - [ ] CLAUDE.md will be ≤200 lines?
 - [ ] Skills focus on real patterns (not generic)?
 - [ ] Rules match actual project structure?
-- [ ] PROJECT-KNOWLEDGE.md comprehensive but not bloated?
+- [ ] .claude/PROJECT-KNOWLEDGE.md comprehensive but not bloated?
 - [ ] No duplicate information across artifacts?
 
 ### 7.2.4 Relevance
@@ -165,7 +165,7 @@ FOR each finding in [architecture, conventions, patterns]:
 | Issue | Detection | Fix |
 |-------|-----------|-----|
 | Generic artifacts | Skills like "write tests", "handle errors" | Make project-specific (e.g., "{codegen_tool} query patterns") |
-| Missing context | No PROJECT-KNOWLEDGE.md planned | Add comprehensive project map |
+| Missing context | No .claude/PROJECT-KNOWLEDGE.md planned | Add comprehensive project map |
 | Over-sized CLAUDE.md | Exceeds 200 lines | Move details to skills/rules, keep CLAUDE.md as index |
 | Low confidence | Many "LOW" scores in analysis | Add disclaimer, suggest manual review |
 | Incomplete coverage | Major patterns/layers missing | Re-run ANALYZE/MAP phases |

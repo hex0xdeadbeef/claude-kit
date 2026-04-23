@@ -5,7 +5,7 @@ Self-verification at each /designer phase.
 ## Phase 1: EXPLORE CONTEXT
 - [ ] Codebase areas identified (files, packages, patterns)
 - [ ] Existing constraints documented
-- [ ] PROJECT-KNOWLEDGE.md checked (if exists)
+- [ ] .claude/PROJECT-KNOWLEDGE.md checked (if exists)
 
 ## Phase 2: CLARIFY REQUIREMENTS
 - [ ] Critical questions asked (scope, priorities, constraints)

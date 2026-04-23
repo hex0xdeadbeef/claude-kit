@@ -70,11 +70,11 @@ phases_enhance:
     gate: "EXPLORE_GATE"
     steps:
       # Load Order (Pattern 3) — Tier 3
-      - "1. LOAD: Tier 3 — PROJECT-KNOWLEDGE.md, relevant skills"
+      - "1. LOAD: Tier 3 — .claude/PROJECT-KNOWLEDGE.md, relevant skills"
       # Context Budget Check
       - "1a. BUDGET: Check total + new_files <= max_total before loading"
       # Knowledge gathering
-      - "2. Read PROJECT-KNOWLEDGE.md → Directory Structure, Code Patterns"
+      - "2. Read .claude/PROJECT-KNOWLEDGE.md → Directory Structure, Code Patterns"
       - "3. Load relevant skills"
       - "4. Search for NEW/CHANGED patterns only"
       - "5. mcp__memory: load meta-agent-lesson entities"
@@ -85,7 +85,7 @@ phases_enhance:
       # Checkpoint (Pattern 1)
       - "7. CHECKPOINT: Update progress.json (EXPLORE: done), write checkpoints/explore.json"
     knowledge_hierarchy:
-      1_map: "PROJECT-KNOWLEDGE.md → Directory Structure, Code Patterns"
+      1_map: ".claude/PROJECT-KNOWLEDGE.md → Directory Structure, Code Patterns"
       2_related: "Load related artifacts (skills, commands)"
       3_code: "Search for NEW/CHANGED patterns only"
       4_lessons: "mcp__memory: load meta-agent-lesson entities"
@@ -93,7 +93,7 @@ phases_enhance:
       note: "Project-specific — define layers in CLAUDE.md"
       pattern: "internal/{layer}/ — {layer description}"
     step_quality:
-      checks: ["PROJECT-KNOWLEDGE.md read", "artifact loaded", "≥1 skill/pattern found"]
+      checks: [".claude/PROJECT-KNOWLEDGE.md read", "artifact loaded", "≥1 skill/pattern found"]
       scoring: "continuous 0.0-1.0 per check, weighted average"
       scoring_ref: "deps/step-quality.md#phase_criteria.EXPLORE"  # EXPLORE phase weights and scoring thresholds
       threshold: 0.5  # minimum phase_score to proceed

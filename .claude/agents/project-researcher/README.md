@@ -10,8 +10,8 @@ workflow: "DISCOVERY → DETECTION → GRAPH → ANALYSIS → CRITIQUE(gate) →
 
 modes:
   CREATE: { when: "No .claude/ exists", action: "Full analysis, generate from scratch" }
-  AUGMENT: { when: ".claude/ exists, no PROJECT-KNOWLEDGE.md", action: "Supplement existing config" }
-  UPDATE: { when: "PROJECT-KNOWLEDGE.md exists", action: "Incremental update" }
+  AUGMENT: { when: ".claude/ exists, no .claude/PROJECT-KNOWLEDGE.md", action: "Supplement existing config" }
+  UPDATE: { when: ".claude/PROJECT-KNOWLEDGE.md exists", action: "Incremental update" }
 
 subagents:
   discovery: { file: "subagents/discovery.md", model: haiku, phases: "VALIDATE + DISCOVER" }

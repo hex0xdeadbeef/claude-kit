@@ -134,7 +134,7 @@ Enforce target line limits for each artifact type with warnings.
 | Skill | ≤600 | ≥500 | ≥750 |
 | Rule | ≤200 | ≥150 | ≥250 |
 | Command | ≤500 | ≥400 | ≥650 |
-| PROJECT-KNOWLEDGE.md | No limit | — | — |
+| .claude/PROJECT-KNOWLEDGE.md | No limit | — | — |
 
 **Line Counting:**
 - Count non-blank lines (skip empty lines)
@@ -163,7 +163,7 @@ For each artifact:
 Size Warning: skills/table-driven-testing/skill.md
   Lines: 523 (target ≤600, warning at ≥500)
   Status: ⚠️ WARNING - within limit but approaching threshold
-  Suggestion: Consider breaking into related skills or moving details to PROJECT-KNOWLEDGE.md
+  Suggestion: Consider breaking into related skills or moving details to .claude/PROJECT-KNOWLEDGE.md
 ```
 
 **Error Examples:**
@@ -216,8 +216,8 @@ Validate internal structure of each artifact type.
 - [ ] Code blocks properly formatted with language identifier
 - [ ] (Optional) `## Exceptions` section if applicable
 
-**PROJECT-KNOWLEDGE.md Requirements:**
-- [ ] Starts with `# PROJECT-KNOWLEDGE.md`
+**.claude/PROJECT-KNOWLEDGE.md Requirements:**
+- [ ] Starts with `# .claude/PROJECT-KNOWLEDGE.md`
 - [ ] Contains `## Executive Summary` with key facts
 - [ ] Contains `## Project Structure` section
 - [ ] Contains `## Architecture Deep-Dive` section
@@ -451,4 +451,4 @@ subagent_result:
 - **Parallel verification:** Check YAML, references, sizes independently (can parallelize)
 - **Duplicate detection:** O(n) for skills/rules (scan once per artifact type)
 - **Reference resolution:** Cache resolved paths to avoid repeated filesystem checks
-- **Large artifacts:** Stream line counting for very large PROJECT-KNOWLEDGE.md files
+- **Large artifacts:** Stream line counting for very large .claude/PROJECT-KNOWLEDGE.md files

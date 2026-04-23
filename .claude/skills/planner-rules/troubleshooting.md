@@ -13,7 +13,7 @@ troubleshooting:
 
   - problem: "Import matrix violations in plan"
     cause: "Handler imports Repository directly"
-    fix: "Check PROJECT-KNOWLEDGE.md layer imports before writing Parts"
+    fix: "Check .claude/PROJECT-KNOWLEDGE.md layer imports before writing Parts"
     lesson: "Architecture violations caught early save refactoring"
 
   - problem: "Config changes but CONFIG_DOCS not updated"

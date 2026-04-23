@@ -79,7 +79,7 @@ template:
         message: "FATAL: <message>"
 
     checklist:
-      startup: ["Load PROJECT-KNOWLEDGE.md if exists", "Confirm input valid"]
+      startup: ["Load .claude/PROJECT-KNOWLEDGE.md if exists", "Confirm input valid"]
       execution: ["<phase 1 check>", "<phase 2 check>"]
       completion: ["Output written"]
 

@@ -29,7 +29,7 @@ phase_criteria:
   EXPLORE:
     checks:
       - name: "project_context"
-        question: "PROJECT-KNOWLEDGE.md and CLAUDE.md read and summarized?"
+        question: ".claude/PROJECT-KNOWLEDGE.md and CLAUDE.md read and summarized?"
         weight: 0.3
       - name: "artifact_loaded"
         question: "Current artifact content loaded and understood?"

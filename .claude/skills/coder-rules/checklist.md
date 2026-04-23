@@ -25,7 +25,7 @@ checklist:
     - "Code matches plan"
     - "All Parts implemented (TodoWrite updated)"
     - "Import matrix followed"
-    - "Error context pattern followed per project conventions (SEE: PROJECT-KNOWLEDGE.md)"
+    - "Error context pattern followed per project conventions (SEE: .claude/PROJECT-KNOWLEDGE.md)"
     - "Sequential Thinking used (if complex logic)"
 
   verification:

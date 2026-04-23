@@ -22,7 +22,7 @@ Layers: handler → service/controller → repository → models
 | Memory/ST/Context7/PostgreSQL MCP unavailable | NON_CRITICAL | Warn, proceed without |
 | Plan not found | FATAL | EXIT — run /planner first |
 | Plan not approved | FATAL | EXIT — run /plan-review first |
-| PROJECT-KNOWLEDGE.md missing | NON_CRITICAL | Use profile above as defaults |
+| .claude/PROJECT-KNOWLEDGE.md missing | NON_CRITICAL | Use profile above as defaults |
 | Tests fail 3x | STOP_AND_WAIT | Show errors, request manual fix |
 | Import violation | STOP_AND_FIX | Fix before proceeding |
 | Loop limit exceeded (3x) | STOP | Show iteration summary, request user help |

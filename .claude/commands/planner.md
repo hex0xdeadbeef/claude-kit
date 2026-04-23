@@ -275,7 +275,7 @@ phases:
           tools:
             - "Grep 'pattern' --type {language}"
             - "Glob '{SOURCE_GLOB}' (Go default: internal/**/*{keyword}*.go)"
-          note: "Check imports between packages (SEE: PROJECT-KNOWLEDGE.md, if available)"
+          note: "Check imports between packages (SEE: .claude/PROJECT-KNOWLEDGE.md, if available)"
 
         complex_search:
           when: "6+ files OR budget 60% consumed without findings (moderate/complex strategy)"
@@ -427,7 +427,7 @@ phases:
     parts_order:
       note: "Follow dependency direction — lower layers first. Adapt to project structure."
       pattern: "Data access → Models → Domain logic → API/Handlers → Tests → Wiring → Docs"
-      reference: "SEE: PROJECT-KNOWLEDGE.md for project-specific layer order (if available)"
+      reference: "SEE: .claude/PROJECT-KNOWLEDGE.md for project-specific layer order (if available)"
 
     config_changes:
       when: "Adding new configuration"
@@ -474,7 +474,7 @@ rules:
     severity: HIGH
 
   - rule: "Import Matrix"
-    description: "check dependencies between layers (SEE: PROJECT-KNOWLEDGE.md, if available)"
+    description: "check dependencies between layers (SEE: .claude/PROJECT-KNOWLEDGE.md, if available)"
     severity: HIGH
 
 ## ERROR HANDLING

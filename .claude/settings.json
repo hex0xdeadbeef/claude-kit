@@ -174,12 +174,47 @@
         ]
       },
       {
-        "matcher": "Write",
+        "matcher": "Write|Edit",
         "hooks": [
           {
             "type": "command",
             "command": ".claude/agents/meta-agent/scripts/check-references.sh",
             "if": "Write(.claude/**)"
+          },
+          {
+            "type": "command",
+            "command": ".claude/agents/meta-agent/scripts/check-references.sh",
+            "if": "Edit(.claude/**)"
+          },
+          {
+            "type": "command",
+            "command": ".claude/agents/meta-agent/scripts/check-references.sh",
+            "if": "Write(README.md)"
+          },
+          {
+            "type": "command",
+            "command": ".claude/agents/meta-agent/scripts/check-references.sh",
+            "if": "Edit(README.md)"
+          },
+          {
+            "type": "command",
+            "command": ".claude/agents/meta-agent/scripts/check-references.sh",
+            "if": "Write(CLAUDE.md)"
+          },
+          {
+            "type": "command",
+            "command": ".claude/agents/meta-agent/scripts/check-references.sh",
+            "if": "Edit(CLAUDE.md)"
+          },
+          {
+            "type": "command",
+            "command": ".claude/agents/meta-agent/scripts/check-references.sh",
+            "if": "Write(install.sh)"
+          },
+          {
+            "type": "command",
+            "command": ".claude/agents/meta-agent/scripts/check-references.sh",
+            "if": "Edit(install.sh)"
           }
         ]
       },
@@ -290,6 +325,17 @@
             "type": "command",
             "command": ".claude/scripts/save-review-checkpoint.sh",
             "blocking": true
+          }
+        ]
+      }
+    ],
+    "TaskCreated": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/scripts/track-task-creation.sh"
           }
         ]
       }

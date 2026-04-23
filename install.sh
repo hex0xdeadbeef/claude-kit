@@ -309,7 +309,7 @@ main() {
     echo ""
     echo -e "${BLUE}Next steps:${NC}"
     echo "  1. Edit CLAUDE.md — update Language Profile to match your project stack"
-    echo "  2. Run /project-researcher — analyze codebase, generate PROJECT-KNOWLEDGE.md"
+    echo "  2. Run /project-researcher — analyze codebase, generate .claude/PROJECT-KNOWLEDGE.md"
     echo "  3. Run /meta-agent onboard — validate configuration"
     echo ""
     echo -e "${BLUE}Optional:${NC}"

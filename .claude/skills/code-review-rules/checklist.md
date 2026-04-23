@@ -9,11 +9,11 @@ checklist:
     - "LINT && TEST passes"
 
   review:
-    - "Architecture: imports follow matrix (PROJECT-KNOWLEDGE.md, if available)"
+    - "Architecture: imports follow matrix (.claude/PROJECT-KNOWLEDGE.md, if available)"
     - "Code: functions <= 30 lines, errors wrapped, no log+return"
     - "Security: OWASP checklist passed"
     - "Tests: coverage >= 70%"
-    - "Project-specific: domain rules per PROJECT-KNOWLEDGE.md (if available)"
+    - "Project-specific: domain rules per .claude/PROJECT-KNOWLEDGE.md (if available)"
     - "MCP: Sequential Thinking (100+ lines), Context7 (new libraries)"
 
   verdict:

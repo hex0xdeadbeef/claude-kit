@@ -6,7 +6,7 @@
 ---
 
 ## Overview
-The GENERATION subagent transforms accumulated research from earlier phases into concrete artifacts: CLAUDE.md, skills, rules, PROJECT-KNOWLEDGE.md, and memory.json. It respects the configured mode (CREATE/AUGMENT/UPDATE) and honors dry_run settings.
+The GENERATION subagent transforms accumulated research from earlier phases into concrete artifacts: CLAUDE.md, skills, rules, .claude/PROJECT-KNOWLEDGE.md, and memory.json. It respects the configured mode (CREATE/AUGMENT/UPDATE) and honors dry_run settings.
 
 ---
 
@@ -50,7 +50,7 @@ Generate a comprehensive but concise project guide from the research state.
 [List layer rules paths and what they check]
 
 ## Further Reading
-- See PROJECT-KNOWLEDGE.md for deep analysis
+- See .claude/PROJECT-KNOWLEDGE.md for deep analysis
 - See individual skill files for detailed guidance
 ```
 
@@ -267,14 +267,14 @@ triggers: [keywords]
 
 ---
 
-## 5.5 PROJECT-KNOWLEDGE.md Generation
+## 5.5 .claude/PROJECT-KNOWLEDGE.md Generation
 
 Create comprehensive research document (no line limit; reference guide).
 
 **Template Sections (order matters):**
 
 ```markdown
-# PROJECT-KNOWLEDGE.md
+# Project Knowledge
 [Date and metadata]
 
 ## Executive Summary
@@ -456,7 +456,7 @@ Generate structured entity and relation data for the Claude Memory Protocol.
 - Preserve existing skills if they exist (check filesystem)
 - Fill gaps: only write files that don't exist
 - If CLAUDE.md exists, preserve and augment (add new sections, don't remove)
-- For PROJECT-KNOWLEDGE.md: merge findings, preserve hand-written notes if present
+- For .claude/PROJECT-KNOWLEDGE.md: merge findings, preserve hand-written notes if present
 
 **UPDATE Mode:**
 - Incremental changes only

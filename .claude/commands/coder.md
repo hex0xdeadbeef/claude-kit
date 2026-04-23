@@ -349,7 +349,7 @@ workflow:
     - phase: 2
       name: "IMPLEMENT PARTS"
       order: "Follow dependency direction: lower layers first (data access → domain → API → tests → wiring)"
-      note: "SEE: PROJECT-KNOWLEDGE.md for project-specific layer order (if available)"
+      note: "SEE: .claude/PROJECT-KNOWLEDGE.md for project-specific layer order (if available)"
 
       tdd_mode:
         when: "TDD skill loaded (plan contains ## TDD)"
@@ -359,7 +359,7 @@ workflow:
 
       after_each_part:
         - "TodoWrite — mark Part as completed"
-        - "Hooks auto-run formatter + linter (SEE: PROJECT-KNOWLEDGE.md)"
+        - "Hooks auto-run formatter + linter (SEE: .claude/PROJECT-KNOWLEDGE.md)"
         - "Do NOT run tests (make test / go test) between Parts — tests run ONCE at VERIFY phase. Exception: TDD mode (plan ## TDD) — RED-GREEN-REFACTOR test runs within a Part are implementation, not verification."
 
       complex_logic:
@@ -412,14 +412,14 @@ workflow:
       verify_startup:
         step_0: "Resolve VERIFY command before running"
         checks:
-          - if: "PROJECT-KNOWLEDGE.md exists AND defines custom VERIFY/FMT/LINT/TEST"
-            then: "Use custom commands from PROJECT-KNOWLEDGE.md"
+          - if: ".claude/PROJECT-KNOWLEDGE.md exists AND defines custom VERIFY/FMT/LINT/TEST"
+            then: "Use custom commands from .claude/PROJECT-KNOWLEDGE.md"
           - if: "Makefile exists with fmt/lint/test targets"
             then: "Use make-based: go vet ./... && make fmt && make lint && make test"
           - if: "go.mod exists but no Makefile"
             then: "Use Go-native: go fmt ./... && go vet ./... && go test ./..."
           - else: "WARN: No VERIFY command available. Skip VERIFY, note in handoff."
-        note: "CLAUDE.md defines defaults. PROJECT-KNOWLEDGE.md overrides. This ensures VERIFY never fails due to missing build tooling."
+        note: "CLAUDE.md defines defaults. .claude/PROJECT-KNOWLEDGE.md overrides. This ensures VERIFY never fails due to missing build tooling."
 
       static_analysis:
         command: "VET (go vet ./... — catches printf format errors, lock copying, suspicious constructs)"
@@ -431,7 +431,7 @@ workflow:
       testing:
         quick_check:
           when: "< 10 tests"
-          command: "TEST (or project-specific test command — SEE: PROJECT-KNOWLEDGE.md)"
+          command: "TEST (or project-specific test command — SEE: .claude/PROJECT-KNOWLEDGE.md)"
 
         full_testing:
           when: "Multi-session task, many tests"

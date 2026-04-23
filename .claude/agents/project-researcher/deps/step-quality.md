@@ -98,7 +98,7 @@ Blocking gates (CRITIQUE, VERIFY) have explicit pass/fail criteria. SEE: `deps/o
 
 ### Generation Subagent (sonnet)
 - [ ] CLAUDE.md generated (≤200 lines)
-- [ ] PROJECT-KNOWLEDGE.md generated
+- [ ] .claude/PROJECT-KNOWLEDGE.md generated
 - [ ] Skills based on ≥3 real code examples each
 - [ ] Rules match detected architecture
 - [ ] No duplicate information across artifacts
@@ -111,7 +111,7 @@ Blocking gates (CRITIQUE, VERIFY) have explicit pass/fail criteria. SEE: `deps/o
 - [ ] Sizes within limits (CLAUDE.md ≤200, skills ≤600, rules ≤200)
 - [ ] No orphan references
 - [ ] Structure complete (all expected artifacts present)
-- [ ] No contradictions between CLAUDE.md and PROJECT-KNOWLEDGE.md
+- [ ] No contradictions between CLAUDE.md and .claude/PROJECT-KNOWLEDGE.md
 - Min pass: 6/6 (blocking gate)
 
 ### Compound Subagent (opus) — pipeline parallelism (v4.2)

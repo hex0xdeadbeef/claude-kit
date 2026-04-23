@@ -62,7 +62,7 @@ triggers:
   - if: "Query returns large dataset (>100 rows expected)"
     then: "Warn user, suggest adding LIMIT clause"
   - if: "User asks about domain entity alignment"
-    then: "Read domain model files (SEE: PROJECT-KNOWLEDGE.md) + compare with table structure"
+    then: "Read domain model files (SEE: .claude/PROJECT-KNOWLEDGE.md) + compare with table structure"
   - if: "MCP postgres tools unavailable"
     then: "Report error, suggest checking MCP config"
 
@@ -149,7 +149,7 @@ workflow:
     - phase: 3
       name: "ANALYZE"
       purpose: "Process results"
-      actions: ["Identify patterns in schema", "Detect issues (missing indexes, orphan data)", "Compare with domain entities (SEE: PROJECT-KNOWLEDGE.md)", "Check alignment with generated query files"]
+      actions: ["Identify patterns in schema", "Detect issues (missing indexes, orphan data)", "Compare with domain entities (SEE: .claude/PROJECT-KNOWLEDGE.md)", "Check alignment with generated query files"]
     - phase: 4
       name: "REPORT"
       purpose: "Generate report"
@@ -204,7 +204,7 @@ troubleshooting:
     fix: "Mask emails (a***@example.com), tokens, passwords"
   - problem: "Entity alignment shows mismatches"
     cause: "DB schema out of sync with domain models"
-    fix: "Check pending migrations, verify code generation (SEE: PROJECT-KNOWLEDGE.md)"
+    fix: "Check pending migrations, verify code generation (SEE: .claude/PROJECT-KNOWLEDGE.md)"
 
 common_mistakes:
   - mistake: "Forgetting LIMIT on SELECT *"
@@ -228,7 +228,7 @@ examples:
     output: "Table structure + sample data + count"
   - title: "Entity alignment"
     input: "check if users match domain entity"
-    actions: ["mcp__postgres__describe_table('users')", "Read domain model file (SEE: PROJECT-KNOWLEDGE.md)", "Compare columns with struct fields"]
+    actions: ["mcp__postgres__describe_table('users')", "Read domain model file (SEE: .claude/PROJECT-KNOWLEDGE.md)", "Compare columns with struct fields"]
     output: "Alignment report with differences"
   - title: "Integrity check"
     input: "check for orphan records in orders"
@@ -241,13 +241,13 @@ references:
     purpose: "SQL patterns for schema, data, integrity checks"
     load_when: "PHASE 2: EXPLORE"
   - file: "{domain_models_path}"
-    purpose: "Domain entities for alignment (SEE: PROJECT-KNOWLEDGE.md)"
+    purpose: "Domain entities for alignment (SEE: .claude/PROJECT-KNOWLEDGE.md)"
     load_when: "PHASE 3: ANALYZE"
 
 # ---
 context:
-  stack: "SEE: PROJECT-KNOWLEDGE.md for {codegen_tool}, {db_driver}, architecture"
-  discovery: "Use mcp__postgres__list_tables; domains SEE: PROJECT-KNOWLEDGE.md"
+  stack: "SEE: .claude/PROJECT-KNOWLEDGE.md for {codegen_tool}, {db_driver}, architecture"
+  discovery: "Use mcp__postgres__list_tables; domains SEE: .claude/PROJECT-KNOWLEDGE.md"
 
 # ---
 next_commands:

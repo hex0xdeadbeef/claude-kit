@@ -84,7 +84,7 @@ Determine the operational mode based on project state:
 2. **UPDATE mode**: Both conditions must be true:
    - `.claude/` directory EXISTS
    - `.git` repository EXISTS
-   - `PROJECT-KNOWLEDGE.md` exists in `.claude/`
+   - `.claude/PROJECT-KNOWLEDGE.md` exists in `.claude/`
    - Action: Set `mode = "UPDATE"`
    - Rationale: Existing Claude project, incremental refresh
 

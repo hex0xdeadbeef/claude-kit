@@ -29,7 +29,7 @@ examples:
     good: |
       // {api_layer}/handler.go
       import "{service_package}"   // API imports service/usecase layer
-    why: "[blocker] API layer must not import data access layer directly (SEE: PROJECT-KNOWLEDGE.md, if available)"
+    why: "[blocker] API layer must not import data access layer directly (SEE: .claude/PROJECT-KNOWLEDGE.md, if available)"
     severity: blocker
 
   security_token_leak:

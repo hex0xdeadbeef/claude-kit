@@ -61,7 +61,7 @@ contracts:
   EXPLORE_to_ANALYZE:
     description: "Knowledge gathered, ready for gap analysis"
     fields:
-      sources_read: { type: "list[string]", example: ["PROJECT-KNOWLEDGE.md", "CLAUDE.md"] }
+      sources_read: { type: "list[string]", example: [".claude/PROJECT-KNOWLEDGE.md", "CLAUDE.md"] }
       new_findings: { type: "list[Finding]", note: "Each: {description, impact, location}" }
       relevant_artifacts: { type: "list[string]", example: ["@command-workflow", "@agent-code-searcher"] }
       project_patterns: { type: "dict", note: "Key patterns found in codebase" }

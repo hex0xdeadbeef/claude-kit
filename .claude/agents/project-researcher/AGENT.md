@@ -206,10 +206,10 @@ modes:
     condition: ".claude/ does not exist"
     behavior: "Creates the entire configuration from scratch"
   - mode: "AUGMENT"
-    condition: ".claude/ exists but no PROJECT-KNOWLEDGE.md"
+    condition: ".claude/ exists but no .claude/PROJECT-KNOWLEDGE.md"
     behavior: "Adds missing parts, preserves existing ones"
   - mode: "UPDATE"
-    condition: "PROJECT-KNOWLEDGE.md exists + git repo"
+    condition: ".claude/PROJECT-KNOWLEDGE.md exists + git repo"
     behavior: "Updates the research incrementally"
 
 # ════════════════════════════════════════════════════════════════════════════════
@@ -391,7 +391,7 @@ reference_files:
   - file: "reference/scoring.md"
     purpose: "Confidence scoring system"
   - file: "templates/project-knowledge.md"
-    purpose: "PROJECT-KNOWLEDGE.md template"
+    purpose: ".claude/PROJECT-KNOWLEDGE.md template"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # CHECKLIST

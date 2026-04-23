@@ -39,7 +39,7 @@ required_sections:
     required: ALWAYS
     validate:
       - ordered_correctly: "Parts follow dependency direction (lower layers first per project structure)"
-        reference: "SEE: PROJECT-KNOWLEDGE.md for project-specific layer order (if available)"
+        reference: "SEE: .claude/PROJECT-KNOWLEDGE.md for project-specific layer order (if available)"
       - full_code_examples: "Complete, runnable code (not snippets)"
       - imports_listed: "All imports shown"
 

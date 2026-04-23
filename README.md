@@ -47,7 +47,7 @@ curl -sL https://raw.githubusercontent.com/hex0xdeadbeef/claude-kit/main/install
 
 ```bash
 # 1. Edit CLAUDE.md — update Language Profile to match your project stack
-# 2. Analyze codebase and generate PROJECT-KNOWLEDGE.md
+# 2. Analyze codebase and generate .claude/PROJECT-KNOWLEDGE.md
 /project-researcher
 
 # 3. Validate configuration
@@ -195,7 +195,7 @@ Creates, enhances, audits, and manages Claude Code artifacts (commands, skills, 
 
 ### `/project-researcher` — Project Analysis
 
-Autonomous agent for deep codebase analysis: architecture, dependencies, and DB schema. Generates `PROJECT-KNOWLEDGE.md` used by other commands as context.
+Autonomous agent for deep codebase analysis: architecture, dependencies, and DB schema. Generates `.claude/PROJECT-KNOWLEDGE.md` used by other commands as context.
 
 Architecture: orchestrator + 7 specialized subagents (detection, discovery, graph, analysis, generation, verification, report).
 
@@ -417,7 +417,7 @@ flowchart LR
         direction TB
         PR1["discovery → detection → graph"] --> PR2["analysis → critique → generation"] --> PR3["verification → report"]
     end
-    PROJ --> PK["PROJECT-KNOWLEDGE.md"]
+    PROJ --> PK[".claude/PROJECT-KNOWLEDGE.md"]
 
     subgraph DBE ["/db-explorer · sonnet"]
         DB_TOOLS["MCP postgres:<br/>list_tables, describe, query"]
@@ -689,7 +689,7 @@ The example contains:
 ├── worktrees/             # Git worktree management
 ├── settings.json          # Claude Code project settings + hooks (git-committed)
 ├── settings.local.json.example  # Template for personal overrides
-└── PROJECT-KNOWLEDGE.md   # Auto-generated project knowledge base
+└── .claude/PROJECT-KNOWLEDGE.md   # Auto-generated project knowledge base
 ```
 
 ---

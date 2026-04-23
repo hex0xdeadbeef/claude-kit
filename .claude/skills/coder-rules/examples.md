@@ -25,13 +25,13 @@ examples:
     good: |
       import "internal/<domain>"  # Use domain controller
     why: "RULE_2: Handlers must not import database directly. Use domain controllers."
-    note: "SEE: PROJECT-KNOWLEDGE.md#Dependency Matrix for project-specific allowed imports (if available)"
+    note: "SEE: .claude/PROJECT-KNOWLEDGE.md#Dependency Matrix for project-specific allowed imports (if available)"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # LAYER IMPORT RULES (generic patterns)
 # ════════════════════════════════════════════════════════════════════════════════
 layer_import_checks:
-  note: "For project-specific package names, SEE: PROJECT-KNOWLEDGE.md#Dependency Matrix (if available)"
+  note: "For project-specific package names, SEE: .claude/PROJECT-KNOWLEDGE.md#Dependency Matrix (if available)"
 
   - layer: models
     rule: "Models import only stdlib (NOT encoding/json)"

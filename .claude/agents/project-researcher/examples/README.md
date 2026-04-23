@@ -53,4 +53,4 @@ When adding new examples:
 
 - `../subagents/report.md` - REPORT subagent specification
 - `../reference/scoring.md` - Confidence scoring algorithm
-- `../templates/project-knowledge.md` - PROJECT-KNOWLEDGE.md structure
+- `../templates/project-knowledge.md` - .claude/PROJECT-KNOWLEDGE.md structure

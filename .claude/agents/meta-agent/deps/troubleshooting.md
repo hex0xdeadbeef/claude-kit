@@ -36,7 +36,7 @@ troubleshooting:
 common_mistakes:
   - mistake: "Skip EXPLORE, jump to PLAN"
     why_bad: "Missing context leads to wrong changes"
-    fix: "Always read artifact + PROJECT-KNOWLEDGE.md first"
+    fix: "Always read artifact + .claude/PROJECT-KNOWLEDGE.md first"
 
   - mistake: "Not saving to MCP memory"
     why_bad: "Lost knowledge between sessions"

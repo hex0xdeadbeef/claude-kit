@@ -7,7 +7,7 @@ purpose: "Validation checks for Clean Architecture compliance in implementation 
 ```yaml
 manual_checks:
   - check: Layer imports
-    how: "Verify project's package structure (SEE: PROJECT-KNOWLEDGE.md#Dependency Matrix, if available)"
+    how: "Verify project's package structure (SEE: .claude/PROJECT-KNOWLEDGE.md#Dependency Matrix, if available)"
     pass_criteria:
       - models_pure: "Models in <domain>/models/ import only stdlib"
       - business_logic_imports_data_access: "Business logic layer ({controller/service/usecase}) imports data access, models, domain services per project conventions"
@@ -22,13 +22,13 @@ manual_checks:
       - pure_go: "Only stdlib imports allowed"
 
   - check: "Handler → Business Logic flow"
-    how: "Verify API layer doesn't bypass business logic layer (SEE: PROJECT-KNOWLEDGE.md for layer naming)"
+    how: "Verify API layer doesn't bypass business logic layer (SEE: .claude/PROJECT-KNOWLEDGE.md for layer naming)"
     pass_criteria:
       - handler_calls_business_logic: "Handler methods call {controller/service/usecase} methods"
       - no_handler_to_db: "Handler NEVER imports database package directly"
 
   - check: Error handling
-    how: "Verify project-specific error handling pattern (SEE: PROJECT-KNOWLEDGE.md)"
+    how: "Verify project-specific error handling pattern (SEE: .claude/PROJECT-KNOWLEDGE.md)"
     pass_criteria:
       - error_context: "Errors carry context per project convention"
       - wrap_with_w: "Errors wrapped with ERROR_WRAP (Go default: %w)"
@@ -151,7 +151,7 @@ concurrency_check:
 ```yaml
 business_logic_pattern_check:
   when: "Plan modifies business logic layer ({controller/service/usecase} per project)"
-  note: "SEE: PROJECT-KNOWLEDGE.md for project-specific layer naming (if available)"
+  note: "SEE: .claude/PROJECT-KNOWLEDGE.md for project-specific layer naming (if available)"
 
   validation:
     - check: "Business logic layer has proper dependencies"

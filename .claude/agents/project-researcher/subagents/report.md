@@ -121,7 +121,7 @@ All artifacts have been generated and verified. Below is the inventory:
 | Rule | Domain Layer | `rules/domain.md` | ✅ Created | [N] | — |
 | Rule | Service Layer | `rules/service.md` | ✅ Created | [N] | — |
 | Rule | Testing Rules | `rules/testing.md` | ✅ Created | [N] | — |
-| Knowledge | PROJECT-KNOWLEDGE.md | `PROJECT-KNOWLEDGE.md` | ✅ Created | [N] | — |
+| Knowledge | .claude/PROJECT-KNOWLEDGE.md | `.claude/PROJECT-KNOWLEDGE.md` | ✅ Created | [N] | — |
 | Memory | memory.json | `memory.json` | ✅ Created | [entities] entities, [relations] relations | — |
 
 **Total:** [N] artifacts created | [total lines] total lines of guidance
@@ -443,7 +443,7 @@ Strategic suggestions for agent configuration and project guidance:
    - Ensure rules accurately capture your project's constraints
    - Add exceptions or special cases as needed
 
-4. **Audit PROJECT-KNOWLEDGE.md**
+4. **Audit .claude/PROJECT-KNOWLEDGE.md**
    - Verify all sections are accurate and complete
    - Add missing technical details or domain knowledge
    - Review metadata and update coverage estimates

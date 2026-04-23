@@ -62,7 +62,7 @@ output: |
   ⚠️ Manual steps required:
   1. Edit ~/.claude/mcp.json - set MEMORY_FILE_PATH
   2. Edit .claude/scripts/sync-to-github.sh - set GITHUB_REPO
-  3. Run: /project-researcher (to generate PROJECT-KNOWLEDGE.md)
+  3. Run: /project-researcher (to generate .claude/PROJECT-KNOWLEDGE.md)
 
 ## phase_5_report
 

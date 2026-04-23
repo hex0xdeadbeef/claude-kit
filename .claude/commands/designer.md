@@ -98,7 +98,7 @@ pipeline:
         - "Read task description from orchestrator"
         - "Quick codebase scan (Grep/Glob) for affected areas"
         - "Identify existing patterns, interfaces, constraints"
-        - "Check PROJECT-KNOWLEDGE.md for project-specific context"
+        - "Check .claude/PROJECT-KNOWLEDGE.md for project-specific context"
       budget:
         reads: 10
         tool_calls: 15

@@ -152,7 +152,7 @@ context_loader:
   task: "Load project context and prior knowledge"
   tools: ["Read", "mcp__memory__read_graph"]
   constraints:
-    files: ["PROJECT-KNOWLEDGE.md", "CLAUDE.md"]
+    files: [".claude/PROJECT-KNOWLEDGE.md", "CLAUDE.md"]
   output_schema:
     project_context: "string summary"
     prior_knowledge: "array of relevant facts"

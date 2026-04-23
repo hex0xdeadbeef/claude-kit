@@ -14,7 +14,7 @@ workflow:
   usage: "Invoke /review-checklist to display full checklist, or reference from /code-review"
 
 architecture_checks:
-  note: "Architecture checks are project-specific. SEE: PROJECT-KNOWLEDGE.md (if available) for dependency matrix, domain structure, layer separation."
+  note: "Architecture checks are project-specific. SEE: .claude/PROJECT-KNOWLEDGE.md (if available) for dependency matrix, domain structure, layer separation."
   checks:
     - "Circular imports between packages"
     - "Database layer leaking into API handlers"
