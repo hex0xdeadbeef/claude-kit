@@ -82,3 +82,20 @@ common_mistakes:
   - mistake: "Not saving lessons_learned for complex tasks"
     why_bad: "Knowledge lost, same mistakes repeated"
     fix: "After non-trivial tasks, save insights to MCP memory"
+
+  - mistake: "Polling BashOutput in a loop while a run_in_background Bash is still running (Monitor tool, v2.1.98)"
+    why_bad: |
+      Each BashOutput call in a while-loop evicts a cache segment. On XL workflows
+      with 5-10 background phases, repeated polling costs 30-70% more tokens and
+      slows feedback by 2-5x.
+    fix: |
+      Two correct patterns — neither polls:
+      Pattern A (wait-until-done): Bash(command: "...", run_in_background: true) →
+        harness auto-notifies on process exit → one BashOutput read AFTER
+        completion. A single BashOutput is fine; only repeated polling is the
+        anti-pattern.
+      Pattern B (streaming progress): add Monitor(command: "tail -f /tmp/log"),
+        which emits one notification per stdout line — use when the agent needs
+        to react to intermediate output (e.g. first FAIL → stop and diagnose).
+      Agent/Task-tool background invocations self-notify; Monitor is for
+      Bash-based streaming only.
