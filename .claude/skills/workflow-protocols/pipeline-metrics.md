@@ -27,7 +27,7 @@ pipeline_metrics:
       minor: N
       nit: N
     sequential_thinking_used: true|false
-    mcp_tools_used: ["sequential_thinking", "context7", "postgresql"]
+    mcp_tools_used: ["sequential_thinking", "context7"]
     evaluate_decision: "PROCEED|REVISE|RETURN"
     code_researcher_metrics:
       invocations: N

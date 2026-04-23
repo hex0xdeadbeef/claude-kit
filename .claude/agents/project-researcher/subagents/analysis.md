@@ -1,8 +1,8 @@
 # SUBAGENT: ANALYSIS
 **Model:** opus
-**Phases:** ANALYZE + MAP + DATABASE (optional)
+**Phases:** ANALYZE + MAP
 **Input:** state.validate (path, mode), state.discover.*, state.detect.*, **state.graph.*** (v4.2, optional — fallback to AST/grep if unavailable)
-**Output:** state.analyze + state.map + state.database
+**Output:** state.analyze + state.map
 
 ---
 
@@ -827,98 +827,6 @@ map:
 
 ---
 
-## DATABASE SECTION (Phase 5.6, Optional)
-
-**Condition:** Only execute if PostgreSQL is detected in dependencies AND `mcp__postgres` tools are available.
-
-If condition not met: set `database.available = false` and `database.reason`.
-
-**Schema Discovery:**
-
-If PostgreSQL is detected:
-1. Check if MCP PostgreSQL tools are available via system capability check
-2. If available, connect to database (if credentials available in environment/config)
-3. Execute: List all tables, columns, constraints, indexes
-4. Parse schema information
-
-**Entity-Table Mapping:**
-
-For each domain entity identified in 4.2:
-1. Infer table name: snake_case(EntityName) or configured via tags
-2. Search schema for matching table
-3. For each entity field:
-   - Find corresponding column in table
-   - Compare types: time.Time → TIMESTAMP, string → VARCHAR, etc.
-   - Check for nullable mismatch
-4. Record: alignment status (aligned/mismatch/unmapped)
-
-**Alignment Report:**
-
-```
-database:
-  available: true
-  connection_status: "connected"
-  dialect: "postgresql"
-  tables_found: 5
-  schema_mapping:
-    - entity_name: "User"
-      table_name: "users"
-      alignment: "aligned"
-      fields:
-        - entity_field: "ID"
-          column_name: "id"
-          entity_type: "string"
-          db_type: "uuid"
-          nullable_match: true
-        - entity_field: "Email"
-          column_name: "email"
-          entity_type: "string"
-          db_type: "varchar(255)"
-          nullable_match: true
-          unique: true
-      indexes:
-        - "idx_users_email"
-      constraints:
-        - "pk_users_id"
-    - entity_name: "Order"
-      table_name: "orders"
-      alignment: "aligned"
-      fields:
-        - entity_field: "ID"
-          column_name: "id"
-          entity_type: "string"
-          db_type: "uuid"
-          nullable_match: true
-        - entity_field: "UserID"
-          column_name: "user_id"
-          entity_type: "string"
-          db_type: "uuid"
-          nullable_match: true
-        - entity_field: "Total"
-          column_name: "total_amount"
-          entity_type: "decimal.Decimal"
-          db_type: "numeric(19,2)"
-          nullable_match: true
-      foreign_keys:
-        - "fk_orders_user_id → users.id"
-      indexes:
-        - "idx_orders_user_id"
-        - "idx_orders_created_at"
-  unmapped_tables:
-    - "audit_log"
-    - "session"
-  summary: "Good alignment; 2/2 entities mapped to tables; 2 unmapped tables (audit, session) for infrastructure use"
-```
-
-If no database connection available:
-```
-database:
-  available: false
-  reason: "PostgreSQL in dependencies but no MCP postgres tools available; set environment variables to enable schema discovery"
-```
-
----
-
 ## Step Quality Checklist
 
 For this subagent to pass, ALL of these must be true:
@@ -1067,22 +975,7 @@ subagent_result:
           circular_dependencies: []
           max_depth: 4
         graph_structure: "layered_acyclic"
-    database:
-      available: true
-      connection_status: "connected"
-      dialect: "postgresql"
-      tables_found: 5
-      schema_mapping:
-        - entity_name: "User"
-          table_name: "users"
-          alignment: "aligned"
-          field_count: 5
-        - entity_name: "Order"
-          table_name: "orders"
-          alignment: "aligned"
-          field_count: 6
-      summary: "Good alignment; 2/2 entities mapped to tables"
-  progress_summary: "analyze.architecture=clean (0.88), layers=3, conventions=complete, map.entry_points=16, entry_types=4, entities=2, patterns=7, integrations=8, dep_graph.packages=34, database=postgresql"
+  progress_summary: "analyze.architecture=clean (0.88), layers=3, conventions=complete, map.entry_points=16, entry_types=4, entities=2, patterns=7, integrations=8, dep_graph.packages=34"
   timestamp: "2025-02-23T10:30:00Z"
 ```
 

@@ -19,7 +19,7 @@ Layers: handler → service/controller → repository → models
 ## Error Handling (All Agents)
 | Error | Severity | Action |
 |-------|----------|--------|
-| Memory/ST/Context7/PostgreSQL MCP unavailable | NON_CRITICAL | Warn, proceed without |
+| Memory/ST/Context7 MCP unavailable | NON_CRITICAL | Warn, proceed without |
 | Plan not found | FATAL | EXIT — run /planner first |
 | Plan not approved | FATAL | EXIT — run /plan-review first |
 | .claude/PROJECT-KNOWLEDGE.md missing | NON_CRITICAL | Use profile above as defaults |

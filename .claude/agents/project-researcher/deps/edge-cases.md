@@ -86,22 +86,6 @@ Early stage, patterns not established
 **Behavior:** VERY LOW confidence (<30%)
 **Recommendation:** Skip artifact generation, manual setup
 
-#### No Database Access
-```
-Project has no database layer
-```
-
-**Behavior:** DATABASE phase skipped automatically
-**Impact:** No entity-table mapping, repository patterns may be generic
-
-#### MCP Unavailable
-```
-PostgreSQL MCP server not configured
-```
-
-**Behavior:** DATABASE phase skipped with warning
-**Impact:** No schema analysis, manual database documentation needed
-
 #### tree-sitter MCP Unavailable
 ```
 MCP tree-sitter server not configured or not running

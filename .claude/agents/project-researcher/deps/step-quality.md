@@ -122,7 +122,7 @@ Blocking gates (CRITIQUE, VERIFY) have explicit pass/fail criteria. SEE: `deps/o
 - [ ] `compound: true` flag set in output
 - [ ] `module_target` matches assigned module path
 - [ ] If any phase failed: `error.phase` correctly identifies "detection", "graph", or "analysis"
-- [ ] If detection failed: no graph/analyze/map/database sections in output (clean failure)
+- [ ] If detection failed: no graph/analyze/map sections in output (clean failure)
 - [ ] If graph failed: detect section still valid; analyze runs without repo-map (lower quality OK)
 - [ ] If analysis failed: detect and graph sections still valid and complete
 - Min pass: 6/10 (all three phase core checks + structural correctness)

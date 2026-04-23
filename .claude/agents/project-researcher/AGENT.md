@@ -18,7 +18,6 @@ description: |
   - Monorepos and multi-module projects (parallel analysis)
   - Legacy and greenfield codebases
   - Open source and enterprise projects
-  - PostgreSQL schema analysis (via MCP)
   - Tree-sitter MCP code analysis (symbols, deps, repo-map)
   - Fallback: ast-grep CLI → grep (graceful degradation)
 
@@ -30,9 +29,6 @@ tools:
   - Glob
   - Grep
   - Bash
-  - mcp__postgres__list_tables
-  - mcp__postgres__describe_table
-  - mcp__postgres__query
 triggers:
   - if: "user wants to analyze new project"
     then: "Load project-researcher agent"
@@ -43,7 +39,6 @@ prerequisites:
     - "uv — install once: curl -LsSf https://astral.sh/uv/install.sh | sh (provides uvx, which auto-installs the tree-sitter MCP server on first tool call)"
   optional:
     - "ast-grep (analysis fallback): npm install -g @ast-grep/cli"
-    - "PostgreSQL MCP server (database analysis phase): see README.md"
 ---
 
 # ════════════════════════════════════════════════════════════════════════════════
@@ -86,12 +81,12 @@ autonomy:
 
 architecture:
   pattern: "orchestrator + 7 subagents + 1 inline phase"
-  total_phases: 10  # VALIDATE(1) DISCOVER(2) DETECT(3) GRAPH(4) ANALYZE(5) MAP(6) DATABASE(7) CRITIQUE(8) GENERATE(9) VERIFY(10) — REPORT is output, not numbered
+  total_phases: 9  # VALIDATE(1) DISCOVER(2) DETECT(3) GRAPH(4) ANALYZE(5) MAP(6) CRITIQUE(7) GENERATE(8) VERIFY(9) — REPORT is output, not numbered
   pipeline:
     - {step: 1, name: DISCOVERY, agent: discovery, model: haiku, phases: "VALIDATE + DISCOVER"}
     - {step: 2, name: DETECTION, agent: detection, model: sonnet, phases: "DETECT"}
     - {step: 3, name: GRAPH, agent: graph, model: sonnet, phases: "GRAPH (symbols + repo-map)"}
-    - {step: "4-5", name: ANALYSIS, agent: analysis, model: opus, phases: "ANALYZE + MAP + DATABASE"}
+    - {step: "4-5", name: ANALYSIS, agent: analysis, model: opus, phases: "ANALYZE + MAP"}
     - {step: 6, name: CRITIQUE, type: inline, model: opus, gate: blocking}
     - {step: 7, name: GENERATION, agent: generation, model: sonnet, phases: "GENERATE"}
     - {step: 8, name: VERIFICATION, agent: verification, model: sonnet, gate: blocking}
@@ -143,7 +138,7 @@ orchestration:
           calls:
             - {subagent: detection, model: sonnet, prompt: "Read {AGENT_ROOT}/subagents/detection.md", merge: "state.detect"}
             - {subagent: graph, model: sonnet, prompt: "Read {AGENT_ROOT}/subagents/graph.md", merge: "state.graph"}
-            - {subagent: analysis, model: opus, prompt: "Read {AGENT_ROOT}/subagents/analysis.md", merge: "state.analyze + state.map + state.database"}
+            - {subagent: analysis, model: opus, prompt: "Read {AGENT_ROOT}/subagents/analysis.md", merge: "state.analyze + state.map"}
           validate: ["primary_language exists", "confidence ≥ 0.3", "symbol_table.total_symbols > 0", "architecture exists"]
         pipeline:
           when: "modules 2-3"
@@ -268,8 +263,8 @@ subagents:
   - name: "analysis"
     file: "subagents/analysis.md"
     model: opus
-    phases: "ANALYZE + MAP + DATABASE"
-    output: "state.analyze, state.map, state.database"
+    phases: "ANALYZE + MAP"
+    output: "state.analyze, state.map"
     parallelizable: true
     input_enhancement: "receives state.graph.repo_map as context (v4.2)"
   - name: "generation"
@@ -302,7 +297,7 @@ inline_phases:
 
 progress:
   calling: "[ORCHESTRATOR] Calling subagent: {name} (model: {model})"
-  done: "[PHASE {n}/10] {NAME} — DONE"
+  done: "[PHASE {n}/9] {NAME} — DONE"
   state: "State: {compact_state_summary}"
 
 # ════════════════════════════════════════════════════════════════════════════════
@@ -315,20 +310,18 @@ rules:
   - id: 2
     rule: "Detect mode automatically (CREATE/AUGMENT/UPDATE)"
   - id: 3
-    rule: "Skip DATABASE if MCP unavailable"
-  - id: 4
     rule: "Report confidence scores for each finding"
-  - id: 5
+  - id: 4
     rule: "Never overwrite existing artifacts without AUGMENT mode"
-  - id: 6
+  - id: 5
     rule: "Auto-exclude vendor/, node_modules/, .git/, generated/"
-  - id: 7
+  - id: 6
     rule: "Use tree-sitter MCP when available, ast-grep as fallback, grep as last resort"
-  - id: 8
+  - id: 7
     rule: "Validate state contract between every subagent call"
-  - id: 9
+  - id: 8
     rule: "Monorepo: pipeline parallelism (≤3 modules, compound DETECT+GRAPH+ANALYZE) or batch parallelism (4+, 3-wave)"
-  - id: 10
+  - id: 9
     rule: "Retry failed subagent once with reduced scope before FATAL"
 
 # ════════════════════════════════════════════════════════════════════════════════

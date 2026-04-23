@@ -53,7 +53,7 @@ See `settings.local.json.example` for the opt-in env block template.
 
 | Error                                                                                  | Severity            | Action                                                                                         |
 | -------------------------------------------------------------------------------------- | ------------------- | ---------------------------------------------------------------------------------------------- |
-| Memory/ST/Context7/PostgreSQL MCP unavailable                                          | NON_CRITICAL        | Warn, proceed without                                                                          |
+| Memory/ST/Context7 MCP unavailable                                                     | NON_CRITICAL        | Warn, proceed without                                                                          |
 | Plan not found                                                                         | FATAL               | EXIT — run /planner first                                                                      |
 | Plan not approved                                                                      | FATAL               | EXIT — run /plan-review first                                                                  |
 | .claude/PROJECT-KNOWLEDGE.md missing                                                           | NON_CRITICAL        | Use profile above as defaults                                                                  |

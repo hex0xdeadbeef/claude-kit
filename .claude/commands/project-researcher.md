@@ -5,7 +5,7 @@ effort: max
 version: 1.0.0
 updated: 2026-02-23
 tags: [research, onboarding, project-analysis]
-allowed-tools: Read, Write, Glob, Grep, Bash, mcp__postgres__list_tables, mcp__postgres__describe_table, mcp__postgres__query
+allowed-tools: Read, Write, Glob, Grep, Bash
 ---
 
 # Project Researcher

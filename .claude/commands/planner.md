@@ -112,11 +112,6 @@ mcp_tools:
     skip_when: "S/M complexity, --minimal mode"
   - tool: "Context7"
     usage: "for external library documentation"
-  - tool: "PostgreSQL"
-    usage: "for DB schema investigation"
-    functions:
-      - "mcp__postgres__list_tables"
-      - "mcp__postgres__describe_table"
 
 ## CONTEXT
 context:
@@ -323,14 +318,6 @@ phases:
         usage:
           - "mcp__plugin_context7_context7__resolve-library-id → {library-id}"
           - "mcp__plugin_context7_context7__query-docs → '{query}'"
-
-      - step: "Database schema investigation"
-        when: "repository/database task"
-        tools:
-          - "mcp__postgres__list_tables"
-          - "mcp__postgres__describe_table('{table_name}')"
-          - "mcp__postgres__query('SELECT ...')"
-        alternative: "/db-explorer for full schema analysis"
 
     research_budget:
       purpose: "Prevent exploration loops. When budget exceeded → STOP_AND_TRANSITION to DESIGN with findings so far."

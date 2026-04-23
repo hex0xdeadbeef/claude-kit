@@ -89,7 +89,7 @@ For more examples, see [Examples](examples.md).
 For all troubleshooting cases, see [Troubleshooting](troubleshooting.md).
 
 ## Core Deps (loaded at startup)
-- [MCP Tools](mcp-tools.md) — Sequential Thinking, Context7, PostgreSQL patterns and fallbacks
+- [MCP Tools](mcp-tools.md) — Sequential Thinking, Context7 patterns and fallbacks
 - [Sequential Thinking Guide](sequential-thinking-guide.md) — when/how to use ST (complexity L/XL only, SKIP for S/M)
 
 ## References

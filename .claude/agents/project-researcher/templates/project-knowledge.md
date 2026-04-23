@@ -148,45 +148,6 @@ Level 4 (entry):    <packages>
 
 ---
 
-## Database Schema (from PHASE 5)
-
-**Note:** This section is populated when PostgreSQL MCP is available.
-
-### Tables
-
-| Table | Columns | Primary Key | Foreign Keys | Domain Entity |
-|-------|---------|-------------|--------------|---------------|
-| <from state.database.tables> | <count> | <pk column> | <fk list> | <mapped entity> |
-
-### Column Details
-
-#### <table_name>
-
-| Column | Type | Nullable | Default | Description |
-|--------|------|----------|---------|-------------|
-| <from mcp__postgres__describe_table> | <type> | <yes/no> | <default> | <purpose> |
-
-### Indexes
-
-| Table | Index Name | Columns | Type | Purpose |
-|-------|------------|---------|------|---------|
-| <table> | <index_name> | <columns> | btree/hash/gin | <why needed> |
-
-### Entity-Table Alignment
-
-| Domain Entity | DB Table | Status | Mismatches |
-|---------------|----------|--------|------------|
-| entity.{Entity1} | {table_1} | ALIGNED | - |
-| entity.{Entity2} | {table_2} | ALIGNED | - |
-
-### Data Statistics
-
-| Table | Row Count | Avg Row Size | Last Analyzed |
-|-------|-----------|--------------|---------------|
-| <table> | <count from query> | <size> | <timestamp> |
-
----
-
 ## Conventions Catalog
 
 ### Naming Conventions

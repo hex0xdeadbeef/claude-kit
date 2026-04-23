@@ -107,7 +107,7 @@ If root cause found → implement single fix + VERIFY. If still stuck → STOP, 
 For all troubleshooting cases, see [Troubleshooting](troubleshooting.md).
 
 ## Core Deps (loaded at startup)
-- [MCP Tools](mcp-tools.md) — Memory, Sequential Thinking, Context7, PostgreSQL patterns and fallbacks
+- [MCP Tools](mcp-tools.md) — Memory, Sequential Thinking, Context7 patterns and fallbacks
 
 ## References
 For detailed checks, read the supporting files in this skill directory:

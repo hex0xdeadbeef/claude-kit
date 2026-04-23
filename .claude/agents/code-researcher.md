@@ -75,9 +75,8 @@ Adapt to the research request. Common patterns:
 3. Bash: `grep -r "CREATE TABLE" migrations/` for schema
 4. Summarize tables, relationships, query patterns
 
-**Note:** This agent does NOT call MCP tools (Context7, PostgreSQL, Memory). These remain with the parent (planner/coder):
+**Note:** This agent does NOT call MCP tools (Context7, Memory). These remain with the parent (planner/coder):
 - Context7 (external library docs) → parent calls directly
-- PostgreSQL MCP (live DB schema) → parent calls directly
 - Memory (past solutions) → parent calls in STARTUP
 
 ## Output Format

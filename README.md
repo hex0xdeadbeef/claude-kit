@@ -205,14 +205,6 @@ Architecture: orchestrator + 7 specialized subagents (detection, discovery, grap
 
 ---
 
-### `/db-explorer` — Database Explorer
-
-Explores PostgreSQL schema and data via MCP. Requires configured `postgres` MCP server.
-
-```bash
-/db-explorer                    # explore entire schema
-/db-explorer users              # explore specific table
-```
 
 ---
 
@@ -238,7 +230,6 @@ Displays the code review checklist: architecture, security (OWASP), code quality
 | Creating new commands/skills/agents | `/meta-agent create` |
 | Preview artifact changes | `/meta-agent enhance --dry-run` |
 | Understand project structure | `/project-researcher` |
-| Explore DB schema | `/db-explorer` |
 
 ---
 
@@ -419,14 +410,9 @@ flowchart LR
     end
     PROJ --> PK[".claude/PROJECT-KNOWLEDGE.md"]
 
-    subgraph DBE ["/db-explorer · sonnet"]
-        DB_TOOLS["MCP postgres:<br/>list_tables, describe, query"]
-    end
-    DBE --> SCH["Schema Report"]
 
     style META fill:#1a73e8,color:#fff,stroke:#1557b0
     style PROJ fill:#1a73e8,color:#fff,stroke:#1557b0
-    style DBE fill:#9334e6,color:#fff,stroke:#7627bb
 ```
 
 </details>
@@ -546,7 +532,6 @@ flowchart TB
 | **opus** | max | `/workflow`, `/planner`, `/designer`, `/coder`, `/meta-agent`, `/project-researcher`, `plan-reviewer`, `code-reviewer` | 50–60 (agents) | Deep reasoning, orchestration, planning, implementation, review |
 | **haiku** | medium | `code-researcher`, PR subagents (discovery, report) | 20 | Fast read-only codebase exploration |
 | **haiku** | low | `verdict-recovery` | 10 | Lightweight verdict fallback when reviewers omit `VERDICT:` |
-| **sonnet** | — | `/db-explorer` | — | Database schema exploration (non-pipeline command) |
 
 > **Note (v2.1.94+):** Claude Code default effort is now `high` for API-key/Team/Enterprise users (changed from `medium` in v2.1.94). All workflow pipeline agents explicitly set `effort: max` (Opus 4.6 only) to enable maximum extended thinking budget. Reviewers and coder migrated sonnet → opus in v1.9.0 (commit `09acec9`) to satisfy the `effort: max` constraint. Pair with `CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING=1` (set globally) to prevent mid-task adaptive throttling.
 
@@ -622,7 +607,6 @@ Configure in `~/.claude/mcp.json`:
 
 | Server | Package | Purpose |
 |--------|---------|---------|
-| `postgres` | `@anthropic/mcp-postgres` | Required for `/db-explorer` |
 | `tree_sitter` | `mcp-server-tree-sitter` | Code analysis (symbols, deps, repo-map) — used by `/project-researcher` |
 
 <details>
@@ -667,7 +651,6 @@ The example contains:
 ├── agents/                # Autonomous agents
 │   ├── meta-agent/        # Artifact lifecycle management (deps, scripts, templates)
 │   ├── project-researcher/# Codebase analysis (7 subagents, AST analysis, scoring)
-│   ├── db-explorer/       # PostgreSQL exploration
 │   ├── plan-reviewer.md   # Plan validation agent (invoked by /workflow)
 │   ├── code-reviewer.md   # Code review agent (invoked by /workflow)
 │   └── code-researcher.md # Codebase exploration agent

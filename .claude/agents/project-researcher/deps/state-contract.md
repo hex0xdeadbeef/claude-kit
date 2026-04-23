@@ -209,7 +209,7 @@ graph:
 
 ---
 
-### ANALYSIS Subagent → `state.analyze` + `state.map` + `state.database`
+### ANALYSIS Subagent → `state.analyze` + `state.map`
 
 **Receives:** `state.validate.path`, `state.validate.mode`, `state.discover.*`, `state.detect.*`, **`state.graph.*`** (v4.2, OPTIONAL — analysis falls back to direct AST/grep if graph unavailable)
 
@@ -285,25 +285,6 @@ map:
         fan_out: int
     circular_deps: string[][]
     isolated_packages: string[]
-```
-
-```yaml
-database:
-  available: bool            # REQUIRED
-  skip_reason: string        # if not available
-  tables:
-    - name: string
-      columns: int
-      primary_key: string
-      foreign_keys: string[]
-      domain_entity: string
-      alignment: "aligned" | "mismatch" | "unmapped"
-  alignment_issues: string[]
-  statistics:
-    total_tables: int
-    total_columns: int
-    total_foreign_keys: int
-    alignment_rate: float    # 0.0-1.0
 ```
 
 ---
@@ -481,9 +462,6 @@ subagent_result:
       core_domain: { ... }
       design_patterns: [...]
       dependency_graph: { ... }
-    database:
-      available: false
-      skip_reason: "no DB layer detected"
   progress_summary: "module=services/api: detect=go(0.92), graph=145sym/52edges, analyze=clean(0.88)"
   error:                                  # only if status != "success"
     phase: "detection" | "graph" | "analysis"  # REQUIRED for compound — which phase failed
@@ -494,8 +472,8 @@ subagent_result:
 
 **Compound partial failure:**
 - `error.phase == "detection"` → the entire `state_updates` is empty, the module is excluded from merge
-- `error.phase == "graph"` → `state_updates.detect` is valid (merged), `state_updates.graph/analyze/map/database` are empty. Analysis runs without repo-map context.
-- `error.phase == "analysis"` → `state_updates.detect` and `state_updates.graph` are valid (merged), `state_updates.analyze/map/database` are empty
+- `error.phase == "graph"` → `state_updates.detect` is valid (merged), `state_updates.graph/analyze/map` are empty. Analysis runs without repo-map context.
+- `error.phase == "analysis"` → `state_updates.detect` and `state_updates.graph` are valid (merged), `state_updates.analyze/map` are empty
 
 ### Per-Module State Lifecycle
 

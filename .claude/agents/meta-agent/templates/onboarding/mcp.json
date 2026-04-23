@@ -18,13 +18,6 @@
         "http_proxy": "",
         "https_proxy": ""
       }
-    },
-    "postgres": {
-      "command": "npx",
-      "args": ["-y", "@anthropic/mcp-postgres"],
-      "env": {
-        "DATABASE_URL": "postgresql://${DB_USER}:${DB_PASSWORD}@localhost:5432/${DB_NAME}"
-      }
     }
   }
 }

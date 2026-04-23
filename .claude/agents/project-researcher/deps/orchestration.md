@@ -13,7 +13,7 @@
 | discovery | `subagents/discovery.md` | haiku | VALIDATE + DISCOVER | No (first) |
 | detection | `subagents/detection.md` | sonnet | DETECT | Per-module |
 | **graph** | **`subagents/graph.md`** | **sonnet** | **GRAPH** | **Per-module** |
-| analysis | `subagents/analysis.md` | opus | ANALYZE + MAP + DATABASE | Per-module |
+| analysis | `subagents/analysis.md` | opus | ANALYZE + MAP | Per-module |
 | generation | `subagents/generation.md` | sonnet | GENERATE | No |
 | verification | `subagents/verification.md` | sonnet | VERIFY | No |
 | report | `subagents/report.md` | haiku | REPORT | No |
@@ -341,9 +341,6 @@ Task tool call (compound):
           entry_points: [...]
           core_domain: { ... }
           ...
-        database:
-          available: bool
-          ...
       progress_summary: "module={module.path}: detect=go(0.92), graph={N}symbols, analyze=clean(0.88)"
       error:  # only if status != "success"
         code: "..."
@@ -398,7 +395,6 @@ FUNCTION orchestrate_pipeline_parallel(state):
       Merge result.state_updates.graph into state.graph.modules[]
       Merge result.state_updates.analyze into state.analyze.modules[]
       Merge result.state_updates.map into state.map.modules[]
-      Merge result.state_updates.database into state.database.modules[]
 
   # ── Step 3: Aggregate merged state ──
 
