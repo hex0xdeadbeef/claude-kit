@@ -189,6 +189,289 @@ installed_at: $(date -u '+%Y-%m-%dT%H:%M:%SZ')
 EOF
 }
 
+# ── Get base skill names (from new archive) ────────────────────────────────────
+# Returns newline-separated skill directory names present in src_dir/.claude/skills/.
+# "Base skills" = skills shipped in the new kit version. Anything in backup but
+# NOT in this list is considered a user-added custom skill.
+get_base_skills() {
+    local src_dir="$1"
+    local skills_dir="${src_dir}/.claude/skills"
+
+    if [ ! -d "$skills_dir" ]; then
+        return 0
+    fi
+
+    find "$skills_dir" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort
+}
+
+# ── Restore user prompts from backup ───────────────────────────────────────────
+# Copies files from backup_dir/prompts/ into target_dir/.claude/prompts/.
+# Collision: keep new archive file; backup file is restored with -old suffix
+# (foo.md → foo-old.md), so the user can compare both versions.
+# Output: "restored=N collisions=M" (caller parses).
+restore_prompts() {
+    local backup_dir="$1"
+    local target_dir="$2"
+    local backup_prompts="${backup_dir}/prompts"
+    local target_prompts="${target_dir}/.claude/prompts"
+
+    local restored=0
+    local collisions=0
+
+    if [ ! -d "$backup_prompts" ]; then
+        echo "restored=0 collisions=0"
+        return 0
+    fi
+
+    mkdir -p "$target_prompts"
+
+    local file filename target_file old_file stem
+    while IFS= read -r -d '' file; do
+        filename=$(basename "$file")
+        target_file="${target_prompts}/${filename}"
+
+        if [ -e "$target_file" ]; then
+            if [[ "$filename" == *.md ]]; then
+                stem="${filename%.md}"
+                old_file="${target_prompts}/${stem}-old.md"
+            else
+                old_file="${target_prompts}/${filename}.old"
+            fi
+            cp "$file" "$old_file"
+            collisions=$((collisions + 1))
+        else
+            cp "$file" "$target_file"
+            restored=$((restored + 1))
+        fi
+    done < <(find "$backup_prompts" -mindepth 1 -maxdepth 1 -type f -print0)
+
+    echo "restored=${restored} collisions=${collisions}"
+}
+
+# ── Restore non-base (user) skill directories from backup ──────────────────────
+# A "custom skill" is a skill directory present in backup but NOT in the new
+# archive's .claude/skills/. Such dirs are copied wholesale to the new install.
+# Idempotent: if the target already contains the same custom skill (e.g., from
+# a prior --update), it is refreshed from backup (overwrite).
+# Output: "restored=N".
+restore_custom_skills() {
+    local backup_dir="$1"
+    local src_dir="$2"
+    local target_dir="$3"
+    local backup_skills="${backup_dir}/skills"
+    local target_skills="${target_dir}/.claude/skills"
+
+    local restored=0
+
+    if [ ! -d "$backup_skills" ]; then
+        echo "restored=0"
+        return 0
+    fi
+
+    local base_skills
+    base_skills=$(get_base_skills "$src_dir")
+
+    mkdir -p "$target_skills"
+
+    local skill_path skill_name
+    while IFS= read -r -d '' skill_path; do
+        skill_name=$(basename "$skill_path")
+
+        # `--` separates options from pattern (defensive — skill names never start
+        # with `-` in practice, but the guard is free).
+        if printf '%s\n' "$base_skills" | grep -Fxq -- "$skill_name"; then
+            continue
+        fi
+
+        if [ -d "${target_skills}/${skill_name}" ]; then
+            # SC2115 guard: ${var:?} aborts if either var is empty, preventing
+            # accidental `rm -rf /` if function args ever come in unset.
+            rm -rf "${target_skills:?}/${skill_name:?}"
+        fi
+        cp -r "$skill_path" "${target_skills}/${skill_name}"
+        restored=$((restored + 1))
+    done < <(find "$backup_skills" -mindepth 1 -maxdepth 1 -type d -print0)
+
+    echo "restored=${restored}"
+}
+
+# ── Restore user-created commands/agents from backup ───────────────────────────
+# For each of {commands, agents}: copy top-level files and dirs from backup
+# that are absent in the new archive. Handles flat .md files (commands/foo.md,
+# agents/foo.md) AND nested-dir agents (agents/my-agent/).
+# Output: "restored=N" (count of copied items, both files and dirs).
+restore_custom_files() {
+    local backup_dir="$1"
+    local src_dir="$2"
+    local target_dir="$3"
+
+    local restored=0
+    local subdir backup_subdir src_subdir target_subdir
+    local file dir filename dirname
+
+    for subdir in commands agents; do
+        backup_subdir="${backup_dir}/${subdir}"
+        src_subdir="${src_dir}/.claude/${subdir}"
+        target_subdir="${target_dir}/.claude/${subdir}"
+
+        if [ ! -d "$backup_subdir" ]; then
+            continue
+        fi
+
+        mkdir -p "$target_subdir"
+
+        while IFS= read -r -d '' file; do
+            filename=$(basename "$file")
+            if [ ! -e "${src_subdir}/${filename}" ]; then
+                cp "$file" "${target_subdir}/${filename}"
+                restored=$((restored + 1))
+            fi
+        done < <(find "$backup_subdir" -mindepth 1 -maxdepth 1 -type f -name "*.md" -print0)
+
+        while IFS= read -r -d '' dir; do
+            dirname=$(basename "$dir")
+            if [ ! -e "${src_subdir}/${dirname}" ]; then
+                cp -r "$dir" "${target_subdir}/${dirname}"
+                restored=$((restored + 1))
+            fi
+        done < <(find "$backup_subdir" -mindepth 1 -maxdepth 1 -type d -print0)
+    done
+
+    echo "restored=${restored}"
+}
+
+# ── Merge non-base skills into frontmatter skills: lists ───────────────────────
+# For every .md file in target commands/ and agents/ (recursive), if a matching
+# backup file exists and contains custom skills in its frontmatter skills: list,
+# merge those custom skills into the new file's frontmatter. Base skills (from
+# the new archive) take priority and order; custom skills are appended.
+# Idempotent: skills already present are not duplicated.
+# Soft dep: python3 required for safe YAML manipulation. Missing → warn + skip.
+# Output: "merged=N skills_added=K" (N files modified, K total skills added).
+#
+# NOTE: The PYEOF delimiter and EVERY python line below MUST start at column 0.
+# The single-quoted heredoc form <<'PYEOF' preserves all leading whitespace
+# verbatim, so any indentation here will be passed to python3 and cause
+# IndentationError. Bash continues to parse the heredoc correctly even when
+# the body is unindented inside an indented function — this is by design.
+merge_frontmatter_skills() {
+    local backup_dir="$1"
+    local src_dir="$2"
+    local target_dir="$3"
+
+    if ! command -v python3 >/dev/null 2>&1; then
+        warn "python3 not found — skipping frontmatter skills merge"
+        echo "merged=0 skills_added=0"
+        return 0
+    fi
+
+    local base_skills
+    base_skills=$(get_base_skills "$src_dir")
+
+    local merged=0
+    local skills_added=0
+    local subdir target_subdir backup_subdir target_file rel_path backup_file added
+
+    for subdir in commands agents; do
+        target_subdir="${target_dir}/.claude/${subdir}"
+        backup_subdir="${backup_dir}/${subdir}"
+
+        if [ ! -d "$target_subdir" ] || [ ! -d "$backup_subdir" ]; then
+            continue
+        fi
+
+        while IFS= read -r -d '' target_file; do
+            # Quoted-pattern form forces literal match (avoids glob interpretation
+            # if INSTALL_DIR contains [, *, ?).
+            rel_path="${target_file#"${target_subdir}/"}"
+            backup_file="${backup_subdir}/${rel_path}"
+
+            [ -f "$backup_file" ] || continue
+
+            added=$(python3 - "$target_file" "$backup_file" "$base_skills" <<'PYEOF' 2>/dev/null || echo 0
+import re
+import sys
+
+target_path = sys.argv[1]
+backup_path = sys.argv[2]
+base_skills = set(sys.argv[3].split())
+
+SKILLS_RE = re.compile(
+    r'^skills:[ \t]*\n((?:[ \t]+-[ \t]+\S+[ \t]*\n)+)',
+    re.MULTILINE,
+)
+ITEM_RE = re.compile(r'^[ \t]+-[ \t]+(\S+)[ \t]*$', re.MULTILINE)
+FM_RE = re.compile(r'^---\n(.*?)\n---\n?(.*)', re.DOTALL)
+
+
+def parse(text):
+    m = FM_RE.match(text)
+    if not m:
+        return None, None, [], False
+    fm, body = m.group(1), m.group(2)
+    # FM_RE strips the trailing newline of the last frontmatter line. SKILLS_RE
+    # requires each item line to end with \n, so search on (fm + '\n') to ensure
+    # the last skills item is captured even when it is the last frontmatter line.
+    sm = SKILLS_RE.search(fm + '\n')
+    if not sm:
+        return fm, body, [], False
+    items = ITEM_RE.findall(sm.group(1))
+    return fm, body, items, True
+
+
+with open(backup_path, 'r', encoding='utf-8') as f:
+    backup_text = f.read()
+_, _, backup_skills, _ = parse(backup_text)
+custom = [s for s in backup_skills if s not in base_skills]
+if not custom:
+    print(0)
+    sys.exit(0)
+
+with open(target_path, 'r', encoding='utf-8') as f:
+    target_text = f.read()
+target_fm, target_body, target_skills, has_block = parse(target_text)
+if target_fm is None:
+    print(0)
+    sys.exit(0)
+
+merged_skills = list(target_skills)
+added_count = 0
+for s in custom:
+    if s not in merged_skills:
+        merged_skills.append(s)
+        added_count += 1
+
+if added_count == 0:
+    print(0)
+    sys.exit(0)
+
+new_block = 'skills:\n' + ''.join(f'  - {s}\n' for s in merged_skills)
+if has_block:
+    # Sub on (target_fm + '\n') for the same reason as parse(): SKILLS_RE
+    # requires each item line to end with \n. Strip the synthetic trailing \n
+    # afterwards so the assembly below produces a single \n before '---'.
+    new_fm = SKILLS_RE.sub(new_block, target_fm + '\n', count=1).rstrip('\n')
+else:
+    new_fm = target_fm.rstrip('\n') + '\n' + new_block.rstrip('\n')
+
+new_text = '---\n' + new_fm + '\n---\n' + target_body
+with open(target_path, 'w', encoding='utf-8') as f:
+    f.write(new_text)
+
+print(added_count)
+PYEOF
+            )
+
+            if [ "${added:-0}" -gt 0 ] 2>/dev/null; then
+                merged=$((merged + 1))
+                skills_added=$((skills_added + added))
+            fi
+        done < <(find "$target_subdir" -type f -name "*.md" -print0)
+    done
+
+    echo "merged=${merged} skills_added=${skills_added}"
+}
+
 # ── Main ───────────────────────────────────────────────────────────────────────
 main() {
     local update_mode=false
@@ -281,6 +564,38 @@ main() {
     mkdir -p "${target_dir}/.claude/workflow-state"
     mkdir -p "${target_dir}/.claude/prompts"
 
+    # Restore user data from backup (--update only).
+    #
+    # Function output invariant (uniformly enforced via parse_kv below):
+    #   each restore function echoes EXACTLY ONE line to stdout, formatted as
+    #   "key1=val1 key2=val2 ..." (space-separated). Logs go to stderr via
+    #   info()/warn() and are excluded from the parsed result.
+    local prompts_restored=0 prompts_collisions=0
+    local custom_skills_restored=0
+    local custom_files_restored=0
+    local fm_files_merged=0 fm_skills_added=0
+    local _result
+
+    # Local helper: prints each `=`-separated value on its own line.
+    # Example: "restored=3 collisions=1" → "3\n1\n"
+    parse_kv() {
+        awk '{ for (i = 1; i <= NF; i++) { n = split($i, kv, "="); print kv[n] } }' <<<"$1"
+    }
+
+    if [ "$update_mode" = true ] && [ -n "$backup_dir" ]; then
+        _result=$(restore_prompts "$backup_dir" "$target_dir") || _result="restored=0 collisions=0"
+        read -r prompts_restored prompts_collisions < <(parse_kv "$_result")
+
+        _result=$(restore_custom_skills "$backup_dir" "$src_dir" "$target_dir") || _result="restored=0"
+        read -r custom_skills_restored < <(parse_kv "$_result")
+
+        _result=$(restore_custom_files "$backup_dir" "$src_dir" "$target_dir") || _result="restored=0"
+        read -r custom_files_restored < <(parse_kv "$_result")
+
+        _result=$(merge_frontmatter_skills "$backup_dir" "$src_dir" "$target_dir") || _result="merged=0 skills_added=0"
+        read -r fm_files_merged fm_skills_added < <(parse_kv "$_result")
+    fi
+
     # Cleanup
     rm -rf "$tmp_dir"
 
@@ -301,6 +616,11 @@ main() {
             echo "--- Previous    +++ New (first 20 lines of diff) ---"
             echo "$settings_diff" | head -20
         fi
+
+        info "  prompts restored: ${prompts_restored} (collisions saved as -old: ${prompts_collisions})"
+        info "  custom skills restored: ${custom_skills_restored}"
+        info "  custom commands/agents restored: ${custom_files_restored}"
+        info "  frontmatter skills merged: ${fm_files_merged} files (${fm_skills_added} skills added)"
     fi
 
     # Success
@@ -318,4 +638,11 @@ main() {
     echo ""
 }
 
-main "$@"
+# ── Entry point ────────────────────────────────────────────────────────────────
+# Sourcing guard: run main only when executed directly, not when sourced.
+# Allows tests to source restore functions without triggering the installer.
+# `:-` defaults guard against `set -u` in unusual shell contexts where one of
+# the variables may be unset (e.g. eval'd via `bash -c`).
+if [ "${BASH_SOURCE[0]:-}" = "${0:-}" ]; then
+    main "$@"
+fi

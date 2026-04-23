@@ -43,6 +43,16 @@ curl -sL https://raw.githubusercontent.com/hex0xdeadbeef/claude-kit/main/install
 curl -sL https://raw.githubusercontent.com/hex0xdeadbeef/claude-kit/main/install.sh | bash -s -- --update
 ```
 
+**Preserved across updates** (no manual restore needed):
+- `.claude/settings.local.json` — personal overrides (existing behavior)
+- `.claude/prompts/` — user feature plans (collisions become `<name>-old.md`)
+- `.claude/skills/<custom>/` — custom skills not shipped in the kit
+- `.claude/commands/<custom>.md`, `.claude/agents/<custom>.md` — user-added files
+- Custom skills in `agents`/`commands` frontmatter `skills:` lists (deduplicated, idempotent)
+
+**Backup:** A timestamped copy is created at `.claude.backup.YYYYMMDD_HHMMSS/` before the update.
+**Soft dep:** `python3` is used to merge frontmatter skills. If absent, the update warns and proceeds without that step.
+
 ### First Steps
 
 ```bash
