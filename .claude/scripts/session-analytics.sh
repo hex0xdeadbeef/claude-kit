@@ -15,6 +15,8 @@
 
 set -euo pipefail
 
+STATE_DIR="${CLAUDE_WORKFLOW_STATE_DIR:-.claude/workflow-state}"
+
 # Drain stdin (hook input JSON) — stdin is consumed here, not available to python
 INPUT=$(cat)
 # Pass to python via env var (proven pattern from protect-files.sh DENY_REASON)
@@ -26,7 +28,7 @@ python3 << 'PYTHON_EOF'
 import json, sys, os, glob
 from datetime import datetime, timezone
 
-STATE_DIR = ".claude/workflow-state"
+STATE_DIR = os.environ.get("CLAUDE_WORKFLOW_STATE_DIR", ".claude/workflow-state")
 ANALYTICS_FILE = os.path.join(STATE_DIR, "session-analytics.jsonl")
 
 # Ensure state dir exists
@@ -222,5 +224,8 @@ PYTHON_EOF
 
 # IMP-16: Clean up stale worktrees at session end
 git worktree prune 2>/dev/null || true
+
+# P1-09: Clean up overflow files older than 7 days
+find "$STATE_DIR" -name "compact-overflow-*.log" -mtime +7 -delete 2>/dev/null || true
 
 exit 0
