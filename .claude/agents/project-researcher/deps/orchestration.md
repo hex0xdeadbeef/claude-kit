@@ -453,7 +453,7 @@ Compound subagent can fail at three points:
   [MODULE] services/auth — detect=go(0.88), analyze=layered(0.75) ✅
   [MODULE] pkg/shared — detect=go(0.95), analyze=library(0.90) ✅
 
-[PHASE 2-5/10] DETECTION + GRAPH + ANALYSIS — DONE (pipeline mode, {N} modules)
+[PHASE 2-5/9] DETECTION + GRAPH + ANALYSIS — DONE (pipeline mode, {N} modules)
 State: detect.primary=go(0.92 avg), analyze.modules={N}, partial={0}
 ```
 
@@ -554,35 +554,35 @@ Orchestrator outputs progress after each subagent call:
 
 ```
 [ORCHESTRATOR] Calling subagent: discovery (model: haiku)
-[PHASE 1/10] DISCOVERY — DONE
+[PHASE 1/9] DISCOVERY — DONE
 State: validate.mode=CREATE, discover.strategy=single, targets=[.]
 
 [ORCHESTRATOR] Calling subagent: detection (model: sonnet)
-[PHASE 2/10] DETECTION — DONE
+[PHASE 2/9] DETECTION — DONE
 State: detect.primary_language=go (0.92), frameworks=[chi@v5, pgx@v5], analysis_method=tree-sitter-mcp
 
 [ORCHESTRATOR] Calling subagent: graph (model: sonnet)
-[PHASE 3/10] GRAPH — DONE
+[PHASE 3/9] GRAPH — DONE
 State: graph.symbols=245, graph.edges=89, graph.repo_map=3200/4000 tokens, PageRank top=internal/domain/repository.go
 
 [ORCHESTRATOR] Calling subagent: analysis (model: opus)
-[PHASE 4-5/10] ANALYSIS — DONE
+[PHASE 4-5/9] ANALYSIS — DONE
 State: analyze.architecture=clean (0.88), layers=3, map.entry_points=3, dep_graph.packages=34
 
 [ORCHESTRATOR] Executing inline: CRITIQUE (model: opus)
-[PHASE 6/10] CRITIQUE — DONE (gate: PASSED)
+[PHASE 6/9] CRITIQUE — DONE (gate: PASSED)
 State: critique.gate_passed=true, issues=1, calibration_adjustments=1
 
 [ORCHESTRATOR] Calling subagent: generation (model: sonnet)
-[PHASE 7/10] GENERATION — DONE
+[PHASE 7/9] GENERATION — DONE
 State: generate.artifacts=5, created=5, preserved=0
 
 [ORCHESTRATOR] Calling subagent: verification (model: sonnet)
-[PHASE 8/10] VERIFICATION — DONE (gate: PASSED)
+[PHASE 8/9] VERIFICATION — DONE (gate: PASSED)
 State: verify.gate_passed=true, yaml=✅, refs=✅, size=✅
 
 [ORCHESTRATOR] Calling subagent: report (model: haiku)
-[PHASE 9/10] REPORT — DONE
+[PHASE 9/9] REPORT — DONE
 ```
 
 ### Monorepo Progress — Pipeline Mode (≤3 modules)
@@ -596,7 +596,7 @@ State: verify.gate_passed=true, yaml=✅, refs=✅, size=✅
   [MODULE] services/auth — detect=go(0.88), graph=98sym/34edges, analyze=layered(0.75) ✅
   [MODULE] pkg/shared — detect=go(0.95), graph=67sym/28edges, analyze=library(0.90) ✅
 
-[PHASE 2-5/10] DETECTION + GRAPH + ANALYSIS — DONE (pipeline mode, 3 modules)
+[PHASE 2-5/9] DETECTION + GRAPH + ANALYSIS — DONE (pipeline mode, 3 modules)
 State: detect.primary=go(0.92 avg), graph.total_symbols=310, analyze.modules=3, partial=0
 ```
 
@@ -612,7 +612,7 @@ State: detect.primary=go(0.92 avg), graph.total_symbols=310, analyze.modules=3, 
   [DETECT] pkg/shared — DONE (go, 0.95)
 [ORCHESTRATOR] Detection merged: primary=go (0.90 avg)
 
-[PHASE 2/10] DETECTION — DONE (5 modules, batch)
+[PHASE 2/9] DETECTION — DONE (5 modules, batch)
 
 [ORCHESTRATOR] Launching 5 graph subagents in parallel...
   [GRAPH] services/api — DONE (145 symbols, 52 edges)
@@ -622,7 +622,7 @@ State: detect.primary=go(0.92 avg), graph.total_symbols=310, analyze.modules=3, 
   [GRAPH] pkg/shared — DONE (67 symbols, 28 edges)
 [ORCHESTRATOR] Graph merged: 498 total symbols, 184 edges
 
-[PHASE 3/10] GRAPH — DONE (5 modules, batch)
+[PHASE 3/9] GRAPH — DONE (5 modules, batch)
 
 [ORCHESTRATOR] Launching 5 analysis subagents in parallel...
   [ANALYZE] services/api — DONE (clean, 0.88)
@@ -632,7 +632,7 @@ State: detect.primary=go(0.92 avg), graph.total_symbols=310, analyze.modules=3, 
   [ANALYZE] pkg/shared — DONE (library, 0.90)
 [ORCHESTRATOR] Analysis merged: 5 modules analyzed
 
-[PHASE 4-5/10] ANALYSIS — DONE (5 modules, batch)
+[PHASE 4-5/9] ANALYSIS — DONE (5 modules, batch)
 ```
 
 ---
