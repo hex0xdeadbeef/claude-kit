@@ -20,7 +20,7 @@ Optional tools used by hooks. Missing tools → graceful degradation (warn, non-
 | ------------------ | ----------------------------------------- | ------------------------------------------------------------------ |
 | `check-jsonschema` | `pipx install 'check-jsonschema==0.37.*'` | `validate-handoff.sh` — JSON Schema validation of handoff payloads |
 
-**Minimum Claude Code version `>= 2.1.113`:** from this version `Bash(...)` deny rules in `settings.json` match commands wrapped in `env`/`sudo`/`watch`/`ionice`/`setsid` before the hook fires. On older versions wrapped variants of blocked commands may bypass `settings.json` deny entries. `block-dangerous-commands.sh` provides defence-in-depth via substring matching but coverage is not guaranteed for all wrapper combinations below 2.1.113.
+**Minimum Claude Code version `>= 2.1.113`:** from this version `Bash(...)` deny rules in `settings.json` match commands wrapped in `env`/`sudo`/`watch`/`ionice`/`setsid` before the hook fires. On older versions these platform deny rules do not strip wrappers (e.g. `env X=1 sudo apt-get` bypasses a `Bash(sudo *)` entry on `< 2.1.113`). `block-dangerous-commands.sh` covers common wrappers via substring matching and provides defence-in-depth on all versions; the version floor documents which platform feature is relied on for complete deny-rule coverage.
 
 **Strict mode (handoff payloads — IMP-01):** set `CLAUDE_HANDOFF_VALIDATION_MODE=strict` in `.claude/settings.local.json` env section to make handoff validation failures block the write (exit 2). Default: `warn` (non-blocking, logs to `workflow-state/handoff-validation.jsonl`).
 
