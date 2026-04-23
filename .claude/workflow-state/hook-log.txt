@@ -10,3 +10,12 @@
 echo "---"
 echo "=== Re-test: workflow.md exempted ==="
 INPUT='{"tool_name":"Write","tool_input":{"file_path":".claude] — Destructive rm command (rm -rf). Remove specific files instead: rm file.go
+[2026-04-23T13:03:46Z] save-progress-before-compact: BLOCKED auto-compact: .iteration-in-flight (plan-reviewer)
+[2026-04-23T13:03:58Z] save-progress-before-compact: BLOCKED auto-compact: .iteration-in-flight (plan-reviewer)
+[2026-04-23T13:04:04Z] save-progress-before-compact: BLOCKED auto-compact: .iteration-in-flight (plan-reviewer)
+[2026-04-23T13:04:29Z] save-progress-before-compact: BLOCKED auto-compact: .iteration-in-flight (plan-reviewer)
+[2026-04-23T13:04:34Z] save-progress-before-compact: BLOCKED auto-compact: .iteration-in-flight (plan-reviewer)
+[2026-04-23T13:04:38Z] save-progress-before-compact: BLOCKED auto-compact: .iteration-in-flight (plan-reviewer)
+[2026-04-23T13:04:43Z] save-progress-before-compact: BLOCKED auto-compact: .iteration-in-flight (plan-reviewer)
+[2026-04-23T13:04:56Z] save-progress-before-compact: BLOCKED auto-compact: .iteration-in-flight (plan-reviewer)
+[2026-04-23T13:05:03Z] save-progress-before-compact: BLOCKED auto-compact: .iteration-in-flight (plan-reviewer)
