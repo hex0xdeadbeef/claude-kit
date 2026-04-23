@@ -35,10 +35,11 @@ fi
 # Exemption list (files that legitimately contain the bare-form literal):
 #   - this script (check-references.sh) — regex literal appears in comments + echo
 #   - .claude/rules/workflow.md — canonical rule doc describing the forbidden form
+#   - .claude/prompts/* — plan/spec/review-response docs that document the rule
 # Without these exemptions the hook self-fires and blocks its own maintenance (strict mode).
 PK_SKIP=false
 case "$FILE_PATH" in
-  *check-references.sh|*.claude/rules/workflow.md|.claude/rules/workflow.md)
+  *check-references.sh|*.claude/rules/workflow.md|*/.claude/prompts/*|.claude/prompts/*)
     PK_SKIP=true
     ;;
 esac
