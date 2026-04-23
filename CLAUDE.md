@@ -19,6 +19,7 @@ Optional tools used by hooks. Missing tools → graceful degradation (warn, non-
 | Tool               | Install                                   | Used by                                                            |
 | ------------------ | ----------------------------------------- | ------------------------------------------------------------------ |
 | `check-jsonschema` | `pipx install 'check-jsonschema==0.37.*'` | `validate-handoff.sh` — JSON Schema validation of handoff payloads |
+| `jq`               | `brew install jq` / `apt-get install jq`  | `validate-handoff.sh` — discriminator read + schema branch logic   |
 
 **Minimum Claude Code version `>= 2.1.113`:** from this version `Bash(...)` deny rules in `settings.json` match commands wrapped in `env`/`sudo`/`watch`/`ionice`/`setsid` before the hook fires. On older versions these platform deny rules do not strip wrappers (e.g. `env X=1 sudo apt-get` bypasses a `Bash(sudo *)` entry on `< 2.1.113`). `block-dangerous-commands.sh` covers common wrappers via substring matching and provides defence-in-depth on all versions; the version floor documents which platform feature is relied on for complete deny-rule coverage.
 

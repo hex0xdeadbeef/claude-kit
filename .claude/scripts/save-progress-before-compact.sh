@@ -272,8 +272,15 @@ if [[ $SIZE -gt 40000 ]]; then
     # head -c 1000 counts bytes, not chars — acceptable for informational preview (UTF-8 mojibake
     # in preview does not affect the full file written above)
     PREVIEW=$(printf '%s' "$OUTPUT" | head -c 1000)
-    jq -n --arg ref "$OVERFLOW_FILE" --arg preview "$PREVIEW" --arg size "$SIZE" \
-      '{"additionalContext": ("[Overflow] Full output (\($size) chars) saved to \($ref). Preview:\n" + $preview + "\n…")}'
+    # python3 instead of jq — scripts already require python3; avoids new jq dependency (CR-001)
+    _REF="$OVERFLOW_FILE" _SIZE="$SIZE" _PREVIEW="$PREVIEW" \
+        python3 -c "
+import json, os
+ref = os.environ['_REF']
+size = os.environ['_SIZE']
+preview = os.environ['_PREVIEW']
+print(json.dumps({'additionalContext': '[Overflow] Full output (' + size + ' chars) saved to ' + ref + '. Preview:\n' + preview + '\n…'}))
+"
 else
     printf '%s\n' "$OUTPUT"
 fi
