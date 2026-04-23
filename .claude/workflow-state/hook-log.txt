@@ -24,3 +24,5 @@ INPUT='{"tool_name":"Write","tool_input":{"file_path":".claude] — Destructive 
 [2026-04-23T13:05:17Z] save-progress-before-compact: BLOCKED auto-compact: .iteration-in-flight (plan-reviewer)
 [2026-04-23T13:05:23Z] save-progress-before-compact: BLOCKED auto-compact: .iteration-in-flight (plan-reviewer)
 [2026-04-23T13:05:30Z] save-progress-before-compact: BLOCKED auto-compact: .iteration-in-flight (plan-reviewer)
+[2026-04-23T13:05:37Z] save-progress-before-compact: BLOCKED auto-compact: .iteration-in-flight (plan-reviewer)
+[2026-04-23T13:05:41Z] save-progress-before-compact: BLOCKED auto-compact: .iteration-in-flight (plan-reviewer)
