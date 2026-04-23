@@ -649,8 +649,9 @@ main() {
 # ── Entry point ────────────────────────────────────────────────────────────────
 # Sourcing guard: run main only when executed directly, not when sourced.
 # Allows tests to source restore functions without triggering the installer.
-# `:-` defaults guard against `set -u` in unusual shell contexts where one of
-# the variables may be unset (e.g. eval'd via `bash -c`).
-if [ "${BASH_SOURCE[0]:-}" = "${0:-}" ]; then
+# ${BASH_SOURCE[0]:-$0}: when piped via `curl | bash -s`, BASH_SOURCE[0] is
+# unset/empty and $0 is "bash" — fallback to $0 makes the test pass correctly.
+# When sourced, BASH_SOURCE[0] is the script path while $0 is the parent shell.
+if [ "${BASH_SOURCE[0]:-$0}" = "$0" ]; then
     main "$@"
 fi
