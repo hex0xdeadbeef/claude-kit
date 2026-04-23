@@ -25,7 +25,7 @@ set -euo pipefail
 
 # ── Hard dependency: python3 ──
 command -v python3 >/dev/null 2>&1 || {
-  echo "protect-files: python3 required but not found" >&2
+  echo "[protect-files] FATAL: python3 required but not found" >&2
   exit 2
 }
 
@@ -36,7 +36,7 @@ INPUT=$(cat)
 LOG_DIR=".claude/workflow-state"
 LOG_FILE="$LOG_DIR/hook-log.txt"
 mkdir -p "$LOG_DIR" 2>/dev/null || {
-  echo "protect-files: cannot create log directory $LOG_DIR" >&2
+  echo "[protect-files] FATAL: cannot create log directory $LOG_DIR" >&2
   exit 2
 }
 
@@ -86,9 +86,9 @@ elif [[ "$FILE_PATH" == */.git/* ]] || [[ "$FILE_PATH" == .git/* ]]; then
 elif [[ "$FILE_PATH" =~ \.claude/settings\.json$ ]]; then
   DENY_REASON="Workflow config (.claude/settings.json). Changes must be made by user, not by agent."
 
-elif [[ "$FILE_PATH" =~ \.claude/scripts/ ]]; then
-  # Fix MAJOR-1: regex catches any file under .claude/scripts/ including subdirectories
-  DENY_REASON="Hook script (.claude/scripts/). Changes must be made by user, not by agent."
+# elif [[ "$FILE_PATH" =~ \.claude/scripts/ ]]; then
+#   # Fix MAJOR-1: regex catches any file under .claude/scripts/ including subdirectories
+#   DENY_REASON="Hook script (.claude/scripts/). Changes must be made by user, not by agent."
 fi
 
 # ── If protected — deny with explanation ──

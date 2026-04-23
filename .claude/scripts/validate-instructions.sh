@@ -41,7 +41,7 @@ input_data = os.environ.get("_HOOK_INPUT", "{}")
 try:
     hook_input = json.loads(input_data)
 except Exception:
-    print("validate-instructions: failed to parse hook input", file=sys.stderr)
+    print("[validate-instructions] ERROR: failed to parse hook input", file=sys.stderr)
     sys.exit(0)
 
 # Extract loaded file paths
@@ -124,6 +124,35 @@ try:
                 "which this section documents for XL workflows. "
                 "Re-add the section after Soft Prerequisites."
             )
+except Exception:
+    pass  # Non-critical
+
+# Hook stderr format check (P1-06): all echo >&2 lines must use [basename] LABEL: format
+# Regression guard — fails if a new non-conforming line is added to any hook script.
+try:
+    import subprocess as _sp, re as _re
+    if not os.path.isdir('.claude/scripts'):
+        raise RuntimeError('scripts dir absent')
+    _grep = _sp.run(
+        ['grep', '-rn', '--include=*.sh', '--exclude-dir=tests', r'>&2[[:space:]]*$', '.claude/scripts/'],
+        capture_output=True, text=True
+    )
+    _pattern = _re.compile(r'\[[a-zA-Z0-9_-]+\]\s+(INFO|WARN|ERROR|FATAL|SKIP|PASS|FAIL|BLOCKING):')
+    _bad = []
+    for _line in _grep.stdout.splitlines():
+        # Format: path:linenum:content
+        _parts = _line.split(':', 2)
+        _content = _parts[2] if len(_parts) >= 3 else _line
+        if not _pattern.search(_content):
+            _file = _parts[0].split('/')[-1] if _parts else '?'
+            _lnum = _parts[1] if len(_parts) > 1 else '?'
+            _bad.append(f"{_file}:{_lnum}")
+    if _bad:
+        warnings.append(
+            f"HOOK STDERR FORMAT: {len(_bad)} echo >&2 line(s) do not follow "
+            "'[basename] LABEL: message' convention (v2.1.98 — first stderr line surfaced in transcript). "
+            f"Non-conforming: {', '.join(_bad[:5])}"
+        )
 except Exception:
     pass  # Non-critical
 

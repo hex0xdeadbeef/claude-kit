@@ -15,7 +15,7 @@ set -euo pipefail
 # ── Hard dependency: python3 (consistent with all other hooks) ──
 # Fix #8: fail loudly so user knows hook is broken, not silently doing nothing
 command -v python3 >/dev/null 2>&1 || {
-  echo "auto-fmt-go: python3 required but not found" >&2
+  echo "[auto-fmt-go] ERROR: python3 required but not found" >&2
   exit 2
 }
 

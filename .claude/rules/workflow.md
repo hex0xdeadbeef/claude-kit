@@ -25,3 +25,37 @@ Context (v2.1.94+):
 - `effort: max` is Opus 4.6 exclusive — enables maximum extended thinking budget
 - Reviewers and coder migrated sonnet → opus in v1.9.0 (09acec9) to satisfy `effort: max` constraint
 - Pair with `CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING=1` (set globally) to prevent mid-task adaptive throttling
+
+## Hook stderr Convention
+
+All hook scripts MUST use this format for stderr messages:
+
+```
+[<script-basename>] LABEL: <message>
+```
+
+**Labels:**
+
+| Label | Meaning | Typical exit |
+|-------|---------|-------------|
+| `INFO` | Informational / status (script succeeds) | 0 |
+| `WARN` | Non-blocking issue (degraded behavior expected) | 0 |
+| `ERROR` | Hook exits with failure (non-critical hook) | non-zero |
+| `FATAL` | Blocks Claude action (security / critical hook) | non-zero |
+| `SKIP` | Condition not met — action intentionally skipped | 0 |
+| `PASS` | Validation succeeded | 0 |
+| `FAIL` | Validation failed | non-zero |
+| `BLOCKING` | Hard-block mode active | non-zero |
+
+**FATAL vs ERROR rule:** Use `FATAL` for PreToolUse hooks whose primary role is to block Claude actions (security-critical path — `block-dangerous-commands.sh`, `protect-files.sh`). Use `ERROR` for all other hooks when they themselves fail.
+
+**Rationale:** Claude Code v2.1.98 surfaces the first line of stderr in the agent
+transcript — structured format makes label machine-parseable at a glance.
+
+**Gold standard:** `validate-handoff.sh` (reference implementation — uses WARN, ERROR,
+SKIP, PASS, FAIL, BLOCKING). INFO and FATAL are also valid labels used by other scripts.
+
+**Scope:** applies to shell `echo ... >&2` lines and Python startup-error
+`print(..., file=sys.stderr)` calls at script entry-point. Internal processing logs
+in Python bodies (deep loop diagnostics) and stderr redirected to log files via
+`2>>log` are out of scope — they serve internal-state tracking, not transcript output.

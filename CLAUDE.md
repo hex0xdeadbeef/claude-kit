@@ -67,7 +67,7 @@ See `settings.local.json.example` for the opt-in env block template.
 - Architecture: `.claude/rules/architecture.md` — import matrix, domain purity (active for `internal/**/*.go`)
 - Go conventions: `.claude/rules/go-conventions.md` — error wrapping, concurrency, config (active for `**/*.go`)
 - Testing: `.claude/rules/testing.md` — table-driven tests, race detector, mocks (active for `**/*_test.go`)
-- Workflow: `.claude/rules/workflow.md` — commands, agents, design rationale (global)
+- Workflow: `.claude/rules/workflow.md` — commands, agents, design rationale, hook stderr convention (global)
 - Handler layer: `.claude/rules/handler-rules.md` — validation, HTTP codes, delegation (active for `internal/handler/**`)
 - Service layer: `.claude/rules/service-rules.md` — business logic, interfaces, transactions (active for `internal/service/**`)
 - Repository layer: `.claude/rules/repository-rules.md` — parameterized SQL, resource cleanup (active for `internal/repository/**`)

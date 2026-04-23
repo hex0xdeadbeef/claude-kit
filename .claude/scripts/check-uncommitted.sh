@@ -66,11 +66,11 @@ print(json.dumps({
       exit 0
     }
     # Fallback if no python3: exit 2 with stderr
-    echo "WARNING: $UNCOMMITTED uncommitted file(s). Commit before stopping." >&2
+    echo "[check-uncommitted] ERROR: $UNCOMMITTED uncommitted file(s). Commit before stopping." >&2
     exit 2
   else
     # No active workflow — WARN only (don't block non-workflow sessions)
-    echo "WARNING: $UNCOMMITTED uncommitted file(s). Consider committing." >&2
+    echo "[check-uncommitted] WARN: $UNCOMMITTED uncommitted file(s). Consider committing." >&2
     exit 0
   fi
 fi

@@ -16,7 +16,7 @@ set -euo pipefail
 
 # ── Hard dependency: python3 ──
 command -v python3 >/dev/null 2>&1 || {
-  echo "block-dangerous-commands: python3 required but not found" >&2
+  echo "[block-dangerous-commands] FATAL: python3 required but not found" >&2
   exit 2
 }
 
@@ -27,7 +27,7 @@ INPUT=$(cat)
 LOG_DIR=".claude/workflow-state"
 LOG_FILE="$LOG_DIR/hook-log.txt"
 mkdir -p "$LOG_DIR" 2>/dev/null || {
-  echo "block-dangerous-commands: cannot create log directory" >&2
+  echo "[block-dangerous-commands] FATAL: cannot create log directory" >&2
   exit 2
 }
 

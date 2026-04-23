@@ -121,8 +121,7 @@ if command -v check-jsonschema &>/dev/null; then
 elif command -v pipx &>/dev/null; then
   VALIDATOR_CMD=(pipx run --spec "check-jsonschema==0.37.*" check-jsonschema)
 else
-  echo "[validate-handoff] WARN: neither check-jsonschema nor pipx found." \
-       "Run: brew install pipx && pipx install 'check-jsonschema==0.37.*'" >&2
+  echo "[validate-handoff] WARN: neither check-jsonschema nor pipx found — run: brew install pipx && pipx install 'check-jsonschema==0.37.*'" >&2
   exit 0
 fi
 
@@ -150,13 +149,13 @@ fi
 
 # Validation failed — report errors
 echo "[validate-handoff] FAIL: ${HANDOFF_FILE}" >&2
-echo "${VALIDATION_OUTPUT}" >&2
+printf '%s\n' "${VALIDATION_OUTPUT}" >> "${VALIDATION_LOG%.jsonl}-detail.log" 2>/dev/null || true
 
 if [[ "${MODE}" == "strict" ]]; then
-  echo "[validate-handoff] BLOCKING (strict mode) — fix the handoff payload and retry" >&2
+  echo "[validate-handoff] BLOCKING: fix the handoff payload and retry (strict mode)" >&2
   exit 2
 fi
 
 # warn mode: log failure but do not block
-echo "[validate-handoff] WARN (warn-mode): validation failed — set CLAUDE_HANDOFF_VALIDATION_MODE=strict to block" >&2
+echo "[validate-handoff] WARN: validation failed (warn-mode) — set CLAUDE_HANDOFF_VALIDATION_MODE=strict to block" >&2
 exit 0

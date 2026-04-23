@@ -36,7 +36,7 @@
 set -euo pipefail
 
 command -v python3 >/dev/null 2>&1 || {
-  echo "ERROR: python3 required for save-review-checkpoint.sh" >&2
+  echo "[save-review-checkpoint] ERROR: python3 required but not found" >&2
   exit 2
 }
 
