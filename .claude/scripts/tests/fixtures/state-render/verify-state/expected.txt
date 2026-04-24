@@ -1,5 +1,5 @@
 ## Workflow State (verified)
-Checkpoint OK: .claude/workflow-state/test-feature-checkpoint.yaml
+Checkpoint OK: STATE_DIR/test-feature-checkpoint.yaml
   feature=test-feature, phase=1/planning, complexity=XL, plan_review_iter=0, code_review_iter=0
   progress: parts 0/0, current=0, sub_phase=null
 Review completions: 3 valid entries
