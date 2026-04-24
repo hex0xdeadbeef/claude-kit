@@ -10,7 +10,9 @@ Load triggers (either is sufficient):
 1. **Heuristic session recovery** — `.claude/workflow-state/*-checkpoint.yaml` is missing and the orchestrator must infer iteration counts from other signals.
 2. **Loop limit reached (3/3)** — plan-review or code-review cycle hit 3 iterations; orchestrator needs the user-facing summary format.
 
-Referenced from [Orchestration Core](orchestration-core.md) § Loop Limits.
+Referenced from [Orchestration Core](orchestration-core.md) § Loop Limits → `tracking_protocol` sub-fields.
+
+**Provenance:** Previously nested under `tracking_protocol.counter_recovery` / `tracking_protocol.iteration_summary_on_stop` in `orchestration-core.md`; relocated as top-level YAML entries here on 2026-04-24 (IMP-05 lazy-load split). Semantics unchanged — both remain conceptually part of the `tracking_protocol` contract defined in the thin core.
 
 ---
 
