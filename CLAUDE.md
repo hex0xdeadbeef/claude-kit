@@ -49,6 +49,22 @@ users hit ~50% cache-miss rate, multiplying token costs.
 | `ENABLE_PROMPT_CACHING_1H=1` | Extend TTL 5 min → 1H (API-key/Bedrock/Vertex/Foundry only) |
 | `FORCE_PROMPT_CACHING_5M=1` | Force 5-min TTL regardless of tier (cost control for non-XL) |
 
+**Default in `.example` (v2.1.108+):** `ENABLE_PROMPT_CACHING_1H=1` ships **enabled by default**
+in `settings.local.json.example`. Users who copy `.example` → `.local.json` inherit it automatically.
+Subscription users are unaffected — the flag is a noop when the platform already defaults to 1H
+(runtime tier detection is not possible via hooks; always-set is safe).
+
+**Cost trade-off:** 1H cache writes cost 2× base price vs 5-min writes. Net-positive for XL tasks
+(many phase transitions cache-read savings outweigh write cost). For short S/M tasks, set
+`FORCE_PROMPT_CACHING_5M=1` to override back to 5-min TTL.
+
+**Hash-guard in `enrich-context.sh`:** The `UserPromptSubmit` hook skips re-injecting
+`additionalContext` when the checkpoint file content hash matches the hash from the prior injection
+(stored in `.claude/workflow-state/.enrich-last-hash`). On hash-match the hook exits 0 with no
+output — Claude Code treats absent `hookSpecificOutput` as "no injection this turn", preserving
+the cached prompt prefix. Hash is rewritten on every checkpoint mutation (phase transition,
+iteration update). When no checkpoint is active, hash-guard is bypassed entirely.
+
 See `settings.local.json.example` for the opt-in env block template.
 
 ## Error Handling (All Agents)

@@ -17,6 +17,7 @@ disallowedTools:
 memory: project
 maxTurns: 50
 ---
+<!-- CACHE_BREAKPOINT: static_instructions -->
 
 # Plan Reviewer
 
@@ -362,3 +363,7 @@ Available through **plan-review-rules** skill (auto-loaded via frontmatter):
 - **Checklist** — self-verification at each review phase
 - **Troubleshooting** — common review issues and fixes
 
+<!-- CACHE_BREAKPOINT_END -->
+<!-- DYNAMIC -->
+<!-- additionalContext injected by SubagentStart hook (inject-review-context.sh):
+     feature, complexity, iteration, prior review issues, plan path, delta-review-mode block -->

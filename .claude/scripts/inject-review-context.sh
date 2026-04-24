@@ -29,66 +29,36 @@ command -v python3 >/dev/null 2>&1 || {
 
 export _AGENT_TYPE="$AGENT_TYPE"
 
+# CWD-independent lib path
+LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib"
+export LIB_DIR
+
 STATE_DIR="${CLAUDE_WORKFLOW_STATE_DIR:-.claude/workflow-state}"
 
 OUTPUT=$(python3 << 'PYTHON_EOF'
-import json, os, glob, re, subprocess
+import json, os, glob, re, subprocess, sys
+
+# Uniform import fallback (AC-3, KD-6)
+try:
+    sys.path.insert(0, os.environ['LIB_DIR'])
+    from state_render import _extract_yaml_section, _extract_scalar, _extract_top_level
+except Exception as _import_err:
+    print(f'[inject-review-context.sh] WARN: shared state-render unavailable — {_import_err}',
+          file=sys.stderr)
+    print('{"additionalContext": ""}')
+    sys.exit(0)
 
 
-def extract_yaml_section(text, section_name):
-    """Extract lines belonging to a top-level YAML section (indent-based)."""
-    lines = text.splitlines()
-    in_section = False
-    base_indent = -1
-    result = []
-    for line in lines:
-        stripped = line.strip()
-        if not stripped:
-            if in_section:
-                result.append("")
-            continue
-        indent = len(line) - len(line.lstrip())
-        if not in_section:
-            if stripped.startswith(section_name + ":"):
-                in_section = True
-                base_indent = indent
-                val = stripped[len(section_name) + 1:].strip()
-                if val:
-                    result.append(val)
-            continue
-        if indent <= base_indent:
-            break
-        result.append(stripped)
-    return result if result else None
-
-
-def extract_scalar(lines, key):
-    """Extract a scalar value from parsed YAML section lines."""
-    for line in lines:
-        stripped = line.strip().lstrip("- ")
-        if stripped.startswith(key + ":"):
-            return stripped[len(key) + 1:].strip().strip('"').strip("'")
-    return None
-
-
-def extract_top_level(content, key):
-    """Extract a top-level scalar from checkpoint YAML."""
-    for line in content.splitlines():
-        stripped = line.strip()
-        if stripped.startswith(key + ":") and not stripped.startswith("#"):
-            indent = len(line) - len(line.lstrip())
-            if indent == 0:
-                return stripped[len(key) + 1:].strip().strip('"').strip("'")
-    return None
-
-
-def aggregate_pipeline_metrics(metrics_file, complexity, agent_type):
+def aggregate_pipeline_metrics(metrics_file, complexity, agent_type, session_completions=None):
     """Read pipeline-metrics.jsonl and return a brief history summary, or None.
 
     Returns None when:
+    - session_completions is provided and has fewer than 3 entries (AC-7 gate)
     - File missing or unreadable
     - Fewer than 3 total entries (insufficient history)
     """
+    if session_completions is not None and len(session_completions) < 3:
+        return None
     if not os.path.isfile(metrics_file):
         return None
     try:
@@ -132,20 +102,20 @@ def aggregate_pipeline_metrics(metrics_file, complexity, agent_type):
     recent = entries[-3:]
     recent_blockers = sum(1 for e in recent if e.get("issues_found", {}).get("blocker", 0) > 0)
 
-    lines = ["[Pipeline history context]:"]
+    lines_out = ["[Pipeline history context]:"]
     n_complexity = len(matching)
     n_total = len(entries)
     scope = f"{complexity} complexity" if n_complexity < n_total else "all runs"
     if avg_iters is not None:
         review_label = "plan-review" if agent_type == "plan-reviewer" else "code-review"
-        lines.append(f"- Avg {review_label} iterations ({scope}, {n_complexity} runs): {avg_iters}")
+        lines_out.append(f"- Avg {review_label} iterations ({scope}, {n_complexity} runs): {avg_iters}")
     if top_categories:
         cats = ", ".join(f"{cat} ({cnt})" for cat, cnt in top_categories)
-        lines.append(f"- Top issue categories: {cats}")
+        lines_out.append(f"- Top issue categories: {cats}")
     if recent_blockers >= 2:
-        lines.append(f"- Note: {recent_blockers}/3 recent runs had BLOCKER issues — focus security/architecture checks")
+        lines_out.append(f"- Note: {recent_blockers}/3 recent runs had BLOCKER issues — focus security/architecture checks")
 
-    return "\n".join(lines) if len(lines) > 1 else None
+    return "\n".join(lines_out) if len(lines_out) > 1 else None
 
 
 def emit_delta_focus_block(lines, state_dir, feature, agent_type, content, current_iter_str, delta_mode):
@@ -204,7 +174,7 @@ def emit_delta_focus_block(lines, state_dir, feature, agent_type, content, curre
     elif agent_type == "code-reviewer":
         # Extract iteration_commit_sha[iter_num - 1] from checkpoint YAML (PR-001: anchored regex)
         prior_sha = None
-        sha_section = extract_yaml_section(content, "iteration_commit_sha")
+        sha_section = _extract_yaml_section(content, "iteration_commit_sha")  # renamed
         if sha_section:
             prior_key = str(iter_num - 1)
             for sha_line in sha_section:
@@ -220,7 +190,7 @@ def emit_delta_focus_block(lines, state_dir, feature, agent_type, content, curre
             # AC-5: graceful no-op — do not block review
             import sys as _sys
             print(
-                f"[inject-review-context] WARN: iteration_commit_sha[{iter_num - 1}] "
+                f"[inject-review-context.sh] WARN: iteration_commit_sha[{iter_num - 1}] "
                 f"missing — code delta skipped",
                 file=_sys.stderr
             )
@@ -300,19 +270,19 @@ except Exception:
         "[Workflow Context] Checkpoint unreadable — context injection skipped."}))
     raise SystemExit(0)
 
-# Extract scalars
-feature = extract_top_level(content, "feature") or "unknown"
-complexity = extract_top_level(content, "complexity") or "?"
-route = extract_top_level(content, "route") or "?"
-phase_completed = extract_top_level(content, "phase_completed") or "?"
+# Extract scalars (using imported helpers — AC-2, rename: no underscore → underscore)
+feature = _extract_top_level(content, "feature") or "unknown"
+complexity = _extract_top_level(content, "complexity") or "?"
+route = _extract_top_level(content, "route") or "?"
+phase_completed = _extract_top_level(content, "phase_completed") or "?"
 
 # Extract iteration counters
-iteration_section = extract_yaml_section(content, "iteration")
+iteration_section = _extract_yaml_section(content, "iteration")
 plan_review_iter = "0/3"
 code_review_iter = "0/3"
 if iteration_section:
-    plan_review_iter = extract_scalar(iteration_section, "plan_review") or "0/3"
-    code_review_iter = extract_scalar(iteration_section, "code_review") or "0/3"
+    plan_review_iter = _extract_scalar(iteration_section, "plan_review") or "0/3"
+    code_review_iter = _extract_scalar(iteration_section, "code_review") or "0/3"
 
 # Determine current iteration for this agent
 if agent_type == "plan-reviewer":
@@ -334,7 +304,8 @@ plan_path = plans[0] if plans else "not found"
 specs = sorted(glob.glob(os.path.join(prompts_dir, f"{feature}-spec.md")))
 spec_path = specs[0] if specs else "none"
 
-# Build context header
+# Context header
+# NOTE: `lines` list is initialized here — this is the authoritative initialization.
 lines = [
     "[Workflow Context — injected by SubagentStart hook]",
     f"Feature: {feature}",
@@ -350,17 +321,15 @@ lines.append(f"Iteration: {current_iter}")
 
 # Code-reviewer specific: verify status
 if agent_type == "code-reviewer":
-    verify_section = extract_yaml_section(content, "verify_result")
+    verify_section = _extract_yaml_section(content, "verify_result")
     if verify_section:
-        v_status = extract_scalar(verify_section, "status") or "?"
-        v_command = extract_scalar(verify_section, "command") or "?"
+        v_status = _extract_scalar(verify_section, "status") or "?"
+        v_command = _extract_scalar(verify_section, "command") or "?"
         lines.append(f"Verify: {v_status} (command: {v_command})")
 
     # Plan-review approved_with_notes from handoff
-    handoff = extract_yaml_section(content, "handoff_payload")
+    handoff = _extract_yaml_section(content, "handoff_payload")
     if handoff:
-        # Collect list items after "approved_with_notes:" key
-        # (extract_yaml_section strips indentation, so use list-item collector)
         in_notes = False
         notes = []
         for h_line in handoff:
@@ -380,7 +349,7 @@ if agent_type == "code-reviewer":
                 lines.append(f"  - {note}")
 
 # Prior iterations from issues_history
-issues = extract_yaml_section(content, "issues_history")
+issues = _extract_yaml_section(content, "issues_history")
 if issues:
     entries = []
     current = {}
@@ -421,7 +390,6 @@ if issues:
             if regression_ids_str and regression_ids_str != "[]":
                 lines.append(f"    REGRESSION IDs (reappeared): {regression_ids_str}")
         # IMP-03: prominent regression alert for current phase's most recent entry
-        # PR-002: ASCII bracket marker matches existing [Workflow Context ...] convention
         _last_entry = phase_entries[-1] if phase_entries else None
         if _last_entry:
             _reg = _last_entry.get("regression_ids", "[]")
@@ -432,7 +400,7 @@ if issues:
 
 # Prior verdicts from review-completions.jsonl (IMP-02: filter by session + effective_agent_type)
 # P1-3: Preserve "unknown" entries as failed_attempts metadata for orchestrator recovery decisions
-# P3-3: Read from both primary and fallback locations — fallback written by IMP-06 when primary fails
+# P3-3: Read from both primary and fallback locations
 completions_file = os.path.join(state_dir, "review-completions.jsonl")
 import tempfile
 fallback_file = os.path.join(tempfile.gettempdir(), "claude-review-completions-fallback.jsonl")
@@ -446,9 +414,9 @@ for _cf in (completions_file, fallback_file):
         except Exception:
             pass
 
+relevant = []
 if comp_lines:
     try:
-        relevant = []
         failed_attempts = []
         seen = set()  # P3-3: deduplicate by (session_id, completed_at, agent)
         for cl in comp_lines:
@@ -456,7 +424,6 @@ if comp_lines:
                 entry = json.loads(cl.strip())
             except json.JSONDecodeError:
                 continue
-            # P3-3: deduplicate entries that exist in both primary and fallback
             dedup_key = (entry.get("session_id", ""), entry.get("completed_at", ""), entry.get("agent", ""))
             if dedup_key in seen:
                 continue
@@ -484,10 +451,9 @@ if comp_lines:
                     _id_list = [c.get("id", "?") for c in _cids if isinstance(c, dict)]
                     if _id_list:
                         lines.append(f"    Canonical IDs: {', '.join(_id_list)}")
-                    # Compact {id, category, location} rendering for the last entry only
                     if r is relevant[-1]:
                         lines.append("    (most recent issues by canonical id)")
-                        for _c in _cids[:5]:  # cap to 5 to stay within 10K context budget
+                        for _c in _cids[:5]:
                             if isinstance(_c, dict):
                                 lines.append(
                                     f"      - {_c.get('id', '?')} "
@@ -501,11 +467,9 @@ if comp_lines:
     except Exception:
         pass
 
-
-# IMP-04 delta-review-mode (delta-review-mode feature — AC-2..AC-5, KD-3)
-# Prefer checkpoint-stored mode for consistency across phases (R-3 mitigation).
+# IMP-04 delta-review-mode
 _delta_mode = (
-    extract_top_level(content, "delta_review_mode")
+    _extract_top_level(content, "delta_review_mode")
     or os.environ.get("CLAUDE_DELTA_REVIEW_MODE", "off").lower()
 )
 if _delta_mode in ("warn", "strict"):
@@ -513,12 +477,22 @@ if _delta_mode in ("warn", "strict"):
         lines, state_dir, feature, agent_type, content, current_iter, _delta_mode
     )
 
-# Pipeline history (IMP-F) — inject only if sufficient history exists
-metrics_summary = aggregate_pipeline_metrics(
-    os.path.join(state_dir, "pipeline-metrics.jsonl"),
-    complexity,
-    agent_type
-)
+# Pipeline history — AC-7 gate: inject ONLY when iter >= 2 AND >= 3 session completions
+# `relevant` is populated above by the JSONL filter block.
+current_iter_num = 0
+try:
+    current_iter_num = int(str(current_iter).split("/")[0])
+except Exception:
+    pass
+
+metrics_summary = None
+if current_iter_num >= 2:
+    metrics_summary = aggregate_pipeline_metrics(
+        os.path.join(state_dir, "pipeline-metrics.jsonl"),
+        complexity,
+        agent_type,
+        session_completions=relevant,
+    )
 if metrics_summary:
     lines.append("")
     lines.append(metrics_summary)
@@ -528,22 +502,22 @@ print(json.dumps({"additionalContext": text}))
 PYTHON_EOF
 )
 
-# P1-09: Pre-emit size guard — explicit overflow control (50K platform threshold)
+# Size cap — lowered from 40K → 8K (AC-4)
+CAP=8192
 SIZE=${#OUTPUT}
-if [[ $SIZE -gt 40000 ]]; then
+if [[ $SIZE -gt $CAP ]]; then
     mkdir -p "$STATE_DIR"
     OVERFLOW_FILE="${STATE_DIR}/compact-overflow-$(date -u +%s)-$$.log"
     printf '%s' "$OUTPUT" > "$OVERFLOW_FILE"
-    echo "[inject-review-context] WARN: output ${SIZE} chars > 40K, saved to ${OVERFLOW_FILE}" >&2
-    # head -c 1000 counts bytes, not chars — acceptable for informational preview
+    echo "[inject-review-context.sh] WARN: output ${SIZE} chars > ${CAP}, saved to ${OVERFLOW_FILE}" >&2
+    LIB_DIR="$LIB_DIR" STATE_DIR="$STATE_DIR" python3 -c "
+import sys, os; sys.path.insert(0, os.environ['LIB_DIR'])
+import state_render; state_render.rotate_spillover_files(os.environ['STATE_DIR'])
+"
     PREVIEW=$(printf '%s' "$OUTPUT" | head -c 1000)
-    # python3 instead of jq — scripts already require python3; avoids new jq dependency (CR-001)
-    _REF="$OVERFLOW_FILE" _SIZE="$SIZE" _PREVIEW="$PREVIEW" \
-        python3 -c "
+    _REF="$OVERFLOW_FILE" _SIZE="$SIZE" _PREVIEW="$PREVIEW" python3 -c "
 import json, os
-ref = os.environ['_REF']
-size = os.environ['_SIZE']
-preview = os.environ['_PREVIEW']
+ref = os.environ['_REF']; size = os.environ['_SIZE']; preview = os.environ['_PREVIEW']
 print(json.dumps({'additionalContext': '[Overflow] Full output (' + size + ' chars) saved to ' + ref + '. Preview:\n' + preview + '\n…'}))
 "
 else

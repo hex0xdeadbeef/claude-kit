@@ -17,6 +17,7 @@ memory: project
 maxTurns: 60
 isolation: worktree
 ---
+<!-- CACHE_BREAKPOINT: static_instructions -->
 
 # Code Reviewer
 
@@ -337,3 +338,7 @@ Available through **code-review-rules** skill (auto-loaded via frontmatter):
 - **Troubleshooting** — common review issues, mistakes, and fixes
 - Top 3 mistakes: (1) NEVER approve with blockers, (2) ALWAYS use ST for 100+ lines, (3) ALWAYS grep search_patterns
 
+<!-- CACHE_BREAKPOINT_END -->
+<!-- DYNAMIC -->
+<!-- additionalContext injected by SubagentStart hook (inject-review-context.sh):
+     feature, complexity, iteration, verify_status, prior review issues, delta-review-mode block -->

@@ -10,18 +10,19 @@
     "  - Configure worktree.sparsePaths for monorepo optimization"
   ],
   "_env_comment": [
+    "Within the `env` block below, keys with a leading '_' are inactive — remove the underscore prefix to activate them. (Top-level `_comment` / `_env_comment` / `_worktree_comment` are documentation keys, not env vars.)",
     "CLAUDE_HANDOFF_VALIDATION_MODE  (IMP-01) warn|strict — strict blocks writes of invalid handoff JSON",
     "CLAUDE_VERDICT_VALIDATION_MODE  (IMP-02) warn|strict — strict forces VERDICT_JSON schema pass (falls back to regex otherwise)",
     "Both envs are independent. Default: warn on both. Set both to strict for full schema enforcement.",
-    "ENABLE_PROMPT_CACHING_1H  (v2.1.108) — extend prompt cache TTL to 1H (API-key/Bedrock/Vertex/Foundry; Pro/Max/Team already default to 1H)",
-    "FORCE_PROMPT_CACHING_5M   (v2.1.108) — force 5-min TTL regardless of tier (override for non-XL cost control)",
+    "ENABLE_PROMPT_CACHING_1H  (v2.1.108) — 1H TTL for API-key/Bedrock/Vertex/Foundry (2× write cost; noop for subscription users). See CLAUDE.md > Prompt Cache Policy.",
+    "FORCE_PROMPT_CACHING_5M   (v2.1.108) — force 5-min TTL regardless of tier (cost control for S/M tasks)",
     "CLAUDE_DELTA_REVIEW_MODE    (delta-review-mode) off|warn|strict — warn emits delta-focus HINT for iter >=2 reviewers (plan: Part list; code: file list via git diff). Default: off (byte-identical, zero behavioral change until opt-in)."
   ],
   "env": {
     "GIT_STRIP_CO_AUTHOR": "false",
     "_CLAUDE_HANDOFF_VALIDATION_MODE": "strict",
     "_CLAUDE_VERDICT_VALIDATION_MODE": "strict",
-    "_ENABLE_PROMPT_CACHING_1H": "1",
+    "ENABLE_PROMPT_CACHING_1H": "1",
     "_FORCE_PROMPT_CACHING_5M": "1",
     "_CLAUDE_DELTA_REVIEW_MODE": "warn"
   },

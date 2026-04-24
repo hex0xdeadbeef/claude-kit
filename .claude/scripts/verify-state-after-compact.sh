@@ -19,51 +19,33 @@ command -v python3 >/dev/null 2>&1 || {
   exit 0
 }
 
-python3 << 'PYTHON_EOF'
-import json, os, glob
+STATE_DIR="${CLAUDE_WORKFLOW_STATE_DIR:-.claude/workflow-state}"
 
-state_dir = ".claude/workflow-state"
+# CWD-independent lib path
+LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib"
+export LIB_DIR
+
+OUTPUT=$(python3 << 'PYTHON_EOF'
+import json, os, glob, sys
+
+# Uniform import fallback (AC-3, KD-6)
+try:
+    sys.path.insert(0, os.environ['LIB_DIR'])
+    from state_render import _extract_yaml_section, _extract_scalar
+except Exception as _import_err:
+    print(f'[verify-state-after-compact.sh] WARN: shared state-render unavailable — {_import_err}',
+          file=sys.stderr)
+    print('{"additionalContext": ""}')
+    sys.exit(0)
+
+state_dir = os.environ.get("CLAUDE_WORKFLOW_STATE_DIR", ".claude/workflow-state")
 warnings = []
 state_summary = []
 
+# --- REMOVED: extract_yaml_section, extract_scalar definitions (AC-2) ---
+# These are now imported from state_render.
 
-def extract_yaml_section(text, section_name):
-    """Extract lines belonging to a top-level YAML section (indent-based)."""
-    lines = text.splitlines()
-    in_section = False
-    base_indent = -1
-    result = []
-    for line in lines:
-        stripped = line.strip()
-        if not stripped:
-            if in_section:
-                result.append("")
-            continue
-        indent = len(line) - len(line.lstrip())
-        if not in_section:
-            if stripped.startswith(section_name + ":"):
-                in_section = True
-                base_indent = indent
-                val = stripped[len(section_name) + 1:].strip()
-                if val:
-                    result.append(val)
-            continue
-        if indent <= base_indent:
-            break
-        result.append(stripped)
-    return result if result else None
-
-
-def extract_scalar(lines, key):
-    """Extract a scalar value from parsed YAML section lines."""
-    for line in lines:
-        stripped = line.strip().lstrip("- ")
-        if stripped.startswith(key + ":"):
-            return stripped[len(key) + 1:].strip().strip('"').strip("'")
-    return None
-
-
-# 1. Verify checkpoint
+# 1. Verify checkpoint (UNCHANGED logic — uses imported helpers)
 checkpoints = sorted(glob.glob(os.path.join(state_dir, "*-checkpoint.yaml")))
 if checkpoints:
     latest = checkpoints[-1]
@@ -93,12 +75,11 @@ if checkpoints:
                                  f"plan_review_iter={fields.get('plan_review_iteration', '0')}, "
                                  f"code_review_iter={fields.get('code_review_iteration', '0')}")
 
-            # Extract handoff context
-            handoff = extract_yaml_section(content, "handoff_payload")
+            handoff = _extract_yaml_section(content, "handoff_payload")
             if handoff:
-                h_to = extract_scalar(handoff, "to")
-                h_artifact = extract_scalar(handoff, "artifact")
-                h_verdict = extract_scalar(handoff, "verdict")
+                h_to = _extract_scalar(handoff, "to")
+                h_artifact = _extract_scalar(handoff, "artifact")
+                h_verdict = _extract_scalar(handoff, "verdict")
                 if any([h_to, h_artifact, h_verdict]):
                     state_summary.append(f"  handoff: to={h_to or '?'}, "
                                          f"artifact={h_artifact or '?'}, "
@@ -108,7 +89,7 @@ if checkpoints:
             # Note: parser assumes "phase:" is the first field in each list entry.
             # YAML does not guarantee field order, but checkpoint-protocol.md defines
             # this order and all writers (orchestrator) follow it.
-            issues = extract_yaml_section(content, "issues_history")
+            issues = _extract_yaml_section(content, "issues_history")
             if issues:
                 iter_entries = []
                 current = {}
@@ -131,13 +112,12 @@ if checkpoints:
                         f"  history: phase {entry.get('phase', '?')} "
                         f"iter {entry.get('iteration', '?')} -> {entry.get('verdict', '?')}")
 
-            # Extract implementation progress
-            progress = extract_yaml_section(content, "implementation_progress")
+            progress = _extract_yaml_section(content, "implementation_progress")
             if progress:
-                p_completed = extract_scalar(progress, "parts_completed")
-                p_total = extract_scalar(progress, "parts_total")
-                p_current = extract_scalar(progress, "current_part")
-                p_sub = extract_scalar(progress, "sub_phase")
+                p_completed = _extract_scalar(progress, "parts_completed")
+                p_total = _extract_scalar(progress, "parts_total")
+                p_current = _extract_scalar(progress, "current_part")
+                p_sub = _extract_scalar(progress, "sub_phase")
                 if any([p_completed, p_total, p_sub]):
                     state_summary.append(
                         f"  progress: parts {p_completed or '?'}/{p_total or '?'}, "
@@ -148,7 +128,7 @@ if checkpoints:
 else:
     state_summary.append("No checkpoint found (not in workflow or first phase)")
 
-# 2. Verify review-completions.jsonl
+# 2. Verify review-completions.jsonl (UNCHANGED)
 completions_file = os.path.join(state_dir, "review-completions.jsonl")
 if os.path.isfile(completions_file):
     try:
@@ -172,18 +152,37 @@ if os.path.isfile(completions_file):
     except Exception as e:
         warnings.append(f"Review completions read error: {e}")
 
-# 3. Build output
+# 3. Build output (UNCHANGED)
 parts = []
 if warnings:
     parts.append("## PostCompact Warnings\n" + "\n".join(f"- {w}" for w in warnings))
 if state_summary:
     parts.append("## Workflow State (verified)\n" + "\n".join(state_summary))
 
-if parts:
-    text = "\n\n".join(parts)
-else:
-    text = "PostCompact: no workflow state to verify"
-
+text = "\n\n".join(parts) if parts else "PostCompact: no workflow state to verify"
 print(json.dumps({"additionalContext": text}))
 PYTHON_EOF
+)
+
+# Size cap — 8K (was: no cap at all; AC-4)
+CAP=8192
+SIZE=${#OUTPUT}
+if [[ $SIZE -gt $CAP ]]; then
+    mkdir -p "$STATE_DIR"
+    OVERFLOW_FILE="${STATE_DIR}/compact-overflow-$(date -u +%s)-$$.log"
+    printf '%s' "$OUTPUT" > "$OVERFLOW_FILE"
+    echo "[verify-state-after-compact.sh] WARN: output ${SIZE} chars > ${CAP}, saved to ${OVERFLOW_FILE}" >&2
+    LIB_DIR="$LIB_DIR" STATE_DIR="$STATE_DIR" python3 -c "
+import sys, os; sys.path.insert(0, os.environ['LIB_DIR'])
+import state_render; state_render.rotate_spillover_files(os.environ['STATE_DIR'])
+"
+    PREVIEW=$(printf '%s' "$OUTPUT" | head -c 1000)
+    _REF="$OVERFLOW_FILE" _SIZE="$SIZE" _PREVIEW="$PREVIEW" python3 -c "
+import json, os
+ref = os.environ['_REF']; size = os.environ['_SIZE']; preview = os.environ['_PREVIEW']
+print(json.dumps({'additionalContext': '[Overflow] Full output (' + size + ' chars) saved to ' + ref + '. Preview:\n' + preview + '\n…'}))
+"
+else
+    printf '%s\n' "$OUTPUT"
+fi
 exit 0
