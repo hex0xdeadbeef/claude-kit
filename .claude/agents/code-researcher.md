@@ -11,6 +11,7 @@ tools:
 memory: project
 maxTurns: 20
 ---
+<!-- CACHE_BREAKPOINT: static_instructions -->
 
 # Code Researcher
 
@@ -135,3 +136,8 @@ Follows [Agent Memory Protocol](../skills/workflow-protocols/agent-memory-protoc
 - Too many results (>50 files) → narrow scope, show top 10 by relevance
 - File not readable → skip, note in summary
 - Bash command fails → report error, try alternative approach
+
+<!-- CACHE_BREAKPOINT_END -->
+<!-- DYNAMIC -->
+<!-- No additionalContext injected for code-researcher (no SubagentStart hook matcher).
+     DYNAMIC section reserved for future per-artifact cache_control wiring. -->

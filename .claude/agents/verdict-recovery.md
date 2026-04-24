@@ -11,6 +11,7 @@ tools:
 maxTurns: 10
 isolation: worktree
 ---
+<!-- CACHE_BREAKPOINT: static_instructions -->
 
 # Verdict Recovery
 
@@ -74,3 +75,8 @@ role:
 ## Error Handling
 - No diff available → VERDICT: CHANGES_REQUESTED with note "Unable to assess — no diff found"
 - Branch not found → VERDICT: CHANGES_REQUESTED with note "Branch error — manual review needed"
+
+<!-- CACHE_BREAKPOINT_END -->
+<!-- DYNAMIC -->
+<!-- No additionalContext injected for verdict-recovery (lightweight fallback agent).
+     DYNAMIC section reserved for future per-artifact cache_control wiring. -->

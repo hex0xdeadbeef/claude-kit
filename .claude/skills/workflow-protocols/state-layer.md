@@ -85,6 +85,17 @@ files:
     cleanup: "Phase 5 completion"
     note: "Enables IMP-H to work for code-reviewer (isolation:worktree) where SubagentStop payload has empty agent_type"
 
+  - name: ".enrich-last-hash"
+    format: "Plain text (one-line SHA256 hex)"
+    written_by:
+      - "enrich-context.sh (UserPromptSubmit) — after successful checkpoint injection"
+    read_by:
+      - "enrich-context.sh (UserPromptSubmit) — hash-guard short-circuit check"
+    schema: "SHA256 hex string of latest checkpoint file content (64 chars)"
+    lifecycle: session-specific
+    cleanup: "Phase 5 completion — deleted alongside other session files"
+    note: "Hash-guard state file. Missing → first injection runs unconditionally (no stale risk). Stale across sessions → worst case one spurious re-injection on session start."
+
   - name: "task-events.jsonl"
     format: JSONL
     written_by:
@@ -155,7 +166,8 @@ files:
 lifecycle_categories:
   session-specific:
     description: "Created during workflow, consumed by pipeline, cleaned at completion"
-    files: ["{feature}-checkpoint.yaml", "review-completions.jsonl", "agent-id-registry.jsonl", "task-events.jsonl"]
+    files: ["{feature}-checkpoint.yaml", "review-completions.jsonl", "agent-id-registry.jsonl",
+            "task-events.jsonl", ".enrich-last-hash"]
     retention: "Until Phase 5 completion (data captured in pipeline-metrics.jsonl)"
 
   cross-session:
@@ -183,6 +195,7 @@ cleanup_protocol:
       - "task-events.jsonl"
       - "worktree-events-debug.jsonl"
       - "hook-log.txt"
+      - ".enrich-last-hash"
       - "{feature}-checkpoint.yaml (LAST — other steps may read it)"
     method: "rm -f (safe — files are session-specific, data already captured)"
     order: "Checkpoint deleted LAST — Phase 5 steps 1-4 may still reference it"

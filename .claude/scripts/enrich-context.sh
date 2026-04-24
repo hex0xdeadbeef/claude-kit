@@ -15,13 +15,36 @@ INPUT=$(cat)
 command -v python3 >/dev/null 2>&1 || exit 0
 
 python3 << 'PYTHON_EOF'
-import json, os, glob, subprocess, sys
+import json, os, glob, subprocess, sys, hashlib
 
 STATE_DIR = ".claude/workflow-state"
 PROMPTS_DIR = ".claude/prompts"
+HASH_FILE = os.path.join(STATE_DIR, ".enrich-last-hash")
 
 parts = []
 session_title = None  # IMP-2: set below when checkpoint exists; drives nested vs flat output form
+
+# Hash-guard: skip re-injection if checkpoint content unchanged since last run.
+# On hash-match, exit 0 with no stdout → Claude Code treats absent hookSpecificOutput as
+# no injection this turn, preserving the cached prefix from the prior successful injection.
+# State: .claude/workflow-state/.enrich-last-hash (one-line SHA256 hex, session-scoped).
+_checkpoint_hash = None
+_checkpoints_pre = sorted(glob.glob(os.path.join(STATE_DIR, "*-checkpoint.yaml")))
+if _checkpoints_pre:
+    _latest_pre = _checkpoints_pre[-1]
+    try:
+        with open(_latest_pre, 'rb') as _f:
+            _cp_bytes = _f.read()
+        _checkpoint_hash = hashlib.sha256(_cp_bytes).hexdigest()
+        try:
+            with open(HASH_FILE) as _hf:
+                _stored_hash = _hf.read().strip()
+        except FileNotFoundError:
+            _stored_hash = None
+        if _stored_hash == _checkpoint_hash:
+            sys.exit(0)
+    except Exception:
+        _checkpoint_hash = None  # guard failure → proceed normally (non-blocking)
 
 # 1. Checkpoint state (highest priority)
 try:
@@ -65,6 +88,16 @@ try:
             except (ValueError, TypeError):
                 cur_phase = 1
             session_title = f"[WF] {feature[:40]} | Ph{cur_phase}/5 | {complexity}"
+
+        # Cache-hint warn: L/XL without 1H TTL → ~50% cache-miss at phase boundaries.
+        # API-key/Bedrock/Vertex/Foundry users only — subscription users get 1H automatically.
+        if complexity in ("L", "XL") and not os.environ.get("ENABLE_PROMPT_CACHING_1H"):
+            print(
+                "[enrich-context] WARN: L/XL task detected but ENABLE_PROMPT_CACHING_1H not set. "
+                "Expected cache-miss rate ~50% at phase boundaries. "
+                "See CLAUDE.md > Prompt Cache Policy.",
+                file=sys.stderr
+            )
 except Exception:
     pass
 
@@ -146,7 +179,11 @@ try:
 except Exception:
     pass
 
-# Output — wrapped in try-except to guarantee valid JSON even on edge cases
+# Output — wrapped in try-except to guarantee valid JSON even on edge cases.
+# Hash-guard state update:
+#   Hash is written INSIDE the try branch, AFTER print() succeeds.
+#   If json.dumps() raises → except fires, fallback empty JSON emitted,
+#   and hash is NOT written → next run re-injects correctly (no stale short-circuit).
 # Form selection (IMP-2):
 #   - session_title set → nested hookSpecificOutput form (required for sessionTitle, v2.1.94)
 #   - otherwise         → flat {"additionalContext": "..."} form (preserves pre-IMP-2 behavior,
@@ -164,8 +201,16 @@ try:
         }))
     else:
         print(json.dumps({"additionalContext": context}))
+    # Hash write ONLY after successful emission — never in the except/fallback path.
+    # Skipped when no checkpoint exists (_checkpoint_hash is None) — AC-7: noop.
+    if _checkpoint_hash:
+        try:
+            with open(HASH_FILE, 'w') as _hf:
+                _hf.write(_checkpoint_hash + '\n')
+        except Exception:
+            pass  # non-blocking
 except Exception:
-    # Fallback: always output valid JSON
+    # Fallback: always output valid JSON — do NOT write hash here (would cause stale short-circuit).
     print('{"additionalContext": ""}')
 
 PYTHON_EOF
