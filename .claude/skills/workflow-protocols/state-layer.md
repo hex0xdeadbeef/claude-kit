@@ -53,7 +53,7 @@ files:
         values:
           - "structured_json — VERDICT_JSON fenced block parsed and validated against .claude/schemas/handoff.schema.json (plan_review_verdict | code_review_verdict). Primary path (IMP-02)."
           - "regex_fallback — VERDICT_JSON block missing, malformed, or failed schema validation; hook fell back to regex on the human-readable VERDICT: line. Defense-in-depth, non-fatal."
-          - "none — no verdict recovered by either path; orchestrator must invoke on_incomplete_output chain (step_0..step_5 in workflow.md)."
+          - "none — no verdict recovered by either path; orchestrator must invoke on_incomplete_output chain (step_0..step_5 in incomplete-output-recovery.md)."
       verdict_transcript_source:
         type: "string"
         semantics: "WHERE the transcript data came from (reverse-search path)"

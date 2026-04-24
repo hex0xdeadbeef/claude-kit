@@ -88,6 +88,8 @@ For all troubleshooting cases, see [Examples & Troubleshooting](examples-trouble
 - Phase 5 cleanup → read cleanup protocol (see [State Layer](state-layer.md))
 - Multiple independent tasks identified (L/XL planner research, or independent failures) → read [Parallel Dispatch](parallel-dispatch.md)
 - Problem encountered → see [Examples & Troubleshooting](examples-troubleshooting.md)
+- Entering Phase 2 or Phase 4 delegation → read [Delegation Templates](delegation-templates.md) (IMP-01/03/04 protocol details)
+- INCOMPLETE verdict detected → read [Incomplete Output Recovery](incomplete-output-recovery.md)
 
 ## Core Deps (workflow-only, loaded at startup)
 These files define fundamental workflow behavior and are loaded at pipeline startup (step 0.1):
@@ -99,6 +101,8 @@ For detailed protocol specifications, read the supporting files in this skill di
 - [Handoff Contracts](handoff-contracts.md) — 5 core contracts, lightweight (5 KB); use for common-path handoff formation
 - [Handoff Protocol](handoff-protocol.md) — full protocol: 5 contracts + IMP-02/03/04 implementation details (22 KB)
 - [Diff Manifest](diff-manifest.md) — diff-based re-plan algorithm (STEP 0.5) + planner re-invocation template; load on iter 2+ only
+- [Delegation Templates](delegation-templates.md) — full delegation prompts + pre/post_delegation for plan-review and code-review (IMP-01/03/04); load ONLY before Phase 2 or Phase 4 delegation
+- [Incomplete Output Recovery](incomplete-output-recovery.md) — output_validation checks + step_0..step_5 INCOMPLETE verdict fallback chain; load ONLY on INCOMPLETE verdict
 - [Checkpoint Protocol](checkpoint-protocol.md) — format, recovery, example
 - [State Layer](state-layer.md) — file contracts, lifecycle categories, cleanup protocol for .claude/workflow-state/
 - [Re-routing](re-routing.md) — 3 triggers + tracking fields + learning

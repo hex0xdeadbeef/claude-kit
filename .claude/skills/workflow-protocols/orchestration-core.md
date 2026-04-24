@@ -65,7 +65,7 @@ flowchart LR
 
 **Phase 2/4 — Incomplete Output Recovery:** If a review agent (plan-reviewer or code-reviewer) returns without a clear verdict:
 
-1. Validate return text for verdict keyword (SEE workflow.md → output_validation)
+1. Validate return text for verdict keyword (SEE incomplete-output-recovery.md → output_validation)
 2. If missing → check review-completions.jsonl (save-review-checkpoint.sh extracts verdict on SubagentStop via transcript). **Apply filter rules below** before treating any entry as authoritative.
 3. If no matching entry OR verdict is UNKNOWN → **orchestrator direct transcript read** (P3-1): read the agent's transcript JSONL directly (path from review-completions.jsonl `agent_transcript_path` field or `.claude/workflow-state/worktree-events-debug.jsonl`), search for `VERDICT:` regex in last assistant messages. This makes the orchestrator self-reliant — not dependent solely on hook infrastructure.
 4. If still no verdict → launch **verdict-recovery** agent (NOT re-launch of full plan-reviewer/code-reviewer). See .claude/agents/verdict-recovery.md — lightweight haiku, ~30s, no memory/skills/checklist.
