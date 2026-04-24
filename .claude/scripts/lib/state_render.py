@@ -76,6 +76,81 @@ def _extract_top_level(content: str, key: str) -> "str | None":
 # State loader
 # ---------------------------------------------------------------------------
 
+_CHECKPOINT_SCALAR_KEYS = {
+    "phase_name", "phase_completed", "complexity", "route",
+    "verdict", "session_type", "file_reads_in_sub_phase", "budget_threshold",
+}
+
+
+def _load_checkpoint(state: dict) -> None:
+    """Populate checkpoint_*, feature, phase, iteration_* fields in state."""
+    try:
+        checkpoints = sorted(glob.glob(os.path.join(state["state_dir"], "*-checkpoint.yaml")))
+        if not checkpoints:
+            return
+        path = checkpoints[-1]
+        state["checkpoint_path"] = path
+        with open(path) as f:
+            content = f.read()
+        state["checkpoint_content"] = content
+        state["feature"] = os.path.basename(path).replace("-checkpoint.yaml", "")
+
+        # Flat scalar extraction — zero-indent top-level keys only
+        for line in content.splitlines():
+            s = line.strip()
+            if not s or s.startswith("#") or ":" not in s:
+                continue
+            if len(line) - len(line.lstrip()) != 0:
+                continue
+            k, _, v = s.partition(":")
+            k = k.strip()
+            v = v.strip().strip('"').strip("'")
+            # "current" → sub_phase_current (avoids collision with
+            # implementation_progress.current_part) — matches enrich-context.sh
+            if k == "current":
+                state["sub_phase_current"] = v
+            elif k in _CHECKPOINT_SCALAR_KEYS:
+                state[k] = v
+
+        iter_section = _extract_yaml_section(content, "iteration")
+        if iter_section:
+            pr = _extract_scalar(iter_section, "plan_review")
+            cr = _extract_scalar(iter_section, "code_review")
+            if pr:
+                state["iteration_plan_review"] = pr
+            if cr:
+                state["iteration_code_review"] = cr
+    except Exception:
+        pass
+
+
+def _load_plans(state: dict) -> None:
+    """Populate plans_list in state.
+
+    Filter matches enrich-context.sh: exclude -evaluate.md, include -spec.md.
+    Golden-test invariant depends on exact match.
+    """
+    try:
+        plans = sorted(glob.glob(os.path.join(state["prompts_dir"], "*.md")))
+        state["plans_list"] = [
+            os.path.basename(p) for p in plans
+            if not p.endswith("-evaluate.md")
+        ]
+    except Exception:
+        pass
+
+
+def _load_completions(state: dict) -> None:
+    """Populate review_completions_lines in state."""
+    try:
+        completions_file = os.path.join(state["state_dir"], "review-completions.jsonl")
+        if os.path.isfile(completions_file):
+            with open(completions_file) as f:
+                state["review_completions_lines"] = f.readlines()
+    except Exception:
+        pass
+
+
 def load_state(state_dir: str = ".claude/workflow-state",
                prompts_dir: str = ".claude/prompts") -> dict:
     """Load workflow state from filesystem. Returns state dict.
@@ -107,82 +182,9 @@ def load_state(state_dir: str = ".claude/workflow-state",
         "plans_list": [],
         "review_completions_lines": [],
     }
-
-    # Load checkpoint
-    try:
-        checkpoints = sorted(glob.glob(os.path.join(state_dir, "*-checkpoint.yaml")))
-        if checkpoints:
-            path = checkpoints[-1]
-            state["checkpoint_path"] = path
-            with open(path) as f:
-                content = f.read()
-            state["checkpoint_content"] = content
-            state["feature"] = os.path.basename(path).replace("-checkpoint.yaml", "")
-
-            # Flat scalar extraction — handles top-level keys only
-            for line in content.splitlines():
-                s = line.strip()
-                if not s or s.startswith("#") or ":" not in s:
-                    continue
-                # Only zero-indent keys
-                if len(line) - len(line.lstrip()) != 0:
-                    continue
-                k, _, v = s.partition(":")
-                k = k.strip()
-                v = v.strip().strip('"').strip("'")
-                # Remap "current" → "sub_phase_current" (avoids collision with
-                # implementation_progress.current_part and sub_phase section header).
-                # This matches the logic in enrich-context.sh verbatim.
-                if k == "current":
-                    state["sub_phase_current"] = v
-                elif k == "phase_name":
-                    state["phase_name"] = v
-                elif k == "phase_completed":
-                    state["phase_completed"] = v
-                elif k == "complexity":
-                    state["complexity"] = v
-                elif k == "route":
-                    state["route"] = v
-                elif k == "verdict":
-                    state["verdict"] = v
-                elif k == "session_type":
-                    state["session_type"] = v
-                elif k == "file_reads_in_sub_phase":
-                    state["file_reads_in_sub_phase"] = v
-                elif k == "budget_threshold":
-                    state["budget_threshold"] = v
-
-            iter_section = _extract_yaml_section(content, "iteration")
-            if iter_section:
-                pr = _extract_scalar(iter_section, "plan_review")
-                cr = _extract_scalar(iter_section, "code_review")
-                if pr:
-                    state["iteration_plan_review"] = pr
-                if cr:
-                    state["iteration_code_review"] = cr
-    except Exception:
-        pass
-
-    # Load plans list (same filter as enrich-context.sh: exclude -evaluate.md,
-    # include -spec.md — golden-test invariant depends on exact match)
-    try:
-        plans = sorted(glob.glob(os.path.join(prompts_dir, "*.md")))
-        state["plans_list"] = [
-            os.path.basename(p) for p in plans
-            if not p.endswith("-evaluate.md")
-        ]
-    except Exception:
-        pass
-
-    # Load review completions
-    try:
-        completions_file = os.path.join(state_dir, "review-completions.jsonl")
-        if os.path.isfile(completions_file):
-            with open(completions_file) as f:
-                state["review_completions_lines"] = f.readlines()
-    except Exception:
-        pass
-
+    _load_checkpoint(state)
+    _load_plans(state)
+    _load_completions(state)
     return state
 
 
@@ -355,25 +357,6 @@ def _render_recent_completions_5(state: dict) -> "str | None":
     return "## Recent Review Completions\n" + "".join(tail)
 
 
-def _render_checkpoint_verify_status(state: dict) -> "str | None":
-    """Checkpoint OK/WARN + fields — for verify-state-after-compact."""
-    path = state.get("checkpoint_path")
-    content = state.get("checkpoint_content")
-    if not path:
-        return "No checkpoint found (not in workflow or first phase)"
-    if not content or not content.strip():
-        return f"[WARN] Checkpoint file empty: {path}"
-    feature = state.get("feature", "?")
-    phase_completed = state.get("phase_completed", "?")
-    phase_name = state.get("phase_name", "?")
-    complexity = state.get("complexity", "?")
-    return (
-        f"Checkpoint OK: {path}\n"
-        f"  feature={feature}, phase={phase_completed}/{phase_name}, "
-        f"complexity={complexity}"
-    )
-
-
 # ---------------------------------------------------------------------------
 # Public render API
 # ---------------------------------------------------------------------------
@@ -391,8 +374,6 @@ _SECTIONS = {
     "implementation_progress_text": _render_implementation_progress_text,
     "checkpoint_ref": _render_checkpoint_ref,         # KD-7: reference-link
     "recent_completions_5": _render_recent_completions_5,
-    # verify-state-after-compact section
-    "checkpoint_verify_status": _render_checkpoint_verify_status,
 }
 
 

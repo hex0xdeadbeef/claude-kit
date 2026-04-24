@@ -196,11 +196,15 @@ rm -rf "$EMPTY_STATE_DIR"
 # -----------------------------------------------------------------------
 echo "--- AC-3: import failure → uniform fallback ---"
 setup_state "${FIXTURE_DIR}/enrich-context/state.yaml"
-# Temporarily rename lib to simulate import failure
+# CR-a3c01bfe fix: nest trap so a kill between mv calls restores real lib.
+# Outer EXIT trap already cleans TEST_STATE_DIR; extend it to also restore lib.
+trap "mv '${LIB_DIR}.bak' '${LIB_DIR}' 2>/dev/null; rm -rf '$TEST_STATE_DIR'" EXIT
 mv "${LIB_DIR}" "${LIB_DIR}.bak"
 STDERR_OUT=$(echo '{}' | bash "${SCRIPTS_DIR}/enrich-context.sh" 2>&1 >/dev/null)
 STDOUT_OUT=$(echo '{}' | bash "${SCRIPTS_DIR}/enrich-context.sh" 2>/dev/null)
 mv "${LIB_DIR}.bak" "${LIB_DIR}"
+# Restore original trap (lib is back; only state dir cleanup remains)
+trap "rm -rf '$TEST_STATE_DIR'" EXIT
 assert_contains "enrich-context import failure: stderr WARN" "$STDERR_OUT" "[enrich-context.sh] WARN:"
 CONTEXT=$(echo "$STDOUT_OUT" | extract_context)
 assert_eq "enrich-context import failure: empty additionalContext" "$CONTEXT" ""
