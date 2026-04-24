@@ -1,0 +1,18 @@
+feature: test-feature
+phase_completed: "1"
+phase_name: planning
+complexity: XL
+route: full
+verdict: "null"
+session_type: workflow
+iteration:
+  plan_review: 0/3
+  code_review: 0/3
+implementation_progress:
+  parts_completed: 0
+  parts_total: 0
+  current_part: 0
+  sub_phase: "null"
+  auto_saved: false
+  cron_id: "null"
+issues_history: []

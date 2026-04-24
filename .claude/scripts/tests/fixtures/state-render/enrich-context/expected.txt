@@ -1,0 +1,5 @@
+[Workflow State]
+Checkpoint: test-feature | Phase: planning (1/5) | Complexity: XL | Route: full | Verdict: null | Session: workflow
+Plans: changelog-2189-2118-workflow-analysis.md, delta-review-mode-spec.md, delta-review-mode.md, hook-context-consolidation-spec.md, hook-context-consolidation.md, planner-plan-reviewer-analysis.md, prompt-cache-design-spec.md, prompt-cache-design.md, remove-postgres-mcp-spec.md, remove-postgres-mcp.md, update-restore-fixes.md, update-restore-spec.md, update-restore.md, workflow-md-refactor-spec.md, workflow-md-refactor.md, workflow-token-consumption-analysis.md
+Recent reviews: plan-reviewer @ 2026-04-24T15:56:14Z; plan-reviewer @ 2026-04-24T16:14:19Z; plan-reviewer @ 2026-04-24T16:25:59Z
+Branch: feature/hook-context-consolidation

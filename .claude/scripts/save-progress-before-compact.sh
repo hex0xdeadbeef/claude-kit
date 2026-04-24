@@ -21,58 +21,42 @@ command -v python3 >/dev/null 2>&1 || {
 }
 
 export HOOK_INPUT="$INPUT"
-
 STATE_DIR="${CLAUDE_WORKFLOW_STATE_DIR:-.claude/workflow-state}"
 
+# CWD-independent lib path
+LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib"
+export LIB_DIR
+
 OUTPUT=$(python3 << 'PYTHON_EOF'
-import json, os, glob, time
+import json, os, glob, time, sys
 from datetime import datetime, timezone
+
+# Uniform import fallback (AC-3, KD-6)
+try:
+    sys.path.insert(0, os.environ['LIB_DIR'])
+    from state_render import (
+        _extract_yaml_section,
+        _extract_scalar,
+        load_state,
+        render,
+        CONTEXT_SIZE_CAP,
+    )
+except Exception as _import_err:
+    print(f'[save-progress-before-compact.sh] WARN: shared state-render unavailable — {_import_err}',
+          file=sys.stderr)
+    print('{"additionalContext": ""}')
+    sys.exit(0)
 
 STATE_DIR = os.environ.get("CLAUDE_WORKFLOW_STATE_DIR", ".claude/workflow-state")
 LOG_FILE = os.path.join(STATE_DIR, "hook-log.txt")
 BLOCK_STATE_FILE = os.path.join(STATE_DIR, "precompact-block-state.json")
 MAX_BLOCKS_PER_PART = 3
 
-# --- Parse stdin payload ---
-try:
-    data = json.loads(os.environ.get("HOOK_INPUT", "") or "{}")
-except Exception:
-    data = {}
-trigger = (data.get("trigger") or "manual").lower()
+# --- REMOVED: extract_yaml_section, extract_scalar definitions (AC-2) ---
+# These are now imported from state_render.
 
-# --- YAML helpers (same as existing script — don't change semantics) ---
-def extract_yaml_section(text, section_name):
-    """Extract lines belonging to a top-level YAML section (indent-based)."""
-    lines = text.splitlines()
-    in_section = False
-    base_indent = -1
-    result = []
-    for line in lines:
-        stripped = line.strip()
-        if not stripped:
-            if in_section:
-                result.append("")
-            continue
-        indent = len(line) - len(line.lstrip())
-        if not in_section:
-            if stripped.startswith(section_name + ":"):
-                in_section = True
-                base_indent = indent
-                val = stripped[len(section_name) + 1:].strip()
-                if val:
-                    result.append(val)
-            continue
-        if indent <= base_indent:
-            break
-        result.append(stripped)
-    return result if result else None
-
-def extract_scalar(lines, key):
-    for line in lines:
-        s = line.strip().lstrip("- ")
-        if s.startswith(key + ":"):
-            return s.split(":", 1)[1].strip().strip('"').strip("'")
-    return None
+# --- UNCHANGED: append_log, load_checkpoint, check_midpart ---
+# --- UNCHANGED: load_block_state, save_block_state ---
 
 def append_log(msg):
     try:
@@ -83,7 +67,6 @@ def append_log(msg):
     except Exception:
         pass
 
-# --- Load latest checkpoint ---
 def load_checkpoint():
     try:
         checkpoints = sorted(glob.glob(os.path.join(STATE_DIR, "*-checkpoint.yaml")))
@@ -96,12 +79,10 @@ def load_checkpoint():
     except Exception:
         return None, None
 
-# --- Mid-Part detection (auto trigger only) ---
 def check_midpart(content):
     """Return current_part (int > 0) if mid-Part in Phase 3, else None."""
     if not content:
         return None
-    # phase_completed == 2 required
     pc = None
     for line in content.splitlines():
         s = line.strip()
@@ -113,22 +94,18 @@ def check_midpart(content):
             break
     if pc != 2:
         return None
-
-    progress = extract_yaml_section(content, "implementation_progress")
+    progress = _extract_yaml_section(content, "implementation_progress")
     if not progress:
         return None
-
-    cp_raw = extract_scalar(progress, "current_part")
+    cp_raw = _extract_scalar(progress, "current_part")
     if not cp_raw:
         return None
     try:
         cp = int(cp_raw)
     except (ValueError, TypeError):
         return None
-
     return cp if cp > 0 else None
 
-# --- Block counter state ---
 def load_block_state():
     try:
         if os.path.isfile(BLOCK_STATE_FILE):
@@ -140,44 +117,43 @@ def load_block_state():
         pass
     return {"feature": None, "current_part": None, "block_count": 0}
 
-def save_block_state(state):
+def save_block_state(state_dict):
     try:
         os.makedirs(STATE_DIR, exist_ok=True)
         with open(BLOCK_STATE_FILE, "w") as f:
-            json.dump(state, f)
+            json.dump(state_dict, f)
     except Exception:
         pass
 
-# --- Build additionalContext (existing behavior preserved verbatim) ---
-def build_additional_context(feature, content):
-    parts = []
-    if content:
-        handoff = extract_yaml_section(content, "handoff_payload")
-        if handoff:
-            parts.append("## Handoff Context\n" + "\n".join(f"  {l}" for l in handoff if l))
-        issues = extract_yaml_section(content, "issues_history")
-        if issues:
-            parts.append("## Issues History\n" + "\n".join(f"  {l}" for l in issues if l))
-        progress = extract_yaml_section(content, "implementation_progress")
-        if progress:
-            parts.append("## Implementation Progress\n" + "\n".join(f"  {l}" for l in progress if l))
-        parts.append(f"## Workflow Checkpoint\nFile: {STATE_DIR}/{feature}-checkpoint.yaml\n{content}")
-    completions_file = os.path.join(STATE_DIR, "review-completions.jsonl")
-    if os.path.isfile(completions_file):
-        try:
-            with open(completions_file) as f:
-                tail = f.readlines()[-5:]
-            if tail:
-                parts.append("## Recent Review Completions\n" + "".join(tail))
-        except Exception:
-            pass
-    return "\n\n".join(parts) if parts else "No workflow state found before compaction."
+# --- CHANGED: build_additional_context now uses render() with checkpoint_ref ---
+# PR-003 fix: removed feature/content params — load_state() re-reads from disk.
+# Call site updated to match (no args). Double-I/O is acceptable: the checkpoint
+# is small (<10 KB) and blocking logic above already read it via load_checkpoint().
+def build_additional_context():
+    """Build additionalContext string. Uses shared render() for all sections.
 
-# --- Main decision ---
+    KD-7: checkpoint_ref emits reference-link only (not full YAML body).
+    PostCompact hook (verify-state-after-compact.sh) reads checkpoint from disk.
+    """
+    state = load_state(STATE_DIR, ".claude/prompts")
+    return render(state, [
+        "handoff_context",
+        "issues_history_text",
+        "implementation_progress_text",
+        "checkpoint_ref",          # KD-7: was f"...{content}" (full body)
+        "recent_completions_5",
+    ]) or "No workflow state found before compaction."
+
+# --- UNCHANGED: Main decision (mid-Part + iteration-in-flight) ---
 feature, content = load_checkpoint()
-
 blocked = False
 reason = None
+data = {}
+try:
+    data = json.loads(os.environ.get("HOOK_INPUT", "") or "{}")
+except Exception:
+    pass
+trigger = (data.get("trigger") or "manual").lower()
 
 if trigger == "auto":
     # --- P0-04: Iteration-in-flight check (review cycle running) ---
@@ -220,65 +196,62 @@ if trigger == "auto":
     if not blocked:
         current_part = check_midpart(content)
         if current_part is not None:
-            state = load_block_state()
+            state_dict = load_block_state()
             # Reset counter on (feature, current_part) change
-            if state.get("feature") != feature or state.get("current_part") != current_part:
-                state = {"feature": feature, "current_part": current_part, "block_count": 0}
-            if state["block_count"] < MAX_BLOCKS_PER_PART:
-                state["block_count"] += 1
-                save_block_state(state)
+            if state_dict.get("feature") != feature or state_dict.get("current_part") != current_part:
+                state_dict = {"feature": feature, "current_part": current_part, "block_count": 0}
+            if state_dict["block_count"] < MAX_BLOCKS_PER_PART:
+                state_dict["block_count"] += 1
+                save_block_state(state_dict)
                 blocked = True
                 reason = (
                     f"Workflow active: Phase 3 Part {current_part}/{feature} in progress. "
                     f"Auto-compaction would discard mid-Part implementation context. "
-                    f"Blocked {state['block_count']}/{MAX_BLOCKS_PER_PART} times for this Part. "
+                    f"Blocked {state_dict['block_count']}/{MAX_BLOCKS_PER_PART} times for this Part. "
                     f"After {MAX_BLOCKS_PER_PART} blocks, compaction will proceed to prevent session failure."
                 )
                 append_log(
                     f"BLOCKED auto-compact feature={feature} part={current_part} "
-                    f"count={state['block_count']}/{MAX_BLOCKS_PER_PART}"
+                    f"count={state_dict['block_count']}/{MAX_BLOCKS_PER_PART}"
                 )
             else:
                 append_log(
                     f"PASS auto-compact feature={feature} part={current_part} "
-                    f"safety-valve triggered, blocks={state['block_count']}/{MAX_BLOCKS_PER_PART}"
+                    f"safety-valve triggered, blocks={state_dict['block_count']}/{MAX_BLOCKS_PER_PART}"
                 )
         else:
             # Not mid-Part anymore: clear counter — no longer in a Part that needs protection.
             # Fires on any auto-compact while NOT mid-Part (phase != 2, or current_part == 0,
             # or no checkpoint). Safe to wipe because the counter is only meaningful mid-Part;
             # the next mid-Part event will allocate a fresh (feature, current_part, 0) state.
-            state = load_block_state()
-            if state.get("feature") is not None:
+            state_dict = load_block_state()
+            if state_dict.get("feature") is not None:
                 save_block_state({"feature": None, "current_part": None, "block_count": 0})
 
-# --- Emit output ---
 if blocked:
     print(json.dumps({"decision": "block", "reason": reason}))
 else:
-    print(json.dumps({"additionalContext": build_additional_context(feature, content)}))
+    print(json.dumps({"additionalContext": build_additional_context()}))
 PYTHON_EOF
 )
 
-# P1-09: Pre-emit size guard — explicit overflow control (50K platform threshold)
+# Size cap — lowered from 40K → 8K (AC-4)
+# Note: decision:block output is ~200 bytes — safely under 8K, no special case needed.
+CAP=8192
 SIZE=${#OUTPUT}
-if [[ $SIZE -gt 40000 ]]; then
+if [[ $SIZE -gt $CAP ]]; then
     mkdir -p "$STATE_DIR"
-    # compact-overflow-{unix_timestamp}-{pid}.log — PID suffix prevents collision if two hooks
-    # fire in the same second (same-second timestamp is the only realistic collision window)
     OVERFLOW_FILE="${STATE_DIR}/compact-overflow-$(date -u +%s)-$$.log"
     printf '%s' "$OUTPUT" > "$OVERFLOW_FILE"
-    echo "[save-progress-before-compact] WARN: output ${SIZE} chars > 40K, saved to ${OVERFLOW_FILE}" >&2
-    # head -c 1000 counts bytes, not chars — acceptable for informational preview (UTF-8 mojibake
-    # in preview does not affect the full file written above)
+    echo "[save-progress-before-compact.sh] WARN: output ${SIZE} chars > ${CAP}, saved to ${OVERFLOW_FILE}" >&2
+    LIB_DIR="$LIB_DIR" STATE_DIR="$STATE_DIR" python3 -c "
+import sys, os; sys.path.insert(0, os.environ['LIB_DIR'])
+import state_render; state_render.rotate_spillover_files(os.environ['STATE_DIR'])
+"
     PREVIEW=$(printf '%s' "$OUTPUT" | head -c 1000)
-    # python3 instead of jq — scripts already require python3; avoids new jq dependency (CR-001)
-    _REF="$OVERFLOW_FILE" _SIZE="$SIZE" _PREVIEW="$PREVIEW" \
-        python3 -c "
+    _REF="$OVERFLOW_FILE" _SIZE="$SIZE" _PREVIEW="$PREVIEW" python3 -c "
 import json, os
-ref = os.environ['_REF']
-size = os.environ['_SIZE']
-preview = os.environ['_PREVIEW']
+ref = os.environ['_REF']; size = os.environ['_SIZE']; preview = os.environ['_PREVIEW']
 print(json.dumps({'additionalContext': '[Overflow] Full output (' + size + ' chars) saved to ' + ref + '. Preview:\n' + preview + '\n…'}))
 "
 else

@@ -1,0 +1,7 @@
+[Workflow Context — injected by SubagentStart hook]
+Feature: test-feature
+Complexity: XL
+Route: full
+Plan: not found
+Spec: none
+Iteration: 0/3
