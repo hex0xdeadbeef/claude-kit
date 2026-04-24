@@ -8,13 +8,14 @@
 #   AC-2:  plan-template.md has diff_vs_prior_iteration block
 #   AC-3:  plan-reviewer.md has Part-selective VALIDATE ARCHITECTURE
 #   AC-4:  handoff.schema.json has optional parts_validated[] in plan_review_verdict
-#   AC-5:  workflow.md has location→Part mapping regex (^Part\s+(\d+)\s*:)
+#   AC-5:  diff-manifest.md has location→Part mapping regex (^Part\s+(\d+)\s*:)
 #   AC-6:  plan-reviewer.md has Pipeline Metrics subsection for parts_skipped_unchanged
 #   AC-7:  backward compat documented (section absent → full validation)
 #   AC-8:  BEHAVIORAL — plan WITHOUT diff section does NOT emit parts_validated[]
 #                       (schema: parts_validated is optional / not in required list)
 #   AC-9:  IMP-03 integration — regression_ids sourced from checkpoint.issues_history[]
-#   AC-10: KD-6 unmappable-location fallback documented
+#          (pointer needle stays in workflow.md; "IMP-03 post_delegation step 5" needle in diff-manifest.md)
+#   AC-10: KD-6 unmappable-location fallback + telemetry kinds in diff-manifest.md
 #   AC-11: KD-4 contract-break literal prefix documented in workflow + plan-reviewer
 # Regression-1: existing VERDICT_JSON payloads (no parts_validated) still schema-validate
 # Regression-2: new VERDICT_JSON payloads WITH parts_validated schema-validate
@@ -29,6 +30,7 @@ PLANNER_MD="${REPO_ROOT}/.claude/commands/planner.md"
 REVIEWER_MD="${REPO_ROOT}/.claude/agents/plan-reviewer.md"
 TEMPLATE_MD="${REPO_ROOT}/.claude/templates/plan-template.md"
 PROTOCOL_MD="${REPO_ROOT}/.claude/skills/workflow-protocols/handoff-protocol.md"
+MANIFEST_MD="${REPO_ROOT}/.claude/skills/workflow-protocols/diff-manifest.md"
 
 cd "${REPO_ROOT}"
 
@@ -137,9 +139,9 @@ print(pv.get('items', {}).get('type', 'missing'))
 assert_json "parts_validated items are integer" "integer" "${parts_validated_item_type}"
 echo
 
-# ─── AC-5: workflow.md location→Part mapping regex ─────────────────────────────────────
-echo "AC-5: workflow.md has location→Part mapping regex"
-assert_fixed_string "location regex pattern" 'Part\s+(\d+)\s*:' "${WORKFLOW_MD}"
+# ─── AC-5: diff-manifest.md location→Part mapping regex ────────────────────────────────
+echo "AC-5: diff-manifest.md has location→Part mapping regex"
+assert_fixed_string "location regex pattern" 'Part\s+(\d+)\s*:' "${MANIFEST_MD}"
 echo
 
 # ─── AC-6: plan-reviewer.md Pipeline Metrics subsection ────────────────────────────────
@@ -183,15 +185,15 @@ echo
 # ─── AC-9: IMP-03 integration — regression_ids from checkpoint.issues_history ──────────
 echo "AC-9: IMP-03 integration — regression_ids sourced from issues_history"
 assert_fixed_string "regression_ids canonical source" "checkpoint.issues_history[]" "${WORKFLOW_MD}"
-assert_fixed_string "IMP-03 post_delegation step 5 reference" "IMP-03 post_delegation step 5" "${WORKFLOW_MD}"
+assert_fixed_string "IMP-03 post_delegation step 5 reference" "IMP-03 post_delegation step 5" "${MANIFEST_MD}"
 echo
 
 # ─── AC-10: KD-6 unmappable-location fallback ──────────────────────────────────────────
 echo "AC-10: KD-6 unmappable-location fallback documented"
-assert_fixed_string "imp04_unmapped_location record_kind" "imp04_unmapped_location" "${WORKFLOW_MD}"
-assert_fixed_string "KD-6 fallback rule"                  "KD-6 fallback" "${WORKFLOW_MD}"
+assert_fixed_string "imp04_unmapped_location record_kind" "imp04_unmapped_location" "${MANIFEST_MD}"
+assert_fixed_string "KD-6 fallback rule"                  "KD-6 fallback" "${MANIFEST_MD}"
 # CR-002: telemetry signal split — cross-cutting (empty location) vs unmapped (non-empty no-match)
-assert_fixed_string "imp04_cross_cutting_issue record_kind"   "imp04_cross_cutting_issue" "${WORKFLOW_MD}"
+assert_fixed_string "imp04_cross_cutting_issue record_kind"   "imp04_cross_cutting_issue" "${MANIFEST_MD}"
 assert_fixed_string "cross_cutting documented in protocol"    "imp04_cross_cutting_issue" "${PROTOCOL_MD}"
 echo
 
