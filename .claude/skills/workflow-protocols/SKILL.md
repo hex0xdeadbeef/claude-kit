@@ -27,13 +27,15 @@ Read this SKILL.md for protocol overview. Then load Core Deps files:
 ### Step 2: Use event-driven protocol loading
 Do NOT load all protocols upfront. Load on-demand per Event Triggers below:
 - Completing a phase → read [Checkpoint Protocol](checkpoint-protocol.md)
-- Forming handoff → read [Handoff Protocol](handoff-protocol.md)
+- Forming handoff (common path) → read [Handoff Contracts](handoff-contracts.md) (5 KB, core contracts only)
+  For IMP-02/03/04 protocol details → also read [Handoff Protocol](handoff-protocol.md)
 - Mismatch signal → read [Re-routing](re-routing.md)
 - All phases done → read [Pipeline Metrics](pipeline-metrics.md)
 
 ### Step 3: Always form handoff payload
 CRITICAL: Every phase MUST produce a structured handoff payload (context + artifact + metadata) for the next phase.
-Read [Handoff Protocol](handoff-protocol.md) for the 4 pipeline contracts (+ 1 tool contract for code-researcher) before forming any handoff.
+Read [Handoff Contracts](handoff-contracts.md) for the 5 pipeline contracts before forming any handoff.
+For IMP-02/03/04 implementation details (verdict envelopes, ID normalization, diff-based replan) → also read [Handoff Protocol](handoff-protocol.md).
 
 ## Example
 
@@ -79,7 +81,8 @@ For all troubleshooting cases, see [Examples & Troubleshooting](examples-trouble
 
 ## Event Triggers
 - Phase completed → write checkpoint (see [Checkpoint Protocol](checkpoint-protocol.md))
-- Forming handoff → read handoff contract (see [Handoff Protocol](handoff-protocol.md))
+- Forming handoff (common path) → read [Handoff Contracts](handoff-contracts.md) (5 KB, core contracts only)
+  For IMP-02/03/04 protocol details → also read [Handoff Protocol](handoff-protocol.md)
 - plan-review or coder signals mismatch → re-route (see [Re-routing](re-routing.md))
 - All phases done → collect metrics (see [Pipeline Metrics](pipeline-metrics.md))
 - Phase 5 cleanup → read cleanup protocol (see [State Layer](state-layer.md))
@@ -93,7 +96,9 @@ These files define fundamental workflow behavior and are loaded at pipeline star
 
 ## Protocol References
 For detailed protocol specifications, read the supporting files in this skill directory:
-- [Handoff Protocol](handoff-protocol.md) — 4 contracts + narrative casting template
+- [Handoff Contracts](handoff-contracts.md) — 5 core contracts, lightweight (5 KB); use for common-path handoff formation
+- [Handoff Protocol](handoff-protocol.md) — full protocol: 5 contracts + IMP-02/03/04 implementation details (22 KB)
+- [Diff Manifest](diff-manifest.md) — diff-based re-plan algorithm (STEP 0.5) + planner re-invocation template; load on iter 2+ only
 - [Checkpoint Protocol](checkpoint-protocol.md) — format, recovery, example
 - [State Layer](state-layer.md) — file contracts, lifecycle categories, cleanup protocol for .claude/workflow-state/
 - [Re-routing](re-routing.md) — 3 triggers + tracking fields + learning
