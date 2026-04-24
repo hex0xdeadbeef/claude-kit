@@ -48,7 +48,7 @@ if _checkpoints_pre:
 
 # 1. Checkpoint state (highest priority)
 try:
-    checkpoints = sorted(glob.glob(os.path.join(STATE_DIR, "*-checkpoint.yaml")))
+    checkpoints = _checkpoints_pre  # reuse pre-computed glob from hash-guard (avoids duplicate syscall)
     if checkpoints:
         latest = checkpoints[-1]
         feature = os.path.basename(latest).replace("-checkpoint.yaml", "")

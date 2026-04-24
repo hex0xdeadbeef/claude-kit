@@ -342,4 +342,3 @@ Available through **code-review-rules** skill (auto-loaded via frontmatter):
 <!-- DYNAMIC -->
 <!-- additionalContext injected by SubagentStart hook (inject-review-context.sh):
      feature, complexity, iteration, verify_status, prior review issues, delta-review-mode block -->
-

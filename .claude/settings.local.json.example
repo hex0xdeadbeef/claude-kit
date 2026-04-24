@@ -10,7 +10,7 @@
     "  - Configure worktree.sparsePaths for monorepo optimization"
   ],
   "_env_comment": [
-    "Keys with a leading '_' are inactive examples; remove the underscore prefix to activate them.",
+    "Within the `env` block below, keys with a leading '_' are inactive — remove the underscore prefix to activate them. (Top-level `_comment` / `_env_comment` / `_worktree_comment` are documentation keys, not env vars.)",
     "CLAUDE_HANDOFF_VALIDATION_MODE  (IMP-01) warn|strict — strict blocks writes of invalid handoff JSON",
     "CLAUDE_VERDICT_VALIDATION_MODE  (IMP-02) warn|strict — strict forces VERDICT_JSON schema pass (falls back to regex otherwise)",
     "Both envs are independent. Default: warn on both. Set both to strict for full schema enforcement.",
