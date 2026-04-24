@@ -23,13 +23,16 @@ files:
     written_by:
       - "Orchestrator — phase-end checkpoint after every phase"
       - "CronCreate — auto-save every 10 min (L/XL tasks only)"
+      - "Orchestrator — delta_review_mode at plan-review pre_delegation (STEP MODE)"
+      - "Orchestrator — iteration_commit_sha[N] at code-review pre_delegation (STEP SHA)"
     read_by:
       - "save-progress-before-compact.sh (PreCompact) — saves state to additionalContext"
       - "verify-state-after-compact.sh (PostCompact) — re-injects state summary"
-      - "inject-review-context.sh (SubagentStart) — injects context for review agents"
+      - "inject-review-context.sh (SubagentStart) — injects context for review agents; reads delta_review_mode (both plan-reviewer and code-reviewer branches)"
+      - "inject-review-context.sh (SubagentStart) — reads iteration_commit_sha (code-reviewer branch only) for git diff delta range"
       - "session-analytics.sh (SessionEnd) — reads feature/phase/complexity for analytics"
       - "audit-config-change.sh (ConfigChange) — existence check only (active workflow gate)"
-    schema: "SEE checkpoint-protocol.md — 12+ YAML fields"
+    schema: "SEE checkpoint-protocol.md — 14+ YAML fields (incl. iteration_commit_sha, delta_review_mode added by delta-review-mode feature)"
     lifecycle: session-specific
     cleanup: "Phase 5 completion — deleted LAST (after metrics collected and final checkpoint written)"
 

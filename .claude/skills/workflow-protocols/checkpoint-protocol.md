@@ -41,6 +41,16 @@ checkpoint_protocol:
       status: "PASS|FAIL|null"
       command: "go vet ./... && make fmt && make lint && make test"
       timestamp: "ISO 8601 | null"
+    delta_review_mode: "off|warn|strict"
+    # Written by orchestrator in plan_review_delegation.pre_delegation STEP MODE.
+    # Read by inject-review-context.sh (prefers checkpoint over live env — R-3).
+    # Default "off" (safe rollout) → byte-identical behavior until opt-in.
+    iteration_commit_sha:
+      "1": "{git-sha-for-coder-iter-1-output}"
+      "2": "{git-sha-for-coder-iter-2-output}"
+    # Written by orchestrator in code_review_delegation.pre_delegation STEP SHA.
+    # Map key = code-review iter N being started (1-based string key).
+    # Read by hook as iteration_commit_sha[N-1] for code-reviewer delta on iter N+1.
     issues_history:
       - phase: 2
         iteration: 1

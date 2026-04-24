@@ -36,6 +36,15 @@ pipeline_metrics:
       total_duration_ms: N
       background_mode_used: true|false
       note: "Collected from Agent/Task tool return metadata (v2.1.30+). Zero if code-researcher not invoked."
+    delta_review_mode: "off|warn|strict"
+    # From checkpoint.delta_review_mode (set at plan-review pre_delegation).
+    # Enables token-savings analysis: compare runs with off vs warn.
+    delta_focus_injected:
+      plan_review: true|false
+      code_review: true|false
+    # Derived by orchestrator at Phase 5: true if delta_review_mode != "off"
+    # AND iteration count >= 2 for that review phase (indicating block was emitted).
+    # Used to measure adoption rate and correlate with review iteration reduction.
 
 # ─────────────────────────────────────────────────────
 # STORAGE

@@ -110,3 +110,49 @@ disable-model-invocation: true
       If manifest file missing (first iter 2+ run before STEP 0.5 executed, or KD-6
       triggered with empty mapping) → planner skips phase_0.8, writes plan without
       diff section → plan-reviewer runs full validation (AC-8 path).
+
+## Reviewer consumer (IMP-04 extension — delta-review-mode)
+
+On iteration ≥2, `inject-review-context.sh` (SubagentStart hook) reads
+`{feature}-diff-manifest.json` to emit a `[Iter N focus — delta only]` block
+into `additionalContext` for plan-reviewer and code-reviewer.
+Gated by `CLAUDE_DELTA_REVIEW_MODE` env-flag (default `off`):
+`off` → byte-identical to current behavior (AC-1, zero behavioral change).
+
+### Plan-reviewer consumer
+
+- Hook reads manifest Parts by status (UNCHANGED / NEEDS_UPDATE / NEW).
+- KD-6 fallback cascade: if ANY Part has `KD-6 fallback` in `reason` field →
+  emits "ALL Parts (KD-6 fallback active)" — effectively full review, no partial scope.
+- Normal path: emits "Parts changed since iter N-1: {ids}" + "Parts unchanged: {ids}".
+- Missing manifest (first iter 2 before STEP 0.5 ran, or KD-6 reroute cleared it) →
+  hook skips emission silently — reviewer runs full validation (AC-8 backward-compat).
+
+### Code-reviewer consumer
+
+- Does NOT read manifest Part list directly (Parts don't map 1:1 to files in general).
+- Instead: reads `checkpoint.iteration_commit_sha[N-1]` → runs
+  `git diff {prior_sha}..HEAD --name-only --stat`.
+- Emits file-level delta: files changed + stat summary since coder iter N-1.
+- KD-6 plan cascade applies on the PLAN side only. Code side still shows git-based
+  file list (git delta is independent of manifest Part mapping).
+- Missing SHA or git failure → hook emits WARN to stderr and skips emission (AC-5).
+
+### Env-flag semantics
+
+| Mode | Header in block | Reviewer behavior |
+| ------ | ----------------- | ------------------- |
+| `off` | (no block) | No change from current — byte-identical output |
+| `warn` | `HINT: focus on ...` | Advisory — full review still recommended |
+| `strict` | `FOCUS: review only ...` | Narrower scope; CONTRACT-BREAK GUARD still required |
+
+### Non-blocking contract
+
+`inject-review-context.sh` MUST exit 0 even on:
+
+- manifest parse failure or missing file
+- missing `iteration_commit_sha[N-1]` in checkpoint
+- `git diff` failure (timeout, detached HEAD in worktree context)
+
+Hook logs `WARN:` to stderr and skips block emission. Reviewer agent continues
+with existing context — no degradation in review quality.
