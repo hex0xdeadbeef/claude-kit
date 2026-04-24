@@ -32,7 +32,7 @@ export _AGENT_TYPE="$AGENT_TYPE"
 STATE_DIR="${CLAUDE_WORKFLOW_STATE_DIR:-.claude/workflow-state}"
 
 OUTPUT=$(python3 << 'PYTHON_EOF'
-import json, os, glob
+import json, os, glob, re, subprocess
 
 
 def extract_yaml_section(text, section_name):
@@ -146,6 +146,132 @@ def aggregate_pipeline_metrics(metrics_file, complexity, agent_type):
         lines.append(f"- Note: {recent_blockers}/3 recent runs had BLOCKER issues — focus security/architecture checks")
 
     return "\n".join(lines) if len(lines) > 1 else None
+
+
+def emit_delta_focus_block(lines, state_dir, feature, agent_type, content, current_iter_str, delta_mode):
+    """Emit [Iter N focus — delta only] block into additionalContext lines.
+
+    Non-blocking: any failure returns silently without modifying lines.
+    AC-1: mode=off never reaches here (guarded at call site).
+    AC-5/KD-5: missing SHA → WARN stderr + return.
+    """
+    try:
+        iter_num = int(str(current_iter_str).split("/")[0])
+    except (ValueError, AttributeError):
+        return
+    if iter_num < 2:
+        return  # no delta on iter 1 — nothing to compare against
+
+    block = []
+    block.append(f"[Iter {iter_num} focus — delta only] (mode: {delta_mode})")
+
+    if agent_type == "plan-reviewer":
+        manifest_path = os.path.join(state_dir, f"{feature}-diff-manifest.json")
+        if not os.path.isfile(manifest_path):
+            return  # AC-2: no manifest → no block (normal on iter 1 or KD-6 reroute)
+        try:
+            with open(manifest_path) as mf:
+                manifest = json.loads(mf.read())
+            if not isinstance(manifest, list):
+                return
+        except Exception:
+            return  # parse failure → graceful no-op
+
+        # KD-5 (spec): KD-6 fallback cascade — any Part with "KD-6 fallback" reason
+        kd6_active = any("KD-6 fallback" in (e.get("reason") or "") for e in manifest)
+        if kd6_active:
+            header = "HINT" if delta_mode == "warn" else "FOCUS"
+            block.append(
+                f"{header}: ALL Parts require review "
+                f"(KD-6 fallback active — manifest had unmappable issue locations)"
+            )
+        else:
+            changed = [e for e in manifest if e.get("status") in ("NEEDS_UPDATE", "NEW")]
+            unchanged = [e for e in manifest if e.get("status") == "UNCHANGED"]
+            if delta_mode == "warn":
+                block.append("HINT: focus on changed Parts first — full plan still accessible if needed")
+            else:
+                block.append("FOCUS: review only changed Parts unless regression suspected")
+            changed_ids = ", ".join(str(e.get("part_id", "?")) for e in changed)
+            unchanged_ids = ", ".join(str(e.get("part_id", "?")) for e in unchanged)
+            if changed_ids:
+                block.append(f"Parts changed since iter {iter_num - 1}: {changed_ids}")
+            if unchanged_ids:
+                block.append(f"Parts unchanged (preservation-contract): {unchanged_ids}")
+
+        block.append(f"Full plan: .claude/prompts/{feature}.md")
+
+    elif agent_type == "code-reviewer":
+        # Extract iteration_commit_sha[iter_num - 1] from checkpoint YAML (PR-001: anchored regex)
+        prior_sha = None
+        sha_section = extract_yaml_section(content, "iteration_commit_sha")
+        if sha_section:
+            prior_key = str(iter_num - 1)
+            for sha_line in sha_section:
+                m = re.match(
+                    rf'^\s*["\']?{re.escape(prior_key)}["\']?\s*:\s*["\']?([a-f0-9]{{7,40}})["\']?\s*$',
+                    sha_line
+                )
+                if m:
+                    prior_sha = m.group(1)
+                    break
+
+        if not prior_sha:
+            # AC-5: graceful no-op — do not block review
+            import sys as _sys
+            print(
+                f"[inject-review-context] WARN: iteration_commit_sha[{iter_num - 1}] "
+                f"missing — code delta skipped",
+                file=_sys.stderr
+            )
+            return
+
+        # Run git diff for file-level delta (R-6: wrap in try/except)
+        try:
+            result_names = subprocess.run(
+                ["git", "diff", f"{prior_sha}..HEAD", "--name-only"],
+                capture_output=True, text=True, timeout=15
+            )
+            result_stat = subprocess.run(
+                ["git", "diff", f"{prior_sha}..HEAD", "--stat"],
+                capture_output=True, text=True, timeout=15
+            )
+            name_only = result_names.stdout.strip()
+            stat_out = result_stat.stdout.strip()
+        except Exception:
+            return  # git failure → graceful no-op (R-6)
+
+        if not name_only:
+            return  # no files changed between iterations — skip emission
+
+        if delta_mode == "warn":
+            block.append(
+                "HINT: focus on changed files first — "
+                "full branch diff accessible via git diff $BASE...HEAD"
+            )
+        else:
+            block.append(
+                "FOCUS: review only changed files unless regression suspected"
+            )
+
+        prior_sha_short = prior_sha[:8] if len(prior_sha) >= 8 else prior_sha
+        block.append(f"Files changed since iter {iter_num - 1} (prior_sha={prior_sha_short}..HEAD):")
+        for fname in name_only.splitlines():
+            if fname.strip():
+                block.append(f"  {fname.strip()}")
+        stat_lines = stat_out.splitlines()
+        if stat_lines:
+            block.append(f"Stat: {stat_lines[-1].strip()}")
+
+        block.append("Full branch diff: git diff $BASE...HEAD")
+
+    else:
+        return  # unknown agent type → skip
+
+    if len(block) > 1:
+        lines.append("")
+        lines.extend(block)
+
 
 agent_type = os.environ.get("_AGENT_TYPE", "unknown")
 
@@ -375,6 +501,17 @@ if comp_lines:
     except Exception:
         pass
 
+
+# IMP-04 delta-review-mode (delta-review-mode feature — AC-2..AC-5, KD-3)
+# Prefer checkpoint-stored mode for consistency across phases (R-3 mitigation).
+_delta_mode = (
+    extract_top_level(content, "delta_review_mode")
+    or os.environ.get("CLAUDE_DELTA_REVIEW_MODE", "off").lower()
+)
+if _delta_mode in ("warn", "strict"):
+    emit_delta_focus_block(
+        lines, state_dir, feature, agent_type, content, current_iter, _delta_mode
+    )
 
 # Pipeline history (IMP-F) — inject only if sufficient history exists
 metrics_summary = aggregate_pipeline_metrics(

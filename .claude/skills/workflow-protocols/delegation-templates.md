@@ -49,6 +49,17 @@ diff-manifest — both required for iteration 2+ correctness.
     Iteration: {N}/3
   returns: "Verdict (APPROVED/NEEDS_CHANGES/REJECTED) + issues + handoff for coder"
   pre_delegation: |
+    STEP MODE (delta-review-mode — KD-3, R-3):
+    Write delta_review_mode to checkpoint once per pipeline run (idempotent).
+    Read CLAUDE_DELTA_REVIEW_MODE env (default "off" if unset).
+    If checkpoint already has delta_review_mode field with a non-empty value → SKIP (preserve first-write value).
+    Purpose: inject-review-context.sh prefers checkpoint value over live env so that
+    flipping the env mid-workflow does not change behavior in-flight (R-3 mitigation).
+    Implementation: read checkpoint YAML, check for delta_review_mode field.
+    If absent: add line `delta_review_mode: "{env_value}"` and write checkpoint.
+    Note: "off" is the default for safe rollout (v1). Flip to "warn" in settings.local.json
+    to enable delta-focus hints (see spec §10 rollout plan + CLAUDE.md docs).
+
     STEP -1 (P0-04): Write .claude/workflow-state/.iteration-in-flight BEFORE delegating.
     Use Write tool (auto-allowed). Content (JSON, one file per session):
       {"agent": "plan-reviewer", "started_at": "{ISO-8601 UTC timestamp, e.g. 2026-04-23T14:30:00Z}", "feature": "{feature}", "iteration": {N}}
@@ -204,6 +215,31 @@ diff-manifest — both required for iteration 2+ correctness.
     Iteration: {N}/3
   returns: "Verdict (APPROVED/APPROVED_WITH_COMMENTS/CHANGES_REQUESTED) + issues + handoff for completion"
   pre_delegation: |
+    STEP SHA (KD-2 — iteration_commit_sha):
+    Record current HEAD SHA in checkpoint before delegating to code-reviewer.
+    This SHA represents the coder's committed state for this review iteration.
+    inject-review-context.sh reads iteration_commit_sha[N-1] on iter ≥2 to
+    compute git diff {prior_sha}..HEAD → file-level delta focus for code-reviewer.
+
+    Steps:
+    1. Run: git rev-parse HEAD → current_sha
+       On failure (git unavailable, detached HEAD): WARN + skip SHA write (non-blocking).
+    2. Determine N = current code_review iteration being started.
+       Read checkpoint.iteration.code_review = "{N}/3", parse N as integer.
+       (Counter is already incremented to N/3 at pre_delegation time.)
+    3. Update checkpoint: add/overwrite iteration_commit_sha[N] = current_sha.
+       Format (in checkpoint YAML):
+         iteration_commit_sha:
+           "1": "{sha}"   # written at iter 1 pre_delegation
+           "2": "{sha}"   # written at iter 2 pre_delegation
+    4. Hook reading convention: for code-reviewer SubagentStart iter N (N ≥ 2),
+       read iteration_commit_sha[N-1] as prior_sha.
+       Example: iter 2 → reads sha["1"] → git diff sha["1"]..HEAD.
+
+    Failure handling: if git rev-parse fails or checkpoint write fails →
+    log WARN, do NOT block delegation. Hook will detect missing SHA and
+    skip code delta emission gracefully (non-blocking, AC-5).
+
     STEP -1 (P0-04): Write .claude/workflow-state/.iteration-in-flight BEFORE delegating.
     Use Write tool (auto-allowed). Content (JSON, one file per session):
       {"agent": "code-reviewer", "started_at": "{ISO-8601 UTC timestamp, e.g. 2026-04-23T14:30:00Z}", "feature": "{feature}", "iteration": {N}}

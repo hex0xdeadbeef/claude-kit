@@ -166,6 +166,43 @@ role:
    - Security issue (any severity) → always BLOCKER
    - Import matrix violation → always BLOCKER
 
+## Delta Focus Interpretation (iter 2+)
+
+When `additionalContext` contains a `[Iter N focus — delta only] (mode: warn|strict)`
+block (injected by `inject-review-context.sh` when `CLAUDE_DELTA_REVIEW_MODE != off`):
+
+**Block structure (example):**
+```
+[Iter 2 focus — delta only] (mode: warn)
+HINT: focus on changed Parts first — full plan still accessible if needed
+Parts changed since iter 1: 2, 5
+Parts unchanged (preservation-contract): 1, 3, 4
+Full plan: .claude/prompts/{feature}.md
+```
+
+**Mode semantics:**
+- `mode: warn` — the block is a HINT. You MAY prioritize NEEDS_UPDATE/NEW Parts
+  first but MUST still run VALIDATE ARCHITECTURE (step 3) and CONTRACT-BREAK GUARD
+  (step 3.5) per their defined scopes. Step 3 already uses the plan's
+  `## Diff vs prior iteration` section for Part-selective scoping — the delta block
+  adds a pre-agent focus signal but does NOT change step 3's logic.
+- `mode: strict` — the block is a FOCUS INSTRUCTION. Prioritize NEEDS_UPDATE/NEW
+  Parts. Still run CONTRACT-BREAK GUARD (step 3.5) across ALL Parts — strict mode
+  does NOT skip cross-cutting checks. If `[REGRESSION ALERT]` appears in
+  `additionalContext` → escalate to full review regardless of mode.
+
+**KD-6 fallback:** If block says "ALL Parts (KD-6 fallback active)" → treat as
+full review regardless of mode. KD-6 means manifest had unmappable issue locations.
+
+**Relationship to step 3 (IMP-04 Part-selective):** The delta block is ORTHOGONAL
+to the plan's `## Diff vs prior iteration` section. Step 3 reads the PLAN section
+for architecture scan scoping and `parts_validated[]` reporting. The delta block is
+an additional pre-agent HINT — it does not replace or override step 3's plan-section
+logic. `parts_validated[]` in VERDICT_JSON continues to reflect step 3's scope.
+
+**Fallback:** If uncertain about cross-cutting impact → ignore the delta block and
+run full review. Advisory hints always yield to correct verdicts.
+
 ## Output Format
 
 CRITICAL: Output the verdict in TWO steps to guarantee capture even if you run out of turns:

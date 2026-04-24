@@ -169,6 +169,42 @@ role:
    - Security issue (any severity) → always BLOCKER
    - Import matrix violation → always BLOCKER
 
+## Delta Focus Interpretation (iter 2+)
+
+When `additionalContext` contains a `[Iter N focus — delta only] (mode: warn|strict)`
+block (injected by `inject-review-context.sh` when `CLAUDE_DELTA_REVIEW_MODE != off`):
+
+**Block structure (example):**
+```
+[Iter 2 focus — delta only] (mode: warn)
+HINT: focus on changed files first — full branch diff accessible via git diff $BASE...HEAD
+Files changed since iter 1 (prior_sha=b5685fd..HEAD):
+  internal/handler/user.go
+  internal/service/user.go
+Stat: 2 files, +57 -9
+Full branch diff: git diff $BASE...HEAD
+```
+
+**Mode semantics:**
+- `mode: warn` — the file list is a HINT. Run full `git diff $BASE...HEAD` per
+  step 3 (GET CHANGES) as the ground-truth diff. Prioritize reviewing listed files
+  first but do not skip others — this is advisory only.
+- `mode: strict` — you MAY run `git diff {prior_sha}..HEAD` as the PRIMARY diff
+  for efficiency, but MUST fall back to `git diff $BASE...HEAD` (ground truth) if:
+    - `[REGRESSION ALERT]` appears in `additionalContext`
+    - You suspect cross-cutting changes not visible in the narrower delta range
+    - `git diff {prior_sha}..HEAD` fails or returns no output
+
+**Ground-truth rule:** `git diff $BASE...HEAD` is always the ground-truth branch diff
+(all changes since branch was cut). The delta range `{prior_sha}..HEAD` is a NARROWER
+view showing only what changed since the PREVIOUS review iteration.
+Using the narrow range saves tokens on iter 2+ when most of the branch is already
+reviewed — but it may miss regressions in code that was NOT changed between iter 1
+and iter 2. Always check `[REGRESSION ALERT]` first.
+
+**Missing block or mode=off:** No behavior change (iter 1, or flag not set). Always
+available: `git diff $BASE...HEAD` gives the full picture per step 3.
+
 ## Output Format
 
 CRITICAL: Output the verdict in TWO steps to guarantee capture even if you run out of turns:
