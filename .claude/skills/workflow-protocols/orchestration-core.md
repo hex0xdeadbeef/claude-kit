@@ -63,90 +63,9 @@ flowchart LR
 
 **Phase 4 — Code Review:** Before delegating, run `git worktree prune 2>/dev/null || true` to clean stale worktree metadata from crashed sessions. Delegate to code-reviewer agent. APPROVED → Done. APPROVED_WITH_COMMENTS → Done (log comments, proceed to completion). CHANGES_REQUESTED → Phase 3 (iteration N/3).
 
-**Phase 2/4 — Incomplete Output Recovery:** If a review agent (plan-reviewer or code-reviewer) returns without a clear verdict:
+**Phase 2/4 — Incomplete Output Recovery:** If a review agent (plan-reviewer or code-reviewer) returns without a clear verdict, the orchestrator runs an 8-step recovery procedure: filter review-completions.jsonl → direct transcript read (P3-1) → launch lightweight verdict-recovery agent if needed. This scenario is rare (after RULE_5 "Output First" was added to agents) but the recovery path is mandatory when triggered.
 
-1. Validate return text for verdict keyword (SEE incomplete-output-recovery.md → output_validation)
-2. If missing → check review-completions.jsonl (save-review-checkpoint.sh extracts verdict on SubagentStop via transcript). **Apply filter rules below** before treating any entry as authoritative.
-3. If no matching entry OR verdict is UNKNOWN → **orchestrator direct transcript read** (P3-1): read the agent's transcript JSONL directly (path from review-completions.jsonl `agent_transcript_path` field or `.claude/workflow-state/worktree-events-debug.jsonl`), search for `VERDICT:` regex in last assistant messages. This makes the orchestrator self-reliant — not dependent solely on hook infrastructure.
-4. If still no verdict → launch **verdict-recovery** agent (NOT re-launch of full plan-reviewer/code-reviewer). See .claude/agents/verdict-recovery.md — lightweight haiku, ~30s, no memory/skills/checklist.
-5. If a matching entry exists but verdict is still UNKNOWN (IMP-H already blocked once and agent still failed) → launch **verdict-recovery** agent — do NOT re-block, do NOT re-launch full review agent.
-6. If verdict recovered from checkpoint, direct transcript read, or verdict-recovery → continue pipeline normally.
-7. If verdict-recovery also fails → WARN user, show filtered review-completions.jsonl data + agent output summary, request manual verdict.
-8. Write checkpoint with `verdict: "INCOMPLETE"` and `recovery_attempted: true`.
-
-**UNKNOWN verdict resolution rules (IMP-06):**
-
-```yaml
-phase_2_recovery:  # plan-reviewer
-  step_1: "Read review-completions.jsonl → filter by session_id == current AND effective_agent_type == 'plan-reviewer'"
-  step_2: "If no matching entry → check injected context (P1-3) for line matching 'prior_failed_attempts: N' (where N is an integer)"
-  step_2a: "If prior_failed_attempts > 0 → review ran but verdict was lost → try direct transcript read (P3-1) → if still missing, launch verdict-recovery (scope: plan)"
-  step_2b: "If prior_failed_attempts == 0 or line absent → genuine UNKNOWN, review never ran → launch verdict-recovery (scope: plan)"
-  step_3: "If matching entry has verdict != UNKNOWN → use it, proceed"
-  step_4: "If matching entry has verdict == UNKNOWN → IMP-H already blocked once; try direct transcript read (P3-1) → if still missing, launch verdict-recovery"
-  step_5_direct_read: "P3-1 direct transcript read: locate transcript_path from review-completions.jsonl entry or worktree-events-debug.jsonl → read JSONL → reverse-search role:assistant for VERDICT: regex. Orchestrator-owned, no hook dependency."
-  forbidden: "NEVER re-launch plan-reviewer from incomplete-output path. Only loop-limit retries (NEEDS_CHANGES) re-launch planner/plan-reviewer."
-
-phase_4_recovery:  # code-reviewer
-  step_1: "Read review-completions.jsonl → filter by session_id == current AND effective_agent_type == 'code-reviewer'"
-  step_2: "If no matching entry → check injected context (P1-3) for line matching 'prior_failed_attempts: N' (where N is an integer)"
-  step_2a: "If prior_failed_attempts > 0 → review ran but verdict was lost → try direct transcript read (P3-1) → if still missing, launch verdict-recovery (scope: code)"
-  step_2b: "If prior_failed_attempts == 0 or line absent → genuine UNKNOWN, review never ran → launch verdict-recovery (scope: code)"
-  step_3: "If matching entry has verdict != UNKNOWN → use it, proceed"
-  step_4: "If matching entry has verdict == UNKNOWN → IMP-H already blocked once; try direct transcript read (P3-1) → if still missing, launch verdict-recovery"
-  step_5_direct_read: "P3-1 direct transcript read: locate agent_transcript_path from review-completions.jsonl entry or worktree-events-debug.jsonl → read JSONL → reverse-search role:assistant for VERDICT: regex. For code-reviewer (worktree agent), agent_transcript_path is the primary source."
-  forbidden: "NEVER re-launch plan-reviewer when Phase 4 is active. NEVER re-launch full code-reviewer from incomplete-output path."
-
-anti_patterns:
-  wrong_1:
-    symptom: "Orchestrator sees last entry in review-completions.jsonl is {agent:'unknown', verdict:'UNKNOWN'} and re-launches plan-reviewer"
-    why_wrong: "Entry is noise (payload with empty agent_type OR stale cross-session record). Must filter by effective_agent_type + session_id first."
-    right: "Filter first (IMP-02). If filtered result is empty → verdict-recovery, not plan-reviewer re-launch."
-  wrong_2:
-    symptom: "During Phase 4 (code review), orchestrator re-launches plan-reviewer because review-completions.jsonl has an UNKNOWN entry"
-    why_wrong: "Phase-agent mismatch. Phase 4 UNKNOWN resolution must target code-reviewer's output only."
-    right: "Filter by the agent owning the current phase (plan-reviewer for phase 2, code-reviewer for phase 4)."
-  wrong_3:
-    symptom: "Re-launch full plan-reviewer/code-reviewer (5+ min, memory, skills) on incomplete output"
-    why_wrong: "Same agent just failed to output verdict. Re-running won't help and costs 10x verdict-recovery."
-    right: "Use verdict-recovery (~30s, haiku, no memory/skills). Full-agent re-launch reserved for NEEDS_CHANGES/CHANGES_REQUESTED loop."
-
-cost_comparison:
-  verdict_recovery: "~30s, haiku, maxTurns:10, no memory, no skills — designed for this"
-  full_reviewer_relaunch: "~5min, sonnet, maxTurns:60, full memory+skills stack — overkill and likely to fail again for same reason"
-```
-
-**review-completions.jsonl filter rules (IMP-02):**
-
-When reading `review-completions.jsonl` for verdict recovery or prior-iteration context, the orchestrator MUST read from BOTH primary and fallback locations (P3-3), then filter entries:
-
-- Primary: `.claude/workflow-state/review-completions.jsonl`
-- Fallback: `/tmp/claude-review-completions-fallback.jsonl` (written by IMP-06 when primary write fails)
-- Deduplicate by `(session_id, completed_at, agent)` before filtering
-
-```yaml
-filter_predicate:
-  session_id: "== current session_id"
-  effective_agent_type:
-    in: ["plan-reviewer", "code-reviewer"]  # ignore "unknown" — noise
-    must_match: "the agent phase just delegated (phase 2 → plan-reviewer, phase 4 → code-reviewer)"
-  optional_cross_check:
-    agent_id: "present in agent-id-registry.jsonl for current session"
-    rationale: "double-guard — only trust entries whose agent_id was registered at SubagentStart"
-
-schema_note: |
-  Entries have two fields since IMP-05:
-    - "agent"               → raw payload agent_type (may be "unknown" for worktree agents)
-    - "effective_agent_type" → post-registry-recovery value (always present, authoritative)
-  ALWAYS filter on "effective_agent_type", NEVER on raw "agent".
-
-rationale: |
-  Without filtering, an "unknown" entry left over from a prior pipeline run or
-  a noise SubagentStop from an unrelated subagent would be mistaken for a
-  missing verdict from plan-reviewer, triggering an unnecessary re-launch (RC-4).
-```
-
-**Note:** This scenario is rare after RULE_5 (Output First) was added to agents. But validation remains as a safety net.
+→ 8-step procedure + IMP-06 UNKNOWN rules + IMP-02 filter predicates + anti-patterns → SEE [unknown-verdict-recovery.md](unknown-verdict-recovery.md).
 
 **Phase 0 — Get Task (optional):** Parse task from user input. Skip if ad-hoc.
 
@@ -154,8 +73,7 @@ rationale: |
 1. Create git commit (MANDATORY)
    - Message format: `{type}({scope}): {description}` (types: feat|fix|refactor|test|docs|chore)
    - Body (optional): max 3 lines, include plan path + complexity + review iterations
-   - Co-Authored-By: included by default (Claude Code system behavior)
-   - To strip: `cp .claude/templates/git-hooks/commit-msg .git/hooks/commit-msg && chmod +x .git/hooks/commit-msg` + set `GIT_STRIP_CO_AUTHOR=true` in settings.local.json env
+   - Co-Authored-By: included by default. To strip: `cp .claude/templates/git-hooks/commit-msg .git/hooks/commit-msg && chmod +x .git/hooks/commit-msg` + set `GIT_STRIP_CO_AUTHOR=true` in settings.local.json env.
 2. Collect pipeline metrics (SEE pipeline-metrics.md):
    a. Standard metrics: phases, iterations, complexity, issues, tools
    b. Code-researcher metrics: extract from Agent/Task tool return metadata (token count, tool uses, duration per invocation). Sum across all invocations in this pipeline run. Include background_mode_used flag.
@@ -204,27 +122,9 @@ tracking_protocol:
       else:
         proceed with iteration {counter}/3
     critical: "Guard runs BEFORE phase launch, not after verdict"
-
-  counter_recovery:
-    description: "When checkpoint is missing, infer iteration count from available signals"
-    strategy:
-      step_1: "Check handoff payload in current context → read iteration field"
-      step_2: "If no handoff → count issues_history entries for this cycle in context"
-      step_3: "If no context → git log --oneline | grep 'plan-review\\|code-review' (count re-runs)"
-      step_4: "If nothing found → assume iteration 1/3 (conservative) + WARN user"
-    warning: "Heuristic recovery is imprecise. After recovery, ALWAYS write checkpoint immediately."
-
-  iteration_summary_on_stop:
-    format: |
-      ## Loop Limit Reached ({cycle_name}: {N}/3)
-      | Iteration | Verdict | Key Issues |
-      |-----------|---------|------------|
-      | 1/3 | NEEDS_CHANGES | {issues from iteration 1} |
-      | 2/3 | NEEDS_CHANGES | {issues from iteration 2} |
-      | 3/3 | NEEDS_CHANGES | {unresolved issues} |
-      **Unresolved:** {list of persisting issues across all iterations}
-      **Recommendation:** {simplify scope | provide specific guidance | split task}
 ```
+
+→ For `counter_recovery` heuristic (checkpoint missing) and `iteration_summary_on_stop` format template (3/3 loop-limit user-facing STOP message) → SEE [counter-recovery.md](counter-recovery.md).
 
 ---
 
@@ -267,33 +167,14 @@ TEST                                         # Tests pass? (Go default: make tes
 | Yes          | Yes              | Yes           | No          | Phase 3: Fix tests                                   |
 | Yes          | Yes              | Yes           | Yes         | Phase 4: Code Review                                 |
 
-**Warning:** Heuristic fallback loses iteration counters — assume iteration 1/3.
+**Warning:** Heuristic fallback loses iteration counters — assume iteration 1/3. (For the inference heuristic itself — see Loop Limits pointer above.)
 
 **Note:** If checkpoint shows `phase_completed: 4` with `verdict: APPROVED` → resume from Phase 5 (Completion).
 
-**Checkpoint format:** `{feature}-checkpoint.yaml` with fields: feature, phase_completed, phase_name, iteration (plan_review N/3, code_review N/3), verdict, timestamp, complexity, route, handoff_payload, issues_history. Full specification: SEE [checkpoint-protocol.md] in workflow-protocols skill.
+**Checkpoint format:** `{feature}-checkpoint.yaml` with fields: feature, phase_completed, phase_name, iteration (plan_review N/3, code_review N/3), verdict, timestamp, complexity, route, handoff_payload, issues_history. Full specification: SEE [checkpoint-protocol.md](checkpoint-protocol.md).
 
 ---
 
 ## Cost Optimization
 
-**Prompt cache TTL for XL sessions (v2.1.108):**
-
-XL workflows span 5-10 phase transitions (5-30 min each). With the 5-min default cache TTL,
-each phase boundary is a cache-miss for API-key/Bedrock/Vertex/Foundry users — ~50% miss rate
-multiplies token costs proportionally.
-
-| Platform | Default TTL | Action |
-| -------- | ----------- | ------ |
-| Subscription (Pro/Max/Team) | 1H | No action — 1H is the default |
-| API-key, Bedrock, Vertex, Foundry | 5 min | Set `ENABLE_PROMPT_CACHING_1H=1` in `settings.local.json` |
-
-**Warm-up tip:** At `/workflow` start, a single CLAUDE.md read populates the cache.
-All subsequent phase transitions within the same 1H window then hit the cache — no
-additional warm-up steps needed; the startup reads are sufficient.
-
-**Override:** Set `FORCE_PROMPT_CACHING_5M=1` to revert to 5-min TTL
-(e.g., for non-XL sessions where 1H caching is unnecessary cost).
-
-See `settings.local.json.example` for the opt-in env block template. See CLAUDE.md
-`## Prompt Cache Policy` for full variable reference.
+**Prompt cache TTL for XL sessions** → SEE [CLAUDE.md § Prompt Cache Policy](../../../CLAUDE.md#prompt-cache-policy) for the authoritative reference (platform defaults, opt-in/override env variables, warm-up behavior).

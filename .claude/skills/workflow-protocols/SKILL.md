@@ -89,12 +89,13 @@ For all troubleshooting cases, see [Examples & Troubleshooting](examples-trouble
 - Multiple independent tasks identified (L/XL planner research, or independent failures) → read [Parallel Dispatch](parallel-dispatch.md)
 - Problem encountered → see [Examples & Troubleshooting](examples-troubleshooting.md)
 - Entering Phase 2 or Phase 4 delegation → read [Delegation Templates](delegation-templates.md) (IMP-01/03/04 protocol details)
-- INCOMPLETE verdict detected → read [Incomplete Output Recovery](incomplete-output-recovery.md)
+- INCOMPLETE verdict detected → read [Incomplete Output Recovery](incomplete-output-recovery.md) AND [Unknown Verdict Recovery](unknown-verdict-recovery.md) (IMP-06 UNKNOWN resolution rules + IMP-02 filter predicates)
+- Checkpoint missing (heuristic session recovery) OR loop limit reached (3/3) → read [Counter Recovery](counter-recovery.md) (counter_recovery heuristic + iteration_summary_on_stop format)
 
 ## Core Deps (workflow-only, loaded at startup)
 These files define fundamental workflow behavior and are loaded at pipeline startup (step 0.1):
 - [Autonomy](autonomy.md) — 3 modes (INTERACTIVE/AUTONOMOUS/RESUME), stop/continue conditions
-- [Orchestration Core](orchestration-core.md) — pipeline phases, loop limits (max 3), session recovery
+- [Orchestration Core](orchestration-core.md) — pipeline phases, loop rules (max 3), session recovery tables. Heavy recovery paths (IMP-06 UNKNOWN verdict, counter heuristics, loop-limit summary) are extracted to on-demand files (see Protocol References).
 
 ## Protocol References
 For detailed protocol specifications, read the supporting files in this skill directory:
@@ -110,3 +111,5 @@ For detailed protocol specifications, read the supporting files in this skill di
 - [Examples & Troubleshooting](examples-troubleshooting.md) — execution examples, common mistakes, troubleshooting
 - [Agent Memory Protocol](agent-memory-protocol.md) — shared memory behavior for all `memory: project` agents
 - [Parallel Dispatch](parallel-dispatch.md) — decision flowchart, research multi-dispatch, failure isolation, conflict detection
+- [Unknown Verdict Recovery](unknown-verdict-recovery.md) — IMP-06 UNKNOWN verdict resolution rules + IMP-02 filter predicates + anti-patterns + cost comparison; load ONLY on INCOMPLETE verdict
+- [Counter Recovery](counter-recovery.md) — counter_recovery heuristic (missing checkpoint) + iteration_summary_on_stop format (3/3 limit hit); load ONLY when the trigger fires
