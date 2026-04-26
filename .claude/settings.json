@@ -72,7 +72,7 @@
       "/Users/dmitriym/Desktop/claude-kit/.claude/workflow-state"
     ]
   },
-  "model": "sonnet",
+  "model": "opus",
   "enabledMcpjsonServers": [
     "sequential-thinking",
     "context7",
@@ -444,8 +444,5 @@
       "CLAUDE.md"
     ]
   },
-  "autoMemoryEnabled": true,
-  "thinking": {
-    "type": "adaptive"
-  }
+  "autoMemoryEnabled": true
 }
