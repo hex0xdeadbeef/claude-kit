@@ -6,7 +6,7 @@
 ---
 
 ## Overview
-The GENERATION subagent transforms accumulated research from earlier phases into concrete artifacts: CLAUDE.md, skills, rules, .claude/PROJECT-KNOWLEDGE.md, and memory.json. It respects the configured mode (CREATE/AUGMENT/UPDATE) and honors dry_run settings.
+The GENERATION subagent transforms accumulated research from earlier phases into concrete artifacts: CLAUDE.md, skills, rules, .claude/PROJECT-KNOWLEDGE.md, and memory.json. It respects the configured mode (CREATE/AUGMENT/POPULATE/UPDATE) and honors dry_run settings.
 
 ---
 
@@ -580,7 +580,7 @@ subagent_result:
   status: "success" | "error" | "partial"
   state_updates:
     generate:
-      mode: "CREATE" | "AUGMENT" | "UPDATE"
+      mode: "CREATE" | "AUGMENT" | "POPULATE" | "UPDATE"
       artifacts:
         - type: "CLAUDE.md" | "skill" | "rule" | "command" | "knowledge" | "memory"
           path: "[full/path/to/file]"

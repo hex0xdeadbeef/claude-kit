@@ -365,7 +365,7 @@ rules:
   - id: 1
     rule: "Complete all phases without user interruption"
   - id: 2
-    rule: "Detect mode automatically (CREATE/AUGMENT/UPDATE)"
+    rule: "Detect mode automatically (CREATE/AUGMENT/POPULATE/UPDATE)"
   - id: 3
     rule: "Report confidence scores for each finding"
   - id: 4
@@ -441,7 +441,7 @@ reference_files:
   - file: "reference/scoring.md"
     purpose: "Confidence scoring system"
   - file: "templates/project-knowledge.md"
-    purpose: ".claude/PROJECT-KNOWLEDGE.md template — Plan-stage CONFIG CONTRACT (7 canonical sections + 14 required slots) AT TOP + analytical research (12 sections) AFTER. SEE: .claude/PROJECT-KNOWLEDGE.md.example for schema, deps/state-contract.md → ## Plan-Stage Contract section for full wire-format docs, ## CONTRACT LINKAGE section below for consumer registry."
+    purpose: ".claude/PROJECT-KNOWLEDGE.md template — Plan-stage CONFIG CONTRACT (7 canonical sections + 14 required slots) AT TOP + analytical research (14 sections) AFTER. SEE: .claude/PROJECT-KNOWLEDGE.md.example for schema, deps/state-contract.md → ## Plan-Stage Contract section for full wire-format docs, ## CONTRACT LINKAGE section below for consumer registry."
 
 # ════════════════════════════════════════════════════════════════════════════════
 # CHECKLIST
@@ -449,7 +449,7 @@ reference_files:
 
 checklist:
   - "Directory exists and is accessible"
-  - "Mode detected (CREATE/AUGMENT/UPDATE)"
+  - "Mode detected (CREATE/AUGMENT/POPULATE/UPDATE)"
   - "Monorepo/module structure detected"
   - "Language detected with confidence"
   - "Symbol graph built with repo-map"

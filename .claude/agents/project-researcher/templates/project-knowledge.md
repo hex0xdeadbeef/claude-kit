@@ -394,7 +394,7 @@ Level 4 (entry):    <packages>
 
 ## Metadata
 
-- **Analysis Mode:** <CREATE/AUGMENT/UPDATE>
+- **Analysis Mode:** <CREATE/AUGMENT/POPULATE/UPDATE>
 - **Analysis Method:** <AST-based/grep-based/mixed>
 - **AST Available:** <yes/no>
 - **Confidence Score:** <overall HIGH/MEDIUM/LOW>
