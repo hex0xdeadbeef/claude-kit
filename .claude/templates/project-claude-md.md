@@ -6,7 +6,7 @@
 > for the canonical schema). The Plan stage reads PROJECT-KNOWLEDGE.md
 > directly via `/planner` and via reviewer hook injection.
 >
-> Need a concrete starter? See `.claude/templates/project-claude-md.go.example.md`
+> Need a concrete starter? See `.claude/templates/project-claude-md-go-example.md`
 > for a fully-populated Go backend example to copy and adapt.
 
 ## Language Profile

@@ -5,7 +5,7 @@ model: opus
 effort: max
 ---
 
-role:я
+role:
   identity: "Orchestrator"
   owns: "Coordination of full development cycle: task-analysis → planner → plan-review (agent) → coder → code-review (agent)"
   does_not_own: "Planning, implementation, review — delegates to sub-commands and agents"
