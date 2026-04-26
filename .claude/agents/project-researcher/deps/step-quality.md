@@ -50,7 +50,7 @@ Blocking gates (CRITIQUE, VERIFY) have explicit pass/fail criteria. SEE: `deps/o
 
 ### Discovery Subagent (haiku)
 - [ ] Path exists and contains source files
-- [ ] Mode correctly determined (CREATE/AUGMENT/UPDATE)
+- [ ] Mode correctly determined (CREATE/AUGMENT/POPULATE/UPDATE)
 - [ ] `source_file_count` > 0
 - [ ] Monorepo detection attempted
 - [ ] Strategy selected (single/per-module/per-module-with-shared-context)
@@ -102,7 +102,7 @@ Blocking gates (CRITIQUE, VERIFY) have explicit pass/fail criteria. SEE: `deps/o
 - [ ] Skills based on ≥3 real code examples each
 - [ ] Rules match detected architecture
 - [ ] No duplicate information across artifacts
-- [ ] Mode-specific behavior (CREATE/AUGMENT/UPDATE)
+- [ ] Mode-specific behavior (CREATE/AUGMENT/POPULATE/UPDATE)
 - Min pass: 5/6
 
 ### Verification Subagent (sonnet, blocking gate)
