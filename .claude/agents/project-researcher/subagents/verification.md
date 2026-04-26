@@ -217,7 +217,24 @@ Validate internal structure of each artifact type.
 - [ ] (Optional) `## Exceptions` section if applicable
 
 **.claude/PROJECT-KNOWLEDGE.md Requirements:**
-- [ ] Starts with `# .claude/PROJECT-KNOWLEDGE.md`
+
+This file is BOTH the Plan-stage canonical contract AND PR's analytical
+research report. Verify both halves.
+
+**Required (canonical Plan-stage contract — error severity):**
+- [ ] Contains `## Language Profile` section (with at least LANGUAGE slot)
+- [ ] Contains `## Source Layout` section
+- [ ] Contains `## Architecture (Layer Vocabulary)` section (with LAYERS list)
+- [ ] Contains `## Domain Purity` section
+- [ ] Contains `## Error Handling` section
+- [ ] Contains `## Configuration` section
+- [ ] Contains `## Concurrency (optional)` section (may be empty if not detected)
+
+If any canonical section is missing → severity: error → gate_passed = false.
+This is the contract /planner and plan-reviewer programmatically read.
+
+**Required (analytical research — warning severity during transition):**
+- [ ] Starts with `# Project Knowledge: <name>` (single H1)
 - [ ] Contains `## Executive Summary` with key facts
 - [ ] Contains `## Project Structure` section
 - [ ] Contains `## Architecture Deep-Dive` section
@@ -228,6 +245,12 @@ Validate internal structure of each artifact type.
 - [ ] Contains `## Conventions Catalog` section
 - [ ] Contains `## Pattern Catalog` section
 - [ ] Contains `## Metadata` section at end
+
+If any analytical section is missing → severity: warning → gate_passed
+remains true (the gate does NOT block on analytical-section absence during
+the transition window). Note for future spec: tighten to error after all
+PR-using projects have been migrated to the canonical-first template (track
+via session-analytics).
 
 **Structure Validation Report:**
 
@@ -319,6 +342,57 @@ Duplicate Check Results:
      - skills/error-wrapping/skill.md (name: "Error Wrapping")
      Recommendation: change second to "error-wrapping" trigger
 ```
+
+---
+
+## 8.2.6 Slot Population Check
+
+Validate that canonical-section slots in `.claude/PROJECT-KNOWLEDGE.md` are
+either populated with a derived value OR carry a placeholder marker
+(`<your-X>`). Empty slots indicate generation bugs.
+
+**Scope:** All 14 canonical slots from §8.2.4 canonical-contract requirements.
+
+**Algorithm:**
+
+```
+For each canonical section in PROJECT-KNOWLEDGE.md:
+  For each slot line (e.g. `- LANGUAGE: <value>`):
+    Extract value (everything after `<slot>:` and before any `#` comment).
+    Trim whitespace.
+    If value matches `^<your-[a-z-]+>$`:
+      severity: info — slot has placeholder (downstream /workflow step 0.05 will WARN)
+    Else if value is empty (after trim):
+      severity: warning — slot is empty (generation bug; expected derived value)
+    Else:
+      severity: info — slot populated correctly
+
+Aggregate counters:
+  - placeholder_slots: count of slots with placeholder
+  - empty_slots: count of slots with empty value
+  - populated_slots: count of slots with derived value
+
+Cross-check against `state.generate.pk_slots_populated`:
+  If counter mismatch → severity: warning — generation reported wrong count.
+```
+
+**Output:** populated as additional fields in `state.verify`:
+
+```yaml
+verify:
+  slot_population:
+    populated: N
+    placeholders: N
+    empty: N
+    issues: []
+```
+
+**Severity policy:**
+- `empty_slots > 0` → emit warning per slot; gate_passed remains true (not blocking; signals generation bug for follow-up)
+- `placeholder_slots > 0` → emit info per slot; gate_passed remains true (placeholders are expected for non-derivable slots)
+- `populated_slots == 0 AND mode != CREATE` → emit warning "PK has zero populated canonical slots — POPULATE mode may have failed"; gate_passed remains true (warning, not error, to prevent transition issues)
+
+**Backward compat:** legacy PR PK files (no canonical sections at all) are caught by §8.2.4 canonical block (severity warning during transition). §8.2.6 only applies when canonical sections are present.
 
 ---
 

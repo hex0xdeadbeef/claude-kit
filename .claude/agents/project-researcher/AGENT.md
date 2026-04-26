@@ -6,6 +6,7 @@ meta:
   version: 4.3.1
   updated: 2026-04-22
   changelog: "SEE: deps/changelog.md"
+  pk_schema_version: "1.0.0"  # PROJECT-KNOWLEDGE.md canonical schema version. SEE: deps/state-contract.md → ## Plan-Stage Contract. Bumping requires reviewing all consumers in `## CONTRACT LINKAGE` section.
 description: |
   Autonomous orchestrator agent for deep analysis of any project and generation of .claude/ configuration.
 
@@ -203,9 +204,14 @@ modes:
   - mode: "AUGMENT"
     condition: ".claude/ exists but no .claude/PROJECT-KNOWLEDGE.md"
     behavior: "Adds missing parts, preserves existing ones"
+  - mode: "POPULATE"
+    condition: ".claude/PROJECT-KNOWLEDGE.md exists AND contains placeholder values matching `<your-[a-z-]+>` (i.e. install.sh-bootstrapped from PROJECT-KNOWLEDGE.md.example)"
+    behavior: "Re-derives all canonical-section slots from state, OVERWRITES placeholders with derived values, PRESERVES hand-edits in analytical sections. PK-targeted refresh — does NOT regenerate skills/rules/CLAUDE.md."
+    rationale: "install.sh bootstraps PK with placeholders to give users a starting template. UPDATE mode 'preserve as-is' would keep placeholders forever — POPULATE mode is the explicit fill-the-template flow."
   - mode: "UPDATE"
-    condition: ".claude/PROJECT-KNOWLEDGE.md exists + git repo"
+    condition: ".claude/PROJECT-KNOWLEDGE.md exists + git repo + ZERO placeholder matches"
     behavior: "Updates the research incrementally"
+mode_precedence: "CREATE → AUGMENT → POPULATE → UPDATE (first match wins)"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # ERROR HANDLING
@@ -290,6 +296,57 @@ inline_phases:
     model: opus
     gate: blocking
     reason: "Needs full state context for adversarial review"
+
+# ════════════════════════════════════════════════════════════════════════════════
+# CONTRACT LINKAGE
+# ════════════════════════════════════════════════════════════════════════════════
+
+contract_linkage:
+  description: |
+    /project-researcher generates `.claude/PROJECT-KNOWLEDGE.md` as a wire-format
+    contract consumed by Plan-stage components. This section enumerates the
+    contract surface so future maintainers know what they may break.
+
+  pk_schema_version: "1.0.0"  # mirrors meta.pk_schema_version
+
+  produced_by:
+    - subagent: generation
+      file: subagents/generation.md
+      sections: ["§5.5.0 Slot Extraction", "§5.5 PROJECT-KNOWLEDGE.md Generation"]
+      mode_aware: ["CREATE (full)", "AUGMENT (preserve)", "POPULATE (re-derive slots)", "UPDATE (incremental)"]
+
+  consumed_by:
+    - consumer: /planner
+      mechanism: "Reads .claude/PROJECT-KNOWLEDGE.md at startup step 1.5; resolves slots via cascade"
+      file: .claude/commands/planner.md
+      slot_consumers: ["LANGUAGE", "LANG_EXT", "VERIFY_CMD", "LAYERS", "DOMAIN_PROHIBIT", "ERROR_WRAP", "CONFIG_EXAMPLE", "CONFIG_DOCS"]
+
+    - consumer: plan-reviewer (agent)
+      mechanism: "PK content injected as `## Project Knowledge (resolved slots)` block in additionalContext via SubagentStart hook"
+      file: .claude/scripts/inject-review-context.sh
+      slot_consumers: ["LAYERS", "LAYER_RULE", "DOMAIN_PROHIBIT", "ERROR_WRAP", "GENERATED_PATTERN", "MOCK_PATTERN", "CONCURRENCY_PRIMITIVES", "CONCURRENCY_LEAKS"]
+
+    - consumer: /workflow startup pre-flight (step 0.05)
+      mechanism: "test -f + grep '<your-[a-z-]+>' — emits WARN if PK missing OR placeholders present"
+      file: .claude/commands/workflow.md
+      slot_consumers: "(presence/absence detection only, not value-based)"
+
+    - consumer: install.sh PK bootstrap
+      mechanism: "Copies `.claude/PROJECT-KNOWLEDGE.md.example` → `.claude/PROJECT-KNOWLEDGE.md` if PK missing"
+      file: install.sh
+      slot_consumers: "(template provisioning only)"
+
+  authoritative_schema:
+    file: .claude/PROJECT-KNOWLEDGE.md.example
+    sections: 7
+    required_slots: 14
+    optional_slots: 5
+
+  state_contract_reference: deps/state-contract.md  # → ## Plan-Stage Contract section
+
+  governance:
+    rule: "Bumping `pk_schema_version` REQUIRES reviewing all `consumed_by` entries above."
+    scope_creep_warning: "Adding new analytical sections to templates/project-knowledge.md does NOT require schema bump (analytical block is open). Adding/renaming/removing CANONICAL sections requires bump + consumer migration."
 
 # ════════════════════════════════════════════════════════════════════════════════
 # PROGRESS TRACKING
@@ -384,7 +441,7 @@ reference_files:
   - file: "reference/scoring.md"
     purpose: "Confidence scoring system"
   - file: "templates/project-knowledge.md"
-    purpose: ".claude/PROJECT-KNOWLEDGE.md template"
+    purpose: ".claude/PROJECT-KNOWLEDGE.md template — Plan-stage CONFIG CONTRACT (7 canonical sections + 14 required slots) AT TOP + analytical research (12 sections) AFTER. SEE: .claude/PROJECT-KNOWLEDGE.md.example for schema, deps/state-contract.md → ## Plan-Stage Contract section for full wire-format docs, ## CONTRACT LINKAGE section below for consumer registry."
 
 # ════════════════════════════════════════════════════════════════════════════════
 # CHECKLIST

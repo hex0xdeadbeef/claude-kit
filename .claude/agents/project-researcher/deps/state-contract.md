@@ -24,12 +24,13 @@ The state is a virtual YAML object. The orchestrator maintains the full state in
 ```yaml
 validate:
   path: string              # REQUIRED — absolute path to the project
-  mode: "CREATE" | "AUGMENT" | "UPDATE"  # REQUIRED
+  mode: "CREATE" | "AUGMENT" | "POPULATE" | "UPDATE"  # REQUIRED — see AGENT.md mode_precedence
   git: bool                 # REQUIRED
   git_root: string          # path to .git or null
   git_remote: string        # remote URL or null
   commit_count: int
   has_claude_dir: bool      # REQUIRED
+  has_pk_placeholders: bool # REQUIRED — true if .claude/PROJECT-KNOWLEDGE.md exists AND contains <your-[a-z-]+> matches; false otherwise. Used by §1.5 mode detection precedence (POPULATE wins over UPDATE when true).
   source_file_count: int    # REQUIRED — number of source files
   extension_distribution:   # file extension counts
     ".go": int
@@ -327,6 +328,8 @@ generate:
   total_created: int
   total_preserved: int
   total_updated: int
+  pk_canonical_sections_present: string[]  # REQUIRED — list of canonical-section heading names actually emitted in PROJECT-KNOWLEDGE.md (e.g. ["Language Profile", "Source Layout", "Architecture (Layer Vocabulary)", "Domain Purity", "Error Handling", "Configuration", "Concurrency (optional)"]). Validated by VERIFICATION subagent §8.2.4.
+  pk_slots_populated: int  # REQUIRED — count of canonical slots populated with derived values (vs placeholder fallback). Cross-checked by VERIFICATION subagent §8.2.6.
 ```
 
 ---
@@ -568,3 +571,59 @@ State: {key_field=value, ...}
 ```
 
 The full state is available via `state.*` for subsequent subagents but is not duplicated in the output.
+
+---
+
+## Plan-Stage Contract
+
+**Purpose:** Documents the wire-format contract between `/project-researcher`
+output and the Plan stage of `/workflow` (commit 198629d).
+
+`.claude/PROJECT-KNOWLEDGE.md` is BOTH /project-researcher's output AND the
+Plan-stage's input. The format MUST satisfy both purposes.
+
+### Authoritative schema reference
+
+`.claude/PROJECT-KNOWLEDGE.md.example` (shipped in commit 198629d).
+
+### Canonical sections (must appear at TOP of PK, before any analytical section)
+
+| Section | Slots |
+|---------|-------|
+| `## Language Profile` | LANGUAGE, LANG_EXT, VERIFY_CMD, BUILD_CMD, TEST_CMD, LINT_CMD, FMT_CMD |
+| `## Source Layout` | SOURCE_GLOB, TEST_GLOB, GENERATED_PATTERN, MOCK_PATTERN |
+| `## Architecture (Layer Vocabulary)` | LAYERS (ordered list), LAYER_RULE (multi-line YAML) |
+| `## Domain Purity` | DOMAIN_PROHIBIT |
+| `## Error Handling` | ERROR_WRAP |
+| `## Configuration` | CONFIG_EXAMPLE, CONFIG_DOCS |
+| `## Concurrency (optional)` | CONCURRENCY_PRIMITIVES, CONCURRENCY_LEAKS |
+
+Total: 7 sections, 14 required slots + 5 optional slots.
+
+### Cascade order (consumed by /planner + plan-reviewer)
+
+1. `.claude/PROJECT-KNOWLEDGE.md` (this file — primary source)
+2. `CLAUDE.md` Language Profile section (legacy fallback)
+3. Abstract default → corresponding architecture check is SKIPPED
+
+### Consumers
+
+| Consumer | Mechanism | File |
+|----------|-----------|------|
+| `/planner` | Reads PK at startup step 1.5 | `.claude/commands/planner.md` |
+| `plan-reviewer` agent | PK content injected as `additionalContext` block via SubagentStart hook | `.claude/scripts/inject-review-context.sh` |
+| `/workflow` startup | Pre-flight check at step 0.05 (warns if PK has placeholders OR is missing) | `.claude/commands/workflow.md` |
+| `install.sh` | Bootstraps PK from `.example` if missing | `install.sh` |
+
+### Schema version
+
+`pk_schema_version: "1.0.0"` — defined in AGENT.md `meta` block. Bumping this
+field requires reviewing all consumers above.
+
+### Subagent flow
+
+1. DISCOVERY (`subagents/discovery.md`): detects `state.validate.has_pk_placeholders`; sets mode (CREATE | AUGMENT | POPULATE | UPDATE)
+2. DETECTION (`subagents/detection.md`): extracts `state.detect.primary_language`, `state.detect.build_tools`, `state.detect.config_files`
+3. ANALYSIS (`subagents/analysis.md`): extracts `state.analyze.architecture.layers`, `state.analyze.architecture.layer_constraints`, `state.analyze.conventions.errors`, `state.analyze.conventions.domain_purity`, `state.analyze.concurrency`
+4. GENERATION (`subagents/generation.md` §5.5.0): maps `state.X → slot Y` for all 14 canonical slots; renders canonical sections at top of PK; populates `state.generate.pk_canonical_sections_present[]` + `pk_slots_populated`
+5. VERIFICATION (`subagents/verification.md` §8.2.4 + §8.2.6): validates canonical sections present (error severity), analytical sections present (warning severity, transition), slot population counts match.

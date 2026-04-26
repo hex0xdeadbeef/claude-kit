@@ -1,11 +1,81 @@
 # Project Knowledge: <Project Name>
 
+<!--
+  Plan-Stage Contract (cascade order — highest precedence first):
+    1. PROJECT-KNOWLEDGE.md (THIS file)
+    2. CLAUDE.md Language Profile section (legacy fallback)
+    3. Abstract default — corresponding check is SKIPPED
+
+  Slot consumers:
+    - /planner reads slots at startup step 1.5
+    - plan-reviewer gets slots injected via additionalContext by
+      .claude/scripts/inject-review-context.sh (SubagentStart hook)
+
+  This template's TOP block (sections 1-7) IS the Plan-stage contract.
+  This template's BOTTOM block (sections 8-19) IS PR's analytical research.
+  Both are emitted in a single file. Plan-stage cascade reads top-down.
+
+  Schema version: 1.0.0 (mirrors AGENT.md meta.pk_schema_version).
+  Authoritative schema reference: .claude/PROJECT-KNOWLEDGE.md.example
+-->
+
 **Last Updated:** <ISO 8601 timestamp>
 **Version:** <semantic version or git hash>
 **Researcher:** project-researcher agent v4.3
 **Analysis Method:** <AST-based | grep-based | mixed>
+**PK Schema Version:** 1.0.0
 
 ---
+
+## Language Profile
+
+- LANGUAGE: <will-be-populated-by-detection>            # e.g. go, python, typescript, java, rust
+- LANG_EXT: <will-be-populated-by-detection>            # e.g. .go, .py, .ts, .java, .rs
+- VERIFY_CMD: <will-be-populated-by-detection>          # full lint+test+vet pipeline; e.g. `make verify`
+- BUILD_CMD: <will-be-populated-by-detection>           # e.g. `make build`, `npm run build`, `cargo build`
+- TEST_CMD: <will-be-populated-by-detection>            # e.g. `make test`, `pytest`, `npm test`
+- LINT_CMD: <will-be-populated-by-detection>            # e.g. `make lint`, `ruff check`, `eslint`
+- FMT_CMD: <will-be-populated-by-detection>             # e.g. `make fmt`, `black .`, `prettier --write`
+
+## Source Layout
+
+- SOURCE_GLOB: <will-be-populated-by-detection>         # e.g. `internal/**/*.go`, `src/**/*.py`
+- TEST_GLOB: <will-be-populated-by-detection>           # e.g. `**/*_test.go`, `tests/**/*.py`
+- GENERATED_PATTERN: <will-be-populated-by-detection>   # e.g. `*_gen.go`, `*.pb.go` (or empty if none)
+- MOCK_PATTERN: <will-be-populated-by-detection>        # e.g. `*/mocks/*.go`, `*.mock.ts` (or empty)
+
+## Architecture (Layer Vocabulary)
+
+- LAYERS:                                               # ordered list, lower → higher
+  - <will-be-populated-by-analysis>
+- LAYER_RULE: |
+    <will-be-populated-by-analysis>
+
+## Domain Purity
+
+- DOMAIN_PROHIBIT: <will-be-populated-by-analysis>      # what MUST NOT appear in domain entities
+
+## Error Handling
+
+- ERROR_WRAP: <will-be-populated-by-analysis>           # how errors are propagated with context
+
+## Configuration
+
+- CONFIG_EXAMPLE: <will-be-populated-by-detection>      # e.g. config.yaml.example, .env.example
+- CONFIG_DOCS: <will-be-populated-by-detection>         # e.g. README.md, docs/configuration.md
+
+## Concurrency (optional)
+
+- CONCURRENCY_PRIMITIVES: <will-be-populated-by-analysis>  # e.g. goroutines+channels, asyncio+task
+- CONCURRENCY_LEAKS: <will-be-populated-by-analysis>       # e.g. goroutine leak, unawaited task
+
+---
+
+<!-- ============================================================
+     PR Analytical Research (sections 8-19) — preserved verbatim
+     These are NOT consumed by the Plan stage. They are a
+     human-readable research report intended for the user.
+     ============================================================ -->
 
 ## Executive Summary
 

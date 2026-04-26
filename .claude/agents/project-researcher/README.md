@@ -9,9 +9,11 @@ architecture: "orchestrator + 7 specialized subagents + 1 inline phase"
 workflow: "DISCOVERY → DETECTION → GRAPH → ANALYSIS → CRITIQUE(gate) → GENERATION → VERIFICATION(gate) → REPORT"
 
 modes:
-  CREATE: { when: "No .claude/ exists", action: "Full analysis, generate from scratch" }
-  AUGMENT: { when: ".claude/ exists, no .claude/PROJECT-KNOWLEDGE.md", action: "Supplement existing config" }
-  UPDATE: { when: ".claude/PROJECT-KNOWLEDGE.md exists", action: "Incremental update" }
+  CREATE:   { when: "No .claude/ exists", action: "Full analysis, generate from scratch" }
+  AUGMENT:  { when: ".claude/ exists, no PROJECT-KNOWLEDGE.md", action: "Supplement existing config" }
+  POPULATE: { when: "PROJECT-KNOWLEDGE.md exists AND contains <your-X> placeholders (install.sh-bootstrapped)", action: "Re-derive canonical slots from state; preserve analytical hand-edits" }
+  UPDATE:   { when: "PROJECT-KNOWLEDGE.md exists AND fully populated (no placeholders)", action: "Incremental update" }
+mode_precedence: "CREATE → AUGMENT → POPULATE → UPDATE (first match wins)"
 
 subagents:
   discovery: { file: "subagents/discovery.md", model: haiku, phases: "VALIDATE + DISCOVER" }
@@ -44,7 +46,7 @@ deps:
 
 outputs:
   CLAUDE_md: ".claude/CLAUDE.md  # Main file (≤200 lines)"
-  PROJECT_KNOWLEDGE: ".claude/PROJECT-KNOWLEDGE.md  # Full research + dependency topology"
+  PROJECT_KNOWLEDGE: ".claude/PROJECT-KNOWLEDGE.md  # Plan-stage CONFIG CONTRACT (7 canonical sections + 14 slots) + analytical research. SEE AGENT.md → Contract Linkage."
   memory: ".claude/memory.json  # MCP persistent context"
   skills: ".claude/skills/"
   rules: ".claude/rules/"

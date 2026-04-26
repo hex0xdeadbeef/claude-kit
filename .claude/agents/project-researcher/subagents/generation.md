@@ -267,6 +267,91 @@ triggers: [keywords]
 
 ---
 
+## 5.5.0 Slot Extraction (Plan-Stage Contract Population)
+
+Before populating the analytical sections (§5.5), the GENERATION subagent
+extracts the 14 canonical Plan-stage slots from accumulated state. The
+canonical sections at the TOP of `templates/project-knowledge.md` are populated
+from this extraction.
+
+### Slot Mapping Table
+
+For every slot, the source is `state.X` from previous phases. When a slot's
+state-source is unavailable or the value is empty, fall back to the canonical
+placeholder (`<your-{slot-snake-case}>`) — DO NOT raise an error, DO NOT emit
+empty value.
+
+| Slot | Source | Fallback |
+|------|--------|----------|
+| LANGUAGE | `state.detect.primary_language` (e.g. "go") | `<your-language>` |
+| LANG_EXT | LANG_EXT_TABLE[state.detect.primary_language] (lookup; see below) | `<your-extension>` |
+| VERIFY_CMD | `state.detect.build_tools.verify_cmd` if extracted, else best-effort from Makefile/package.json | `<your-verify-command>` |
+| BUILD_CMD | `state.detect.build_tools.build_cmd` | `<your-build-command>` |
+| TEST_CMD | `state.detect.build_tools.test_cmd` | `<your-test-command>` |
+| LINT_CMD | `state.detect.build_tools.lint_cmd` | `<your-lint-command>` |
+| FMT_CMD | `state.detect.build_tools.fmt_cmd` | `<your-format-command>` |
+| SOURCE_GLOB | derived from `state.detect.primary_language` + `state.discover.modules[*].path` (e.g. for Go: `internal/**/*.go`) | `<your-source-glob>` |
+| TEST_GLOB | derived from `state.detect.primary_language` (per-language convention) | `<your-test-glob>` |
+| GENERATED_PATTERN | derived from `state.analyze.code_generation_tools` if detected (e.g. `*_gen.go`); empty if none | (empty — slot remains absent, plan-reviewer SKIPs check) |
+| MOCK_PATTERN | derived from `state.analyze.testing.mock_strategy` (e.g. `*/mocks/*.go` for mockery) | (empty — slot remains absent) |
+| LAYERS | `state.analyze.architecture.layers` as ORDERED list (lower→higher per dependency direction) | `<your-data-layer>`, `<your-business-layer>`, `<your-api-layer>` |
+| LAYER_RULE | rendered from `state.analyze.architecture.layer_constraints` as multi-line YAML block | `<describe import-direction rules>` |
+| DOMAIN_PROHIBIT | derived from `state.analyze.conventions.domain_purity` (e.g. for Go: `no encoding/json struct tags`) | `<pattern-or-rule>` |
+| ERROR_WRAP | derived from `state.analyze.conventions.errors.pattern` (e.g. `fmt.Errorf("context: %w", err)`) | `<wrap-pattern>` |
+| CONFIG_EXAMPLE | from `state.detect.config_files.example_path` (e.g. `config.yaml.example`) | `<path>` |
+| CONFIG_DOCS | from `state.detect.config_files.docs_path` (e.g. `README.md`) | `<path>` |
+| CONCURRENCY_PRIMITIVES | from `state.analyze.concurrency.primitives` (e.g. `goroutines, channels, mutex`) | (empty — slot remains absent) |
+| CONCURRENCY_LEAKS | from `state.analyze.concurrency.leak_patterns` (e.g. `goroutine leaks`) | (empty — slot remains absent) |
+
+### LANG_EXT_TABLE (lookup)
+
+```yaml
+LANG_EXT_TABLE:
+  go: ".go"
+  python: ".py"
+  typescript: ".ts"
+  javascript: ".js"
+  java: ".java"
+  rust: ".rs"
+  ruby: ".rb"
+  php: ".php"
+  csharp: ".cs"
+  cpp: ".cpp"
+  c: ".c"
+  kotlin: ".kt"
+  swift: ".swift"
+```
+
+If `state.detect.primary_language` is not in the table, fall back to `<your-extension>` (placeholder).
+
+### Confidence Comments
+
+For every slot whose derived value has confidence < HIGH (per `state.detect.primary_confidence` for language slots, or `state.analyze.architecture_confidence` for architecture slots), append a comment line in the rendered PK:
+
+```yaml
+- LANGUAGE: go
+  # (confidence: MEDIUM — verify manually)
+```
+
+For HIGH confidence: no comment.
+For LOW confidence: append `# (confidence: LOW — verify manually; consider re-running /project-researcher with manual hints)`.
+
+### Output
+
+After §5.5.0 completes, the GENERATION subagent has:
+- A populated dictionary `slots: {SLOT_NAME: {value, confidence, source}}`
+- Each slot is either a derived value OR a placeholder string
+- A list `pk_canonical_sections_present: string[]` of canonical-section names emitted (for verification)
+- A counter `pk_slots_populated: int` of slots with non-placeholder values (for verification + telemetry)
+
+These are appended to `state.generate` for downstream verification (Part 3) and metrics (Part 5).
+
+### Rule
+
+Run §5.5.0 BEFORE §5.5. The canonical sections rendered from `slots` MUST appear at the top of the generated PK file, BEFORE any analytical section.
+
+---
+
 ## 5.5 .claude/PROJECT-KNOWLEDGE.md Generation
 
 Create comprehensive research document (no line limit; reference guide).
@@ -467,6 +552,18 @@ Generate structured entity and relation data for the Claude Memory Protocol.
   - If no longer relevant: mark deprecated (don't delete)
 - Update memory.json with new relations discovered
 - Generate CHANGES.md documenting all updates
+
+**POPULATE Mode (NEW):**
+- Triggered when `state.validate.mode == "POPULATE"` (see discovery.md §1.5 mode detection)
+- Treats canonical-section slots as if absent — re-derives all 14 slots from `state.detect` / `state.analyze` per §5.5.0
+- OVERWRITES placeholder lines (`<your-X>`) in canonical sections with derived values
+- PRESERVES hand-edits in analytical sections (Executive Summary, Architecture Deep-Dive, Project Structure, Dependency Topology, Technology Stack, Core Domain, Conventions Catalog, Entry Points Map, External Integrations, Pattern Catalog, Decision Log, Technical Debt, Change History, Metadata)
+- DOES NOT regenerate other artifacts (CLAUDE.md, skills/, rules/, memory.json) — POPULATE is PK-targeted refresh only
+- For each canonical section line:
+  - If line value matches `<your-[a-z-]+>` placeholder pattern AND derived value is available → write derived value
+  - If line value is non-placeholder (user hand-edit) AND confidence-low marker absent → preserve verbatim (user's intent)
+  - If derived value unavailable → preserve placeholder (downstream `/workflow` step 0.05 will emit WARN)
+- Mode does not interact with skills/rules/CLAUDE.md generation steps (§5.1, §5.2, §5.3) — they are SKIPPED in POPULATE mode
 
 **Dry Run (config.dry_run = true):**
 - Do NOT write any files to disk

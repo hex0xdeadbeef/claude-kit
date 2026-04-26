@@ -71,28 +71,48 @@ Check for existing Claude project artifacts:
 - `has_claude_dir`: boolean
 - `claude_artifacts`: {files: [...], dirs: [...]}
 
+### 1.4.5 PROJECT-KNOWLEDGE.md Placeholder Detection
+
+If `.claude/PROJECT-KNOWLEDGE.md` exists, scan for canonical-slot placeholders
+to determine if it was bootstrapped from `.example` (install.sh) but never
+populated.
+
+```bash
+[ -f "$PROJECT_PATH/.claude/PROJECT-KNOWLEDGE.md" ] && \
+  grep -cE '<your-[a-z-]+>' "$PROJECT_PATH/.claude/PROJECT-KNOWLEDGE.md" 2>/dev/null
+```
+
+**Action:** Record `has_pk_placeholders: bool` (true if at least one match;
+false if PK absent OR zero matches).
+
+**Store:** `state.validate.has_pk_placeholders: bool`
+
+**Note:** This regex is identical to `/workflow` step 0.05 pre-flight check —
+single source of truth for "PK is unfilled" detection.
+
 ### 1.5 Mode Detection
 
 Determine the operational mode based on project state:
 
-**Decision Tree:**
+**Decision Tree (precedence: CREATE → AUGMENT → POPULATE → UPDATE):**
 
 1. **CREATE mode**: `.claude/` directory does NOT exist
    - Action: Set `mode = "CREATE"`
    - Rationale: Greenfield project, full analysis needed
 
-2. **UPDATE mode**: Both conditions must be true:
-   - `.claude/` directory EXISTS
-   - `.git` repository EXISTS
-   - `.claude/PROJECT-KNOWLEDGE.md` exists in `.claude/`
-   - Action: Set `mode = "UPDATE"`
-   - Rationale: Existing Claude project, incremental refresh
-
-3. **AUGMENT mode**: All other cases
+2. **AUGMENT mode**: `.claude/` exists BUT `.claude/PROJECT-KNOWLEDGE.md` does NOT exist
    - Action: Set `mode = "AUGMENT"`
-   - Rationale: Partial existing artifacts, merge new findings
+   - Rationale: Partial existing artifacts, merge new findings (PK absent — generate)
 
-**Store:** `mode: "CREATE" | "UPDATE" | "AUGMENT"`
+3. **POPULATE mode** (NEW): `.claude/PROJECT-KNOWLEDGE.md` exists AND `state.validate.has_pk_placeholders == true`
+   - Action: Set `mode = "POPULATE"`
+   - Rationale: PK was bootstrapped from `.example` by install.sh; canonical slots have `<your-X>` placeholders that must be re-derived from state. Preserves analytical hand-edits (see generation.md §5.7 POPULATE block).
+
+4. **UPDATE mode**: All remaining cases — `.claude/PROJECT-KNOWLEDGE.md` exists AND `state.validate.has_pk_placeholders == false` AND `.git` repository exists
+   - Action: Set `mode = "UPDATE"`
+   - Rationale: Existing fully-populated Claude project, incremental refresh
+
+**Store:** `mode: "CREATE" | "AUGMENT" | "POPULATE" | "UPDATE"`
 
 ### 1.6 Conditional Git Analysis (UPDATE mode only)
 
