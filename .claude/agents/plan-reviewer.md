@@ -80,7 +80,7 @@ role:
 3. **VALIDATE ARCHITECTURE** (IMP-04: Part-selective on iter 2+)
    - Check import matrix compliance (handler → service → repository → models)
    - Check domain purity (no encoding/json tags in entities)
-   - Check error handling patterns (wrap with %w, no log+return)
+   - Check error handling patterns (wrap errors per PROJECT-KNOWLEDGE.md → ERROR_WRAP convention; never log AND return same error). SKIP this check + emit consolidated NIT if ERROR_WRAP slot is unset.
    - Mode: manual (< 4 Parts) — direct checks; complex (4+ Parts, 3+ layers) — use Sequential Thinking
    - If complexity L/XL and plan does NOT use Sequential Thinking → add MAJOR issue
    - Reference: For details see [architecture-checks.md] in plan-review-rules skill

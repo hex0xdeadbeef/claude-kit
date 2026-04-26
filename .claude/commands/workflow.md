@@ -5,7 +5,7 @@ model: opus
 effort: max
 ---
 
-role:
+role:я
   identity: "Orchestrator"
   owns: "Coordination of full development cycle: task-analysis → planner → plan-review (agent) → coder → code-review (agent)"
   does_not_own: "Planning, implementation, review — delegates to sub-commands and agents"
@@ -101,6 +101,38 @@ startup:
   critical: "On agent startup, IMMEDIATELY execute ALL steps"
 
   steps:
+    - step: 0.05
+      action: "Pre-flight: PROJECT-KNOWLEDGE.md sanity check"
+      tool: "Bash (read-only)"
+      check: |
+        Run: test -f .claude/PROJECT-KNOWLEDGE.md && grep -E '<your-[a-z-]+>' .claude/PROJECT-KNOWLEDGE.md | head -3
+      mode_env: "CLAUDE_PROJECT_KNOWLEDGE_MODE (warn|strict, default warn)"
+      behavior:
+        - if: "PROJECT-KNOWLEDGE.md missing"
+          then_warn: "[workflow] WARN: PROJECT-KNOWLEDGE.md not found — slot-driven architecture checks will be SKIPPED. Run /project-researcher or copy .claude/PROJECT-KNOWLEDGE.md.example."
+          then_strict: "BLOCK if complexity >= M; emit FATAL message and exit 2"
+        - if: "PROJECT-KNOWLEDGE.md exists AND contains placeholder values matching '<your-[a-z-]+>' AND complexity >= M"
+          then_warn: "[workflow] WARN: PROJECT-KNOWLEDGE.md has unfilled placeholders for {complexity} task — checks dependent on those slots will be SKIPPED. Fill in the matching slots."
+          then_strict: "BLOCK if complexity >= M; emit FATAL message and exit 2"
+        - if: "PROJECT-KNOWLEDGE.md exists AND fully populated (zero '<your-[a-z-]+>' matches)"
+          then: "PROCEED silently (no message)"
+        - if: "Complexity is S"
+          then: "PROCEED silently regardless of PK state (S tasks rarely run slot-driven checks)"
+      stderr_format: "[workflow] WARN: <message>"
+      exit_on_strict: 2
+      probe_for_acceptance: |
+        Falsifiable predicate: With a fully-filled PROJECT-KNOWLEDGE.md (zero
+        '<your-[a-z-]+>' matches), running /workflow at any complexity must
+        produce ZERO stderr WARN lines from this step. Verify with:
+          test -z "$(grep -E '<your-[a-z-]+>' .claude/PROJECT-KNOWLEDGE.md)" && echo "PASS: filled PK"
+      purpose: |
+        Prevents silent Go-fallback for non-Go projects. The cascade order
+        (PROJECT-KNOWLEDGE.md > CLAUDE.md Language Profile > SKIP) is designed
+        to be ZERO-COST when PK is properly populated. The pre-flight WARN is
+        the early-warning signal that something is missing. Generic regex
+        '<your-[a-z-]+>' is extensible to future PK slot additions without
+        grep-pattern updates.
+
     - step: 0
       action: "Task Analysis — task classification"
       reference: "For details see [task-analysis.md] in planner-rules skill"

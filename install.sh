@@ -597,6 +597,21 @@ main() {
     mkdir -p "${target_dir}/.claude/workflow-state"
     mkdir -p "${target_dir}/.claude/prompts"
 
+    # ── Bootstrap PROJECT-KNOWLEDGE.md (planner-genericity feature) ────────
+    # Copy .example → .md if user PK is missing. Idempotent: never overwrites
+    # an existing PK. Existing /project-researcher workflow continues to work
+    # — running /project-researcher overwrites this placeholder file with
+    # codebase-derived values. The --update path is handled separately by
+    # restore_project_knowledge() which preserves the user's prior PK.
+    local pk_target="${target_dir}/.claude/PROJECT-KNOWLEDGE.md"
+    local pk_example="${target_dir}/.claude/PROJECT-KNOWLEDGE.md.example"
+    if [ ! -f "$pk_target" ] && [ -f "$pk_example" ]; then
+        cp "$pk_example" "$pk_target"
+        info "Created .claude/PROJECT-KNOWLEDGE.md from generic template"
+        warn "  Fill in <your-language>, <your-verify-cmd>, etc. before running /workflow on M+ tasks"
+        warn "  OR run /project-researcher to auto-derive values from your codebase"
+    fi
+
     # Restore user data from backup (--update only).
     #
     # Function output invariant (uniformly enforced via parse_kv below):

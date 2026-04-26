@@ -1,0 +1,80 @@
+# Project Knowledge
+
+<!--
+  This file is the contract between your project's stack and the Claude Kit
+  Plan/Review stages. The kit defaults to language-neutral behavior when slots
+  are unfilled (the plan-reviewer SKIPs the corresponding check and emits a
+  consolidated NIT issue listing skipped slots).
+
+  Cascade order (highest precedence first):
+    1. PROJECT-KNOWLEDGE.md (this file)
+    2. CLAUDE.md Language Profile section (kit default — legacy fallback)
+    3. Abstract default — the check is SKIPPED
+
+  Fill in the slots below for full architecture validation. Run
+  /project-researcher to auto-generate values from your codebase, or fill
+  manually.
+
+  Slot consumers:
+    - /planner reads this file at startup step 1.5
+    - plan-reviewer gets these slots injected via additionalContext
+      by .claude/scripts/inject-review-context.sh (SubagentStart hook)
+-->
+
+## Language Profile
+
+- LANGUAGE: <your-language>            # e.g. go, python, typescript, java, rust
+- LANG_EXT: <your-extension>           # e.g. .go, .py, .ts, .java, .rs
+- VERIFY_CMD: <your-verify-command>    # full lint+test+vet pipeline; e.g. `make verify`
+- BUILD_CMD: <your-build-command>      # e.g. `make build`, `npm run build`, `cargo build`
+- TEST_CMD: <your-test-command>        # e.g. `make test`, `pytest`, `npm test`
+- LINT_CMD: <your-lint-command>        # e.g. `make lint`, `ruff check`, `eslint`
+- FMT_CMD: <your-format-command>       # e.g. `make fmt`, `black .`, `prettier --write`
+
+## Source Layout
+
+- SOURCE_GLOB: <your-source-glob>      # e.g. `internal/**/*.go`, `src/**/*.py`
+- TEST_GLOB: <your-test-glob>          # e.g. `**/*_test.go`, `tests/**/*.py`
+- GENERATED_PATTERN: <your-gen-glob>   # files protected from edit; e.g. `*_gen.go`, `*.pb.go`
+- MOCK_PATTERN: <your-mock-glob>       # e.g. `*/mocks/*.go`, `*.mock.ts`
+
+## Architecture (Layer Vocabulary)
+
+- LAYERS:                              # ordered list, lower → higher
+  - <data-access-layer>                # e.g. repository, dao, persistence
+  - <business-layer>                   # e.g. service, usecase, controller
+  - <api-layer>                        # e.g. handler, view, endpoint
+- LAYER_RULE: |
+    <describe import-direction rules in your project; e.g.>
+    - <api-layer> imports <business-layer>; NEVER imports <data-access-layer> directly
+    - <business-layer> imports <data-access-layer>
+    - <data-access-layer> imports models only
+
+## Domain Purity
+
+- DOMAIN_PROHIBIT: <pattern-or-rule>   # what MUST NOT appear in domain entities
+                                       # examples:
+                                       # Go:        no encoding/json struct tags (no `json:` or `db:`)
+                                       # Python:    no sqlalchemy / django.db imports
+                                       # TypeScript: no class-validator / TypeORM decorators
+                                       # Java:      no @Entity / @Column annotations on records
+
+## Error Handling
+
+- ERROR_WRAP: <wrap-pattern>           # how errors are propagated with context
+                                       # examples:
+                                       # Go:        fmt.Errorf("context: %w", err)
+                                       # Python:    raise XError("context") from err
+                                       # TypeScript: throw new XError("context", { cause: err })
+                                       # Java:      throw new XException("context", err)
+
+## Configuration
+
+- CONFIG_EXAMPLE: <path>               # e.g. config.yaml.example, .env.example
+- CONFIG_DOCS: <path>                  # e.g. README.md, docs/configuration.md
+
+## Concurrency (optional)
+
+- CONCURRENCY_PRIMITIVES: <list>       # e.g. goroutines+channels (Go), asyncio+task (Python),
+                                       # Promise+worker (TypeScript), virtual threads (Java)
+- CONCURRENCY_LEAKS: <leak-name>       # e.g. goroutine leak, unawaited task, dangling Promise

@@ -497,6 +497,60 @@ if metrics_summary:
     lines.append("")
     lines.append(metrics_summary)
 
+# ─────────────────────────────────────────────────────────────────────────────
+# PROJECT-KNOWLEDGE.md injection (planner-genericity feature)
+# Reads .claude/PROJECT-KNOWLEDGE.md (cwd-relative); appends as a labelled
+# block. Reviewer agents use the slots to resolve language-neutral checks.
+# Failure mode: missing PK → log record_kind="pk_missing_at_inject" + skip.
+# Telemetry record carries iteration + phase + agent for analysis correlation.
+# ─────────────────────────────────────────────────────────────────────────────
+pk_path = ".claude/PROJECT-KNOWLEDGE.md"
+pk_block_added = False
+if os.path.isfile(pk_path):
+    try:
+        with open(pk_path, "r", encoding="utf-8") as pf:
+            pk_content = pf.read()
+        # Cap at 4KB of PK content to leave headroom under the 8KB additionalContext cap
+        if len(pk_content) > 4096:
+            pk_content = pk_content[:4096] + "\n\n... [truncated — full PK at .claude/PROJECT-KNOWLEDGE.md]"
+        lines.append("")
+        lines.append("## Project Knowledge (resolved slots — from .claude/PROJECT-KNOWLEDGE.md)")
+        lines.append(pk_content.strip())
+        pk_block_added = True
+    except Exception as _pk_err:
+        # Non-fatal — agent proceeds without PK; will SKIP slot-driven checks
+        import sys as _sys
+        print(
+            f"[inject-review-context.sh] WARN: PROJECT-KNOWLEDGE.md unreadable: {_pk_err}",
+            file=_sys.stderr
+        )
+
+if not pk_block_added:
+    # Telemetry — append a record to handoff-validation.jsonl (if present)
+    try:
+        validation_log = os.path.join(state_dir, "handoff-validation.jsonl")
+        os.makedirs(state_dir, exist_ok=True)
+        import datetime as _dt
+        record = {
+            "ts": _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "record_kind": "pk_missing_at_inject",
+            "agent": agent_type,
+            "feature": feature,
+            "iteration": current_iter,
+            "phase": review_phase,
+            "session_id": current_session_id,
+            "note": "PROJECT-KNOWLEDGE.md missing or unreadable; reviewer will SKIP slot-driven checks and emit consolidated NIT issue"
+        }
+        with open(validation_log, "a", encoding="utf-8") as vf:
+            vf.write(json.dumps(record) + "\n")
+        # Inject a one-line hint into additionalContext so reviewer knows
+        lines.append("")
+        lines.append("[Project Knowledge — NOT INJECTED]")
+        lines.append("PROJECT-KNOWLEDGE.md is missing. Slot-driven architecture checks will be SKIPPED.")
+        lines.append("Emit ONE consolidated NIT issue listing skipped slots in your VERDICT_JSON.")
+    except Exception:
+        pass  # Telemetry is best-effort; never block injection
+
 text = "\n".join(lines)
 print(json.dumps({"additionalContext": text}))
 PYTHON_EOF

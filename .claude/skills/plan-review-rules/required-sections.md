@@ -38,8 +38,7 @@ required_sections:
   - section: Parts
     required: ALWAYS
     validate:
-      - ordered_correctly: "Parts follow dependency direction (lower layers first per project structure)"
-        reference: "SEE: .claude/PROJECT-KNOWLEDGE.md for project-specific layer order (if available)"
+      - ordered_correctly: "Parts follow dependency direction per PROJECT-KNOWLEDGE.md → LAYERS list (lower-index layers first); fallback if LAYERS unset: generic dependency order (data → business → api)"
       - full_code_examples: "Complete, runnable code (not snippets)"
       - imports_listed: "All imports shown"
 
@@ -60,8 +59,8 @@ required_sections:
   - section: "Config Changes"
     required: IF_CONFIG_TOUCHED
     validate:
-      - config_example_updated: "CONFIG_EXAMPLE has new fields (Go default: config.yaml.example)"
-      - config_docs_updated: "CONFIG_DOCS documents new config (Go default: README.md)"
+      - config_example_updated: "CONFIG_EXAMPLE has new fields (resolved from PROJECT-KNOWLEDGE.md → CONFIG_EXAMPLE; SKIP this validation if slot unset)"
+      - config_docs_updated: "CONFIG_DOCS documents new config (resolved from PROJECT-KNOWLEDGE.md → CONFIG_DOCS; SKIP this validation if slot unset)"
       - example_values: "Sensible defaults provided"
 ```
 
@@ -120,10 +119,10 @@ common_issues:
 
   - issue: "Code snippets instead of full examples"
     example_bad: |
-      func GetByID(...) {
+      <function-signature> {
         // implementation
       }
-    example_good: |
+    example_good_go: |
       func (s *Service) GetByID(ctx context.Context, id string) (*models.Entity, error) {
         result, err := s.repo.Get(ctx, id)
         if err != nil {
@@ -131,5 +130,12 @@ common_issues:
         }
         return result, nil
       }
+    example_good_python: |
+      def get_by_id(self, request_id: str) -> Entity:
+          try:
+              return self._repo.get(request_id)
+          except RepoError as err:
+              raise ServiceError(f"get entity {request_id}") from err
     severity: MAJOR
+    note: "The Go and Python examples above are LANGUAGE-SPECIFIC reference shapes — adapt to your project's LANGUAGE (resolved from PROJECT-KNOWLEDGE.md). The principle is identical across languages: full function body, error context propagation per ERROR_WRAP, explicit return types/values, no truncated `...` placeholders."
 ```

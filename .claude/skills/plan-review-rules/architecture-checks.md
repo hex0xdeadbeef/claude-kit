@@ -1,45 +1,94 @@
 # Architecture Compliance Checks
 
-purpose: "Validation checks for Clean Architecture compliance in implementation plans"
+purpose: "Validation checks for project's architecture compliance in implementation plans. Slot values resolved from .claude/PROJECT-KNOWLEDGE.md (or from CLAUDE.md Language Profile as legacy fallback)."
+
+## Slot Resolution
+
+The checks below reference SLOTS — abstract names that the reviewer resolves
+from `.claude/PROJECT-KNOWLEDGE.md` (injected via `additionalContext` by the
+SubagentStart hook) at run-time.
+
+| Slot | Source | Used by check |
+|------|--------|---------------|
+| LAYERS | PROJECT-KNOWLEDGE.md → LAYERS | Layer imports, Handler → Business Logic flow |
+| LAYER_RULE | PROJECT-KNOWLEDGE.md → LAYER_RULE | Layer imports |
+| DOMAIN_PROHIBIT | PROJECT-KNOWLEDGE.md → DOMAIN_PROHIBIT | Clean domain |
+| ERROR_WRAP | PROJECT-KNOWLEDGE.md → ERROR_WRAP | Error handling |
+| GENERATED_PATTERN | PROJECT-KNOWLEDGE.md → GENERATED_PATTERN | Protected files |
+| MOCK_PATTERN | PROJECT-KNOWLEDGE.md → MOCK_PATTERN | Protected files |
+| CONCURRENCY_PRIMITIVES | PROJECT-KNOWLEDGE.md → CONCURRENCY_PRIMITIVES | Concurrency check |
+| CONCURRENCY_LEAKS | PROJECT-KNOWLEDGE.md → CONCURRENCY_LEAKS | Concurrency check |
+
+**SKIP rule:** If a slot is unset (PROJECT-KNOWLEDGE.md missing OR slot value
+is empty / contains `<your-` placeholder), the corresponding check is SKIPPED
+for this run. The reviewer:
+
+1. Emits ONE consolidated NIT issue at the end of the verdict:
+   `{severity: "NIT", category: "completeness", problem: "N checks skipped
+   due to unconfigured PROJECT-KNOWLEDGE.md slots: [<slot1>, <slot2>, ...].
+   Populate PROJECT-KNOWLEDGE.md to enable full validation."}`
+2. The `inject-review-context.sh` SubagentStart hook writes a per-invocation
+   `record_kind="pk_missing_at_inject"` entry to `handoff-validation.jsonl`
+   when PROJECT-KNOWLEDGE.md is missing entirely (file-level telemetry).
+   Per-slot SKIP details are visible in the consolidated NIT issue text.
+
+The NIT issue does NOT block approval (auto-escalation rule "5+ MINOR" does
+NOT escalate NIT — verified per `plan-review-rules/SKILL.md:21`). Telemetry
+is hook-side only — reviewer agents lack a Bash tool and cannot write to
+`handoff-validation.jsonl` directly.
 
 ## Manual Checks (Simple Plans)
 
 ```yaml
 manual_checks:
   - check: Layer imports
-    how: "Verify project's package structure (SEE: .claude/PROJECT-KNOWLEDGE.md#Dependency Matrix, if available)"
+    resolved_from: PROJECT-KNOWLEDGE.md → LAYERS, LAYER_RULE
+    skip_if_unset: true
+    how: "Verify project's package structure per LAYERS list and LAYER_RULE description"
     pass_criteria:
-      - models_pure: "Models in <domain>/models/ import only stdlib"
-      - business_logic_imports_data_access: "Business logic layer ({controller/service/usecase}) imports data access, models, domain services per project conventions"
-      - api_imports_business_logic: "API imports business logic layer (not database directly) — {controller/service/usecase} per project"
-      - no_api_to_db: "API NEVER imports database directly"
+      - models_pure: "Lowest-level layer (LAYERS[0]) imports only stdlib"
+      - business_logic_imports_data_access: "Business-layer imports data-access-layer per LAYER_RULE"
+      - api_imports_business_logic: "API/transport layer imports business-layer (NOT data-access directly) per LAYER_RULE"
+      - no_api_to_db: "API/transport layer NEVER imports data-access layer directly"
+    # <!-- EXAMPLE (lang: go) — for reference only -->
+    # LAYERS: [models, repository, service, handler]
+    # LAYER_RULE: handler → service → repository → models
+    # <!-- end EXAMPLE -->
 
   - check: Clean domain
-    how: "Search for tags in domain entities"
+    resolved_from: PROJECT-KNOWLEDGE.md → DOMAIN_PROHIBIT
+    skip_if_unset: true
+    how: "Search for DOMAIN_PROHIBIT pattern in domain entities"
     pass_criteria:
-      - no_json_tags: "No `json:` tags in entity structs"
-      - no_db_tags: "No `db:` tags in entity structs"
-      - pure_go: "Only stdlib imports allowed"
+      - domain_pure: "No DOMAIN_PROHIBIT pattern matches in entity files"
+    # <!-- EXAMPLE (lang: go) — DOMAIN_PROHIBIT = `json:` or `db:` struct tags -->
+    # <!-- EXAMPLE (lang: python) — DOMAIN_PROHIBIT = `from sqlalchemy` or `from django.db` imports -->
 
-  - check: "Handler → Business Logic flow"
-    how: "Verify API layer doesn't bypass business logic layer (SEE: .claude/PROJECT-KNOWLEDGE.md for layer naming)"
+  - check: Handler → Business Logic flow
+    resolved_from: PROJECT-KNOWLEDGE.md → LAYERS, LAYER_RULE
+    skip_if_unset: true
+    how: "Verify API layer doesn't bypass business logic layer per LAYER_RULE"
     pass_criteria:
-      - handler_calls_business_logic: "Handler methods call {controller/service/usecase} methods"
-      - no_handler_to_db: "Handler NEVER imports database package directly"
+      - handler_calls_business_logic: "API-layer methods call business-layer methods"
+      - no_handler_to_db: "API-layer NEVER imports data-access layer directly"
 
   - check: Error handling
-    how: "Verify project-specific error handling pattern (SEE: .claude/PROJECT-KNOWLEDGE.md)"
+    resolved_from: PROJECT-KNOWLEDGE.md → ERROR_WRAP
+    skip_if_unset: true
+    how: "Verify project-specific error handling pattern per ERROR_WRAP"
     pass_criteria:
-      - error_context: "Errors carry context per project convention"
-      - wrap_with_w: "Errors wrapped with ERROR_WRAP (Go default: %w)"
+      - error_context: "Errors carry context per ERROR_WRAP convention"
       - no_log_and_return: "Never log AND return same error"
+    # <!-- EXAMPLE (lang: go) — ERROR_WRAP = `fmt.Errorf("context: %w", err)` -->
+    # <!-- EXAMPLE (lang: python) — ERROR_WRAP = `raise XError("context") from err` -->
 
   - check: Protected files
-    how: "Verify plan doesn't edit generated files"
+    resolved_from: PROJECT-KNOWLEDGE.md → GENERATED_PATTERN, MOCK_PATTERN
+    skip_if_unset: true
+    how: "Verify plan doesn't edit generated or mock files"
     pass_criteria:
-      - no_generated_edits: "No changes to generated query files"
-      - no_gen_edits: "No changes to GENERATED files (Go default: *_gen.go)"
-      - no_mock_edits: "No changes to MOCKS files (Go default: */mocks/*.go)"
+      - no_generated_edits: "No changes to files matching GENERATED_PATTERN glob"
+      - no_mock_edits: "No changes to files matching MOCK_PATTERN glob"
     severity_if_fail: BLOCKER
 ```
 
@@ -57,23 +106,24 @@ automated_checks:
     model: "haiku"
     prompt_template: |
       Validate architecture compliance for files mentioned in the plan:
-      - Check layer imports matrix compliance
-      - Find DOMAIN_PROHIBIT in domain entities (Go default: encoding/json tags)
-      - Verify error handling patterns per project conventions (ERROR_WRAP, error context)
-      - List any protected file modifications
+      - Check layer imports matrix compliance per LAYER_RULE
+      - Find DOMAIN_PROHIBIT pattern in domain entities
+      - Verify error handling patterns per ERROR_WRAP convention
+      - List any GENERATED_PATTERN / MOCK_PATTERN file modifications
 
     output_format:
       - violations: "List of import matrix violations"
-      - domain_issues: "DOMAIN_PROHIBIT found in entities"
-      - error_issues: "Missing error context or ERROR_WRAP"
-      - protected_files: "Generated files in change list"
+      - domain_issues: "DOMAIN_PROHIBIT matches found in entities"
+      - error_issues: "Missing error context or non-conformant ERROR_WRAP"
+      - protected_files: "Generated / mock files in change list"
 ```
 
 ## Security Checklist (API Endpoints)
 
 ```yaml
 security_checklist:
-  when: "Plan includes API handler changes"
+  when: "Plan includes API/transport handler changes"
+  note: "Security checks are LANGUAGE-AGNOSTIC and run regardless of PROJECT-KNOWLEDGE.md state"
 
   checks:
     - check: SQL injection prevention
@@ -83,7 +133,7 @@ security_checklist:
       severity: BLOCKER
 
     - check: Input validation
-      validate: "DTOs have validate tags OR manual validation"
+      validate: "DTOs have validation OR manual validation at boundary"
       pass: "All user inputs validated at boundary"
       fail: "Direct use of unvalidated input"
       severity: BLOCKER
@@ -106,6 +156,7 @@ security_checklist:
 ```yaml
 design_patterns_check:
   when: "Plan mentions patterns (Factory, Strategy, etc.)"
+  note: "Pattern names are language-agnostic — runs regardless of PROJECT-KNOWLEDGE.md state"
 
   validation:
     - question: "Are patterns justified (not over-engineering)?"
@@ -118,27 +169,29 @@ design_patterns_check:
       pass: "Shows why simple approach insufficient"
       fail: "Pattern chosen without considering simple solution"
 
-    - question: "Do patterns align with Clean Architecture layers?"
-      check: "Pattern doesn't violate layer boundaries"
-      pass: "Factory in infrastructure, Strategy in domain"
-      fail: "Domain pattern imports infrastructure"
+    - question: "Do patterns align with the project's architecture layers?"
+      check: "Pattern doesn't violate LAYER_RULE boundaries"
+      pass: "Pattern placed in appropriate layer per LAYERS"
+      fail: "Pattern violates layer boundaries"
 ```
 
 ## Concurrency Check
 
 ```yaml
 concurrency_check:
-  when: "Plan includes concurrency primitives (Go default: goroutines, channels, sync primitives)"
+  when: "Plan includes concurrency primitives"
+  resolved_from: PROJECT-KNOWLEDGE.md → CONCURRENCY_PRIMITIVES, CONCURRENCY_LEAKS
+  skip_if_unset: true
 
   validation:
     - question: "Is the right concurrency pattern chosen?"
-      options: ["Worker Pool", "errgroup", "Pipeline", "Fan-out/Fan-in"]
+      options: ["Worker Pool", "Pipeline", "Fan-out/Fan-in", "Producer/Consumer"]
       check: "Pattern matches problem (e.g., Worker Pool for limited concurrency)"
 
     - question: "Is graceful shutdown addressed?"
-      check: "Context cancellation propagates, workers clean up"
-      pass: "ctx.Done() handled, resources released"
-      fail: "No shutdown mechanism or concurrency leaks (Go default: goroutine leaks)"
+      check: "Cancellation propagates, workers clean up"
+      pass: "Shutdown signal handled, resources released"
+      fail: "No shutdown mechanism or CONCURRENCY_LEAKS risk"
 
     - question: "Is concurrency level defined?"
       check: "Worker count or buffer size specified"
@@ -150,22 +203,23 @@ concurrency_check:
 
 ```yaml
 business_logic_pattern_check:
-  when: "Plan modifies business logic layer ({controller/service/usecase} per project)"
-  note: "SEE: .claude/PROJECT-KNOWLEDGE.md for project-specific layer naming (if available)"
+  when: "Plan modifies business logic layer (per PROJECT-KNOWLEDGE.md → LAYERS)"
+  resolved_from: PROJECT-KNOWLEDGE.md → LAYERS, LAYER_RULE
+  skip_if_unset: true
 
   validation:
     - check: "Business logic layer has proper dependencies"
-      pass: "Business logic layer injects {data_access_interface} and domain-specific services per project conventions"
-      fail: "Business logic layer creates dependencies internally"
+      pass: "Business-layer injects data-access-layer interfaces and domain services per LAYER_RULE"
+      fail: "Business-layer creates dependencies internally"
       severity: MAJOR
 
     - check: "API layer uses business logic layer"
-      pass: "Handlers call {controller/service/usecase} methods, not database directly"
-      fail: "Handler imports data access layer directly"
+      pass: "API-layer methods call business-layer methods, not data-access directly"
+      fail: "API-layer imports data-access layer directly"
       severity: BLOCKER
 
     - check: "Models in correct location"
-      pass: "Domain models in <domain>/models/ package"
-      fail: "Models defined in business logic or API layer"
+      pass: "Domain models in lowest layer (LAYERS[0]) per LAYER_RULE"
+      fail: "Models defined in business or API layer"
       severity: MAJOR
 ```

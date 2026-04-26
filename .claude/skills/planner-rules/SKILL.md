@@ -57,7 +57,9 @@ Form handoff payload for plan-review.
 
 ### Code completeness in plans
 
-**Good — full function body:**
+**Principle:** Full body, error context propagated, all parameters/returns shown. Concrete syntax follows your project's LANGUAGE (resolved from PROJECT-KNOWLEDGE.md).
+
+**Good — full function body (lang: go):**
 ```go
 func (s *Service) Do(ctx context.Context, id string) error {
     result, err := s.repo.Get(ctx, id)
@@ -68,11 +70,24 @@ func (s *Service) Do(ctx context.Context, id string) error {
 }
 ```
 
-**Bad — signature only:**
+**Good — full function body (lang: python):**
+```python
+def do(self, request_id: str) -> None:
+    try:
+        result = self._repo.get(request_id)
+    except RepoError as err:
+        raise ServiceError(f"get item {request_id}") from err
+```
+
+**Bad — signature only (any language):**
 ```go
 func (uc *UseCase) Do(ctx context.Context) error
 ```
-**Why:** Incomplete example — only signature without body. Coder needs complete examples with function body, error wrapping, and context propagation.
+```python
+def do(self, request_id: str) -> None: ...
+```
+
+**Why:** Incomplete examples (signatures without bodies) are not actionable for the coder. The coder needs full body with error handling per the project's ERROR_WRAP convention (resolved from PROJECT-KNOWLEDGE.md).
 
 For more examples, see [Examples](examples.md).
 

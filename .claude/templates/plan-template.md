@@ -2,6 +2,11 @@ meta:
   type: "plan-template"
   purpose: "Implementation plan template — output of /planner, input to /plan-review"
   usage: "Fill placeholders → save as plan.md → pass to /plan-review"
+  language_resolution: |
+    Concrete language is resolved from .claude/PROJECT-KNOWLEDGE.md via slots:
+    LANG_EXT, LAYERS, DOMAIN_PROHIBIT, ERROR_WRAP, GENERATED_PATTERN, MOCK_PATTERN,
+    CONFIG_EXAMPLE, CONFIG_DOCS, VERIFY_CMD, TEST_CMD, LINT_CMD, FMT_CMD.
+    See .claude/PROJECT-KNOWLEDGE.md.example for the canonical schema.
 
 plan:
   title: "{Feature Name}"
@@ -57,51 +62,72 @@ plan:
   parts:
     - part: 1
       name: "{Name}"
-      file: "path/to/file.go"
+      file: "{path/to/file{LANG_EXT}}"   # LANG_EXT resolved from PROJECT-KNOWLEDGE.md
       action: "CREATE"  # CREATE | UPDATE
       description: "{What this part does}"
       code: |
-        package example
-
-        func Example() {
-            // ...
-        }
+        # FULL implementation in your project's language.
+        # See .claude/PROJECT-KNOWLEDGE.md → LANGUAGE for syntax.
+        #
+        # <!-- EXAMPLE (lang: go) — for reference only, replace with your language -->
+        # package example
+        #
+        # func Example() {
+        #     // ...
+        # }
+        # <!-- end EXAMPLE -->
+        #
+        # <!-- EXAMPLE (lang: python) — alternative shape -->
+        # def example():
+        #     ...
+        # <!-- end EXAMPLE -->
 
     - part: 2
       name: "{Name}"
-      file: "path/to/file.go"
+      file: "{path/to/file{LANG_EXT}}"
       action: "UPDATE"
       description: "{What this part does}"
       code: |
-        // full code example
+        # full code example in your project's language
 
     - part: N
       name: "Tests"
-      file: "path/to/file_test.go"
+      file: "{path/to/{test-file-pattern}}"   # e.g. file_test.go (Go), test_file.py (Python)
       action: "CREATE"
       description: "Tests for new functionality"
       code: |
-        func TestExample(t *testing.T) {
-            tests := []struct {
-                name    string
-                input   string
-                want    string
-                wantErr bool
-            }{
-                // ...
-            }
-            for _, tt := range tests {
-                t.Run(tt.name, func(t *testing.T) {
-                    // ...
-                })
-            }
-        }
+        # FULL test in your project's language.
+        # See .claude/PROJECT-KNOWLEDGE.md → TEST_GLOB for naming convention.
+        #
+        # <!-- EXAMPLE (lang: go) — table-driven test pattern -->
+        # func TestExample(t *testing.T) {
+        #     tests := []struct {
+        #         name    string
+        #         input   string
+        #         want    string
+        #         wantErr bool
+        #     }{
+        #         // ...
+        #     }
+        #     for _, tt := range tests {
+        #         t.Run(tt.name, func(t *testing.T) {
+        #             // ...
+        #         })
+        #     }
+        # }
+        # <!-- end EXAMPLE -->
+        #
+        # <!-- EXAMPLE (lang: python) — pytest parametrize pattern -->
+        # @pytest.mark.parametrize("input,want,want_err", [...])
+        # def test_example(input, want, want_err):
+        #     ...
+        # <!-- end EXAMPLE -->
 
   files_summary:
-    - file: "path/to/file1.go"
+    - file: "{path/to/file1{LANG_EXT}}"
       action: "CREATE"
       description: "{description}"
-    - file: "path/to/file2.go"
+    - file: "{path/to/file2{LANG_EXT}}"
       action: "UPDATE"
       description: "{description}"
 
@@ -110,21 +136,21 @@ plan:
       - "{Criterion 1}"
       - "{Criterion 2}"
     technical:
-      - "{build_check_command} passes"
-      - "{test_command} passes"
-      - "Coverage >= 70%"
+      - "{VERIFY_CMD} passes"   # resolved from PROJECT-KNOWLEDGE.md → VERIFY_CMD
+      - "{TEST_CMD} passes"
+      - "Coverage >= 70%"       # adjust to project standard
       - "No security vulnerabilities"
     architecture:
-      - "Import matrix respected"
-      - "Clean domain (no serialization tags in domain entities)"
-      - "Error handling follows project conventions"
+      - "Import matrix respected (per PROJECT-KNOWLEDGE.md → LAYER_RULE)"
+      - "Domain entities follow project's purity rules (per PROJECT-KNOWLEDGE.md → DOMAIN_PROHIBIT)"
+      - "Error handling per project conventions (per PROJECT-KNOWLEDGE.md → ERROR_WRAP)"
 
   config_changes:
-    - path: "config.yaml.example"
+    - path: "{CONFIG_EXAMPLE}"  # resolved from PROJECT-KNOWLEDGE.md
       changes: |
         new_section:
           param: value  # description
-    - path: "README.md"
+    - path: "{CONFIG_DOCS}"     # resolved from PROJECT-KNOWLEDGE.md
       changes: "Update configuration table"
 
   notes: "{Additional notes, edge cases, known limitations}"

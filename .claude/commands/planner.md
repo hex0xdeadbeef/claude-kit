@@ -144,6 +144,29 @@ startup:
       action: TodoWrite
       description: "create phase list for progress tracking"
 
+    - step: 1.5
+      action: "Read PROJECT-KNOWLEDGE.md if exists; resolve language slots"
+      file: ".claude/PROJECT-KNOWLEDGE.md"
+      purpose: |
+        Resolve LANGUAGE, LANG_EXT, LAYERS, DOMAIN_PROHIBIT, ERROR_WRAP,
+        GENERATED_PATTERN, MOCK_PATTERN, CONFIG_EXAMPLE, CONFIG_DOCS,
+        VERIFY_CMD, BUILD_CMD, TEST_CMD, LINT_CMD, FMT_CMD slots for use
+        in subsequent phases (RESEARCH, DESIGN, DOCUMENT).
+      cascade: |
+        Resolution order (highest precedence first):
+        1. .claude/PROJECT-KNOWLEDGE.md (this file)
+        2. CLAUDE.md Language Profile section (legacy fallback)
+        3. Abstract default — slot remains unresolved; planner uses generic placeholder, plan-reviewer SKIPs the corresponding check
+      action_if_not_found: |
+        Proceed without resolved slots. Plan will use {SLOT_NAME} placeholders
+        verbatim. /workflow startup pre-flight (step 0.05) emits a WARN if
+        complexity >= M and PK is missing or contains placeholder values like
+        `<your-language>`.
+      action_if_found: |
+        Read all slot values into planner context. Use them when filling
+        plan-template.md placeholders ({LANG_EXT}, {VERIFY_CMD}, etc.) and
+        when generating Part code examples (use LANGUAGE-resolved syntax).
+
     - step: 2
       action: Read
       file: ".claude/templates/plan-template.md"
@@ -249,6 +272,23 @@ phases:
           - "Constraints: specific requirements?"
         note: "Task types and keywords → SEE [task-analysis.md] in planner-rules skill. If spec provided → skip clarifying questions already answered in spec. Focus on implementation-specific questions only."
 
+      - action: "Ask LAYER VOCABULARY question (CONDITIONAL)"
+        condition: "PROJECT-KNOWLEDGE.md missing OR LAYERS slot empty/placeholder, AND complexity >= M"
+        skip_when:
+          - "Complexity == S (no layer-validated checks run)"
+          - "PROJECT-KNOWLEDGE.md → LAYERS slot is populated (use those layers)"
+        question: |
+          "Layer vocabulary: which layers does your project use, in dependency order
+          (lowest → highest)? E.g., for Go Clean Architecture:
+          [models, repository, service, handler]; for Django:
+          [model, manager, view]; for Spring Boot:
+          [entity, repository, service, controller]. Provide a comma-separated list."
+        purpose: |
+          Without LAYERS, the planner cannot allocate Parts to project-specific
+          layers and the plan-reviewer cannot validate import-matrix compliance.
+          On answer received, planner uses the response as the working LAYERS
+          for this plan AND offers (NON-BLOCKING) to write it to PROJECT-KNOWLEDGE.md.
+
   phase_2_data_flow:
     name: "DATA_FLOW"
     reference: "For details see [data-flow.md] in planner-rules skill"
@@ -268,9 +308,9 @@ phases:
         simple_search:
           when: "1-2 files (simple strategy)"
           tools:
-            - "Grep 'pattern' --type {language}"
-            - "Glob '{SOURCE_GLOB}' (Go default: internal/**/*{keyword}*.go)"
-          note: "Check imports between packages (SEE: .claude/PROJECT-KNOWLEDGE.md, if available)"
+            - "Grep 'pattern' --type {LANGUAGE}"
+            - "Glob '{SOURCE_GLOB}' — resolved from PROJECT-KNOWLEDGE.md → SOURCE_GLOB; legacy fallback: CLAUDE.md Language Profile; abstract default: '**/*{keyword}*' (broad search if no slot resolution)"
+          note: "Check imports between packages per LAYER_RULE (resolved from PROJECT-KNOWLEDGE.md → LAYER_RULE)"
 
         complex_search:
           when: "6+ files OR budget 60% consumed without findings (moderate/complex strategy)"
@@ -419,10 +459,11 @@ phases:
     config_changes:
       when: "Adding new configuration"
       files:
-        - file: "CONFIG_EXAMPLE (Go default: config.yaml.example)"
+        - file: "{CONFIG_EXAMPLE} — resolved from PROJECT-KNOWLEDGE.md → CONFIG_EXAMPLE"
           action: "Add new parameter with default value"
-        - file: "CONFIG_DOCS (Go default: README.md)"
+        - file: "{CONFIG_DOCS} — resolved from PROJECT-KNOWLEDGE.md → CONFIG_DOCS"
           action: "Update configuration table"
+      slot_unset_behavior: "If CONFIG_EXAMPLE or CONFIG_DOCS slot is unset, planner SKIPS this section in the generated plan and notes 'Config changes section omitted: PROJECT-KNOWLEDGE.md slot {CONFIG_EXAMPLE,CONFIG_DOCS} unset.'"
 
   phase_5_document:
     name: "DOCUMENT"
@@ -461,7 +502,7 @@ rules:
     severity: HIGH
 
   - rule: "Import Matrix"
-    description: "check dependencies between layers (SEE: .claude/PROJECT-KNOWLEDGE.md, if available)"
+    description: "check dependencies between layers per PROJECT-KNOWLEDGE.md → LAYER_RULE; SKIP if LAYER_RULE slot unset (planner emits WARN line in plan output)"
     severity: HIGH
 
 ## ERROR HANDLING

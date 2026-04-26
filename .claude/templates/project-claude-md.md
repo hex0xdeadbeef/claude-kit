@@ -1,40 +1,40 @@
-# Project: Go Backend Workflow
+# Project: <your-project-name>
+
+> **Quick start:** This file documents project-level conventions used by the
+> Claude Kit pipeline. For the language/framework-specific override values,
+> populate `.claude/PROJECT-KNOWLEDGE.md` (see `.claude/PROJECT-KNOWLEDGE.md.example`
+> for the canonical schema). The Plan stage reads PROJECT-KNOWLEDGE.md
+> directly via `/planner` and via reviewer hook injection.
+>
+> Need a concrete starter? See `.claude/templates/project-claude-md.go.example.md`
+> for a fully-populated Go backend example to copy and adapt.
 
 ## Language Profile
-- Language: Go >= 1.24
-- Commands: VERIFY=`go vet ./... && make fmt && make lint && make test`, FMT=`make fmt`, LINT=`make lint`, TEST=`make test`, VET=`go vet ./...`
-- Error wrapping: `fmt.Errorf("context: %w", err)` — NEVER log AND return same error
-- Domain entities: NO encoding/json tags (tags belong in DTOs)
-- Source: `internal/**/*.go`, Generated: `*_gen.go`, Mocks: `*/mocks/*.go`
-- Config: update `config.yaml.example` + `README.md` when config changes
-- Concurrency: goroutines, channels, mutex, sync; race check: `go test -race`
+
+See `.claude/PROJECT-KNOWLEDGE.md` for the authoritative slot values
+(LANGUAGE, VERIFY_CMD, LAYERS, ERROR_WRAP, etc.). The CLAUDE.md Language
+Profile section below is a LEGACY fallback — kept for kits installed before
+PROJECT-KNOWLEDGE.md became the input contract.
+
+<!-- LEGACY FALLBACK — kept for backward compatibility.
+     Authoritative values live in .claude/PROJECT-KNOWLEDGE.md. -->
+- Language: <your-language>
+- Commands: VERIFY=`<your-verify-cmd>`, FMT=`<your-fmt-cmd>`, LINT=`<your-lint-cmd>`, TEST=`<your-test-cmd>`
+- Source: `<your-source-glob>`, Generated: `<your-gen-glob>`, Mocks: `<your-mock-glob>`
+- Config: update `<your-config-example>` + `<your-config-docs>` when config changes
 
 ## Architecture (Import Matrix)
-Layers: handler → service/controller → repository → models
-- handler NEVER imports repository directly
-- models: only stdlib imports
-- service: may import repository, NEVER handler
-- Domain entities must be pure — no serialization annotations
 
-## Error Handling (All Agents)
-| Error | Severity | Action |
-|-------|----------|--------|
-| Memory/ST/Context7 MCP unavailable | NON_CRITICAL | Warn, proceed without |
-| Plan not found | FATAL | EXIT — run /planner first |
-| Plan not approved | FATAL | EXIT — run /plan-review first |
-| .claude/PROJECT-KNOWLEDGE.md missing | NON_CRITICAL | Use profile above as defaults |
-| Tests fail 3x | STOP_AND_WAIT | Show errors, request manual fix |
-| Import violation | STOP_AND_FIX | Fix before proceeding |
-| Loop limit exceeded (3x) | STOP | Show iteration summary, request user help |
+See `.claude/PROJECT-KNOWLEDGE.md → LAYERS / LAYER_RULE` for the
+authoritative layer vocabulary. The Plan stage will use those values for
+import-matrix validation.
 
 ## Workflow Commands
-<!-- TODO(Phase 2): Update when migrating to agents/ -->
+
 - Full dev cycle: `/workflow`
 - Planning only: `/planner`
 - Implementation: `/coder`
 
 ## Hooks
-- PreCompact: saves workflow state before context compaction (automatic)
-- SubagentStop: records review agent completion markers (automatic)
-- Stop: blocks if uncommitted changes exist (automatic)
-- Config: `.claude/settings.json`
+
+- See `.claude/settings.json` for the authoritative hook configuration.

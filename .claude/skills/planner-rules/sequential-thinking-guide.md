@@ -9,13 +9,13 @@ loaded_when: "complexity L/XL only (SEE: .claude/commands/workflow.md conditiona
 required_when:
   # Common triggers (both planner and reviewer)
   - condition: "Architecture layers >= 3"
-    example: "Feature affects domain, usecase, repository, api layers"
+    example: "Feature affects 3+ layers from PROJECT-KNOWLEDGE.md → LAYERS (e.g., data, business, api in your project's vocabulary)"
 
   - condition: "New pattern or integration"
     example: "Integrating new external service, plugin system"
 
   - condition: "Parts in plan >= 4"
-    example: "Plan has Database, Domain, Repository, UseCase, API, Tests"
+    example: "Plan has 4+ Parts spanning multiple layers (e.g., one Part per layer + a Tests Part)"
 
   # Planner-specific triggers
   - condition: "Alternatives >= 3"
