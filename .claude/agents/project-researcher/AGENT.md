@@ -6,7 +6,7 @@ meta:
   version: 4.3.1
   updated: 2026-04-22
   changelog: "SEE: deps/changelog.md"
-  pk_schema_version: "1.0.0"  # PROJECT-KNOWLEDGE.md canonical schema version. SEE: deps/state-contract.md → ## Plan-Stage Contract. Bumping requires reviewing all consumers in `## CONTRACT LINKAGE` section.
+  pk_schema_version: "1.1.0"  # PROJECT-KNOWLEDGE.md canonical schema version. SEE: deps/state-contract.md → ## Plan-Stage Contract. Bumping requires reviewing all consumers in `## CONTRACT LINKAGE` section.
 description: |
   Autonomous orchestrator agent for deep analysis of any project and generation of .claude/ configuration.
 
@@ -307,7 +307,7 @@ contract_linkage:
     contract consumed by Plan-stage components. This section enumerates the
     contract surface so future maintainers know what they may break.
 
-  pk_schema_version: "1.0.0"  # mirrors meta.pk_schema_version
+  pk_schema_version: "1.1.0"  # mirrors meta.pk_schema_version
 
   produced_by:
     - subagent: generation
@@ -319,12 +319,12 @@ contract_linkage:
     - consumer: /planner
       mechanism: "Reads .claude/PROJECT-KNOWLEDGE.md at startup step 1.5; resolves slots via cascade"
       file: .claude/commands/planner.md
-      slot_consumers: ["LANGUAGE", "LANG_EXT", "VERIFY_CMD", "LAYERS", "DOMAIN_PROHIBIT", "ERROR_WRAP", "CONFIG_EXAMPLE", "CONFIG_DOCS"]
+      slot_consumers: ["LANGUAGE", "LANG_EXT", "VERIFY_CMD", "LAYERS", "DOMAIN_PROHIBIT", "ERROR_WRAP", "CONFIG_EXAMPLE", "CONFIG_DOCS", "DEPENDENCY_FILE", "INSTALL_VERB"]
 
     - consumer: plan-reviewer (agent)
       mechanism: "PK content injected as `## Project Knowledge (resolved slots)` block in additionalContext via SubagentStart hook"
       file: .claude/scripts/inject-review-context.sh
-      slot_consumers: ["LAYERS", "LAYER_RULE", "DOMAIN_PROHIBIT", "ERROR_WRAP", "GENERATED_PATTERN", "MOCK_PATTERN", "CONCURRENCY_PRIMITIVES", "CONCURRENCY_LEAKS"]
+      slot_consumers: ["LAYERS", "LAYER_RULE", "DOMAIN_PROHIBIT", "ERROR_WRAP", "GENERATED_PATTERN", "MOCK_PATTERN", "CONCURRENCY_PRIMITIVES", "CONCURRENCY_LEAKS", "ARCHITECTURE_STYLE"]
 
     - consumer: /workflow startup pre-flight (step 0.05)
       mechanism: "test -f + grep '<your-[a-z-]+>' — emits WARN if PK missing OR placeholders present"
@@ -339,7 +339,7 @@ contract_linkage:
   authoritative_schema:
     file: .claude/PROJECT-KNOWLEDGE.md.example
     sections: 7
-    required_slots: 14
+    required_slots: 17
     optional_slots: 5
 
   state_contract_reference: deps/state-contract.md  # → ## Plan-Stage Contract section
@@ -441,7 +441,7 @@ reference_files:
   - file: "reference/scoring.md"
     purpose: "Confidence scoring system"
   - file: "templates/project-knowledge.md"
-    purpose: ".claude/PROJECT-KNOWLEDGE.md template — Plan-stage CONFIG CONTRACT (7 canonical sections + 14 required slots) AT TOP + analytical research (14 sections) AFTER. SEE: .claude/PROJECT-KNOWLEDGE.md.example for schema, deps/state-contract.md → ## Plan-Stage Contract section for full wire-format docs, ## CONTRACT LINKAGE section below for consumer registry."
+    purpose: ".claude/PROJECT-KNOWLEDGE.md template — Plan-stage CONFIG CONTRACT (7 canonical sections + 17 required slots) AT TOP + analytical research (14 sections) AFTER. SEE: .claude/PROJECT-KNOWLEDGE.md.example for schema, deps/state-contract.md → ## Plan-Stage Contract section for full wire-format docs, ## CONTRACT LINKAGE section below for consumer registry."
 
 # ════════════════════════════════════════════════════════════════════════════════
 # CHECKLIST

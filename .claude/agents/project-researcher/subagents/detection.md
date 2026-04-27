@@ -156,6 +156,53 @@ language_detection:
 
 ---
 
+### 2.2.5 Dependency File Selection
+
+**Purpose:** Derive a single primary manifest from the manifest scan output for use as the
+`DEPENDENCY_FILE` slot value (consumed by GENERATION subagent §5.5.0 + INSTALL_VERB derivation).
+
+**Input:** `state.discover.manifests: [{path, language, type, version_info}]` (populated by
+`subagents/discovery.md` lines 174-187).
+
+**Algorithm:**
+
+1. Filter `state.discover.manifests` to entries whose `language` field matches
+   `state.detect.primary_language` (e.g. for a Go primary project, keep only `go.mod` entries).
+2. If exactly one filtered match → that is the primary manifest. Confidence: HIGH (0.95).
+3. If multiple filtered matches → pick the one whose `path` has the fewest path separators
+   (root preferred over subdirectory). Confidence: MEDIUM (0.70). Reason: monorepo with
+   multiple modules of the same language; root manifest is the canonical entry point.
+4. If zero filtered matches → emit empty `dependency_file`. Confidence: LOW (0.0). Reason:
+   primary_language detection succeeded but no matching manifest found (possible: non-standard
+   layout, vendored deps, or detection error). The `DEPENDENCY_FILE` slot resolves to its
+   `<your-dep-file>` placeholder; verification.md emits a warning (per §8.2.6 placeholder check).
+
+**Output (write to state):**
+
+```yaml
+state.detect.dependency_file:
+  path: "<relative path, e.g. go.mod>"
+  type: "<go.mod | package.json | pyproject.toml | requirements.txt | Cargo.toml | pom.xml | build.gradle | Gemfile>"
+  language: "<go | python | typescript | javascript | rust | java | ...>"
+  confidence: <0.0 - 1.0>
+```
+
+**Edge cases:**
+
+- Polyglot monorepo (Python tooling + Go core): `state.detect.primary_language` declares ONE
+  language; this section selects the manifest matching that language. Other manifests remain in
+  `state.discover.manifests[]` and are not surfaced as `state.detect.dependency_file`.
+- Two same-language manifests at different depths (e.g. `go.mod` in root + `tools/go.mod`):
+  shallowest path wins. Deterministic.
+- `state.detect.primary_language` unset (multi-language tied): fall through to LOW-confidence
+  empty output; do not guess.
+
+**Cross-reference:** Consumed by `subagents/generation.md` §5.5.0 Slot Mapping Table (DEPENDENCY_FILE
+row). Confidence value is preserved in the `state.detect.dependency_file.confidence` field for
+future use; current generation does not act on it but verification.md may.
+
+---
+
 ### 2.3 Framework Detection (3-Tier Approach)
 
 Detect frameworks and major dependencies used in the project.

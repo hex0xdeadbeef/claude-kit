@@ -351,7 +351,7 @@ Validate that canonical-section slots in `.claude/PROJECT-KNOWLEDGE.md` are
 either populated with a derived value OR carry a placeholder marker
 (`<your-X>`). Empty slots indicate generation bugs.
 
-**Scope:** All 14 canonical slots from §8.2.4 canonical-contract requirements.
+**Scope:** All 17 canonical slots from §8.2.4 canonical-contract requirements.
 
 **Algorithm:**
 

@@ -15,7 +15,7 @@
   This template's BOTTOM block (sections 8-19) IS PR's analytical research.
   Both are emitted in a single file. Plan-stage cascade reads top-down.
 
-  Schema version: 1.0.0 (mirrors AGENT.md meta.pk_schema_version).
+  Schema version: 1.1.0 (mirrors AGENT.md meta.pk_schema_version).
   Authoritative schema reference: .claude/PROJECT-KNOWLEDGE.md.example
 -->
 
@@ -23,7 +23,7 @@
 **Version:** <semantic version or git hash>
 **Researcher:** project-researcher agent v4.3
 **Analysis Method:** <AST-based | grep-based | mixed>
-**PK Schema Version:** 1.0.0
+**PK Schema Version:** 1.1.0
 
 ---
 
@@ -36,6 +36,8 @@
 - TEST_CMD: <will-be-populated-by-detection>            # e.g. `make test`, `pytest`, `npm test`
 - LINT_CMD: <will-be-populated-by-detection>            # e.g. `make lint`, `ruff check`, `eslint`
 - FMT_CMD: <will-be-populated-by-detection>             # e.g. `make fmt`, `black .`, `prettier --write`
+- DEPENDENCY_FILE: <will-be-populated-by-detection>     # e.g. go.mod, package.json, pyproject.toml, Cargo.toml, pom.xml
+- INSTALL_VERB: <will-be-populated-by-detection>        # e.g. `go get`, `npm install`, `pip install`, `cargo add`, `mvn dependency:get`
 
 ## Source Layout
 
@@ -46,6 +48,7 @@
 
 ## Architecture (Layer Vocabulary)
 
+- ARCHITECTURE_STYLE: <will-be-populated-by-analysis>   # one of: layered | flat | event_driven | hexagonal | other
 - LAYERS:                                               # ordered list, lower → higher
   - <will-be-populated-by-analysis>
 - LAYER_RULE: |

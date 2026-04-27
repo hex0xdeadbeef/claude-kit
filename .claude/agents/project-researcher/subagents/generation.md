@@ -270,7 +270,7 @@ triggers: [keywords]
 ## 5.5.0 Slot Extraction (Plan-Stage Contract Population)
 
 Before populating the analytical sections (§5.5), the GENERATION subagent
-extracts the 14 canonical Plan-stage slots from accumulated state. The
+extracts the 17 canonical Plan-stage slots from accumulated state. The
 canonical sections at the TOP of `templates/project-knowledge.md` are populated
 from this extraction.
 
@@ -290,10 +290,13 @@ empty value.
 | TEST_CMD | `state.detect.build_tools.test_cmd` | `<your-test-command>` |
 | LINT_CMD | `state.detect.build_tools.lint_cmd` | `<your-lint-command>` |
 | FMT_CMD | `state.detect.build_tools.fmt_cmd` | `<your-format-command>` |
+| DEPENDENCY_FILE | `state.detect.dependency_file.path` (populated by detection.md §2.2.5) | `<your-dep-file>` |
+| INSTALL_VERB | `INSTALL_VERB_TABLE[state.detect.primary_language]` (lookup; see below) | `<your-install-cmd>` |
 | SOURCE_GLOB | derived from `state.detect.primary_language` + `state.discover.modules[*].path` (e.g. for Go: `internal/**/*.go`) | `<your-source-glob>` |
 | TEST_GLOB | derived from `state.detect.primary_language` (per-language convention) | `<your-test-glob>` |
 | GENERATED_PATTERN | derived from `state.analyze.code_generation_tools` if detected (e.g. `*_gen.go`); empty if none | (empty — slot remains absent, plan-reviewer SKIPs check) |
 | MOCK_PATTERN | derived from `state.analyze.testing.mock_strategy` (e.g. `*/mocks/*.go` for mockery) | (empty — slot remains absent) |
+| ARCHITECTURE_STYLE | `ARCHITECTURE_STYLE_MAP[state.analyze.architecture.primary_pattern]` (8→5 enum mapping; see below). If `state.analyze.architecture.confidence < 0.6` → emit `other` regardless of mapping. | `<your-style>` |
 | LAYERS | `state.analyze.architecture.layers` as ORDERED list (lower→higher per dependency direction) | `<your-data-layer>`, `<your-business-layer>`, `<your-api-layer>` |
 | LAYER_RULE | rendered from `state.analyze.architecture.layer_constraints` as multi-line YAML block | `<describe import-direction rules>` |
 | DOMAIN_PROHIBIT | derived from `state.analyze.conventions.domain_purity` (e.g. for Go: `no encoding/json struct tags`) | `<pattern-or-rule>` |
@@ -323,6 +326,53 @@ LANG_EXT_TABLE:
 ```
 
 If `state.detect.primary_language` is not in the table, fall back to `<your-extension>` (placeholder).
+
+### INSTALL_VERB_TABLE (lookup)
+
+Maps `state.detect.primary_language` → install command. Mirrors the `LANG_EXT_TABLE` pattern.
+Static defaults are conservative (lowest-common-denominator verb that works without modern
+tooling assumptions like Poetry, Yarn, etc.). Detection-from-build-script (Makefile,
+package.json `scripts.install`) is out of scope for this version.
+
+```yaml
+INSTALL_VERB_TABLE:
+  go: "go get"
+  python: "pip install"
+  typescript: "npm install"
+  javascript: "npm install"
+  rust: "cargo add"
+  java: "mvn dependency:get"
+  # Other languages from LANG_EXT_TABLE (ruby, php, csharp, cpp, c, kotlin, swift) fall through to <your-install-cmd> placeholder per spec §3.2 — extension is a follow-up task.
+```
+
+If `state.detect.primary_language` is not in the table, fall back to `<your-install-cmd>` (placeholder). The `INSTALL_VERB` slot then resolves to placeholder; verification.md §8.2.6 emits a warning.
+
+### ARCHITECTURE_STYLE_MAP (lossy 8→5 enum)
+
+Maps `state.analyze.architecture.primary_pattern` (8 values from analysis.md §3.1) → PK schema's
+5-value enum (`layered | flat | event_driven | hexagonal | other`). Per-row mapping rationale
+documented in `project-researcher-pk-sync-spec.md` §F4.
+
+```yaml
+ARCHITECTURE_STYLE_MAP:
+  clean: layered                       # Clean Architecture is a layered variant (concentric rings of dependency direction)
+  hexagonal: hexagonal                 # direct match
+  mvc: layered                         # MVC is a 3-layer pattern in practice
+  layered: layered                     # direct match
+  ddd: hexagonal                       # DDD strategic patterns commonly pair with hexagonal/ports & adapters
+  microservices: other                 # microservices is orthogonal — a single microservice can be layered
+  modular_monolith: layered            # modules are typically layered internally
+  standard_go: layered                 # Go's idiom is layered when LAYERS slot is set
+```
+
+**Confidence gate:** If `state.analyze.architecture.confidence < 0.6` (per analysis.md §3.1
+confidence tiers — MEDIUM threshold), emit `other` regardless of the mapping above. Reason:
+below MEDIUM, claiming a specific pattern has high false-positive risk; defaulting to `other`
+is the conservative honest answer. Users can manually override the slot.
+
+**Note on `event_driven` and `flat`:** Neither value has a current detector in analysis.md.
+These values are reachable only via manual user edit of the generated PK file. Adding a
+detector for either is documented as out-of-scope follow-up (spec §3.2).
 
 ### Confidence Comments
 
@@ -555,7 +605,7 @@ Generate structured entity and relation data for the Claude Memory Protocol.
 
 **POPULATE Mode (NEW):**
 - Triggered when `state.validate.mode == "POPULATE"` (see discovery.md §1.5 mode detection)
-- Treats canonical-section slots as if absent — re-derives all 14 slots from `state.detect` / `state.analyze` per §5.5.0
+- Treats canonical-section slots as if absent — re-derives all 17 slots from `state.detect` / `state.analyze` per §5.5.0
 - OVERWRITES placeholder lines (`<your-X>`) in canonical sections with derived values
 - PRESERVES hand-edits in analytical sections (Executive Summary, Architecture Deep-Dive, Project Structure, Dependency Topology, Technology Stack, Core Domain, Conventions Catalog, Entry Points Map, External Integrations, Pattern Catalog, Decision Log, Technical Debt, Change History, Metadata)
 - DOES NOT regenerate other artifacts (CLAUDE.md, skills/, rules/, memory.json) — POPULATE is PK-targeted refresh only

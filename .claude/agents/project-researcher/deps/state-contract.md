@@ -590,15 +590,15 @@ Plan-stage's input. The format MUST satisfy both purposes.
 
 | Section | Slots |
 |---------|-------|
-| `## Language Profile` | LANGUAGE, LANG_EXT, VERIFY_CMD, BUILD_CMD, TEST_CMD, LINT_CMD, FMT_CMD |
+| `## Language Profile` | LANGUAGE, LANG_EXT, VERIFY_CMD, BUILD_CMD, TEST_CMD, LINT_CMD, FMT_CMD, DEPENDENCY_FILE, INSTALL_VERB |
 | `## Source Layout` | SOURCE_GLOB, TEST_GLOB, GENERATED_PATTERN, MOCK_PATTERN |
-| `## Architecture (Layer Vocabulary)` | LAYERS (ordered list), LAYER_RULE (multi-line YAML) |
+| `## Architecture (Layer Vocabulary)` | ARCHITECTURE_STYLE, LAYERS (ordered list), LAYER_RULE (multi-line YAML) |
 | `## Domain Purity` | DOMAIN_PROHIBIT |
 | `## Error Handling` | ERROR_WRAP |
 | `## Configuration` | CONFIG_EXAMPLE, CONFIG_DOCS |
 | `## Concurrency (optional)` | CONCURRENCY_PRIMITIVES, CONCURRENCY_LEAKS |
 
-Total: 7 sections, 14 required slots + 5 optional slots.
+Total: 7 sections, 17 required slots + 5 optional slots.
 
 ### Cascade order (consumed by /planner + plan-reviewer)
 
@@ -617,7 +617,7 @@ Total: 7 sections, 14 required slots + 5 optional slots.
 
 ### Schema version
 
-`pk_schema_version: "1.0.0"` — defined in AGENT.md `meta` block. Bumping this
+`pk_schema_version: "1.1.0"` — defined in AGENT.md `meta` block. Bumping this
 field requires reviewing all consumers above.
 
 ### Subagent flow
@@ -625,5 +625,5 @@ field requires reviewing all consumers above.
 1. DISCOVERY (`subagents/discovery.md`): detects `state.validate.has_pk_placeholders`; sets mode (CREATE | AUGMENT | POPULATE | UPDATE)
 2. DETECTION (`subagents/detection.md`): extracts `state.detect.primary_language`, `state.detect.build_tools`, `state.detect.config_files`
 3. ANALYSIS (`subagents/analysis.md`): extracts `state.analyze.architecture.layers`, `state.analyze.architecture.layer_constraints`, `state.analyze.conventions.errors`, `state.analyze.conventions.domain_purity`, `state.analyze.concurrency`
-4. GENERATION (`subagents/generation.md` §5.5.0): maps `state.X → slot Y` for all 14 canonical slots; renders canonical sections at top of PK; populates `state.generate.pk_canonical_sections_present[]` + `pk_slots_populated`
+4. GENERATION (`subagents/generation.md` §5.5.0): maps `state.X → slot Y` for all 17 canonical slots; renders canonical sections at top of PK; populates `state.generate.pk_canonical_sections_present[]` + `pk_slots_populated`
 5. VERIFICATION (`subagents/verification.md` §8.2.4 + §8.2.6): validates canonical sections present (error severity), analytical sections present (warning severity, transition), slot population counts match.
