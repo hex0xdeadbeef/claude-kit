@@ -15,6 +15,8 @@
 
 Structured multi-agent development workflow with built-in planning, implementation, and code review phases. Supports any language and framework — Go, Python, TypeScript, Rust, Java, and 26 more via tree-sitter analysis.
 
+> **Note:** Defaults are tuned for Go (sparse paths, `pre-commit-build.sh` runs `go build`, `CLAUDE.md` Language Profile pins Go ≥ 1.24). For other stacks: edit `CLAUDE.md` Language Profile, adjust `worktree.sparsePaths` in `.claude/settings.local.json`, and replace or disable the Go-specific build hook. See [⚙️ Configuration Files](#️-configuration-files).
+
 ---
 
 ## 📑 Table of Contents
@@ -164,11 +166,11 @@ cp .mcp.json.example .mcp.json   # fresh setup
 
 Ships with three servers:
 
-| Server | Transport | Required by |
-|--------|-----------|-------------|
-| `sequential-thinking` | `npx @modelcontextprotocol/server-sequential-thinking` | `/planner`, `/designer` (L/XL tasks) |
-| `context7` | `npx @upstash/context7-mcp` (proxy-bypass env preset) | Library-docs lookup across all coder/planner phases |
-| `tree_sitter` | `uvx --python python3.11 mcp-server-tree-sitter` | `/project-researcher` structural analysis |
+| Server | Transport | Used by |
+|--------|-----------|---------|
+| `sequential-thinking` | `npx @modelcontextprotocol/server-sequential-thinking` | `/planner`, `/designer` on L/XL tasks (required) |
+| `context7` | `npx @upstash/context7-mcp` (proxy-bypass env preset) | Library-docs lookup across coder/planner phases (required) |
+| `tree_sitter` | `uvx --python python3.11 mcp-server-tree-sitter` | `/project-researcher` structural analysis (optional — agents fall back to grep) |
 
 Install `uv` once for `uvx`: `curl -LsSf https://astral.sh/uv/install.sh | sh`. `npx` ships with Node.js. See [🔌 MCP Servers](#-mcp-servers) for required-vs-optional matrix.
 
@@ -234,6 +236,19 @@ The main command that orchestrates the entire development process. Executes all 
 </details>
 
 **Result:** implemented, tested, and reviewed code with a git commit.
+
+---
+
+### `/designer` — Solution Architecture *(L/XL, opt-in)*
+
+Phase 0.7 between Task Analysis and Planning. Explores requirements, surfaces 2-3 alternative approaches, and produces an approved spec consumed by `/planner`. Skipped for S/M-complexity by default; M-complexity `new_feature` or `integration` tasks may opt in.
+
+```bash
+/designer Add multi-region failover         # explicit invocation
+/workflow --design Add multi-region failover # via orchestrator
+```
+
+**Result:** approved spec at `.claude/prompts/{feature}-spec.md` (consumed by `/planner` startup)
 
 ---
 
@@ -525,12 +540,12 @@ flowchart LR
 ```mermaid
 flowchart LR
     subgraph SKILLS ["Skills (on-demand loading)"]
-        WP["workflow-protocols · 11 files"]
+        WP["workflow-protocols · 17 files"]
         PLR["planner-rules · 8 files"]
         CDR["coder-rules · 7 files"]
         PRR["plan-review-rules · 5 files"]
         CRR["code-review-rules · 5 files"]
-        TDD["tdd-rules · 10 files"]
+        TDD["tdd-rules · 2 files"]
         DR["design-rules · 3 files"]
         SDB["systematic-debugging · 4 files"]
     end
@@ -667,18 +682,18 @@ flowchart TB
   Default paths are Go-specific: `.claude/`, `internal/`, `cmd/`, `go.mod`, `go.sum`, `Makefile`, `CLAUDE.md`.
 
 <details>
-<summary>⚙️ Infrastructure Protocols</summary>
+<summary>⚙️ Infrastructure Improvements (IMP series)</summary>
 
-Architectural improvements layered onto the pipeline since v1.9.0. These protocols operate transparently — no user action required.
+Architectural improvements layered onto the pipeline since v1.9.0, tracked as IMP-XX task IDs in commits and planning docs. These improvements operate transparently — no user action required.
 
-| Protocol | What it does | Key artifact |
-|----------|-------------|--------------|
-| **IMP-01** Handoff Validation | JSON Schema validation of typed handoff payloads on write via PostToolUse hook | `.claude/schemas/handoff.schema.json` |
-| **IMP-02** Structured Verdict | VERDICT_JSON fenced block enables structured extraction; regex fallback on parse failure | `workflow-state/review-completions.jsonl` |
-| **IMP-03** Issue ID Normalization | Canonical IDs `^[PC]R-[0-9a-f]{8}$` enable cross-iteration set-diff (resolved vs regressed) | `review-completions.jsonl` |
-| **IMP-04** Diff-based Re-plan | On iteration 2+, planner receives a diff-manifest — only NEEDS_UPDATE parts are rewritten | `workflow-state/{feature}-diff-manifest.json` |
-| **IMP-05** Effective Agent Type | Post-registry recovery resolves agent identity from transcript when SubagentStop fires without registration | `review-completions.jsonl` field `effective_agent_type` |
-| **IMP-06** UNKNOWN Verdict Resolution | Tiered recovery: checkpoint → direct transcript read → verdict-recovery agent → manual user verdict | `orchestration-core.md` phases 2/4 |
+| ID | Improvement | What it does | Key artifact |
+|----|-------------|--------------|--------------|
+| **IMP-01** | Handoff Validation | JSON Schema validation of typed handoff payloads on write via PostToolUse hook | `.claude/schemas/handoff.schema.json` |
+| **IMP-02** | Structured Verdict | VERDICT_JSON fenced block enables structured extraction; regex fallback on parse failure | `workflow-state/review-completions.jsonl` |
+| **IMP-03** | Issue ID Normalization | Canonical IDs `^[PC]R-[0-9a-f]{8}$` enable cross-iteration set-diff (resolved vs regressed) | `review-completions.jsonl` |
+| **IMP-04** | Diff-based Re-plan | On iteration 2+, planner receives a diff-manifest — only NEEDS_UPDATE parts are rewritten | `workflow-state/{feature}-diff-manifest.json` |
+| **IMP-05** | Effective Agent Type | Post-registry recovery resolves agent identity from transcript when SubagentStop fires without registration | `review-completions.jsonl` field `effective_agent_type` |
+| **IMP-06** | UNKNOWN Verdict Resolution | Tiered recovery: checkpoint → direct transcript read → verdict-recovery agent → manual user verdict | `orchestration-core.md` phases 2/4 |
 
 Enable strict validation via `.claude/settings.local.json`:
 ```json
@@ -761,9 +776,6 @@ For `.mcp.json` setup (copy from `.mcp.json.example`, gitignored), see [⚙️ C
     ├── schemas/                      # JSON Schemas (handoff.schema.json — IMP-01)
     ├── rules/                        # Cross-cutting constraints (architecture rules)
     ├── workflow-state/               # Runtime state (gitignored, generated during workflow)
-    ├── agent-memory/                 # Agent-specific persistent memory
-    ├── archive/                      # Archived artifacts
-    ├── worktrees/                    # Git worktree management
     ├── settings.json                 # Claude Code project settings + hooks (git-committed)
     ├── settings.local.json.example   # Personal overrides template (copy → settings.local.json)
     ├── PROJECT-KNOWLEDGE.md          # Auto-generated project knowledge (per-project)
@@ -813,7 +825,7 @@ Supported Claude Code hook events not yet leveraged in the kit — available for
 | `SessionStart` | Initialize workflow-state at session start; load environment from checkpoint |
 | `FileChanged` | Watch `prompts/{feature}.md` for mid-session drift detection |
 | `WorktreeRemove` | Cleanup `workflow-state/` artifacts after code-review worktree is removed |
-| `TaskCreated` / `TaskCompleted` | Track `TodoWrite` task lifecycle in `pipeline-metrics.jsonl` |
+| `TaskCompleted` | Pair with the active `TaskCreated` hook to close out `TodoWrite` task lifecycle in `pipeline-metrics.jsonl` |
 | `PostToolUseFailure` | Log failed tool calls for debugging and session analytics |
 | `PermissionRequest` | Pre-audit tool permission requests before user sees the dialog |
 | `UserPromptExpansion` | Track slash command invocation frequency in `session-analytics.sh` |
