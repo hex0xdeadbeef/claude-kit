@@ -34,6 +34,17 @@ Diverging scenarios (one file shows happy-path-only, another shows 5 edge
 cases) makes /coder output inconsistent across language switches and breaks
 the parity rule that lets contributors compare languages side-by-side.
 
+## Size budget
+
+Shape files **target ≤3 KB** but may extend to **≤4 KB ceiling** when the
+parity-rule scenario (Cycle 1 happy + Cycle 2 not-found + Cycle 3 wrap with
+table-driven/parameterised) requires more verbose syntax (e.g., Java,
+Rust). When a shape file would exceed 4 KB, extract verbose Cycle 3 GREEN
+blocks to `tdd-rules/references/<lang>-extras.md` (T1.7 overflow allowance,
+mirrors P1 code-shapes pattern). The parity rule takes precedence over a
+strict per-file byte cap — richer per-language training data improves
+/coder Phase 2 IMPLEMENT output more than a tight size limit.
+
 ## Cross-reference
 
 This INVARIANTS.md mirrors `planner-rules/code-shapes/INVARIANTS.md` (4
