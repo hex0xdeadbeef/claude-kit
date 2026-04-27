@@ -373,7 +373,7 @@ workflow:
         follow plan order verbatim.
 
       tdd_mode:
-        when: "TDD skill loaded (plan contains ## TDD AND LANGUAGE == 'go' OR unset)"
+        when: "TDD skill loaded (plan contains ## TDD AND LANGUAGE in {'go', unset})"
         behavior: "Each Part follows RED-GREEN-REFACTOR instead of implement→test"
         part_order: "Tests are NOT a separate Part — they are woven into each Part via RED-GREEN-REFACTOR cycles"
         reference: ".claude/skills/tdd-go/SKILL.md § Integration with Coder Parts"
