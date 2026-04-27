@@ -20,6 +20,7 @@ Structured multi-agent development workflow with built-in planning, implementati
 ## 📑 Table of Contents
 
 - [⚡ Quick Start](#-quick-start)
+- [⚙️ Configuration Files](#️-configuration-files)
 - [🔧 Commands](#-commands)
 - [🏗 Architecture](#-architecture)
 - [🔌 MCP Servers](#-mcp-servers)
@@ -91,6 +92,99 @@ cp .claude/settings.local.json.example /path/to/your/project/.claude/settings.lo
 ```
 
 </details>
+
+---
+
+## ⚙️ Configuration Files
+
+Four files control kit behavior. Each has a different lifecycle and git status — copy the `.example` templates once after install, then customize per machine or per project.
+
+| File | Git status (in your project) | Lifecycle | Purpose |
+|------|------------------------------|-----------|---------|
+| `.claude/settings.json` | committed | per-kit | Hooks, permissions, default model, MCP server registrations |
+| `.claude/settings.local.json` | gitignored after `install.sh` (`.example` shipped) | personal / per-machine | Env overrides, extra permissions, monorepo sparse paths |
+| `.mcp.json` | gitignored after `install.sh` (`.example` shipped) | personal / per-machine | MCP server endpoints (`sequential-thinking`, `context7`, `tree_sitter`) |
+| `.claude/PROJECT-KNOWLEDGE.md` | committed (preserved on `--update`) | per-project | Auto-generated codebase analysis used as context by all agents |
+| `.claude/.kit-version` | committed | per-installation | Tracks installed kit version for `install.sh --update` |
+
+> The kit's own repo commits `.mcp.json` and `settings.local.json` for dogfooding; `install.sh` ships a `.gitignore` block that ignores them in your project so personal config doesn't leak.
+
+### `.claude/settings.local.json.example` — Personal Overrides
+
+Copy once, then edit:
+
+```bash
+cp .claude/settings.local.json.example .claude/settings.local.json
+```
+
+Merge semantics vs `settings.json`: scalars override, arrays merge, `deny` wins over `allow`. The file is gitignored and **preserved across `install.sh --update`**.
+
+<details>
+<summary>📋 Env variables (activate by removing leading <code>_</code>)</summary>
+
+| Variable | Default in `.example` | Effect |
+|----------|----------------------|--------|
+| `GIT_STRIP_CO_AUTHOR` | `false` | Strip `Co-Authored-By` lines from auto-generated commit messages |
+| `CLAUDE_HANDOFF_VALIDATION_MODE` | `_strict` *(inactive)* | `strict` blocks writes of invalid handoff JSON; `warn` logs and continues (IMP-01) |
+| `CLAUDE_VERDICT_VALIDATION_MODE` | `_strict` *(inactive)* | `strict` enforces VERDICT_JSON schema; otherwise falls back to regex extraction (IMP-02) |
+| `CLAUDE_ISSUE_ID_VALIDATION_MODE` | `_strict` *(inactive)* | `strict` blocks verdict records whose `issues[].id` fails canonical pattern `^[PC]R-[0-9a-f]{8}$` (IMP-03); regex fallback still rescues verdict in `warn` |
+| `CLAUDE_PROJECT_KNOWLEDGE_MODE` | `_strict` *(inactive)* | `strict` BLOCKS `/workflow` startup when `PROJECT-KNOWLEDGE.md` is missing or has placeholder values for M+ tasks |
+| `CLAUDE_PK_PATH_MODE` | `_strict` *(inactive)* | `strict` blocks writes containing bare `PROJECT-KNOWLEDGE.md` references (without `.claude/` prefix) — caught by `meta-agent/check-references` |
+| `ENABLE_PROMPT_CACHING_1H` | `1` | Extend prompt cache TTL 5 min → 1H for API-key/Bedrock/Vertex/Foundry users; noop on subscription tier (v2.1.108) |
+| `FORCE_PROMPT_CACHING_5M` | `_1` *(inactive)* | Force 5-min TTL regardless of platform tier — cost control for short S/M tasks |
+| `CLAUDE_DELTA_REVIEW_MODE` | `_warn` *(inactive)* | `warn` (HINT) / `strict` (FOCUS) injects delta-only context into reviewers on iter ≥2; `off` keeps full context |
+
+Top-level keys with leading `_` (e.g. `_comment`, `_env_comment`, `_worktree_comment`) are documentation, not env vars.
+
+</details>
+
+<details>
+<summary>🌳 Monorepo sparse paths</summary>
+
+Speed up `code-reviewer` worktree creation in 100k+ file repos by checking out only relevant subtrees:
+
+```json
+"worktree": {
+  "sparsePaths": [".claude/", "src/", "tests/", "package.json"]
+}
+```
+
+The shipped `.example` defaults to a Go layout (`internal/`, `cmd/`, `go.mod`, `go.sum`, `Makefile`). Override for your stack — JS, Python, Rust, monorepo packages, etc. Add `.claude/` if the reviewer needs to read project rules from inside the worktree.
+
+</details>
+
+### `.mcp.json.example` — MCP Server Endpoints
+
+Per-machine config (gitignored after `install.sh`). Copy once if you don't have an existing `.mcp.json`:
+
+```bash
+cp .mcp.json.example .mcp.json   # fresh setup
+# — or merge the relevant blocks into an existing .mcp.json
+```
+
+Ships with three servers:
+
+| Server | Transport | Required by |
+|--------|-----------|-------------|
+| `sequential-thinking` | `npx @modelcontextprotocol/server-sequential-thinking` | `/planner`, `/designer` (L/XL tasks) |
+| `context7` | `npx @upstash/context7-mcp` (proxy-bypass env preset) | Library-docs lookup across all coder/planner phases |
+| `tree_sitter` | `uvx --python python3.11 mcp-server-tree-sitter` | `/project-researcher` structural analysis |
+
+Install `uv` once for `uvx`: `curl -LsSf https://astral.sh/uv/install.sh | sh`. `npx` ships with Node.js. See [🔌 MCP Servers](#-mcp-servers) for required-vs-optional matrix.
+
+### `.claude/PROJECT-KNOWLEDGE.md` — Project Knowledge Base
+
+Auto-generated codebase analysis (architecture, modules, dependencies, language profile) consumed as context by `/planner`, `/coder`, `plan-reviewer`, and `code-reviewer`. Generate once after install:
+
+```bash
+/project-researcher
+```
+
+Committed per project — not part of the kit. **Preserved across `install.sh --update`** so kit upgrades never clobber your project knowledge. Re-run `/project-researcher` when architecture changes significantly (new module, framework swap, schema migration). Missing file is non-fatal — agents fall back to the `Language Profile` block in `CLAUDE.md`.
+
+### `.claude/.kit-version` — Installation Tracker
+
+Auto-managed by `install.sh`. Records the installed kit version, source URL, and install timestamp so `--update` can compute changelogs and skip downgrades. Do not edit by hand.
 
 ---
 
@@ -213,9 +307,6 @@ Architecture: orchestrator + 7 specialized subagents (detection, discovery, grap
 ```bash
 /project-researcher
 ```
-
----
-
 
 ---
 
@@ -599,13 +690,15 @@ Enable strict validation via `.claude/settings.local.json`:
 }
 ```
 
+See [⚙️ Configuration Files](#️-configuration-files) for the full env-vars matrix and worktree sparse-paths config.
+
 </details>
 
 ---
 
 ## 🔌 MCP Servers
 
-Configure in `~/.claude/mcp.json`:
+Configure project-scoped servers in `.mcp.json` (copy from `.mcp.json.example` — see [⚙️ Configuration Files](#mcpjsonexample--mcp-server-endpoints)) or globally in `~/.claude/mcp.json`:
 
 ### Required
 
@@ -623,33 +716,15 @@ Configure in `~/.claude/mcp.json`:
 <details>
 <summary>🔧 Installing tree_sitter MCP Server</summary>
 
-Install `uv`, then the server auto-installs on first tool call via the `uvx` transport configured in `.mcp.json`:
+Install `uv` once — the server then auto-installs on first tool call via the `uvx` transport configured in `.mcp.json`:
 
 ```bash
-# Install uv (once, any macOS/Linux machine)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-`.mcp.json` is not committed (personal per-machine config). Copy the shipped example or merge its `tree_sitter` entry into your existing `.mcp.json`:
+For `.mcp.json` setup (copy from `.mcp.json.example`, gitignored), see [⚙️ Configuration Files → `.mcp.json.example`](#mcpjsonexample--mcp-server-endpoints).
 
-```bash
-cp .mcp.json.example .mcp.json   # fresh setup
-# — or merge the tree_sitter block into an existing .mcp.json
-```
-
-The example contains:
-```json
-{
-  "mcpServers": {
-    "tree_sitter": {
-      "command": "uvx",
-      "args": ["mcp-server-tree-sitter"]
-    }
-  }
-}
-```
-
-> **Note:** The patched fork is no longer needed. PR#29 (tree-sitter 0.24+ API compat) was merged into the official wrale/mcp-server-tree-sitter upstream on 2026-04-09.
+> **Note:** The patched fork is no longer needed. PR#29 (tree-sitter 0.24+ API compat) was merged into the official `wrale/mcp-server-tree-sitter` upstream on 2026-04-09.
 
 </details>
 
@@ -658,32 +733,41 @@ The example contains:
 ## 📂 Project Structure
 
 ```
-.claude/
-├── agents/                # Autonomous agents
-│   ├── meta-agent/        # Artifact lifecycle management (deps, scripts, templates)
-│   ├── project-researcher/# Codebase analysis (7 subagents, AST analysis, scoring)
-│   ├── plan-reviewer.md   # Plan validation agent (invoked by /workflow)
-│   ├── code-reviewer.md   # Code review agent (invoked by /workflow)
-│   └── code-researcher.md # Codebase exploration agent
-├── commands/              # Slash commands (/workflow, /planner, /coder, etc.)
-├── skills/                # Reusable domain knowledge
-│   ├── workflow-protocols/# Orchestration, handoff, checkpoints, re-routing
-│   ├── planner-rules/     # Planning methodology, task analysis, data flow
-│   ├── coder-rules/       # Implementation rules, MCP tools
-│   ├── plan-review-rules/ # Architecture checks, required sections
-│   ├── code-review-rules/ # Security checklist (OWASP), review checklists
-│   └── tdd-rules/         # TDD workflow (per-language tdd-shapes/<LANGUAGE>.md)
-├── templates/             # Templates for creating new artifacts
-├── prompts/               # Generated implementation plans
-├── scripts/               # Lifecycle hook scripts (23 scripts + 3 tests)
-├── rules/                 # Cross-cutting constraints (architecture rules)
-├── workflow-state/        # Runtime state (gitignored, generated during workflow)
-├── agent-memory/          # Agent-specific persistent memory
-├── archive/               # Archived artifacts
-├── worktrees/             # Git worktree management
-├── settings.json          # Claude Code project settings + hooks (git-committed)
-├── settings.local.json.example  # Template for personal overrides
-└── ./PROJECT-KNOWLEDGE.md    # Auto-generated project knowledge base
+.
+├── .mcp.json.example                 # MCP server endpoints template (copy → .mcp.json)
+└── .claude/
+    ├── agents/                       # Autonomous agents
+    │   ├── meta-agent/               # Artifact lifecycle management (deps, scripts, templates)
+    │   ├── project-researcher/       # Codebase analysis (7 subagents, AST analysis, scoring)
+    │   ├── plan-reviewer.md          # Plan validation (invoked by /workflow)
+    │   ├── code-reviewer.md          # Code review (invoked by /workflow, isolated worktree)
+    │   ├── code-researcher.md        # Codebase exploration (haiku)
+    │   └── verdict-recovery.md       # Lightweight verdict fallback (haiku, on reviewer failure)
+    ├── commands/                     # Slash commands (/workflow, /planner, /coder, etc.)
+    ├── skills/                       # Reusable domain knowledge (8 packages)
+    │   ├── workflow-protocols/       # Orchestration, handoff, checkpoints, re-routing
+    │   ├── planner-rules/            # Planning methodology, task analysis, data flow
+    │   ├── coder-rules/              # Implementation rules, MCP tools, review-response
+    │   ├── plan-review-rules/        # Architecture checks, required sections
+    │   ├── code-review-rules/        # Security checklist (OWASP), review checklists
+    │   ├── design-rules/             # Design phase 0.7 checklist (L/XL only)
+    │   ├── systematic-debugging/     # Root-cause investigation on 3x VERIFY fail
+    │   └── tdd-rules/                # TDD workflow (per-language tdd-shapes/<LANGUAGE>.md)
+    ├── templates/                    # Templates for creating new artifacts
+    ├── prompts/                      # Generated implementation plans (preserved on --update)
+    ├── scripts/                      # Lifecycle hook scripts
+    │   ├── lib/                      # Shared helpers (state_render.py)
+    │   └── tests/                    # Hook test suite + fixtures
+    ├── schemas/                      # JSON Schemas (handoff.schema.json — IMP-01)
+    ├── rules/                        # Cross-cutting constraints (architecture rules)
+    ├── workflow-state/               # Runtime state (gitignored, generated during workflow)
+    ├── agent-memory/                 # Agent-specific persistent memory
+    ├── archive/                      # Archived artifacts
+    ├── worktrees/                    # Git worktree management
+    ├── settings.json                 # Claude Code project settings + hooks (git-committed)
+    ├── settings.local.json.example   # Personal overrides template (copy → settings.local.json)
+    ├── PROJECT-KNOWLEDGE.md          # Auto-generated project knowledge (per-project)
+    └── .kit-version                  # Installed kit version metadata (managed by install.sh)
 ```
 
 ---
