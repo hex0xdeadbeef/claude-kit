@@ -17,7 +17,7 @@
     "All envs are independent. Default: warn on all. Set to strict for full enforcement.",
     "ENABLE_PROMPT_CACHING_1H  (v2.1.108) — 1H TTL for API-key/Bedrock/Vertex/Foundry (2× write cost; noop for subscription users). See CLAUDE.md > Prompt Cache Policy.",
     "FORCE_PROMPT_CACHING_5M   (v2.1.108) — force 5-min TTL regardless of tier (cost control for S/M tasks)",
-    "CLAUDE_DELTA_REVIEW_MODE    (delta-review-mode) off|warn|strict — warn emits delta-focus HINT for iter >=2 reviewers (plan: Part list; code: file list via git diff). Default: off (byte-identical, zero behavioral change until opt-in)."
+    "CLAUDE_DELTA_REVIEW_MODE    (delta-review-mode) off|warn|strict — off=disabled (default, byte-identical, zero behavioral change). warn=HINT advisory delta-focus for iter >=2 reviewers (plan: Part list; code: file list via git diff). strict=FOCUS narrower scope (opt-in indefinitely, no planned default flip)."
   ],
   "env": {
     "GIT_STRIP_CO_AUTHOR": "false",
