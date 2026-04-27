@@ -52,7 +52,7 @@ common_mistakes:
 
   - mistake: "Skip architecture check on 'small' changes"
     why_bad: "One wrong import creates precedent for more"
-    fix: "ALWAYS check import matrix, regardless of change size"
+    fix: "Check layer-dependency compliance per {LAYER_RULE} slot if set and {ARCHITECTURE_STYLE} == 'layered'; SKIP-with-NIT otherwise (canonical SKIP per architecture-checks.md L22-33)."
     check: "Architecture check in TodoWrite"
 
   - mistake: "Mark issues as [nit] to avoid blocking"

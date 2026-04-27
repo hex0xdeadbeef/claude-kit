@@ -15,7 +15,7 @@ troubleshooting:
     lesson: "Architecture violations caught early prevent major refactoring later"
 
   - problem: "Hook blocks edit - generated file"
-    cause: "Attempted to edit generated files (GENERATED/MOCKS — Go default: *_gen.go, mocks/*.go) directly"
+    cause: "Attempted to edit generated files (per {GENERATED_PATTERN}/{MOCK_PATTERN} slots resolved from PROJECT-KNOWLEDGE.md; kit-default Go: *_gen.go, mocks/*.go) directly"
     fix: "Regenerate via project's code generation commands (SEE: .claude/PROJECT-KNOWLEDGE.md or Makefile), edit source files instead"
     lesson: "Generated files must be regenerated, not manually edited"
 

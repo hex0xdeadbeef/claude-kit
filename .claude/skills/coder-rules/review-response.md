@@ -194,7 +194,7 @@ response_protocol:
         verify_status:
           lint: PASS
           test: PASS
-          command_used: "go vet ./... && make fmt && make lint && make test"
+          command_used: "{resolved VERIFY_CMD per .claude/PROJECT-KNOWLEDGE.md > CLAUDE.md fallback; Go example: 'go vet ./... && make fmt && make lint && make test'}"
 
   examples:
     blind_acceptance:

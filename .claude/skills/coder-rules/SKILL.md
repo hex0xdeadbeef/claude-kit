@@ -9,8 +9,8 @@ disable-model-invocation: true
 ## 5 CRITICAL Rules
 
 - RULE_1 Plan Only: Implement ONLY what's in the plan. No improvements.
-- RULE_2 Import Matrix: NEVER violate the import matrix.
-- RULE_3 Clean Domain: NEVER add encoding/json tags to domain entities (tags belong in DTOs).
+- RULE_2 Layer Dependency: NEVER violate {LAYER_RULE} (resolved from PROJECT-KNOWLEDGE.md; CLAUDE.md fallback). SKIP if slot unset OR {ARCHITECTURE_STYLE} != "layered".
+- RULE_3 Clean Domain: NEVER add {DOMAIN_PROHIBIT} (resolved from PROJECT-KNOWLEDGE.md → DOMAIN_PROHIBIT; CLAUDE.md fallback) to domain entities (tags belong in DTOs at handler/API layer). SKIP if slot unset.
 - RULE_4 No Log+Return: NEVER log AND return error simultaneously.
 - RULE_5 Tests Pass: Code NOT ready until tests pass.
 
@@ -50,15 +50,19 @@ Decision: PROCEED / REVISE / RETURN (see Evaluate Protocol above).
 Write output to `.claude/prompts/{feature}-evaluate.md`.
 
 ### Step 3: Implement parts in dependency order
-Follow lower-layers-first: data access → models → domain → API → tests → wiring.
-After each Part: PostToolUse hooks auto-format files (gofmt). Run LINT only for import/error checks. Check 5 CRITICAL Rules above continuously.
+Follow Parts order from plan. The plan's Parts list is the source of truth.
+If plan unordered: use {LAYERS} slot dependency direction when {ARCHITECTURE_STYLE} == "layered";
+otherwise follow plan order verbatim and emit consolidated NIT if ambiguous.
+After each Part: PostToolUse hooks auto-format files (per language matcher; kit-default Go: `gofmt` via `auto-fmt-go.sh`). Run resolved {LINT_CMD} only for import/error checks. Check 5 CRITICAL Rules above continuously.
 Do NOT run FMT manually between Parts — hooks handle formatting, VERIFY handles final FMT+LINT.
-IMPORTANT: Do NOT run tests (make test, go test) between Parts. Tests run ONCE at Step 4 VERIFY.
+IMPORTANT: Do NOT run tests (resolved {TEST_CMD}) between Parts. Tests run ONCE at Step 4 VERIFY.
 Running tests after each Part wastes time — compile errors are caught by LINT, logic errors are caught at VERIFY.
 Exception: If plan contains ## TDD section, RED-GREEN-REFACTOR test runs within a Part are allowed (they are implementation, not verification).
 
 ### Step 4: Verify
-Run full VERIFY: `go vet ./... && make fmt && make lint && make test`.
+Run full VERIFY using the resolved command from coder.md `verify_startup` cascade
+(PROJECT-KNOWLEDGE.md → VERIFY_CMD; CLAUDE.md fallback; DEPENDENCY_FILE-aware WARN; SKIP-with-NIT).
+Kit-default for Go projects (legacy CLAUDE.md fallback): `go vet ./... && make fmt && make lint && make test`.
 If tests fail 3x → load systematic-debugging skill, run Phase 1 root cause investigation.
 On success → proceed to Step 5.
 
@@ -84,7 +88,7 @@ type Service struct {
     ID string `json:"id"`
 }
 ```
-**Why:** RULE_3 — Domain entities must be pure. No encoding/json tags. Tags belong in DTOs at the handler/API layer.
+**Why:** RULE_3 — Domain entities must be pure. No {DOMAIN_PROHIBIT} (resolved from PROJECT-KNOWLEDGE.md). Tags belong in DTOs at the handler/API layer.
 
 For more examples, see [Examples](examples.md).
 
@@ -98,7 +102,7 @@ If root cause found → implement single fix + VERIFY. If still stuck → STOP, 
 
 ### Import matrix violation detected
 **Cause:** Didn't check architecture rules before implementation.
-**Fix:** Review import matrix (handler → service → repository → models). Refactor imports. This is ALWAYS a BLOCKER.
+**Fix:** Review layer-dependency rule per resolved {LAYER_RULE}. Refactor imports per the resolved rule. BLOCKER when slot is set AND {ARCHITECTURE_STYLE} == "layered"; SKIP-with-consolidated-NIT when unset/non-layered (canonical SKIP).
 
 ### New library used without Context7
 **Cause:** Assumed familiarity with library API.

@@ -20,7 +20,7 @@ disable-model-invocation: true
 ## Auto-Escalation
 - 5+ MINOR in same file → escalate to MAJOR
 - Security issue (any severity) → always BLOCKER
-- Import matrix violation → always BLOCKER
+- Layer-dependency violation (when {LAYER_RULE} SET AND {ARCHITECTURE_STYLE} == "layered") → always BLOCKER. SKIP entries (slot unset/non-layered) → consolidated NIT, NOT BLOCKER.
 
 ## Spec Check Trust
 If coder handoff includes spec_check with status=PASS → trust spec compliance, skip plan compliance re-check during REVIEW. Focus REVIEW entirely on code quality (architecture, error handling, security, test coverage).
@@ -31,7 +31,7 @@ If spec_check missing → backward compat: check plan coverage during REVIEW.
 
 ### Step 1: Quick Check — lint + test (blocking)
 If coder handoff includes verify_status with lint=PASS and test=PASS → trust coder verification, skip re-run.
-Otherwise: run `make lint` and `make test`. If EITHER fails → STOP, return to coder.
+Otherwise: run `{LINT_CMD}` and `{TEST_CMD}` (resolved from PROJECT-KNOWLEDGE.md; CLAUDE.md fallback; kit-default Go: `make lint`, `make test`). If EITHER fails → STOP, return to coder. If both slots unset AND no CLAUDE.md fallback → SKIP QUICK CHECK, emit consolidated NIT.
 Do NOT proceed to review if Quick Check fails (whether trusted or re-run).
 Also check spec_check from coder handoff. If status=PASS → note compliance trusted. If PARTIAL → note gaps. If missing → plan to check coverage during REVIEW (backward compat).
 
@@ -41,7 +41,7 @@ If >100 lines or >5 files or 3+ layers → use Sequential Thinking.
 
 ### Step 3: Review all concern areas
 Check each area using grep search patterns from [Examples](examples.md):
-- Architecture: import matrix compliance
+- Architecture: layer-dependency compliance per {LAYER_RULE} slot (SKIP if unset or non-layered)
 - Error handling: no log+return, proper wrapping
 - Security: no hardcoded secrets, no token leaks (see [Security Checklist](security-checklist.md))
 - Test coverage: new code has tests
@@ -54,21 +54,14 @@ CRITICAL: NEVER approve with BLOCKER issues. Form handoff for completion.
 
 ### Log AND return — most common blocker
 
-**Bad:**
-```go
-if err != nil {
-    log.Error("failed", "err", err)
-    return err  // duplicate log in error chain
-}
-```
+**Principle:** Choose one — return with wrap (domain/service) or log (handler), never both.
 
-**Good:**
-```go
-if err != nil {
-    return fmt.Errorf("context: %w", err)
-}
-```
-**Why:** [BLOCKER] Log AND return creates duplicate logs in error chain. Choose one: return with wrap (domain/service) or log (handler).
+**Reference shapes** (syntax-correct examples per language):
+- See `../planner-rules/code-shapes/<LANGUAGE>.md` for language-correct error wrapping per `{ERROR_WRAP}` slot
+- Kit Go example: `return fmt.Errorf("context: %w", err)`
+- SKIP if `{ERROR_WRAP}` slot unset
+
+**Why:** [BLOCKER] Log AND return creates duplicate logs in error chain — language-agnostic anti-pattern.
 
 For more examples (incl. grep search patterns), see [Examples](examples.md).
 

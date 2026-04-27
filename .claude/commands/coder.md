@@ -74,7 +74,7 @@ output:
         verify_status:
           lint: PASS
           test: PASS
-          command_used: "go vet ./... && make fmt && make lint && make test"
+          command_used: "{resolved VERIFY_CMD — Go example: 'go vet ./... && make fmt && make lint && make test'; Python example: 'pytest && ruff check'; resolved per .claude/PROJECT-KNOWLEDGE.md > CLAUDE.md fallback}"
         spec_check:
           status: PASS
           coverage_pct: 100
@@ -129,8 +129,10 @@ autonomy:
     - condition: Tests fail 3x consecutively
       action: "Stop, request help"
 
-    - condition: Import matrix violation
+    - condition: "Layer-dependency violation (when {LAYER_RULE} is set AND {ARCHITECTURE_STYLE} == 'layered')"
       action: "Fix before continuing"
+    - condition: "Layer-dependency check skipped ({LAYER_RULE} unset OR non-layered architecture)"
+      action: "Continue; SKIP recorded as consolidated NIT in handoff"
 
   continue_conditions:
     - condition: Part completed
@@ -348,8 +350,18 @@ workflow:
 
     - phase: 2
       name: "IMPLEMENT PARTS"
-      order: "Follow dependency direction: lower layers first (data access → domain → API → tests → wiring)"
-      note: "SEE: .claude/PROJECT-KNOWLEDGE.md for project-specific layer order (if available)"
+      order: |
+        Follow Parts order from plan. The plan's Parts list is the source of truth for ordering
+        (planner Phase 4 DESIGN already resolved order using {ARCHITECTURE_STYLE}-aware analysis).
+        If plan does not specify explicit order:
+          - if {LAYERS} slot set AND {ARCHITECTURE_STYLE} == "layered" → use lower-layers-first
+            (resolve {LAYERS} list from PROJECT-KNOWLEDGE.md);
+          - else → follow plan's natural Part order, emit consolidated NIT in evaluate_output
+            if order ambiguous (canonical SKIP, see plan-review-rules/architecture-checks.md L22-33).
+      note: |
+        Resolved from PROJECT-KNOWLEDGE.md → LAYERS + ARCHITECTURE_STYLE; SKIP if unset OR non-layered.
+        Kit example: LAYERS=[orchestrator, reviewers, enforcement, knowledge], ARCHITECTURE_STYLE=other →
+        follow plan order verbatim.
 
       tdd_mode:
         when: "TDD skill loaded (plan contains ## TDD)"
@@ -360,7 +372,7 @@ workflow:
       after_each_part:
         - "TodoWrite — mark Part as completed"
         - "Hooks auto-run formatter + linter (SEE: .claude/PROJECT-KNOWLEDGE.md)"
-        - "Do NOT run tests (make test / go test) between Parts — tests run ONCE at VERIFY phase. Exception: TDD mode (plan ## TDD) — RED-GREEN-REFACTOR test runs within a Part are implementation, not verification."
+        - "Do NOT run tests (resolved {TEST_CMD}) between Parts — tests run ONCE at VERIFY phase. Exception: TDD mode (plan ## TDD) — RED-GREEN-REFACTOR test runs within a Part are implementation, not verification."
 
       complex_logic:
         when: "3+ conditions, state machines"
@@ -384,8 +396,8 @@ workflow:
       config_changes:
         when: "Config added"
         actions:
-          - "Update CONFIG_EXAMPLE (Go default: config.yaml.example)"
-          - "Update CONFIG_DOCS (Go default: README.md)"
+          - "Update {CONFIG_EXAMPLE} (resolved from PROJECT-KNOWLEDGE.md → CONFIG_EXAMPLE; CLAUDE.md fallback). SKIP if slot unset."
+          - "Update {CONFIG_DOCS} (resolved from PROJECT-KNOWLEDGE.md → CONFIG_DOCS; CLAUDE.md fallback). SKIP if slot unset."
 
     - phase: 2.5
       name: "SIMPLIFY (optional)"
@@ -410,23 +422,31 @@ workflow:
       note: "This is the ONLY phase where tests run. Do not run tests earlier."
 
       verify_startup:
-        step_0: "Resolve VERIFY command before running"
+        step_0: "Resolve VERIFY command via slot-driven cascade"
         checks:
-          - if: ".claude/PROJECT-KNOWLEDGE.md exists AND defines custom VERIFY/FMT/LINT/TEST"
-            then: "Use custom commands from .claude/PROJECT-KNOWLEDGE.md"
-          - if: "Makefile exists with fmt/lint/test targets"
-            then: "Use make-based: go vet ./... && make fmt && make lint && make test"
-          - if: "go.mod exists but no Makefile"
-            then: "Use Go-native: go fmt ./... && go vet ./... && go test ./..."
-          - else: "WARN: No VERIFY command available. Skip VERIFY, note in handoff."
-        note: "CLAUDE.md defines defaults. .claude/PROJECT-KNOWLEDGE.md overrides. This ensures VERIFY never fails due to missing build tooling."
+          - if: ".claude/PROJECT-KNOWLEDGE.md exists AND defines VERIFY_CMD (not <your-…> placeholder)"
+            then: "Use VERIFY_CMD from .claude/PROJECT-KNOWLEDGE.md"
+          - if: ".claude/PROJECT-KNOWLEDGE.md exists AND defines individual FMT_CMD/LINT_CMD/TEST_CMD slots"
+            then: "Compose: {FMT_CMD} && {LINT_CMD} && {TEST_CMD}"
+          - if: "CLAUDE.md Language Profile defines VERIFY entry (legacy fallback)"
+            then: "Use CLAUDE.md VERIFY value (kit-default for Go projects: go vet ./... && make fmt && make lint && make test)"
+          - if: "PROJECT-KNOWLEDGE.md → DEPENDENCY_FILE detected (e.g. pyproject.toml, package.json, Cargo.toml, pom.xml) but VERIFY_CMD unset"
+            then: "WARN with INSTALL_VERB-aware hint: 'No VERIFY command resolved. Detected {DEPENDENCY_FILE}. Configure VERIFY_CMD in PROJECT-KNOWLEDGE.md or set INSTALL_VERB. Skipping VERIFY.' Do NOT execute commands."
+          - else: "WARN: No VERIFY command available. Emit consolidated NIT in handoff with verify_status: SKIPPED."
+        note: |
+          Cascade follows canonical 'PROJECT-KNOWLEDGE.md > CLAUDE.md > SKIP' contract from CLAUDE.md PK schema doc.
+          Kit's CLAUDE.md Language Profile retains Go-default as the legacy fallback — kit-dogfood
+          backwards-compat preserved when PK absent (constraint C5).
 
       static_analysis:
-        command: "VET (go vet ./... — catches printf format errors, lock copying, suspicious constructs)"
-        note: "Run before FMT/LINT. Fails fast on compilation-adjacent issues."
+        note: |
+          Static analysis is part of the resolved VERIFY_CMD when the project's
+          tooling provides it (Go: `go vet`; Python: `mypy`/`ruff`; Rust: `cargo clippy`;
+          TypeScript: `tsc --noEmit`/`eslint`; Java: `checkstyle`/`spotbugs`). No separate
+          VET phase — resolved VERIFY_CMD invokes whatever the project declares.
 
       formatting:
-        command: "FMT && LINT"
+        command: "{FMT_CMD} && {LINT_CMD} (resolved at startup; part of VERIFY_CMD if composite)"
 
       testing:
         quick_check:
@@ -458,10 +478,7 @@ workflow:
         - [x] Part 2: ...
 
         Checks:
-        - [x] VET (go vet ./...)
-        - [x] FMT
-        - [x] LINT
-        - [x] TEST (or test-runner subagent — adapt to project)
+        - [x] VERIFY ({verify_command_used resolved at startup})
         - [x] SPEC CHECK (coverage: N%)
 
         Ready for code review → /code-review
@@ -492,13 +509,19 @@ rules:
     severity: CRITICAL
 
   - id: RULE_2
-    title: "Import Matrix"
-    description: "NEVER violate the import matrix."
+    title: "Layer Dependency"
+    description: |
+      Layer-dependency compliance per {LAYER_RULE} slot (resolved from PROJECT-KNOWLEDGE.md → LAYER_RULE;
+      CLAUDE.md fallback). NEVER violate the resolved rule when {LAYER_RULE} is set AND
+      {ARCHITECTURE_STYLE} == "layered". SKIP rule with consolidated NIT if slot unset OR non-layered architecture.
     severity: CRITICAL
 
   - id: RULE_3
     title: "Clean Domain"
-    description: "NEVER add DOMAIN_PROHIBIT to domain entities (Go default: encoding/json tags)."
+    description: |
+      NEVER add {DOMAIN_PROHIBIT} (resolved from PROJECT-KNOWLEDGE.md → DOMAIN_PROHIBIT;
+      CLAUDE.md fallback) to domain entities (tags belong in DTOs at handler/API layer).
+      SKIP rule with consolidated NIT if slot unset.
     severity: CRITICAL
 
   - id: RULE_4

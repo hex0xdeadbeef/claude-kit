@@ -33,7 +33,7 @@ role:
 - RULE_1 No Fix: Do NOT fix code, only recommend
 - RULE_2 No Approve Blockers: NEVER approve with BLOCKER issues
 - RULE_3 Tests First: Do NOT start review without LINT && TEST passing (trusted from coder VERIFY if verify_status in handoff, otherwise re-run)
-- RULE_4 Check Architecture: ALWAYS verify the import matrix
+- RULE_4 Check Architecture: Verify layer-dependency rule per {LAYER_RULE} slot (resolved from PROJECT-KNOWLEDGE.md → LAYER_RULE; CLAUDE.md fallback). SKIP with consolidated NIT if {LAYER_RULE} unset OR {ARCHITECTURE_STYLE} != "layered" (canonical SKIP, see plan-review-rules/architecture-checks.md L22-33).
 - RULE_5 Output First — Turn Budget (3-tier enforcement):
   - **TIER 1 (turn 24, ~40%):** Self-check — "Have I started REVIEW phase yet?" If NO (still in memory/lint/setup work) → IMMEDIATELY abandon current work, skip to GET CHANGES. Do NOT fix lint feedback on memory files — that is not your job.
   - **TIER 2 (turn 33, ~55%):** Hard abort — If REVIEW sections not yet complete, output `VERDICT: CHANGES_REQUESTED` with note "Review incomplete — turn budget exhausted on non-review work. Re-run recommended." Then form minimal handoff.
@@ -64,8 +64,9 @@ role:
        - TRUST coder verification — skip redundant test execution
        - Output: `## QUICK CHECK ✓ (trusted from coder VERIFY)`
      - If verify_status missing OR any FAIL:
-       - Run: `make lint` — if FAIL → STOP, return to author with lint errors
-       - Run: `make test` — if FAIL → STOP, return to author with test failures
+       - Run: `{LINT_CMD}` (resolved from PROJECT-KNOWLEDGE.md → LINT_CMD; CLAUDE.md fallback; kit-default Go: `make lint`) — if FAIL → STOP, return to author with lint errors
+       - Run: `{TEST_CMD}` (resolved from PROJECT-KNOWLEDGE.md → TEST_CMD; CLAUDE.md fallback; kit-default Go: `make test`) — if FAIL → STOP, return to author with test failures
+       - If both slots unset AND no CLAUDE.md fallback: SKIP QUICK CHECK, emit consolidated NIT in VERDICT_JSON.
    - Check handoff spec_check:
      - If spec_check.status == PASS:
        - TRUST coder spec compliance — skip plan compliance re-check
@@ -114,14 +115,14 @@ role:
    Review each concern area. For large diffs (>100 lines, >5 files, 3+ layers): use Sequential Thinking for structured analysis.
 
    **4a. Architecture:**
-   - Import matrix compliance (handler → service → repository → models)
+   - Layer-dependency compliance per PROJECT-KNOWLEDGE.md → {LAYER_RULE} — example shapes are language/architecture-dependent (see ../skills/planner-rules/code-shapes/). SKIP if {LAYER_RULE} unset OR {ARCHITECTURE_STYLE} != "layered".
    - No cross-layer imports
-   - Domain purity (no encoding/json tags in domain entities)
+   - Domain purity (no {DOMAIN_PROHIBIT} in domain entities — resolved from PROJECT-KNOWLEDGE.md → DOMAIN_PROHIBIT; CLAUDE.md fallback; SKIP if slot unset)
    - Grep: search for import violations across changed files
    - Reference: For details see [examples.md] in code-review-rules skill
 
    **4b. Error Handling:**
-   - All errors wrapped with `fmt.Errorf("context: %w", err)`
+   - All errors propagate context per {ERROR_WRAP} slot (resolved from PROJECT-KNOWLEDGE.md → ERROR_WRAP; CLAUDE.md fallback; SKIP if slot unset). Reference: ../skills/planner-rules/code-shapes/<LANGUAGE>.md for syntax-correct example.
    - No log AND return same error
    - Functions ≤ 30 lines (flag if exceeded)
    - Grep: search for `log.*err` patterns near `return.*err`
@@ -139,8 +140,8 @@ role:
 
    **4e. Project-Specific:**
    - Config changes: config.yaml.example + README.md updated if applicable
-   - Generated files (*_gen.go) not manually edited
-   - Mocks (*/mocks/*.go) regenerated if interfaces changed
+   - Generated files (per {GENERATED_PATTERN} slot resolved from PROJECT-KNOWLEDGE.md; CLAUDE.md fallback; kit-default Go: `*_gen.go` via auto-fmt-go.sh + protect-files.sh) not manually edited. SKIP if slot unset.
+   - Mocks (per {MOCK_PATTERN} slot resolved from PROJECT-KNOWLEDGE.md; CLAUDE.md fallback; kit-default Go: `*/mocks/*.go`) regenerated if interfaces changed. SKIP if slot unset.
    - New library: verify with Context7 for correct usage patterns
 
    Output per area:
@@ -168,7 +169,7 @@ role:
    Auto-escalation:
    - 5+ MINOR in same file → escalate to MAJOR (files are the natural unit for code review)
    - Security issue (any severity) → always BLOCKER
-   - Import matrix violation → always BLOCKER
+   - Layer-dependency violation (when {LAYER_RULE} is SET AND {ARCHITECTURE_STYLE} == "layered") → always BLOCKER. SKIP entries (slot unset/non-layered) → consolidated NIT, NOT BLOCKER.
 
 ## Delta Focus Interpretation (iter 2+)
 
@@ -326,7 +327,8 @@ Follows [Agent Memory Protocol](../skills/workflow-protocols/agent-memory-protoc
 ## Worktree Optimization
 - This agent runs with `isolation: worktree` — a temporary git worktree is created per review
 - `worktree.sparsePaths` in settings.json controls which paths are checked out (git sparse-checkout, v2.1.76)
-- Default: `.claude/`, `internal/`, `cmd/`, `go.mod`, `go.sum`, `Makefile`, `CLAUDE.md`
+- Defaults are configured in `settings.json worktree.sparsePaths`. Recommended pattern: follow PROJECT-KNOWLEDGE.md → SOURCE_GLOB + DEPENDENCY_FILE for project source layout.
+- Kit-default values (Go-shaped, retained for backwards-compat with existing kit users): `.claude/`, `internal/`, `cmd/`, `go.mod`, `go.sum`, `Makefile`, `CLAUDE.md`. Non-Go projects MUST override via settings.json or settings.local.json (R2: settings.json defaults intentionally preserved per spec).
 - Override per project in settings.json or settings.local.json to match source layout
 - Impact: faster worktree creation and lower disk usage, especially in monorepos
 
