@@ -29,22 +29,20 @@ data_flow_analysis:
     - check: "External service call?"
       if_yes: "Dedicated client/adapter package (typically a sibling of <DATA_ACCESS_LAYER>)"
 
-<!-- EXAMPLE (lang: go) — Clean Architecture for a Go backend
-  PROJECT-KNOWLEDGE.md → LAYERS: [models, repository, service, handler]
-  Resolution:
-    <INPUT_LAYER> = handler
-    <BUSINESS_LAYER> = service
-    <DATA_ACCESS_LAYER> = repository
-  request_response: handler → service → repository → database
--->
+<!-- LAYER RESOLUTION — language-agnostic
+  Layer roles are abstract slots: <INPUT_LAYER>, <BUSINESS_LAYER>, <DATA_ACCESS_LAYER>.
+  Concrete layer NAMES come from PROJECT-KNOWLEDGE.md → LAYERS (ordered low-to-high).
 
-<!-- EXAMPLE (lang: python) — Django MTV
-  PROJECT-KNOWLEDGE.md → LAYERS: [model, manager, view]
-  Resolution:
-    <INPUT_LAYER> = view
-    <BUSINESS_LAYER> = manager
-    <DATA_ACCESS_LAYER> = model (Django ORM)
-  request_response: view → manager → model → database
+  Resolution rule:
+    <DATA_ACCESS_LAYER> = LAYERS[0]   (lowest layer — talks to storage)
+    <BUSINESS_LAYER>    = LAYERS[1..N-1]  (middle layers)
+    <INPUT_LAYER>       = LAYERS[N]   (highest layer — talks to outside world)
+
+  If LAYERS is unset OR ARCHITECTURE_STYLE != layered, the data-flow path is
+  computed without naming concrete layers — the planner uses abstract slot
+  names verbatim and emits a NEEDS_VALIDATION marker on layer-allocation Parts.
+
+  Per-language concrete examples are in .claude/skills/planner-rules/code-shapes/.
 -->
 
 ## Output Format

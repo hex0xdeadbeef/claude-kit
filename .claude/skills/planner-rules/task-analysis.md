@@ -156,8 +156,13 @@ preconditions:
       fail_action: "WARN: pending migrations detected"
 
   if_external_library:
-    - check: "Library in go.mod?"
-      fail_action: "INFO: will need go get"
+    - check: "Library declared in {DEPENDENCY_FILE}?"
+      resolved_from: "PROJECT-KNOWLEDGE.md → DEPENDENCY_FILE"
+      skip_if_unset: true                                      # canonical SKIP per architecture-checks.md
+      fail_action: "INFO: will need {INSTALL_VERB}"
+      # Both placeholders are slot-substituted by the planner before output.
+      # If either slot is unset, the check is SKIPPED (no output line) and
+      # contributes to the consolidated NIT issue emitted by plan-reviewer.
 ```
 
 ---

@@ -10,6 +10,7 @@ SubagentStart hook) at run-time.
 
 | Slot | Source | Used by check |
 |------|--------|---------------|
+| ARCHITECTURE_STYLE | PROJECT-KNOWLEDGE.md → ARCHITECTURE_STYLE | Gates layer-related checks (Layer imports, Handler → Business Logic flow, Parts ordering) |
 | LAYERS | PROJECT-KNOWLEDGE.md → LAYERS | Layer imports, Handler → Business Logic flow |
 | LAYER_RULE | PROJECT-KNOWLEDGE.md → LAYER_RULE | Layer imports |
 | DOMAIN_PROHIBIT | PROJECT-KNOWLEDGE.md → DOMAIN_PROHIBIT | Clean domain |
@@ -21,7 +22,18 @@ SubagentStart hook) at run-time.
 
 **SKIP rule:** If a slot is unset (PROJECT-KNOWLEDGE.md missing OR slot value
 is empty / contains `<your-` placeholder), the corresponding check is SKIPPED
-for this run. The reviewer:
+for this run.
+
+**Layer-check predicate:** Layer-related checks (Layer imports, Handler →
+Business Logic flow, Parts ordering, Business Logic Layer Check) run ONLY when
+BOTH conditions hold:
+
+- `ARCHITECTURE_STYLE` is `layered` (or unset AND `LAYERS` is populated — back-compat)
+- `LAYERS` and `LAYER_RULE` are populated
+
+Otherwise these checks are SKIPPED with one consolidated NIT entry.
+
+The reviewer:
 
 1. Emits ONE consolidated NIT issue at the end of the verdict:
    `{severity: "NIT", category: "completeness", problem: "N checks skipped

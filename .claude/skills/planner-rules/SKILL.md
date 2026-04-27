@@ -57,37 +57,13 @@ Form handoff payload for plan-review.
 
 ### Code completeness in plans
 
-**Principle:** Full body, error context propagated, all parameters/returns shown. Concrete syntax follows your project's LANGUAGE (resolved from PROJECT-KNOWLEDGE.md).
+**Principle:** Full function body, error context propagated per ERROR_WRAP, explicit return types and values, no truncation.
 
-**Good — full function body (lang: go):**
-```go
-func (s *Service) Do(ctx context.Context, id string) error {
-    result, err := s.repo.Get(ctx, id)
-    if err != nil {
-        return fmt.Errorf("get item: %w", err)
-    }
-    return nil
-}
-```
+**Bad — signature-only stub (any language):** Function declared without body (e.g. `func Get(id string) error` or `def get(id): ...`). Not actionable for the coder — no error path, no return shape.
 
-**Good — full function body (lang: python):**
-```python
-def do(self, request_id: str) -> None:
-    try:
-        result = self._repo.get(request_id)
-    except RepoError as err:
-        raise ServiceError(f"get item {request_id}") from err
-```
+**Good — see per-language reference shapes** in `.claude/skills/planner-rules/code-shapes/<LANGUAGE>.md` (resolved from `PROJECT-KNOWLEDGE.md → LANGUAGE`; falls back to `code-shapes/_default.md` pseudocode if LANGUAGE is unset or not one of go/python/typescript/rust/java).
 
-**Bad — signature only (any language):**
-```go
-func (uc *UseCase) Do(ctx context.Context) error
-```
-```python
-def do(self, request_id: str) -> None: ...
-```
-
-**Why:** Incomplete examples (signatures without bodies) are not actionable for the coder. The coder needs full body with error handling per the project's ERROR_WRAP convention (resolved from PROJECT-KNOWLEDGE.md).
+**Why:** Incomplete examples are not actionable for the coder. Concrete shapes are language-specific; the four invariants (full body, ERROR_WRAP, explicit types, no truncation) are universal — see `code-shapes/INVARIANTS.md`.
 
 For more examples, see [Examples](examples.md).
 

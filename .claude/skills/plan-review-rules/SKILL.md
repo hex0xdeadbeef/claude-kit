@@ -64,9 +64,9 @@ For more examples, see [Troubleshooting](troubleshooting.md) and [Architecture C
 
 ## Common Issues
 
-### Approved plan with import violations
-**Cause:** Manual check missed handler → repository direct import.
-**Fix:** ALWAYS verify import matrix. For plans with 4+ Parts, use grep to verify imports in code examples. Import violation = ALWAYS BLOCKER.
+### Approved plan with layer-dependency violations
+**Cause:** Manual check missed a direct import that violates LAYER_RULE (e.g. an api-layer importing a data-access layer directly, where LAYER_RULE forbids it).
+**Fix:** Verify layer-dependency rule per PROJECT-KNOWLEDGE.md → LAYER_RULE — SKIP with consolidated NIT if LAYER_RULE is unset OR ARCHITECTURE_STYLE != "layered" (canonical SKIP, see plan-review-rules/architecture-checks.md § Layer-check predicate). For plans with 4+ Parts when the check runs, use grep to verify imports in code examples. Layer-rule violation = ALWAYS BLOCKER when the check is active.
 
 ### Security issue marked as MAJOR instead of BLOCKER
 **Cause:** Didn't apply auto-escalation rule.

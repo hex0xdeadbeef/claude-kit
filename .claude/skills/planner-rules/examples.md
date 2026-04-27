@@ -1,35 +1,28 @@
 # Planner Examples
 
-purpose: "Examples of complete vs incomplete code for plans, in 2 languages — to demonstrate the principle is language-agnostic."
+purpose: "Illustrate the code-completeness principle. Concrete shapes live in code-shapes/<LANGUAGE>.md and are loaded conditionally by /planner Phase 4."
 
 ---
 
-examples:
-  code_completeness:
-    bad_go:
-      code: "func (uc *UseCase) Do(ctx context.Context) error"
-      why: "Incomplete example — only signature without body"
+principle:
+  bad: "Signature-only stub: `func Get(id string) error` (Go) / `def get(id): ...` (Python) — no body, no error path, not actionable for code review."
+  good: "Full function body satisfying all four invariants in code-shapes/INVARIANTS.md."
 
-    good_go:
-      code: |
-        func (s *Service) Do(ctx context.Context, id string) error {
-            result, err := s.repo.Get(ctx, id)
-            if err != nil {
-                return fmt.Errorf("get item: %w", err)
-            }
-            return nil
-        }
-      why: "Full example with function body, error wrapping per ERROR_WRAP, context propagation"
+four_invariants:
+  - "1. Full function body (no `...` / no signature-only stubs)"
+  - "2. Error context propagation per the project's ERROR_WRAP slot"
+  - "3. Explicit return types and values (typed or annotated)"
+  - "4. No truncation — every control-flow path returns / raises / panics"
 
-    bad_python:
-      code: "def do(self, request_id: str) -> None: ..."
-      why: "Incomplete example — only signature, no body"
+reference_shapes:
+  resolved_from: "PROJECT-KNOWLEDGE.md → LANGUAGE"
+  selector: |
+    - go         → code-shapes/go.md
+    - python     → code-shapes/python.md
+    - typescript → code-shapes/typescript.md
+    - rust       → code-shapes/rust.md
+    - java       → code-shapes/java.md
+    - any other / unset → code-shapes/_default.md  (pseudocode)
+  invariants_anchor: "code-shapes/INVARIANTS.md"
 
-    good_python:
-      code: |
-        def do(self, request_id: str) -> None:
-            try:
-                result = self._repo.get(request_id)
-            except RepoError as err:
-                raise ServiceError(f"get item {request_id}") from err
-      why: "Full example with function body, exception chaining per ERROR_WRAP, explicit type annotations"
+note: "If you add a new supported language, follow code-shapes/INVARIANTS.md → 'Adding a new language' before updating the selector above."

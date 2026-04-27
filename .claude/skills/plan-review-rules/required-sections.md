@@ -38,7 +38,7 @@ required_sections:
   - section: Parts
     required: ALWAYS
     validate:
-      - ordered_correctly: "Parts follow dependency direction per PROJECT-KNOWLEDGE.md → LAYERS list (lower-index layers first); fallback if LAYERS unset: generic dependency order (data → business → api)"
+      - ordered_correctly: "Parts follow dependency direction per PROJECT-KNOWLEDGE.md → LAYERS list (lower-index layers first). SKIP this validation if LAYERS unset OR ARCHITECTURE_STYLE != layered (canonical SKIP, see plan-review-rules/architecture-checks.md § Layer-check predicate); emit consolidated NIT."
       - full_code_examples: "Complete, runnable code (not snippets)"
       - imports_listed: "All imports shown"
 

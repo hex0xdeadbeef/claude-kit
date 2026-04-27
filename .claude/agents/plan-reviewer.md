@@ -31,7 +31,7 @@ role:
 ## Rules (STRICT)
 - NEVER modify the plan — only recommend changes
 - NEVER approve a plan with BLOCKER issues
-- ALWAYS verify the import matrix
+- Verify layer-dependency rule per PROJECT-KNOWLEDGE.md → LAYER_RULE — SKIP with consolidated NIT if LAYER_RULE is unset OR ARCHITECTURE_STYLE != "layered" (canonical SKIP, see plan-review-rules/architecture-checks.md § Layer-check predicate)
 - Read plan FROM SCRATCH — never trust cached version
 - RULE_5 Output First — Turn Budget (3-tier enforcement):
   - **TIER 1 (turn 20):** Self-check — "Have I started VALIDATE ARCHITECTURE yet?" If NO (still in memory/startup work) → IMMEDIATELY skip to READ PLAN. Workflow context is pre-injected via SubagentStart hook (IMP-A) — do NOT spend turns reading checkpoint or review-completions manually.
@@ -78,7 +78,7 @@ role:
      ```
 
 3. **VALIDATE ARCHITECTURE** (IMP-04: Part-selective on iter 2+)
-   - Check import matrix compliance (handler → service → repository → models)
+   - Check layer-dependency compliance against PROJECT-KNOWLEDGE.md → LAYER_RULE; concrete layer names and example shapes are project-resolved (see code-shapes/<LANGUAGE>.md and architecture-checks.md slot table)
    - Check domain purity (no encoding/json tags in entities)
    - Check error handling patterns (wrap errors per PROJECT-KNOWLEDGE.md → ERROR_WRAP convention; never log AND return same error). SKIP this check + emit consolidated NIT if ERROR_WRAP slot is unset.
    - Mode: manual (< 4 Parts) — direct checks; complex (4+ Parts, 3+ layers) — use Sequential Thinking

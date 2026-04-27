@@ -273,10 +273,14 @@ phases:
         note: "Task types and keywords → SEE [task-analysis.md] in planner-rules skill. If spec provided → skip clarifying questions already answered in spec. Focus on implementation-specific questions only."
 
       - action: "Ask LAYER VOCABULARY question (CONDITIONAL)"
-        condition: "PROJECT-KNOWLEDGE.md missing OR LAYERS slot empty/placeholder, AND complexity >= M"
+        condition: |
+          PROJECT-KNOWLEDGE.md missing OR LAYERS slot empty/placeholder,
+          AND complexity >= M,
+          AND ARCHITECTURE_STYLE is unset OR ARCHITECTURE_STYLE == "layered"
         skip_when:
           - "Complexity == S (no layer-validated checks run)"
           - "PROJECT-KNOWLEDGE.md → LAYERS slot is populated (use those layers)"
+          - "PROJECT-KNOWLEDGE.md → ARCHITECTURE_STYLE in {flat, event_driven, hexagonal, other} — non-layered styles do not use LAYER_RULE"
         question: |
           "Layer vocabulary: which layers does your project use, in dependency order
           (lowest → highest)? E.g., for Go Clean Architecture:
@@ -287,7 +291,8 @@ phases:
           Without LAYERS, the planner cannot allocate Parts to project-specific
           layers and the plan-reviewer cannot validate import-matrix compliance.
           On answer received, planner uses the response as the working LAYERS
-          for this plan AND offers (NON-BLOCKING) to write it to PROJECT-KNOWLEDGE.md.
+          for this plan AND offers (NON-BLOCKING) to write it to PROJECT-KNOWLEDGE.md
+          AND offers to set ARCHITECTURE_STYLE: layered if currently unset.
 
   phase_2_data_flow:
     name: "DATA_FLOW"
