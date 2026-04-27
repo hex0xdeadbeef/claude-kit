@@ -305,9 +305,12 @@ Why dual emission: The human-readable `VERDICT:` line is a defense-in-depth fall
 
 The `id` field in each issue is **normalized by the save-review-checkpoint.sh hook** into its canonical form `PR-<first-8-hex-chars-of-sha256(category|location|problem)>` BEFORE schema validation. You may emit any advisory string (e.g. `"PR-001"`) — the hook will overwrite it with the canonical form. The canonical form is what downstream consumers (orchestrator `resolved_ids`, injector's REGRESSION ALERT, `review-completions.jsonl`) reference.
 
-**Location-stability guidance (IMP-03 KD-8):** prefer function / symbol name over line number in the `location` field. Line numbers shift when code is edited, which changes the hash → breaks ID continuity across iterations. Examples:
-- PREFER: `"Part 3: UserHandler.Create"` or `"internal/service/user.go:Update"` (stable across edits)
-- AVOID: `"handler.go:42"` alone (drift-prone)
+**Location-stability guidance (IMP-03 KD-8):** prefer function / symbol name over line number in the `location` field. Line numbers shift when code is edited, which changes the hash → breaks ID continuity across iterations. File extensions and project-specific path prefixes also drift (refactors, language ports, monorepo restructuring). Examples (language-agnostic):
+- PREFER: `"Part 3: UserHandler.Create"` (Part-anchored symbol — most stable)
+- ACCEPT: `"<source-glob-relative-path>:Update"` (path + symbol — stable until file rename)
+- AVOID: `"<filename>:42"` alone (line number only — drift-prone)
+
+**Note:** match path conventions to the project's `SOURCE_GLOB` slot (PROJECT-KNOWLEDGE.md). Avoid hardcoding language-specific prefixes (`internal/`, `src/`, `lib/`) or file extensions (`.go`, `.py`, `.ts`) in the `location` string — those vary per project.
 
 **Iteration 2+ context:** `inject-review-context.sh` passes canonical IDs from the prior iteration into your `additionalContext`. When referencing a carried-over issue, write the exact canonical ID (e.g. `PR-ab12cd34`) in both your human-readable output and the VERDICT_JSON `id` field — the hook will still re-normalise, but using the canonical form directly eliminates churn.
 

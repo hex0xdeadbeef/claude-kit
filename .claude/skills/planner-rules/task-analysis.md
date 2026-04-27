@@ -81,25 +81,27 @@ complexity_matrix:
     layers: "3+"
     files: "6-10"
     examples:
-      - "New endpoint with database → domain → API"
-      - "Refactor controller by splitting into services"
+      - "New endpoint touching storage → domain → input/API layers"
+      - "Refactor a layer by splitting concerns across modules"
     indicators:
       - "Affects 3+ architecture layers"
       - "May require architectural decision"
-      - "New SQL queries or migrations"
+      - "New persistence schema or migration"
+    note: "Concrete layer names per project — see PROJECT-KNOWLEDGE.md → LAYERS"
 
   XL:
     parts: "7+"
     layers: "4+"
     files: "10+"
     examples:
-      - "New domain with full stack (DB → models → controller → API → tests)"
+      - "New domain with full stack (storage → entities → business → API → tests)"
       - "Integration with external service"
-      - "Plugin architecture"
+      - "Plugin or event-driven architecture across multiple boundaries"
     indicators:
       - "Cross-domain changes"
       - "New external system integration"
       - "Sequential Thinking needed for approach selection"
+    note: "Layer terminology shown is illustrative; resolve concrete names from PROJECT-KNOWLEDGE.md → LAYERS"
 ```
 
 ---
@@ -207,7 +209,7 @@ Input: "Add endpoint GET /api/v1/{resource}/:id"
 
 Task Analysis:
   Type: new_feature
-  Complexity: L (5 Parts: DB query + model + controller + handler + tests)
+  Complexity: L (5 Parts: data query + entity + business + API + tests)
   Route: standard
   Sequential Thinking: recommended
   Plan Review: standard

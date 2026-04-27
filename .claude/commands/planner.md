@@ -283,10 +283,12 @@ phases:
           - "PROJECT-KNOWLEDGE.md → ARCHITECTURE_STYLE in {flat, event_driven, hexagonal, other} — non-layered styles do not use LAYER_RULE"
         question: |
           "Layer vocabulary: which layers does your project use, in dependency order
-          (lowest → highest)? E.g., for Go Clean Architecture:
-          [models, repository, service, handler]; for Django:
-          [model, manager, view]; for Spring Boot:
-          [entity, repository, service, controller]. Provide a comma-separated list."
+          (lowest → highest)? Provide a comma-separated list. Examples from common
+          stacks (illustrative — your project's vocabulary may differ):
+            - Django:    [model, manager, view]
+            - Go:        [models, repository, service, handler]
+            - Spring:    [entity, repository, service, controller]
+          Use what your codebase actually uses."
         purpose: |
           Without LAYERS, the planner cannot allocate Parts to project-specific
           layers and the plan-reviewer cannot validate import-matrix compliance.
@@ -327,12 +329,17 @@ phases:
             - "Collect examples from multiple layers"
             - "Map import graph between packages"
           delegation_prompt_example: |
-            Research the codebase for: API handler implementation patterns
+            Research the codebase for: API/transport-layer implementation patterns
             Focus areas:
-            - error handling and response formatting in internal/handler/
-            - middleware usage patterns
+            - error handling and response formatting in <INPUT_LAYER>
+              (resolve from PROJECT-KNOWLEDGE.md → LAYERS[N], or describe by role
+              if LAYERS unset)
+            - middleware / request-pipeline patterns
             - input validation approach
             Context: Planning new_feature task, complexity L
+            <!-- EXAMPLE (lang: go) — concrete <INPUT_LAYER> = `internal/handler/` -->
+            <!-- EXAMPLE (lang: python) — concrete <INPUT_LAYER> = `app/api/` or `<pkg>/views/` -->
+            <!-- EXAMPLE (lang: typescript) — concrete <INPUT_LAYER> = `src/controllers/` or `src/routes/` -->
           note: "code-researcher returns structured summary ≤2000 tokens. See .claude/agents/code-researcher.md for output format."
 
           background_mode:
@@ -457,9 +464,18 @@ phases:
       warning: "If Sequential Thinking NOT used — justify why it was unnecessary"
 
     parts_order:
-      note: "Follow dependency direction — lower layers first. Adapt to project structure."
-      pattern: "Data access → Models → Domain logic → API/Handlers → Tests → Wiring → Docs"
-      reference: "SEE: .claude/PROJECT-KNOWLEDGE.md for project-specific layer order (if available)"
+      note: |
+        Follow dependency direction — lower layers first. Concrete layer names
+        resolve from PROJECT-KNOWLEDGE.md → LAYERS (lowest-to-highest).
+      pattern_when_layers_set: "{LAYERS[0]} → {LAYERS[1]} → ... → {LAYERS[N]} → Tests → Setup → Docs"
+      pattern_when_layers_unset: "<DATA_ACCESS_LAYER> → <BUSINESS_LAYER> → <INPUT_LAYER> → Tests → Setup → Docs"
+      fallback_skip_rule: |
+        If LAYERS unset AND ARCHITECTURE_STYLE != layered, planner SKIPS layer
+        prefixes in Parts headings and uses functional grouping (input handling →
+        core logic → output → tests → setup → docs). Plan-reviewer emits a
+        consolidated NIT noting layer-allocation was skipped (canonical SKIP
+        pattern, see plan-review-rules/architecture-checks.md § Layer-check predicate).
+      reference: "SEE: .claude/PROJECT-KNOWLEDGE.md for project-specific layer order"
 
     config_changes:
       when: "Adding new configuration"
