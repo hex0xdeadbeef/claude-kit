@@ -5,6 +5,8 @@
         "CLAUDE_VERDICT_VALIDATION_MODE": "strict",
         "CLAUDE_PROJECT_KNOWLEDGE_MODE": "strict",
         "CLAUDE_DELTA_REVIEW_MODE": "strict",
+        "CLAUDE_ISSUE_ID_VALIDATION_MODE": "strict",
+        "CLAUDE_PK_PATH_MODE": "strict",
         "ENABLE_PROMPT_CACHING_1H": "1",
         "FORCE_PROMPT_CACHING_5M": "1"
     }
