@@ -33,7 +33,7 @@ try:
     sys.path.insert(0, os.environ['LIB_DIR'])
     from state_render import _extract_yaml_section, _extract_scalar
 except Exception as _import_err:
-    print(f'[verify-state-after-compact.sh] WARN: shared state-render unavailable — {_import_err}',
+    print(f'[verify-state-after-compact] WARN: shared state-render unavailable — {_import_err}',
           file=sys.stderr)
     print('{"additionalContext": ""}')
     sys.exit(0)
@@ -171,7 +171,7 @@ if [[ $SIZE -gt $CAP ]]; then
     mkdir -p "$STATE_DIR"
     OVERFLOW_FILE="${STATE_DIR}/compact-overflow-$(date -u +%s)-$$.log"
     printf '%s' "$OUTPUT" > "$OVERFLOW_FILE"
-    echo "[verify-state-after-compact.sh] WARN: output ${SIZE} chars > ${CAP}, saved to ${OVERFLOW_FILE}" >&2
+    echo "[verify-state-after-compact] WARN: output ${SIZE} chars > ${CAP}, saved to ${OVERFLOW_FILE}" >&2
     LIB_DIR="$LIB_DIR" STATE_DIR="$STATE_DIR" python3 -c "
 import sys, os; sys.path.insert(0, os.environ['LIB_DIR'])
 import state_render; state_render.rotate_spillover_files(os.environ['STATE_DIR'])

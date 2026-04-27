@@ -205,7 +205,7 @@ STDOUT_OUT=$(echo '{}' | bash "${SCRIPTS_DIR}/enrich-context.sh" 2>/dev/null)
 mv "${LIB_DIR}.bak" "${LIB_DIR}"
 # Restore original trap (lib is back; only state dir cleanup remains)
 trap "rm -rf '$TEST_STATE_DIR'" EXIT
-assert_contains "enrich-context import failure: stderr WARN" "$STDERR_OUT" "[enrich-context.sh] WARN:"
+assert_contains "enrich-context import failure: stderr WARN" "$STDERR_OUT" "[enrich-context] WARN:"
 CONTEXT=$(echo "$STDOUT_OUT" | extract_context)
 assert_eq "enrich-context import failure: empty additionalContext" "$CONTEXT" ""
 cleanup_state

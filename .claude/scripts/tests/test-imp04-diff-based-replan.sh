@@ -4,7 +4,8 @@
 # Usage: bash .claude/scripts/tests/test-imp04-diff-based-replan.sh
 #
 # IMP-04 is a documentation + schema change (no new hook/script). Tests verify:
-#   AC-1:  workflow.md has pre_delegation STEP 0.5 (manifest build)
+#   AC-1:  delegation-templates.md has pre_delegation STEP 0.5 (manifest build)
+#          (relocated from workflow.md during workflow-md refactor)
 #   AC-2:  plan-template.md has diff_vs_prior_iteration block
 #   AC-3:  plan-reviewer.md has Part-selective VALIDATE ARCHITECTURE
 #   AC-4:  handoff.schema.json has optional parts_validated[] in plan_review_verdict
@@ -14,9 +15,11 @@
 #   AC-8:  BEHAVIORAL — plan WITHOUT diff section does NOT emit parts_validated[]
 #                       (schema: parts_validated is optional / not in required list)
 #   AC-9:  IMP-03 integration — regression_ids sourced from checkpoint.issues_history[]
-#          (pointer needle stays in workflow.md; "IMP-03 post_delegation step 5" needle in diff-manifest.md)
+#          (pointer needle in delegation-templates.md post-refactor;
+#          "IMP-03 post_delegation step 5" needle in diff-manifest.md)
 #   AC-10: KD-6 unmappable-location fallback + telemetry kinds in diff-manifest.md
-#   AC-11: KD-4 contract-break literal prefix documented in workflow + plan-reviewer
+#   AC-11: KD-4 contract-break literal prefix documented in delegation-templates + plan-reviewer
+#          (relocated from workflow.md during workflow-md refactor)
 # Regression-1: existing VERDICT_JSON payloads (no parts_validated) still schema-validate
 # Regression-2: new VERDICT_JSON payloads WITH parts_validated schema-validate
 
@@ -31,6 +34,12 @@ REVIEWER_MD="${REPO_ROOT}/.claude/agents/plan-reviewer.md"
 TEMPLATE_MD="${REPO_ROOT}/.claude/templates/plan-template.md"
 PROTOCOL_MD="${REPO_ROOT}/.claude/skills/workflow-protocols/handoff-protocol.md"
 MANIFEST_MD="${REPO_ROOT}/.claude/skills/workflow-protocols/diff-manifest.md"
+# IMP-04 pre/post_delegation contracts were extracted from workflow.md to
+# delegation-templates.md during the workflow-md refactor (see
+# .claude/prompts/workflow-md-refactor.md). Predicates that previously
+# asserted IMP-04 STEP 0.5, contract-break literals, and issues_history
+# pointers in WORKFLOW_MD now point at DELEGATION_TEMPLATES_MD.
+DELEGATION_TEMPLATES_MD="${REPO_ROOT}/.claude/skills/workflow-protocols/delegation-templates.md"
 
 cd "${REPO_ROOT}"
 
@@ -85,10 +94,11 @@ assert_json() {
 echo "=== IMP-04 diff-based replan — documentation + schema regression tests ==="
 echo
 
-# ─── AC-1: workflow.md pre_delegation STEP 0.5 ─────────────────────────────────────────
-echo "AC-1: workflow.md has pre_delegation STEP 0.5 (manifest build)"
-assert_fixed_string "STEP 0.5 IMP-04 header"          "STEP 0.5 (IMP-04" "${WORKFLOW_MD}"
-assert_fixed_string "diff-manifest.json artifact"     "{feature}-diff-manifest.json" "${WORKFLOW_MD}"
+# ─── AC-1: delegation-templates.md pre_delegation STEP 0.5 ─────────────────────────────
+# Post workflow-md refactor: pre_delegation STEPs moved from workflow.md to delegation-templates.md.
+echo "AC-1: delegation-templates.md has pre_delegation STEP 0.5 (manifest build)"
+assert_fixed_string "STEP 0.5 IMP-04 header"          "STEP 0.5 (IMP-04" "${DELEGATION_TEMPLATES_MD}"
+assert_fixed_string "diff-manifest.json artifact"     "{feature}-diff-manifest.json" "${DELEGATION_TEMPLATES_MD}"
 echo
 
 # ─── AC-2: plan-template.md diff_vs_prior_iteration ────────────────────────────────────
@@ -184,7 +194,8 @@ echo
 
 # ─── AC-9: IMP-03 integration — regression_ids from checkpoint.issues_history ──────────
 echo "AC-9: IMP-03 integration — regression_ids sourced from issues_history"
-assert_fixed_string "regression_ids canonical source" "checkpoint.issues_history[]" "${WORKFLOW_MD}"
+# Pointer relocated from workflow.md → delegation-templates.md (workflow-md refactor).
+assert_fixed_string "regression_ids canonical source" "checkpoint.issues_history[]" "${DELEGATION_TEMPLATES_MD}"
 assert_fixed_string "IMP-03 post_delegation step 5 reference" "IMP-03 post_delegation step 5" "${MANIFEST_MD}"
 echo
 
@@ -198,10 +209,11 @@ assert_fixed_string "cross_cutting documented in protocol"    "imp04_cross_cutti
 echo
 
 # ─── AC-11: KD-4 contract-break literal prefix ─────────────────────────────────────────
-echo "AC-11: KD-4 contract-break literal prefix documented in workflow + plan-reviewer"
-assert_fixed_string "workflow.md: literal prefix"         'IMP-04 contract break: Part ' "${WORKFLOW_MD}"
-assert_fixed_string "plan-reviewer.md: literal prefix"    'IMP-04 contract break: Part ' "${REVIEWER_MD}"
-assert_fixed_string "imp04_contract_break_reroute kind"   "imp04_contract_break_reroute" "${WORKFLOW_MD}"
+# Post workflow-md refactor: literal prefix + reroute kind moved to delegation-templates.md.
+echo "AC-11: KD-4 contract-break literal prefix documented in delegation-templates + plan-reviewer"
+assert_fixed_string "delegation-templates.md: literal prefix"  'IMP-04 contract break: Part ' "${DELEGATION_TEMPLATES_MD}"
+assert_fixed_string "plan-reviewer.md: literal prefix"         'IMP-04 contract break: Part ' "${REVIEWER_MD}"
+assert_fixed_string "imp04_contract_break_reroute kind"        "imp04_contract_break_reroute" "${DELEGATION_TEMPLATES_MD}"
 echo
 
 # ─── Regression 1: existing VERDICT_JSON (no parts_validated) still validates ──────────

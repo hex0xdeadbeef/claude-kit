@@ -28,7 +28,7 @@ try:
     sys.path.insert(0, os.environ['LIB_DIR'])
     import state_render
 except Exception as _import_err:
-    print(f'[enrich-context.sh] WARN: shared state-render unavailable — {_import_err}',
+    print(f'[enrich-context] WARN: shared state-render unavailable — {_import_err}',
           file=sys.stderr)
     print('{"additionalContext": ""}')
     sys.exit(0)
@@ -80,7 +80,7 @@ try:
         # Cache-hint warn for L/XL without 1H TTL
         if complexity in ("L", "XL") and not os.environ.get("ENABLE_PROMPT_CACHING_1H"):
             print(
-                "[enrich-context.sh] WARN: L/XL task detected but ENABLE_PROMPT_CACHING_1H not set. "
+                "[enrich-context] WARN: L/XL task detected but ENABLE_PROMPT_CACHING_1H not set. "
                 "Expected cache-miss rate ~50% at phase boundaries. "
                 "See CLAUDE.md > Prompt Cache Policy.",
                 file=sys.stderr
@@ -130,7 +130,7 @@ if [[ $SIZE -gt $CAP ]]; then
     mkdir -p "$STATE_DIR"
     OVERFLOW_FILE="${STATE_DIR}/compact-overflow-$(date -u +%s)-$$.log"
     printf '%s' "$OUTPUT" > "$OVERFLOW_FILE"
-    echo "[enrich-context.sh] WARN: output ${SIZE} chars > ${CAP}, saved to ${OVERFLOW_FILE}" >&2
+    echo "[enrich-context] WARN: output ${SIZE} chars > ${CAP}, saved to ${OVERFLOW_FILE}" >&2
     LIB_DIR="$LIB_DIR" STATE_DIR="$STATE_DIR" python3 -c "
 import sys, os; sys.path.insert(0, os.environ['LIB_DIR'])
 import state_render; state_render.rotate_spillover_files(os.environ['STATE_DIR'])

@@ -43,7 +43,7 @@ try:
     sys.path.insert(0, os.environ['LIB_DIR'])
     from state_render import _extract_yaml_section, _extract_scalar, _extract_top_level
 except Exception as _import_err:
-    print(f'[inject-review-context.sh] WARN: shared state-render unavailable — {_import_err}',
+    print(f'[inject-review-context] WARN: shared state-render unavailable — {_import_err}',
           file=sys.stderr)
     print('{"additionalContext": ""}')
     sys.exit(0)
@@ -190,7 +190,7 @@ def emit_delta_focus_block(lines, state_dir, feature, agent_type, content, curre
             # AC-5: graceful no-op — do not block review
             import sys as _sys
             print(
-                f"[inject-review-context.sh] WARN: iteration_commit_sha[{iter_num - 1}] "
+                f"[inject-review-context] WARN: iteration_commit_sha[{iter_num - 1}] "
                 f"missing — code delta skipped",
                 file=_sys.stderr
             )
@@ -521,7 +521,7 @@ if os.path.isfile(pk_path):
         # Non-fatal — agent proceeds without PK; will SKIP slot-driven checks
         import sys as _sys
         print(
-            f"[inject-review-context.sh] WARN: PROJECT-KNOWLEDGE.md unreadable: {_pk_err}",
+            f"[inject-review-context] WARN: PROJECT-KNOWLEDGE.md unreadable: {_pk_err}",
             file=_sys.stderr
         )
 
@@ -563,7 +563,7 @@ if [[ $SIZE -gt $CAP ]]; then
     mkdir -p "$STATE_DIR"
     OVERFLOW_FILE="${STATE_DIR}/compact-overflow-$(date -u +%s)-$$.log"
     printf '%s' "$OUTPUT" > "$OVERFLOW_FILE"
-    echo "[inject-review-context.sh] WARN: output ${SIZE} chars > ${CAP}, saved to ${OVERFLOW_FILE}" >&2
+    echo "[inject-review-context] WARN: output ${SIZE} chars > ${CAP}, saved to ${OVERFLOW_FILE}" >&2
     LIB_DIR="$LIB_DIR" STATE_DIR="$STATE_DIR" python3 -c "
 import sys, os; sys.path.insert(0, os.environ['LIB_DIR'])
 import state_render; state_render.rotate_spillover_files(os.environ['STATE_DIR'])
