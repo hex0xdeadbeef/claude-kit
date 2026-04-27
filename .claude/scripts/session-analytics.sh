@@ -153,35 +153,6 @@ try:
 except Exception as e:
     print(f"session-analytics: checkpoint read error: {e}", file=sys.stderr)
 
-# 4.5. Task creation metrics (from task-events.jsonl — not in transcript)
-# TaskCreated hook writes per-creation entries; we aggregate per-session here.
-# Filter by session_id to avoid double-counting across concurrent sessions.
-task_created_count = 0
-task_created_breakdown = {}
-try:
-    task_events_file = os.path.join(STATE_DIR, "task-events.jsonl")
-    if os.path.isfile(task_events_file):
-        with open(task_events_file) as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    ev = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                if ev.get("event") == "TaskCreated" and ev.get("session_id") == session_id:
-                    task_created_count += 1
-                    at = ev.get("agent_type", "unknown")
-                    task_created_breakdown[at] = task_created_breakdown.get(at, 0) + 1
-except Exception as e:
-    print(f"[session-analytics] ERROR: task-events read error: {e}", file=sys.stderr)
-
-task_creation_metrics = {
-    "task_created_count": task_created_count,
-    "task_created_breakdown": task_created_breakdown,
-}
-
 # 4. Exploration metrics (derived from tool_breakdown)
 exploration_reads = sum(tool_breakdown.get(t, 0) for t in ("Read", "Grep", "Glob"))
 action_writes = sum(tool_breakdown.get(t, 0) for t in ("Write", "Edit"))
@@ -208,7 +179,6 @@ entry = {
     "tool_calls": tool_calls,
     "tool_breakdown": tool_breakdown,
     "exploration_metrics": exploration_metrics,
-    "task_creation_metrics": task_creation_metrics,
     "agent_metrics": agent_metrics if agent_metrics else None,
     "errors": errors,
     "checkpoint": checkpoint,

@@ -320,17 +320,6 @@
         ]
       }
     ],
-    "TaskCreated": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".claude/scripts/track-task-creation.sh"
-          }
-        ]
-      }
-    ],
     "WorktreeCreate": [
       {
         "matcher": "",
