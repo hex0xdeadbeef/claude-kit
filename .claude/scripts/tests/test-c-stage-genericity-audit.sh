@@ -5,7 +5,8 @@
 # Tests 2026-04-27 fresh C-stage audit: 5 Coder + Code-Reviewer genericity gaps
 # fixed in coder.md, code-reviewer.md, coder-rules/SKILL.md, settings.local.json.example.
 #
-# Coverage: 16 ACs automated. Manual: CG1.4, CG2.4, CG4.5, CG5.4 (visual cross-ref).
+# Coverage: 16 ACs automated. CG1.1-CG1.3 retargeted post-T1 (tdd-go → tdd-rules/tdd-shapes).
+# Manual: CG1.4, CG2.4, CG4.5, CG5.4 (visual cross-ref).
 # Awk active-body extractor uses 3-state machine (PR-001 fix from plan-review iter 1).
 # CG3.5 uses jq for structural assertion (PR-002 fix from plan-review iter 1).
 
@@ -24,23 +25,23 @@ cd "$PROJECT_ROOT"
 # AUTOMATED
 # ════════════════════════════════════════════════════════════════════════
 
-# CG1.1 — coder.md step 5 condition references LANGUAGE slot
-awk '/Conditional: Load TDD skill/,/skip_behavior:|^[[:space:]]+purpose:/' .claude/commands/coder.md \
-  | grep -qE 'LANGUAGE[[:space:]]*==[[:space:]]*.go.|PROJECT-KNOWLEDGE\.md → LANGUAGE' \
-  || fail "CG1.1 — coder.md TDD-load condition missing LANGUAGE slot reference"
-pass "CG1.1 — coder.md TDD-load condition gates on LANGUAGE slot"
-
-# CG1.2 — skip_behavior block present
+# CG1.1 — coder.md "Conditional: Load TDD skill" condition references LANGUAGE slot via tdd-shapes cascade
 awk '/Conditional: Load TDD skill/,/^[[:space:]]+purpose:/' .claude/commands/coder.md \
-  | grep -q 'skip_behavior:' \
-  || fail "CG1.2 — coder.md TDD-load missing skip_behavior block"
-pass "CG1.2 — skip_behavior documented for non-Go SKIP path"
+  | grep -qE 'PROJECT-KNOWLEDGE\.md → LANGUAGE|tdd-shapes/<LANGUAGE>\.md' \
+  || fail "CG1.1 — coder.md TDD-load condition missing LANGUAGE slot reference (post-T3 refactor: must reference PROJECT-KNOWLEDGE.md → LANGUAGE OR tdd-shapes/<LANGUAGE>.md)"
+pass "CG1.1 — coder.md TDD-load condition gates on LANGUAGE slot via tdd-shapes cascade"
 
-# CG1.3 — "kit ships Go-only TDD patterns" rationale present
+# CG1.2 — cascade block present (replaces former skip_behavior block; cascade documents all 3 branches)
 awk '/Conditional: Load TDD skill/,/^[[:space:]]+purpose:/' .claude/commands/coder.md \
-  | grep -qE 'Go-only TDD patterns|Go-only TDD' \
-  || fail "CG1.3 — coder.md TDD-load missing Go-only acknowledgment"
-pass "CG1.3 — Go-only TDD acknowledgment present in skip rationale"
+  | grep -q 'cascade:' \
+  || fail "CG1.2 — coder.md TDD-load missing cascade block (post-T3: cascade replaces skip_behavior)"
+pass "CG1.2 — cascade documented for LANGUAGE→file resolution and unmatched-LANGUAGE NIT path"
+
+# CG1.3 — tdd-shapes per-language pattern referenced (post-T1 refactor: skill is multi-lang, NOT Go-only)
+awk '/Conditional: Load TDD skill/,/^[[:space:]]+purpose:/' .claude/commands/coder.md \
+  | grep -qE 'tdd-shapes|per-language|5-language enum' \
+  || fail "CG1.3 — coder.md TDD-load missing tdd-shapes per-language pattern reference"
+pass "CG1.3 — tdd-shapes per-language pattern referenced (replaces v1.17 Go-only acknowledgment)"
 
 # CG2.1 — code-reviewer.md GET CHANGES example: no internal/handler/user.go in active body
 # Active body = lines BETWEEN the two fences ``` ... ``` following "Block structure (example):"
@@ -155,7 +156,7 @@ pass "CG5.3 — LAYERS slot pointer present in both RULE_3 main and Why"
 # ════════════════════════════════════════════════════════════════════════
 # MANUAL
 # ════════════════════════════════════════════════════════════════════════
-# CG1.4 — L367-370 tdd_mode reference consistency (visual cross-reference review)
+# CG1.4 — tdd_mode block reference consistency: must point to tdd-rules/SKILL.md (NOT tdd-go); visual cross-reference review
 # CG2.4 — SOURCE_GLOB pointer in active body (covered partly by CG2.2)
 # CG4.5 — SOURCE_GLOB note in location-stability section (visual review of footer note)
 # CG5.4 — no information loss in RULE_3 wording (intent preservation, visual review)

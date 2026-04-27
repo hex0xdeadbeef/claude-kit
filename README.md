@@ -439,7 +439,7 @@ flowchart LR
         CDR["coder-rules · 7 files"]
         PRR["plan-review-rules · 5 files"]
         CRR["code-review-rules · 5 files"]
-        TDD["tdd-go · 3 files"]
+        TDD["tdd-rules · 10 files"]
         DR["design-rules · 3 files"]
         SDB["systematic-debugging · 4 files"]
     end
@@ -672,7 +672,7 @@ The example contains:
 │   ├── coder-rules/       # Implementation rules, MCP tools
 │   ├── plan-review-rules/ # Architecture checks, required sections
 │   ├── code-review-rules/ # Security checklist (OWASP), review checklists
-│   └── tdd-go/            # TDD workflow for Go projects
+│   └── tdd-rules/         # TDD workflow (per-language tdd-shapes/<LANGUAGE>.md)
 ├── templates/             # Templates for creating new artifacts
 ├── prompts/               # Generated implementation plans
 ├── scripts/               # Lifecycle hook scripts (23 scripts + 3 tests)

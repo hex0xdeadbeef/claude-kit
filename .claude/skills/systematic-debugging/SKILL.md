@@ -179,7 +179,7 @@ You MUST complete each phase before proceeding to the next.
 1. **Create Failing Test Case**
    - Simplest possible reproduction
    - `go test -v -run TestXxx -count=1 ./...` must FAIL before fix
-   - Use tdd-go skill for proper failing test creation
+   - Use tdd-rules skill for proper failing test creation (loads tdd-shapes/<LANGUAGE>.md per cascade)
    - For concurrency bugs: `go test -race -run TestXxx ./...`
 
 2. **Implement Single Fix**
@@ -238,7 +238,7 @@ If you catch yourself thinking:
 | "Issue is simple, don't need process" | Simple issues have root causes too. Process is fast for simple bugs. |
 | "Emergency, no time for process" | Systematic debugging is FASTER than guess-and-check thrashing. |
 | "Just try this first, then investigate" | First fix sets the pattern. Do it right from the start. |
-| "I'll write test after confirming fix works" | Untested fixes don't stick. Test first proves it (use tdd-go skill). |
+| "I'll write test after confirming fix works" | Untested fixes don't stick. Test first proves it (use tdd-rules skill). |
 | "Multiple fixes at once saves time" | Can't isolate what worked. Causes new bugs. |
 | "Reference too long, I'll adapt the pattern" | Partial understanding guarantees bugs. Read it completely. |
 | "I see the problem, let me fix it" | Seeing symptoms ≠ understanding root cause. |
@@ -272,4 +272,4 @@ If investigation reveals architectural issue → escalate to user (do NOT attemp
 - **`condition-based-waiting.md`** — Replace arbitrary `time.Sleep` with condition polling
 
 **Related skills:**
-- **tdd-go** — For creating failing test case (Phase 4, Step 1)
+- **tdd-rules** — For creating failing test case (Phase 4, Step 1; per-language idioms in tdd-shapes/<LANGUAGE>.md)

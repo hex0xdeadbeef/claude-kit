@@ -157,19 +157,32 @@ startup:
       purpose: "Load plan"
 
     - action: "Conditional: Load TDD skill"
-      condition: "Plan file contains '## TDD' heading AND PROJECT-KNOWLEDGE.md → LANGUAGE == 'go' (or LANGUAGE unset, treating kit-default as Go)"
+      condition: "Plan file contains '## TDD' heading"
       files:
-        - ".claude/skills/tdd-go/SKILL.md"
-      skip_behavior: |
-        If '## TDD' is present BUT LANGUAGE != 'go':
-          - SKIP loading tdd-go (kit ships Go-only TDD patterns; no per-language equivalents).
-          - Coder applies generic red-green-refactor: write failing test before
-            implementation, keep test minimal, refactor only after green.
-          - Emit consolidated NIT in handoff.deviations_from_plan: "TDD section
-            present but kit lacks language-specific TDD reference for {LANGUAGE};
-            coder applied generic red-green-refactor (write failing test → minimal
-            implementation → refactor)."
-      purpose: "Load TDD Red-Green-Refactor workflow for Go projects. If ## TDD absent OR LANGUAGE != go — skip with NIT, use generic TDD flow."
+        - ".claude/skills/tdd-rules/SKILL.md"
+        - ".claude/skills/tdd-rules/tdd-shapes/<LANGUAGE>.md  # resolved via cascade below"
+      cascade: |
+        Per-language reference shape resolved from PROJECT-KNOWLEDGE.md → LANGUAGE
+        (see .claude/skills/tdd-rules/SKILL.md § 'Cascade resolution' for the
+        single source of truth — coder.md MUST mirror that section verbatim).
+
+        Resolution order (highest precedence first):
+          1. PROJECT-KNOWLEDGE.md → LANGUAGE in {go, python, typescript, rust, java}
+             → load tdd-shapes/<LANGUAGE>.md
+          2. LANGUAGE slot is unset/empty (PROJECT-KNOWLEDGE.md missing OR slot empty)
+             → fall back to CLAUDE.md Language Profile (kit-default = Go)
+             → load tdd-shapes/go.md (preserves C5 kit-dogfood byte-equivalence)
+          3. PROJECT-KNOWLEDGE.md present AND LANGUAGE not in the 5-language enum
+             (e.g., 'config-as-code', 'ruby', 'kotlin')
+             → load tdd-shapes/_default.md silently
+             → emit consolidated NIT in handoff.deviations_from_plan:
+               "TDD section present but kit lacks language-specific TDD reference for
+               {LANGUAGE}; coder applied generic Red-Green-Refactor from tdd-shapes/_default.md."
+      purpose: |
+        Load TDD Red-Green-Refactor workflow with per-language test idioms.
+        Mirror of P1 code-shapes pattern (planner-rules/code-shapes/<LANGUAGE>.md).
+        For unmatched LANGUAGE — _default.md pseudocode is strictly more informative
+        than the previous silent SKIP behaviour shipped in v1.17 CG1.
 
     - action: "Conditional: Load Review Response protocol"
       condition: "Re-entry after CHANGES_REQUESTED (iteration > 1 in handoff context)"
@@ -373,11 +386,11 @@ workflow:
         follow plan order verbatim.
 
       tdd_mode:
-        when: "TDD skill loaded (plan contains ## TDD AND LANGUAGE in {'go', unset})"
+        when: "TDD skill loaded (plan contains ## TDD heading; LANGUAGE-resolved tdd-shapes file loaded per startup step 5 cascade)"
         behavior: "Each Part follows RED-GREEN-REFACTOR instead of implement→test"
-        part_order: "Tests are NOT a separate Part — they are woven into each Part via RED-GREEN-REFACTOR cycles"
-        reference: ".claude/skills/tdd-go/SKILL.md § Integration with Coder Parts"
-        non_go_fallback: "If LANGUAGE != go: tdd-go skill NOT loaded (see startup step 5 skip_behavior); coder applies generic red-green-refactor without language-specific test idioms."
+        part_order: "Tests are NOT a separate Part — they are woven into each Part via Red-Green-Refactor cycles"
+        reference: ".claude/skills/tdd-rules/SKILL.md § 'Integration with /coder Parts'"
+        per_language_idioms: ".claude/skills/tdd-rules/tdd-shapes/<LANGUAGE>.md (resolved via cascade)"
 
       after_each_part:
         - "TodoWrite — mark Part as completed"
