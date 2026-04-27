@@ -1,0 +1,11 @@
+{
+  "$handoff_contract": "coder_to_code_review",
+  "branch": "feature/bad-iteration",
+  "parts_implemented": ["Part 1"],
+  "verify_status": {
+    "lint": "PASS",
+    "test": "PASS",
+    "command_used": "make test"
+  },
+  "iteration": "99/3"
+}

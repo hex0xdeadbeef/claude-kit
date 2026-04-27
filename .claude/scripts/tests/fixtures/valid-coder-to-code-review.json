@@ -1,0 +1,32 @@
+{
+  "$handoff_contract": "coder_to_code_review",
+  "branch": "feature/example",
+  "parts_implemented": [
+    "Part 1: Database migration",
+    "Part 2: Domain models",
+    "Part 3: Service layer"
+  ],
+  "evaluate_adjustments": [
+    "Part 3: Simplified error handling — using sentinel instead of custom error type"
+  ],
+  "risks_mitigated": [
+    "N+1 query in Part 2 — optimized with batch query"
+  ],
+  "deviations_from_plan": [],
+  "verify_status": {
+    "lint": "PASS",
+    "test": "PASS",
+    "command_used": "go vet ./... && make fmt && make lint && make test"
+  },
+  "spec_check": {
+    "status": "PASS",
+    "coverage_pct": 100,
+    "deviations_confirmed": [],
+    "ac_coverage": [
+      "AC 1: covered by TestCreateUser",
+      "AC 2: covered by TestListUsers"
+    ],
+    "issues": []
+  },
+  "iteration": "1/3"
+}

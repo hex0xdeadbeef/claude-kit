@@ -161,10 +161,14 @@ role:
    - MINOR: Code style, naming, documentation — does not block
    - NIT: Stylistic preference — does not block
 
-   Decision:
-   - APPROVED: 0 BLOCKER, 0 MAJOR (clean merge)
+   Decision matrix (all 5 enum values per `handoff.schema.json` $defs.code_review_verdict):
+   - APPROVED: 0 BLOCKER, 0 MAJOR, 0 MINOR (clean merge)
    - APPROVED_WITH_COMMENTS: 0 BLOCKER, 0 MAJOR, has MINOR/NIT (merge with notes)
-   - CHANGES_REQUESTED: 1+ BLOCKER or 1+ MAJOR or 3+ MINOR (return to coder)
+   - CHANGES_REQUESTED: 1+ BLOCKER or 1+ MAJOR or 5+ MINOR same file (return to coder; default for non-trivial issues)
+   - NEEDS_CHANGES: legacy alias for CHANGES_REQUESTED. Emit ONLY when orchestrator explicitly signals planner re-route via iteration counter; agent default is to prefer CHANGES_REQUESTED.
+   - REJECTED: irrecoverable issue (security exploit, data corruption risk, scope-violation requiring task abort). Triggers workflow STOP, not normal coder retry. Emit ONLY when justification is documented in handoff narrative.
+
+   All 5 values are schema-legal per cross-version compatibility (legacy NEEDS_CHANGES/REJECTED + modern APPROVED_WITH_COMMENTS/CHANGES_REQUESTED). Hook (`save-review-checkpoint.sh`) accepts all 5; downstream `incomplete-output-recovery.md` lists all 5.
 
    Auto-escalation:
    - 5+ MINOR in same file → escalate to MAJOR (files are the natural unit for code review)
@@ -215,7 +219,7 @@ CRITICAL: Output the verdict in TWO steps to guarantee capture even if you run o
 
 Structure your output as follows:
 
-VERDICT: {APPROVED|APPROVED_WITH_COMMENTS|CHANGES_REQUESTED}
+VERDICT: {APPROVED|APPROVED_WITH_COMMENTS|CHANGES_REQUESTED|NEEDS_CHANGES|REJECTED}
 
 ### Code Review: {branch}
 Issues: {N} BLOCKER, {N} MAJOR, {N} MINOR

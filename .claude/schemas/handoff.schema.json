@@ -1,11 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://claude-kit/schemas/handoff.schema.json",
+  "version": "1.1.0",
   "title": "Claude Kit — Handoff & Verdict Payload Schema",
-  "description": "Validates .claude/workflow-state/*-handoff.json inter-phase payloads AND structured review verdicts emitted by plan-reviewer / code-reviewer agents. oneOf switches on either $handoff_contract (handoff envelope) or $verdict_contract (verdict envelope).",
+  "description": "Validates .claude/workflow-state/*-handoff.json inter-phase payloads AND structured review verdicts emitted by plan-reviewer / code-reviewer agents. oneOf switches on either $handoff_contract (handoff envelope) or $verdict_contract (verdict envelope). Schema version 1.1.0 (additive minor): added coder_to_code_review contract (D2 from post-1.17-symmetry-audit). Existing 1.0.0 fixtures remain valid (additive only).",
   "oneOf": [
     { "$ref": "#/$defs/planner_to_plan_review" },
     { "$ref": "#/$defs/plan_review_to_coder" },
+    { "$ref": "#/$defs/coder_to_code_review" },
     { "$ref": "#/$defs/plan_review_verdict" },
     { "$ref": "#/$defs/code_review_verdict" }
   ],
@@ -238,6 +240,86 @@
             "iteration": { "type": "string", "pattern": "^[123]/3$" }
           },
           "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "coder_to_code_review": {
+      "title": "coder_to_code_review",
+      "description": "Handoff from /coder to code-reviewer agent (D2 from post-1.17-symmetry-audit). Mirrors planner_to_plan_review validation depth on the C-stage side. Closes asymmetry where C-stage handoff was previously unvalidated by schema (annotation 'IMP-01.2 future' resolved at schema 1.1.0).",
+      "type": "object",
+      "required": [
+        "$handoff_contract",
+        "branch",
+        "parts_implemented",
+        "verify_status",
+        "iteration"
+      ],
+      "properties": {
+        "$handoff_contract": {
+          "const": "coder_to_code_review",
+          "description": "Discriminator — must be 'coder_to_code_review'."
+        },
+        "branch": {
+          "type": "string",
+          "description": "Git branch where /coder committed implementation (code-reviewer reviews in worktree from this branch)."
+        },
+        "parts_implemented": {
+          "type": "array",
+          "description": "Parts implemented per plan, one string per Part with brief description.",
+          "items": { "type": "string" }
+        },
+        "evaluate_adjustments": {
+          "type": "array",
+          "description": "Inline adjustments documented during /coder Phase 1.5 EVALUATE (REVISE decisions).",
+          "items": { "type": "string" }
+        },
+        "risks_mitigated": {
+          "type": "array",
+          "description": "Risks identified during EVALUATE/IMPLEMENT and how they were resolved.",
+          "items": { "type": "string" }
+        },
+        "deviations_from_plan": {
+          "type": "array",
+          "description": "Deviations from approved plan with rationale; empty array = no deviations.",
+          "items": { "type": "string" }
+        },
+        "verify_status": {
+          "type": "object",
+          "description": "Output of /coder Phase 3 VERIFY. lint and test enums map to canonical PASS/FAIL/SKIPPED states; SKIPPED is legitimate when no VERIFY_CMD resolves (per coder.md verify_startup cascade SKIP-with-NIT branch).",
+          "required": ["lint", "test", "command_used"],
+          "properties": {
+            "lint": { "type": "string", "enum": ["PASS", "FAIL", "SKIPPED"] },
+            "test": { "type": "string", "enum": ["PASS", "FAIL", "SKIPPED"] },
+            "command_used": { "type": "string", "description": "VERIFY command resolved at coder Phase 3 startup (PK > CLAUDE.md > SKIP cascade)." }
+          },
+          "additionalProperties": true
+        },
+        "spec_check": {
+          "type": "object",
+          "description": "Output of /coder Phase 3.5 SPEC CHECK. Optional — present for L/XL complexity; missing for S complexity (lightweight mode).",
+          "properties": {
+            "status": { "type": "string", "enum": ["PASS", "PARTIAL", "FAIL"] },
+            "coverage_pct": { "type": "integer", "minimum": 0, "maximum": 100 },
+            "deviations_confirmed": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "ac_coverage": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "issues": {
+              "type": "array",
+              "items": { "type": "object" }
+            }
+          },
+          "additionalProperties": true
+        },
+        "iteration": {
+          "type": "string",
+          "description": "Code-review iteration counter, format N/3 where N in {1,2,3} (max 3 per workflow loop limit).",
+          "pattern": "^[123]/3$"
         }
       },
       "additionalProperties": false

@@ -1,0 +1,5 @@
+{
+  "$handoff_contract": "coder_to_code_review",
+  "branch": "feature/missing-fields",
+  "iteration": "1/3"
+}

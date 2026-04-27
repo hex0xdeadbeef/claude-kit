@@ -69,7 +69,9 @@ handoff_protocol:
     coder_to_code_review:
       producer: "/coder"
       consumer: "code-reviewer (agent)"
+      schema_validated: "yes — schema $defs.coder_to_code_review (handoff.schema.json 1.1.0+, D2 from post-1.17-symmetry-audit)"
       payload:
+        "$handoff_contract": "coder_to_code_review"  # IMP-01: discriminator. Quote the $ key in YAML.
         branch: "feature/{name}"
         parts_implemented: ["Part 1: DB", "Part 2: Domain"]
         evaluate_adjustments:
@@ -79,9 +81,9 @@ handoff_protocol:
         deviations_from_plan:
           - "Description + rationale"
         verify_status:
-          lint: "PASS"
-          test: "PASS"
-          command_used: "go vet ./... && make fmt && make lint && make test"
+          lint: "PASS|FAIL|SKIPPED"
+          test: "PASS|FAIL|SKIPPED"
+          command_used: "{resolved VERIFY_CMD per PROJECT-KNOWLEDGE.md > CLAUDE.md fallback}"
         spec_check:
           status: "PASS|PARTIAL|FAIL"
           coverage_pct: 100

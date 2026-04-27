@@ -29,10 +29,10 @@ role:
   success_criteria: "All checks passed, issues classified by severity, verdict justified, handoff formed"
 
 ## Rules (STRICT)
-- NEVER modify the plan — only recommend changes
-- NEVER approve a plan with BLOCKER issues
-- Verify layer-dependency rule per PROJECT-KNOWLEDGE.md → LAYER_RULE — SKIP with consolidated NIT if LAYER_RULE is unset OR ARCHITECTURE_STYLE != "layered" (canonical SKIP, see plan-review-rules/architecture-checks.md § Layer-check predicate)
-- Read plan FROM SCRATCH — never trust cached version
+- RULE_1 No Modify: NEVER modify the plan — only recommend changes
+- RULE_2 No Approve Blockers: NEVER approve a plan with BLOCKER issues
+- RULE_3 Read FROM SCRATCH: Read plan FROM SCRATCH — never trust cached version
+- RULE_4 Check Architecture: Verify layer-dependency rule per PROJECT-KNOWLEDGE.md → LAYER_RULE — SKIP with consolidated NIT if LAYER_RULE is unset OR ARCHITECTURE_STYLE != "layered" (canonical SKIP, see plan-review-rules/architecture-checks.md § Layer-check predicate)
 - RULE_5 Output First — Turn Budget (3-tier enforcement):
   - **TIER 1 (turn 20):** Self-check — "Have I started VALIDATE ARCHITECTURE yet?" If NO (still in memory/startup work) → IMMEDIATELY skip to READ PLAN. Workflow context is pre-injected via SubagentStart hook (IMP-A) — do NOT spend turns reading checkpoint or review-completions manually.
   - **TIER 2 (turn 28):** Hard abort — If VERDICT section not yet started, output `VERDICT: NEEDS_CHANGES` with note "Review incomplete — turn budget exhausted on non-review work. Re-run recommended." Then form minimal handoff.

@@ -24,6 +24,12 @@ run_test() {
   local mode="$3"
   local file="$4"
 
+  # Test isolation: unset ALL validation-mode envs to prevent env-leak from
+  # settings.local.json (e.g., CLAUDE_ISSUE_ID_VALIDATION_MODE=strict promoting
+  # verdict mode → strict via validate-handoff.sh L88).
+  unset CLAUDE_HANDOFF_VALIDATION_MODE
+  unset CLAUDE_VERDICT_VALIDATION_MODE
+  unset CLAUDE_ISSUE_ID_VALIDATION_MODE
   export CLAUDE_HANDOFF_VALIDATION_MODE="${mode}"
   actual_exit=0
   bash "${VALIDATE}" "${file}" >/dev/null 2>&1 || actual_exit=$?
@@ -45,6 +51,10 @@ run_hook_test() {
   local mode="$3"
   local file_path="$4"
 
+  # Test isolation: unset ALL validation-mode envs (see run_test rationale).
+  unset CLAUDE_HANDOFF_VALIDATION_MODE
+  unset CLAUDE_VERDICT_VALIDATION_MODE
+  unset CLAUDE_ISSUE_ID_VALIDATION_MODE
   export CLAUDE_HANDOFF_VALIDATION_MODE="${mode}"
   actual_exit=0
   printf '{"tool_input":{"file_path":"%s"}}' "${file_path}" \
@@ -93,6 +103,27 @@ run_test \
   2 "strict" \
   "${FIXTURES}/invalid-bad-enum.json"
 
+# D2 (post-1.17-symmetry-audit): coder_to_code_review handoff contract — schema 1.1.0 additive
+run_test \
+  "valid coder_to_code_review (warn, direct)" \
+  0 "warn" \
+  "${FIXTURES}/valid-coder-to-code-review.json"
+
+run_test \
+  "valid coder_to_code_review (strict, direct)" \
+  0 "strict" \
+  "${FIXTURES}/valid-coder-to-code-review.json"
+
+run_test \
+  "invalid coder_to_code_review missing-required (strict, direct)" \
+  2 "strict" \
+  "${FIXTURES}/invalid-coder-to-code-review-missing-required.json"
+
+run_test \
+  "invalid coder_to_code_review bad-iteration (strict, direct)" \
+  2 "strict" \
+  "${FIXTURES}/invalid-coder-to-code-review-bad-iteration.json"
+
 # ─── Hook mode (stdin JSON) ─────────────────────────────────────────────────────
 # CR-001: hook invocation path was previously untested. These two cases cover:
 #   (a) the filename guard that skips non-handoff writes (cheap path)
@@ -125,8 +156,11 @@ run_verdict_test() {
   local mode="$3"
   local file="$4"
 
-  export CLAUDE_VERDICT_VALIDATION_MODE="${mode}"
+  # Test isolation: unset ALL validation-mode envs (see run_test rationale).
   unset CLAUDE_HANDOFF_VALIDATION_MODE
+  unset CLAUDE_VERDICT_VALIDATION_MODE
+  unset CLAUDE_ISSUE_ID_VALIDATION_MODE
+  export CLAUDE_VERDICT_VALIDATION_MODE="${mode}"
   actual_exit=0
   bash "${VALIDATE}" "${file}" >/dev/null 2>&1 || actual_exit=$?
 
