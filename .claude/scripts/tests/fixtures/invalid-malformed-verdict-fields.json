@@ -1,0 +1,16 @@
+{
+  "$verdict_contract": "code_review_verdict",
+  "verdict": "APPROVED",
+  "issues": [
+    {
+      "id": "CR-xyz123",
+      "severity": "WHATEVER",
+      "category": "style",
+      "problem": "Test fixture: id violates ^CR-[0-9a-f]{8}$ pattern AND severity is not in enum"
+    }
+  ],
+  "handoff": {
+    "verdict": "APPROVED",
+    "iteration": "99/3"
+  }
+}

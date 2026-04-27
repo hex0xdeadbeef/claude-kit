@@ -1,0 +1,9 @@
+{
+  "$verdict_contract": "code_review_verdict",
+  "verdict": "APPROVED",
+  "issues": [],
+  "handoff": {
+    "verdict": "APPROVED",
+    "iteration": "1/3"
+  }
+}

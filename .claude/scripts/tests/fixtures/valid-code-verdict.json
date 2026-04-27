@@ -1,0 +1,18 @@
+{
+  "$verdict_contract": "code_review_verdict",
+  "verdict": "APPROVED_WITH_COMMENTS",
+  "issues": [
+    {
+      "id": "CR-abcdef01",
+      "severity": "MINOR",
+      "category": "style",
+      "location": "internal/service/foo.go:42",
+      "problem": "Test fixture: minor style finding",
+      "suggestion": "Test fixture: rename variable"
+    }
+  ],
+  "handoff": {
+    "verdict": "APPROVED_WITH_COMMENTS",
+    "iteration": "1/3"
+  }
+}

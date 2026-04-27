@@ -1,0 +1,26 @@
+{
+  "$verdict_contract": "plan_review_verdict",
+  "verdict": "APPROVED",
+  "issues": [
+    {
+      "id": "PR-1234abcd",
+      "severity": "MINOR",
+      "category": "completeness",
+      "location": "Part 2",
+      "problem": "Test fixture: minor finding example",
+      "suggestion": "Test fixture: optional suggestion"
+    }
+  ],
+  "handoff": {
+    "$handoff_contract": "plan_review_to_coder",
+    "artifact": ".claude/prompts/example-feature.md",
+    "verdict": "APPROVED",
+    "issues_summary": {
+      "blocker": 0,
+      "major": 0,
+      "minor": 1
+    },
+    "approved_with_notes": ["Test fixture note"],
+    "iteration": "1/3"
+  }
+}
