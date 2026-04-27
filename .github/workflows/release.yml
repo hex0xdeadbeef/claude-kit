@@ -36,16 +36,21 @@ jobs:
 
       - name: Verify tarball contents
         run: |
-          echo "=== Tarball contents ==="
-          tar tzf "${ARCHIVE}" | head -60
+          set -o pipefail
+          ENTRIES=$(tar tzf "${ARCHIVE}")
+          echo "=== Tarball contents (first 60) ==="
+          printf '%s\n' "$ENTRIES" | head -60
           echo ""
           echo "=== Checking excluded paths are absent ==="
-          # These paths must NOT appear in the tarball
+          # These paths must NOT appear in the tarball.
+          # Trailing "/" denotes a directory (matches the dir entry or any contained file).
+          # Bare names match the full final path component (anchored at "/" and end-of-line),
+          # so e.g. ".claude/PROJECT-KNOWLEDGE.md" does NOT match "...md.example".
           EXCLUDED=(
             ".claude/PROJECT-KNOWLEDGE.md"
-            "workflow-state/"
-            "prompts/"
-            "agent-memory/"
+            ".claude/workflow-state/"
+            ".claude/prompts/"
+            ".claude/agent-memory/"
             ".DS_Store"
             ".gitkeep"
             "superpowers-main/"
@@ -53,8 +58,17 @@ jobs:
           )
           FAILED=0
           for path in "${EXCLUDED[@]}"; do
-            if tar tzf "${ARCHIVE}" | grep -q "$path"; then
+            esc=$(printf '%s' "$path" | sed 's/[][\.*^$()+?{}|/]/\\&/g')
+            if [[ "$path" == */ ]]; then
+              # Directory: match path-prefix (dir entry itself or any contained file)
+              pattern="/${esc}"
+            else
+              # File: match end-of-entry exactly
+              pattern="/${esc}\$"
+            fi
+            if printf '%s\n' "$ENTRIES" | grep -qE "$pattern"; then
               echo "ERROR: excluded path found in tarball: $path"
+              printf '%s\n' "$ENTRIES" | grep -E "$pattern" | sed 's/^/  /'
               FAILED=1
             fi
           done
