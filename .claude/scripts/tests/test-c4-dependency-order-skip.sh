@@ -60,15 +60,18 @@ if [[ -d .git ]]; then
     done
     # PROJECT-KNOWLEDGE.md.example: post-1.18 auto-fmt-generic spec extends FMT_CMD with
     # `{}` placeholder doc (per spec auto-fmt-generic §4.1). Allow diff if and only if
-    # all +/- lines belong to the FMT_CMD documentation block.
+    # every +/- line is either (a) a `- FMT_CMD:` slot line, or (b) a comment-continuation
+    # line (starts with whitespace + `#`). Loose tokens are anchored to the FMT_CMD block
+    # to prevent unrelated lines containing words like "black"/"prettier" from slipping
+    # through (CR-iter2 NIT tightening).
     git diff "$BASE"..HEAD -- .claude/PROJECT-KNOWLEDGE.md.example > /tmp/c4-pk-diff.txt 2>&1 || true
     if [[ -s /tmp/c4-pk-diff.txt ]]; then
       bad_lines=$(grep -E '^[+-]' /tmp/c4-pk-diff.txt \
         | grep -vE '^(\+\+\+|---) ' \
-        | grep -vE 'FMT_CMD|placeholder|per-file mode|whole-project|auto-fmt\.sh|changed file path|gofmt -w|black|prettier|make fmt' \
+        | grep -vE '^[+-]- FMT_CMD:|^[+-][[:space:]]+#' \
         || true)
       if [[ -n "$bad_lines" ]]; then
-        fail "AC-C4.6 — .claude/PROJECT-KNOWLEDGE.md.example has changes outside FMT_CMD doc-extension scope"
+        fail "AC-C4.6 — .claude/PROJECT-KNOWLEDGE.md.example has changes outside FMT_CMD slot/comment scope"
       fi
     fi
     rm -f /tmp/c4-diff.txt /tmp/c4-pk-diff.txt

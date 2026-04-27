@@ -106,11 +106,15 @@ if [[ -d .git ]]; then
     git diff "$BASE"..HEAD -- .claude/settings.json > /tmp/c5-settings-diff.txt 2>&1 || true
     if [[ -s /tmp/c5-settings-diff.txt ]]; then
       # post-1.18 auto-fmt-generic spec replaces 2 auto-fmt-go.sh if-clause hook entries
-      # with 1 single auto-fmt.sh entry. Allow diff if and only if all +/- lines belong
-      # to that hook-block consolidation.
+      # with 1 single auto-fmt.sh entry. Allow diff if and only if every +/- line is
+      # either (a) a "command" key referencing auto-fmt(-go).sh, (b) an "if" key matching
+      # the dropped Go-specific filter, (c) a "type": "command" line accompanying the new
+      # entry, or (d) a structural-brace/comma JSON line. Allowlist tokens are anchored to
+      # specific JSON-key shapes to prevent unrelated lines from slipping through
+      # (CR-iter2 NIT tightening).
       bad_lines=$(grep -E '^[+-]' /tmp/c5-settings-diff.txt \
         | grep -vE '^(\+\+\+|---) ' \
-        | grep -vE 'auto-fmt(-go)?\.sh|"if": "(Write|Edit)\(\*\*/\*\.go\)"|^[+-][[:space:]]*[}{,]+[[:space:]]*$|"type": "command"' \
+        | grep -vE '^[+-][[:space:]]+"command":[[:space:]]+"\.claude/scripts/auto-fmt(-go)?\.sh",?$|^[+-][[:space:]]+"if":[[:space:]]+"(Write|Edit)\(\*\*/\*\.go\)"$|^[+-][[:space:]]+"type":[[:space:]]+"command",?$|^[+-][[:space:]]*[}{,]+[[:space:]]*$' \
         || true)
       if [[ -n "$bad_lines" ]]; then
         fail "AC-C5.13 — .claude/settings.json has changes outside auto-fmt-generic hook-block consolidation"
@@ -126,14 +130,16 @@ if [[ -d .git ]]; then
     fi
     rm -f /tmp/c5-schema-diff.txt
     # PROJECT-KNOWLEDGE.md.example: same auto-fmt-generic FMT_CMD doc-extension allowance as AC-C4.6
+    # PK.example: anchored auto-fmt-generic FMT_CMD doc-extension allowance (matches AC-C4.6;
+    # CR-iter2 NIT tightening — restrict to slot line + comment-continuation only).
     git diff "$BASE"..HEAD -- .claude/PROJECT-KNOWLEDGE.md.example > /tmp/c5-pk-diff.txt 2>&1 || true
     if [[ -s /tmp/c5-pk-diff.txt ]]; then
       bad_lines=$(grep -E '^[+-]' /tmp/c5-pk-diff.txt \
         | grep -vE '^(\+\+\+|---) ' \
-        | grep -vE 'FMT_CMD|placeholder|per-file mode|whole-project|auto-fmt\.sh|changed file path|gofmt -w|black|prettier|make fmt' \
+        | grep -vE '^[+-]- FMT_CMD:|^[+-][[:space:]]+#' \
         || true)
       if [[ -n "$bad_lines" ]]; then
-        fail "AC-C5.15 — .claude/PROJECT-KNOWLEDGE.md.example has changes outside FMT_CMD doc-extension scope"
+        fail "AC-C5.15 — .claude/PROJECT-KNOWLEDGE.md.example has changes outside FMT_CMD slot/comment scope"
       fi
     fi
     rm -f /tmp/c5-pk-diff.txt
