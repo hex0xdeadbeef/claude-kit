@@ -73,29 +73,32 @@ grep -q 'Refactor imports per the resolved rule' .claude/skills/coder-rules/SKIL
   || fail "AC-C3.5c — coder-rules/SKILL.md L101 'Common Issues' does not reference resolved LAYER_RULE"
 pass "AC-C3.5 — coder.md + coder-rules/SKILL.md RULE_2 + Common Issues reference LAYER_RULE+SKIP"
 
-# AC-C3.8: verdict envelope unchanged (C2/C7/C8) — schema, ID pattern, severity enum
+# AC-C3.8/C3.10: contract-preservation pre-merge gate (see CR-003)
 if [[ -d .git ]]; then
-  git diff main -- .claude/schemas/handoff.schema.json > /tmp/c3-schema-diff.txt 2>&1 || true
-  if [[ -s /tmp/c3-schema-diff.txt ]]; then
-    fail "AC-C3.8 — handoff.schema.json was modified (verdict envelope contract violated)"
+  CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
+  if [[ "$CURRENT_BRANCH" == "main" ]]; then
+    label "INFO" "AC-C3.8/C3.10 — skipped (running on main; pre-merge gate only)"
+  else
+    BASE="$(git merge-base HEAD origin/main 2>/dev/null || echo main)"
+    git diff "$BASE"..HEAD -- .claude/schemas/handoff.schema.json > /tmp/c3-schema-diff.txt 2>&1 || true
+    if [[ -s /tmp/c3-schema-diff.txt ]]; then
+      fail "AC-C3.8 — handoff.schema.json was modified (verdict envelope contract violated)"
+    fi
+    rm -f /tmp/c3-schema-diff.txt
+    pass "AC-C3.8 — verdict envelope schema unchanged"
+
+    git diff "$BASE"..HEAD -- .claude/scripts/inject-review-context.sh > /tmp/c3-inject-diff.txt 2>&1 || true
+    if [[ -s /tmp/c3-inject-diff.txt ]]; then
+      fail "AC-C3.10 — inject-review-context.sh was modified (C6 contract violated)"
+    fi
+    rm -f /tmp/c3-inject-diff.txt
+    pass "AC-C3.10 — inject-review-context.sh unchanged"
   fi
-  rm -f /tmp/c3-schema-diff.txt
 fi
-pass "AC-C3.8 — verdict envelope schema unchanged"
 
 # AC-C3.9: IMP-04 parts_validated mechanism unchanged (no diff-manifest schema edits)
 # Implicit: we don't touch diff-manifest.md or workflow-protocols files.
 pass "AC-C3.9 — IMP-04 parts_validated mechanism unchanged (no edits in scope)"
-
-# AC-C3.10: inject-review-context.sh PK injection unchanged
-if [[ -d .git ]]; then
-  git diff main -- .claude/scripts/inject-review-context.sh > /tmp/c3-inject-diff.txt 2>&1 || true
-  if [[ -s /tmp/c3-inject-diff.txt ]]; then
-    fail "AC-C3.10 — inject-review-context.sh was modified (C6 contract violated)"
-  fi
-  rm -f /tmp/c3-inject-diff.txt
-fi
-pass "AC-C3.10 — inject-review-context.sh unchanged"
 
 # ════════════════════════════════════════════════════════════════════════
 # MANUAL (operator procedure)

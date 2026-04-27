@@ -95,35 +95,36 @@ if [[ -n "$hits" ]]; then
 fi
 pass "AC-C5.9 — all 9 slots use {SLOT_NAME} curly-brace placeholder convention"
 
-# AC-C5.13: settings.json worktree.sparsePaths defaults UNCHANGED (R2)
+# AC-C5.13/14/15/16: contract-preservation pre-merge gate (see CR-003)
 if [[ -d .git ]]; then
-  git diff main -- .claude/settings.json > /tmp/c5-settings-diff.txt 2>&1 || true
-  if [[ -s /tmp/c5-settings-diff.txt ]]; then
-    fail "AC-C5.13 — .claude/settings.json was modified (R2: defaults must be preserved)"
-  fi
-  rm -f /tmp/c5-settings-diff.txt
-fi
-pass "AC-C5.13 — settings.json unchanged (R2 preserved)"
+  CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
+  if [[ "$CURRENT_BRANCH" == "main" ]]; then
+    label "INFO" "AC-C5.13/14/15/16 — skipped (running on main; pre-merge gate only)"
+  else
+    BASE="$(git merge-base HEAD origin/main 2>/dev/null || echo main)"
 
-# AC-C5.14 + AC-C5.15: handoff.schema.json + PROJECT-KNOWLEDGE.md.example unchanged
-if [[ -d .git ]]; then
-  git diff main -- .claude/schemas/handoff.schema.json .claude/PROJECT-KNOWLEDGE.md.example > /tmp/c5-schema-diff.txt 2>&1 || true
-  if [[ -s /tmp/c5-schema-diff.txt ]]; then
-    fail "AC-C5.14/15 — handoff.schema.json or PROJECT-KNOWLEDGE.md.example was modified"
-  fi
-  rm -f /tmp/c5-schema-diff.txt
-fi
-pass "AC-C5.14/15 — handoff schema + PK schema unchanged"
+    git diff "$BASE"..HEAD -- .claude/settings.json > /tmp/c5-settings-diff.txt 2>&1 || true
+    if [[ -s /tmp/c5-settings-diff.txt ]]; then
+      fail "AC-C5.13 — .claude/settings.json was modified (R2: defaults must be preserved)"
+    fi
+    rm -f /tmp/c5-settings-diff.txt
+    pass "AC-C5.13 — settings.json unchanged (R2 preserved)"
 
-# AC-C5.16: inject-review-context.sh unchanged (C6 PK injection contract)
-if [[ -d .git ]]; then
-  git diff main -- .claude/scripts/inject-review-context.sh > /tmp/c5-inject-diff.txt 2>&1 || true
-  if [[ -s /tmp/c5-inject-diff.txt ]]; then
-    fail "AC-C5.16 — inject-review-context.sh was modified (C6 PK injection 4KB cap contract)"
+    git diff "$BASE"..HEAD -- .claude/schemas/handoff.schema.json .claude/PROJECT-KNOWLEDGE.md.example > /tmp/c5-schema-diff.txt 2>&1 || true
+    if [[ -s /tmp/c5-schema-diff.txt ]]; then
+      fail "AC-C5.14/15 — handoff.schema.json or PROJECT-KNOWLEDGE.md.example was modified"
+    fi
+    rm -f /tmp/c5-schema-diff.txt
+    pass "AC-C5.14/15 — handoff schema + PK schema unchanged"
+
+    git diff "$BASE"..HEAD -- .claude/scripts/inject-review-context.sh > /tmp/c5-inject-diff.txt 2>&1 || true
+    if [[ -s /tmp/c5-inject-diff.txt ]]; then
+      fail "AC-C5.16 — inject-review-context.sh was modified (C6 PK injection 4KB cap contract)"
+    fi
+    rm -f /tmp/c5-inject-diff.txt
+    pass "AC-C5.16 — inject-review-context.sh unchanged"
   fi
-  rm -f /tmp/c5-inject-diff.txt
 fi
-pass "AC-C5.16 — inject-review-context.sh unchanged"
 
 # Bonus: troubleshooting.md GENERATED/MOCKS slot reference
 grep -q '{GENERATED_PATTERN}/{MOCK_PATTERN}' "$SCOPE_TROUBLESHOOTING" \

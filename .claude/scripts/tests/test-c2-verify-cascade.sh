@@ -67,15 +67,21 @@ grep -q 'resolved command\|verify_startup cascade' .claude/skills/coder-rules/SK
   || fail "AC-C2.5 — coder-rules/SKILL.md does not reference resolved VERIFY_CMD"
 pass "AC-C2.5 — coder-rules/SKILL.md references resolved VERIFY_CMD"
 
-# AC-C2.9: handoff schema unchanged (C1)
+# AC-C2.9: handoff schema unchanged (C1) — pre-merge gate (see CR-003)
 if [[ -d .git ]]; then
-  git diff main -- .claude/schemas/handoff.schema.json > /tmp/c2-handoff-diff.txt 2>&1 || true
-  if [[ -s /tmp/c2-handoff-diff.txt ]]; then
-    fail "AC-C2.9 — handoff.schema.json was modified (C1 contract preservation violated)"
+  CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
+  if [[ "$CURRENT_BRANCH" == "main" ]]; then
+    label "INFO" "AC-C2.9 — skipped (running on main; pre-merge gate only)"
+  else
+    BASE="$(git merge-base HEAD origin/main 2>/dev/null || echo main)"
+    git diff "$BASE"..HEAD -- .claude/schemas/handoff.schema.json > /tmp/c2-handoff-diff.txt 2>&1 || true
+    if [[ -s /tmp/c2-handoff-diff.txt ]]; then
+      fail "AC-C2.9 — handoff.schema.json was modified (C1 contract preservation violated)"
+    fi
+    rm -f /tmp/c2-handoff-diff.txt
+    pass "AC-C2.9 — handoff schema unchanged"
   fi
-  rm -f /tmp/c2-handoff-diff.txt
 fi
-pass "AC-C2.9 — handoff schema unchanged"
 
 # ════════════════════════════════════════════════════════════════════════
 # MANUAL (operator procedure)

@@ -73,7 +73,7 @@ On PASS/PARTIAL → form handoff payload for code-review, including spec_check.
 
 ## Example
 
-### Clean Domain — no json tags in entities (RULE_3)
+### Clean Domain — no {DOMAIN_PROHIBIT} in entities (RULE_3)
 
 **Good:**
 ```go
@@ -100,7 +100,7 @@ For more examples, see [Examples](examples.md).
 `go test -v -count=1 ./...` output as evidence. Trace data flow to find root cause.
 If root cause found → implement single fix + VERIFY. If still stuck → STOP, request manual help.
 
-### Import matrix violation detected
+### Layer-dependency violation detected
 **Cause:** Didn't check architecture rules before implementation.
 **Fix:** Review layer-dependency rule per resolved {LAYER_RULE}. Refactor imports per the resolved rule. BLOCKER when slot is set AND {ARCHITECTURE_STYLE} == "layered"; SKIP-with-consolidated-NIT when unset/non-layered (canonical SKIP).
 

@@ -9,9 +9,9 @@ troubleshooting:
     lesson: "Systematic root cause investigation is faster than guess-and-check.
       3x failures = time for structured approach, not another fix attempt."
 
-  - problem: "Import matrix violation detected by hooks"
+  - problem: "Layer-dependency violation detected by hooks"
     cause: "Didn't check architecture rules before implementation"
-    fix: "Review import matrix from .claude/PROJECT-KNOWLEDGE.md, refactor imports to follow layer dependencies"
+    fix: "Review layer-dependency rule per resolved {LAYER_RULE} (resolved from PROJECT-KNOWLEDGE.md → LAYER_RULE; CLAUDE.md fallback). Refactor imports per resolved rule. SKIP-with-consolidated-NIT when {LAYER_RULE} unset OR {ARCHITECTURE_STYLE} != \"layered\" (canonical SKIP)."
     lesson: "Architecture violations caught early prevent major refactoring later"
 
   - problem: "Hook blocks edit - generated file"

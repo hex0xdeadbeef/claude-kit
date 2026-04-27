@@ -44,14 +44,22 @@ done
 pass "AC-C1.4 — 7 code-shapes/ files present (5 langs + default + INVARIANTS)"
 
 # AC-C1.6: handoff.schema.json + checkpoint format unchanged (constraints C1, C3)
+# Pre-merge gate: assert diff between current HEAD and origin/main merge-base.
+# On main itself: skip with INFO (post-merge contract changes are caught by /workflow plan-review).
 if [[ -d .git ]]; then
-  git diff main -- .claude/schemas/handoff.schema.json .claude/skills/workflow-protocols/checkpoint-protocol.md > /tmp/c1-schema-diff.txt 2>&1 || true
-  if [[ -s /tmp/c1-schema-diff.txt ]]; then
-    fail "AC-C1.6 — handoff.schema.json or checkpoint-protocol.md was modified (forbidden per C1, C3)"
+  CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
+  if [[ "$CURRENT_BRANCH" == "main" ]]; then
+    label "INFO" "AC-C1.6 — skipped (running on main; pre-merge gate only — see CR-003)"
+  else
+    BASE="$(git merge-base HEAD origin/main 2>/dev/null || echo main)"
+    git diff "$BASE"..HEAD -- .claude/schemas/handoff.schema.json .claude/skills/workflow-protocols/checkpoint-protocol.md > /tmp/c1-schema-diff.txt 2>&1 || true
+    if [[ -s /tmp/c1-schema-diff.txt ]]; then
+      fail "AC-C1.6 — handoff.schema.json or checkpoint-protocol.md was modified (forbidden per C1, C3)"
+    fi
+    rm -f /tmp/c1-schema-diff.txt
+    pass "AC-C1.6 — schema/checkpoint contracts unchanged"
   fi
-  rm -f /tmp/c1-schema-diff.txt
 fi
-pass "AC-C1.6 — schema/checkpoint contracts unchanged"
 
 # ════════════════════════════════════════════════════════════════════════
 # MANUAL (operator procedure — not CI-automated)

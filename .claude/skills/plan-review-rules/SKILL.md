@@ -20,7 +20,7 @@ disable-model-invocation: true
 ## Auto-Escalation
 - 5+ MINOR in same Part → escalate to MAJOR
 - Security issue (any severity) → always BLOCKER
-- Import matrix violation → always BLOCKER
+- Layer-dependency violation (when {LAYER_RULE} SET AND {ARCHITECTURE_STYLE} == "layered") → always BLOCKER. SKIP entries (slot unset/non-layered) → consolidated NIT, NOT BLOCKER.
 
 ## Instructions
 

@@ -44,17 +44,23 @@ grep -q '{ARCHITECTURE_STYLE} == "layered"' .claude/skills/coder-rules/SKILL.md 
   || fail "AC-C4.3b — coder-rules/SKILL.md missing ARCHITECTURE_STYLE conditional"
 pass "AC-C4.3 — coder-rules/SKILL.md L53 wording matches"
 
-# AC-C4.6: handoff schema + PK schema + plan structure unchanged
+# AC-C4.6: handoff schema + PK schema + plan structure unchanged — pre-merge gate (see CR-003)
 if [[ -d .git ]]; then
-  for f in .claude/schemas/handoff.schema.json .claude/PROJECT-KNOWLEDGE.md.example .claude/templates/plan-template.md; do
-    git diff main -- "$f" > /tmp/c4-diff.txt 2>&1 || true
-    if [[ -s /tmp/c4-diff.txt ]]; then
-      fail "AC-C4.6 — $f was modified (contract violation)"
-    fi
-  done
-  rm -f /tmp/c4-diff.txt
+  CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
+  if [[ "$CURRENT_BRANCH" == "main" ]]; then
+    label "INFO" "AC-C4.6 — skipped (running on main; pre-merge gate only)"
+  else
+    BASE="$(git merge-base HEAD origin/main 2>/dev/null || echo main)"
+    for f in .claude/schemas/handoff.schema.json .claude/PROJECT-KNOWLEDGE.md.example .claude/templates/plan-template.md; do
+      git diff "$BASE"..HEAD -- "$f" > /tmp/c4-diff.txt 2>&1 || true
+      if [[ -s /tmp/c4-diff.txt ]]; then
+        fail "AC-C4.6 — $f was modified (contract violation)"
+      fi
+    done
+    rm -f /tmp/c4-diff.txt
+    pass "AC-C4.6 — schemas/PK/plan-template unchanged"
+  fi
 fi
-pass "AC-C4.6 — schemas/PK/plan-template unchanged"
 
 # ════════════════════════════════════════════════════════════════════════
 # MANUAL (operator procedure)
