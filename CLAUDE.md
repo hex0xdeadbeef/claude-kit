@@ -5,8 +5,10 @@ Reusable Claude Code configuration kit for any project. Provides a structured mu
 ## Language Profile
 
 - Language: Go >= 1.24
-- Commands: VERIFY=`go vet ./... && make fmt && make lint && make test`, FMT=`make fmt`, LINT=`make lint`, TEST=`make test`, VET=`go vet ./...`
+- Commands: VERIFY=`go vet ./... && make fmt && make lint && make test`, BUILD=`go build ./...`, FMT=`make fmt`, LINT=`make lint`, TEST=`make test`, VET=`go vet ./...`
+- Dependencies: `go.mod` (DEPENDENCY_FILE), `go get` (INSTALL_VERB)
 - Source: `internal/**/*.go`, Generated: `*_gen.go`, Mocks: `*/mocks/*.go`
+- Architecture: `layered` (ARCHITECTURE_STYLE) — handler → service → repository → models (LAYER_RULE)
 - Config: update `config.yaml.example` + `README.md` when config changes
 - Concurrency: goroutines, channels, mutex, sync; race check: `go test -race`
 
