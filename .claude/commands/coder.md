@@ -157,10 +157,19 @@ startup:
       purpose: "Load plan"
 
     - action: "Conditional: Load TDD skill"
-      condition: "Plan file contains '## TDD' heading"
+      condition: "Plan file contains '## TDD' heading AND PROJECT-KNOWLEDGE.md → LANGUAGE == 'go' (or LANGUAGE unset, treating kit-default as Go)"
       files:
         - ".claude/skills/tdd-go/SKILL.md"
-      purpose: "Load TDD Red-Green-Refactor workflow. If ## TDD absent — skip, use standard implement→test flow."
+      skip_behavior: |
+        If '## TDD' is present BUT LANGUAGE != 'go':
+          - SKIP loading tdd-go (kit ships Go-only TDD patterns; no per-language equivalents).
+          - Coder applies generic red-green-refactor: write failing test before
+            implementation, keep test minimal, refactor only after green.
+          - Emit consolidated NIT in handoff.deviations_from_plan: "TDD section
+            present but kit lacks language-specific TDD reference for {LANGUAGE};
+            coder applied generic red-green-refactor (write failing test → minimal
+            implementation → refactor)."
+      purpose: "Load TDD Red-Green-Refactor workflow for Go projects. If ## TDD absent OR LANGUAGE != go — skip with NIT, use generic TDD flow."
 
     - action: "Conditional: Load Review Response protocol"
       condition: "Re-entry after CHANGES_REQUESTED (iteration > 1 in handoff context)"
@@ -364,10 +373,11 @@ workflow:
         follow plan order verbatim.
 
       tdd_mode:
-        when: "TDD skill loaded (plan contains ## TDD)"
+        when: "TDD skill loaded (plan contains ## TDD AND LANGUAGE == 'go' OR unset)"
         behavior: "Each Part follows RED-GREEN-REFACTOR instead of implement→test"
         part_order: "Tests are NOT a separate Part — they are woven into each Part via RED-GREEN-REFACTOR cycles"
         reference: ".claude/skills/tdd-go/SKILL.md § Integration with Coder Parts"
+        non_go_fallback: "If LANGUAGE != go: tdd-go skill NOT loaded (see startup step 5 skip_behavior); coder applies generic red-green-refactor without language-specific test idioms."
 
       after_each_part:
         - "TodoWrite — mark Part as completed"

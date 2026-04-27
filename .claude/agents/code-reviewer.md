@@ -59,6 +59,7 @@ role:
    - TodoWrite: create review checklist (Quick Check, Architecture, Error Handling, Security, Test Coverage, Verdict)
 
 2. **QUICK CHECK (blocking)**
+   - **Pre-flight (step 0.5):** run Worktree sparsePaths sanity check (see ## Worktree Optimization → QUICK CHECK Pre-flight). If pre-flight emits BLOCKER (`CR-worktree-misconfigured`), exit with REJECTED verdict before continuing.
    - Check handoff verify_status:
      - If verify_status.lint == PASS AND verify_status.test == PASS:
        - TRUST coder verification — skip redundant test execution
@@ -185,11 +186,20 @@ block (injected by `inject-review-context.sh` when `CLAUDE_DELTA_REVIEW_MODE != 
 [Iter 2 focus — delta only] (mode: warn)
 HINT: focus on changed files first — full branch diff accessible via git diff $BASE...HEAD
 Files changed since iter 1 (prior_sha=b5685fd..HEAD):
-  internal/handler/user.go
-  internal/service/user.go
-Stat: 2 files, +57 -9
+  <files matching project SOURCE_GLOB, output by inject-review-context.sh>
+Stat: <file count>, +<added> -<removed>
 Full branch diff: git diff $BASE...HEAD
 ```
+
+<!-- EXAMPLE (lang: go) — kit-dogfood file list shape -->
+<!--   internal/handler/user.go                                  -->
+<!--   internal/service/user.go                                  -->
+<!-- EXAMPLE (lang: python) — Django/FastAPI-like project shape  -->
+<!--   app/views/user.py                                         -->
+<!--   app/services/user.py                                      -->
+<!-- EXAMPLE (lang: typescript) — Express/NestJS-like shape      -->
+<!--   src/controllers/userController.ts                         -->
+<!--   src/services/userService.ts                               -->
 
 **Mode semantics:**
 - `mode: warn` — the file list is a HINT. Run full `git diff $BASE...HEAD` per
@@ -235,7 +245,9 @@ Issues: {N} BLOCKER, {N} MAJOR, {N} MINOR
 **Issues Found (if any):**
 [CR-NNN] [SEVERITY] Issue Name
 - Category: architecture|security|error_handling|completeness|style
-- Location: path/file.go:line
+- Location: <source-glob-relative-path>:<symbol> (preferred — stable until file rename)
+            OR <symbol> alone (Part-anchored, most stable)
+            AVOID line-numbers-only (drift-prone; line numbers shift with edits)
 - Problem: brief description
 - Suggestion: concrete fix
 - Reference: RULE_N | OWASP-XXX (violated rule)
@@ -271,7 +283,7 @@ VERDICT_JSON:
   "$verdict_contract": "code_review_verdict",
   "verdict": "APPROVED_WITH_COMMENTS",
   "issues": [
-    {"id": "CR-001", "severity": "MINOR", "category": "style", "location": "internal/service/foo.go:42", "problem": "…"}
+    {"id": "CR-001", "severity": "MINOR", "category": "style", "location": "internal/service/foo:Create", "problem": "…"}
   ],
   "handoff": {
     "verdict": "APPROVED_WITH_COMMENTS",
@@ -296,9 +308,12 @@ Why dual emission: The human-readable `VERDICT:` line is a defense-in-depth fall
 
 The `id` field in each issue is **normalized by the save-review-checkpoint.sh hook** into its canonical form `CR-<first-8-hex-chars-of-sha256(category|location|problem)>` BEFORE schema validation. You may emit any advisory string (e.g. `"CR-001"`) — the hook will overwrite it with the canonical form. The canonical form is what downstream consumers (orchestrator `resolved_ids`, injector's REGRESSION ALERT, `review-completions.jsonl`) reference.
 
-**Location-stability guidance (IMP-03 KD-8):** prefer function / symbol name over line number in the `location` field. Line numbers shift when code is edited, which changes the hash → breaks ID continuity across iterations. Examples:
-- PREFER: `"internal/service/user.go:Update"` or `"handler/auth.go:login_handler"` (stable across edits)
-- AVOID: `"user.go:42"` alone (drift-prone)
+**Location-stability guidance (IMP-03 KD-8):** prefer function / symbol name over line number in the `location` field. Line numbers shift when code is edited, which changes the hash → breaks ID continuity across iterations. File extensions and project-specific path prefixes also drift (refactors, language ports, monorepo restructuring). Examples (language-agnostic):
+- PREFER: `"Part 3: UserHandler.Create"` (Part-anchored symbol — most stable)
+- ACCEPT: `"<source-glob-relative-path>:Update"` (path + symbol — stable until file rename)
+- AVOID: `"<filename>:42"` alone (line number only — drift-prone)
+
+**Note:** match path conventions to the project's `SOURCE_GLOB` slot (PROJECT-KNOWLEDGE.md). Avoid hardcoding language-specific prefixes (`internal/`, `src/`, `lib/`) or file extensions (`.go`, `.py`, `.ts`) in the `location` string — those vary per project.
 
 **Iteration 2+ context:** `inject-review-context.sh` passes canonical IDs from the prior iteration into your `additionalContext`. When referencing a carried-over issue, write the exact canonical ID (e.g. `CR-ab12cd34`) in both your human-readable output and the VERDICT_JSON `id` field — the hook will still re-normalise, but using the canonical form directly eliminates churn.
 
@@ -329,12 +344,40 @@ Follows [Agent Memory Protocol](../skills/workflow-protocols/agent-memory-protoc
 - Memory unavailable → proceed without (NON_CRITICAL)
 
 ## Worktree Optimization
-- This agent runs with `isolation: worktree` — a temporary git worktree is created per review
-- `worktree.sparsePaths` in settings.json controls which paths are checked out (git sparse-checkout, v2.1.76)
+- This agent runs with `isolation: worktree` — a temporary git worktree is created per review.
+- `worktree.sparsePaths` in settings.json controls which paths are checked out (git sparse-checkout, v2.1.76).
 - Defaults are configured in `settings.json worktree.sparsePaths`. Recommended pattern: follow PROJECT-KNOWLEDGE.md → SOURCE_GLOB + DEPENDENCY_FILE for project source layout.
-- Kit-default values (Go-shaped, retained for backwards-compat with existing kit users): `.claude/`, `internal/`, `cmd/`, `go.mod`, `go.sum`, `Makefile`, `CLAUDE.md`. Non-Go projects MUST override via settings.json or settings.local.json (R2: settings.json defaults intentionally preserved per spec).
-- Override per project in settings.json or settings.local.json to match source layout
-- Impact: faster worktree creation and lower disk usage, especially in monorepos
+- Kit-default values (Go-shaped, retained for backwards-compat with existing kit users): `.claude/`, `internal/`, `cmd/`, `go.mod`, `go.sum`, `Makefile`, `CLAUDE.md`.
+- **MANDATORY for non-Go projects:** override `worktree.sparsePaths` via `settings.json` OR `settings.local.json` BEFORE first code-review run. The QUICK CHECK pre-flight (below) verifies at least one non-`.claude/` source path is resolvable on disk; if all paths beyond `.claude/` are unresolvable AND PK→LANGUAGE != 'go', code-reviewer emits a BLOCKER issue (`worktree-misconfigured`) and exits with REJECTED verdict.
+- See `.claude/settings.local.json.example` for non-Go template sparsePaths blocks (Python, TypeScript, Rust, Java commented out — uncomment for your stack).
+- Impact: faster worktree creation and lower disk usage, especially in monorepos.
+
+### QUICK CHECK Pre-flight (step 0.5 — Worktree sparsePaths sanity)
+
+Before starting review, verify worktree sparsePaths resolve to actual files:
+
+```yaml
+worktree_sparsepaths_check:
+  purpose: "Detect Go-shaped sparsePaths on non-Go projects before review begins."
+  step:
+    - 1. Read worktree.sparsePaths from settings.
+    - 2. For each path, test `[ -e "$ROOT/$path" ]`.
+    - 3. Resolve LANGUAGE from PROJECT-KNOWLEDGE.md → LANGUAGE (or CLAUDE.md fallback).
+  trigger:
+    - condition: "AT MOST '.claude/' resolves AND LANGUAGE != 'go' (or LANGUAGE unset AND no Go markers like go.mod present)"
+    - emit_blocker: |
+        {
+          "id": "CR-worktree-misconfigured",
+          "severity": "BLOCKER",
+          "category": "configuration",
+          "location": ".claude/settings.json:worktree.sparsePaths",
+          "problem": "Worktree sparsePaths uses kit-default Go shape; non-Go project has no resolvable source paths beyond .claude/. Reviewer cannot see source files.",
+          "suggestion": "Override worktree.sparsePaths in settings.local.json with project-appropriate paths. Templates available at .claude/settings.local.json.example (Python: ['.claude/','src/','tests/','pyproject.toml','CLAUDE.md']; TypeScript: ['.claude/','src/','package.json','tsconfig.json','CLAUDE.md']; Rust: ['.claude/','src/','tests/','Cargo.toml','CLAUDE.md']).",
+          "reference": "code-reviewer.md § Worktree Optimization"
+        }
+    - exit_verdict: "REJECTED (irrecoverable; user must fix config before retry)"
+  skip_when: "LANGUAGE == 'go' OR Go markers (go.mod) detected — kit defaults intentionally preserved (R2)."
+```
 
 ## References
 Available through **code-review-rules** skill (auto-loaded via frontmatter):

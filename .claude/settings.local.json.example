@@ -36,7 +36,11 @@
     "allow": [],
     "deny": []
   },
-  "_worktree_comment": "Uncomment for monorepos (100k+ files) to speed up code-reviewer worktree creation. Only checked-out paths will be visible to the reviewer agent.",
+  "_worktree_comment": "Uncomment for monorepos (100k+ files) to speed up code-reviewer worktree creation. Only checked-out paths will be visible to the reviewer agent. The kit ships Go-shaped defaults; for non-Go projects, replace the sparsePaths array with one of the language-specific templates below.",
+  "_worktree_templates_python": "Python (Django / FastAPI / Flask): [\"src/\", \"tests/\", \"pyproject.toml\", \"requirements.txt\", \"setup.py\"]",
+  "_worktree_templates_typescript": "TypeScript / Node.js: [\"src/\", \"tests/\", \"package.json\", \"tsconfig.json\"]",
+  "_worktree_templates_rust": "Rust: [\"src/\", \"tests/\", \"Cargo.toml\", \"Cargo.lock\"]",
+  "_worktree_templates_java": "Java (Maven / Gradle): [\"src/main/\", \"src/test/\", \"pom.xml\", \"build.gradle\", \"build.gradle.kts\"]",
   "worktree": {
     "sparsePaths": ["internal/", "cmd/", "go.mod", "go.sum", "Makefile"]
   }

@@ -10,7 +10,7 @@ disable-model-invocation: true
 
 - RULE_1 Plan Only: Implement ONLY what's in the plan. No improvements.
 - RULE_2 Layer Dependency: NEVER violate {LAYER_RULE} (resolved from PROJECT-KNOWLEDGE.md; CLAUDE.md fallback). SKIP if slot unset OR {ARCHITECTURE_STYLE} != "layered".
-- RULE_3 Clean Domain: NEVER add {DOMAIN_PROHIBIT} (resolved from PROJECT-KNOWLEDGE.md → DOMAIN_PROHIBIT; CLAUDE.md fallback) to domain entities (tags belong in DTOs at handler/API layer). SKIP if slot unset.
+- RULE_3 Clean Domain: NEVER add {DOMAIN_PROHIBIT} (resolved from PROJECT-KNOWLEDGE.md → DOMAIN_PROHIBIT; CLAUDE.md fallback) to domain entities. Tags belong in DTOs at the API/transport layer (your project's highest LAYERS entry per PROJECT-KNOWLEDGE.md → LAYERS). SKIP if slot unset.
 - RULE_4 No Log+Return: NEVER log AND return error simultaneously.
 - RULE_5 Tests Pass: Code NOT ready until tests pass.
 
@@ -88,7 +88,7 @@ type Service struct {
     ID string `json:"id"`
 }
 ```
-**Why:** RULE_3 — Domain entities must be pure. No {DOMAIN_PROHIBIT} (resolved from PROJECT-KNOWLEDGE.md). Tags belong in DTOs at the handler/API layer.
+**Why:** RULE_3 — Domain entities must be pure. No {DOMAIN_PROHIBIT} (resolved from PROJECT-KNOWLEDGE.md). Tags belong in DTOs at the API/transport layer (highest LAYERS entry per PROJECT-KNOWLEDGE.md → LAYERS).
 
 For more examples, see [Examples](examples.md).
 
