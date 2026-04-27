@@ -150,13 +150,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/scripts/auto-fmt-go.sh",
-            "if": "Write(**/*.go)"
-          },
-          {
-            "type": "command",
-            "command": ".claude/scripts/auto-fmt-go.sh",
-            "if": "Edit(**/*.go)"
+            "command": ".claude/scripts/auto-fmt.sh"
           }
         ]
       },

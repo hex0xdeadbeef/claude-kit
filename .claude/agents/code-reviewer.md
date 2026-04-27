@@ -141,7 +141,7 @@ role:
 
    **4e. Project-Specific:**
    - Config changes: config.yaml.example + README.md updated if applicable
-   - Generated files (per {GENERATED_PATTERN} slot resolved from PROJECT-KNOWLEDGE.md; CLAUDE.md fallback; kit-default Go: `*_gen.go` via auto-fmt-go.sh + protect-files.sh) not manually edited. SKIP if slot unset.
+   - Generated files (per {GENERATED_PATTERN} slot resolved from PROJECT-KNOWLEDGE.md; CLAUDE.md fallback; consumed by `auto-fmt.sh` and `protect-files.sh`; kit-default Go fallback when slot unset: `*_gen.go`) not manually edited. SKIP if slot unset.
    - Mocks (per {MOCK_PATTERN} slot resolved from PROJECT-KNOWLEDGE.md; CLAUDE.md fallback; kit-default Go: `*/mocks/*.go`) regenerated if interfaces changed. SKIP if slot unset.
    - New library: verify with Context7 for correct usage patterns
 

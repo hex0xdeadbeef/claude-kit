@@ -51,14 +51,28 @@ if [[ -d .git ]]; then
     label "INFO" "AC-C4.6 — skipped (running on main; pre-merge gate only)"
   else
     BASE="$(git merge-base HEAD origin/main 2>/dev/null || echo main)"
-    for f in .claude/schemas/handoff.schema.json .claude/PROJECT-KNOWLEDGE.md.example .claude/templates/plan-template.md; do
+    # handoff.schema.json + plan-template.md: bytes-identical (hard contract)
+    for f in .claude/schemas/handoff.schema.json .claude/templates/plan-template.md; do
       git diff "$BASE"..HEAD -- "$f" > /tmp/c4-diff.txt 2>&1 || true
       if [[ -s /tmp/c4-diff.txt ]]; then
         fail "AC-C4.6 — $f was modified (contract violation)"
       fi
     done
-    rm -f /tmp/c4-diff.txt
-    pass "AC-C4.6 — schemas/PK/plan-template unchanged"
+    # PROJECT-KNOWLEDGE.md.example: post-1.18 auto-fmt-generic spec extends FMT_CMD with
+    # `{}` placeholder doc (per spec auto-fmt-generic §4.1). Allow diff if and only if
+    # all +/- lines belong to the FMT_CMD documentation block.
+    git diff "$BASE"..HEAD -- .claude/PROJECT-KNOWLEDGE.md.example > /tmp/c4-pk-diff.txt 2>&1 || true
+    if [[ -s /tmp/c4-pk-diff.txt ]]; then
+      bad_lines=$(grep -E '^[+-]' /tmp/c4-pk-diff.txt \
+        | grep -vE '^(\+\+\+|---) ' \
+        | grep -vE 'FMT_CMD|placeholder|per-file mode|whole-project|auto-fmt\.sh|changed file path|gofmt -w|black|prettier|make fmt' \
+        || true)
+      if [[ -n "$bad_lines" ]]; then
+        fail "AC-C4.6 — .claude/PROJECT-KNOWLEDGE.md.example has changes outside FMT_CMD doc-extension scope"
+      fi
+    fi
+    rm -f /tmp/c4-diff.txt /tmp/c4-pk-diff.txt
+    pass "AC-C4.6 — schemas/plan-template unchanged; PK.example diff (if any) limited to auto-fmt-generic FMT_CMD doc"
   fi
 fi
 

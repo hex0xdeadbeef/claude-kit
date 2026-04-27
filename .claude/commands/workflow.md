@@ -389,7 +389,7 @@ hooks:
     - "InstructionsLoaded → validate-instructions.sh (rules validation)"
     - "UserPromptSubmit → enrich-context.sh (context enrichment + exploration budget visualization)"
     - "PreToolUse → protect-files.sh, check-artifact-size.sh [if: Write(.claude/**)], import-matrix prompt hook [if: internal/**/*.go], block-dangerous-commands.sh, pre-commit-build.sh [if: Bash(git commit*)]"
-    - "PostToolUse → auto-fmt-go.sh [if: **/*.go], yaml-lint.sh [if: Edit(.claude/**)], check-references.sh [if: Write(.claude/**)], check-plan-drift.sh [if: .claude/**]"
+    - "PostToolUse → auto-fmt.sh [matcher: Write|Edit; slot-driven via FMT_CMD/LANG_EXT], yaml-lint.sh [if: Edit(.claude/**)], check-references.sh [if: Write(.claude/**)], check-plan-drift.sh [if: .claude/**]"
     - "SessionEnd → session-analytics.sh"
     - "StopFailure → log-stop-failure.sh (API error logging)"
     - "Notification → notify-user.sh"

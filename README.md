@@ -491,7 +491,7 @@ flowchart TB
     PRE3 --> EXEC
     PRE4 --> EXEC
 
-    EXEC -->|"Write / Edit"| POST1["auto-fmt-go.sh<br/>(non-blocking)"]
+    EXEC -->|"Write / Edit"| POST1["auto-fmt.sh<br/>(slot-driven, non-blocking)"]
     EXEC -->|Edit| POST2["yaml-lint.sh<br/>(non-blocking)"]
     EXEC -->|Write| POST3["check-references.sh<br/>(non-blocking)"]
     EXEC -->|"Write / Edit"| POST4["check-plan-drift.sh<br/>(non-blocking)"]
@@ -700,7 +700,7 @@ Configured in `.claude/settings.json`. Enforce quality automatically:
 | `check-artifact-size.sh` | PreToolUse (Write) | Block writes exceeding size thresholds |
 | `block-dangerous-commands.sh` | PreToolUse (Bash) | Block destructive shell commands |
 | `pre-commit-build.sh` | PreToolUse (Bash) | Validate `go build` before git commit |
-| `auto-fmt-go.sh` | PostToolUse (Write/Edit) | Auto-format Go code |
+| `auto-fmt.sh` | PostToolUse (Write/Edit) | Auto-format source files (slot-driven via FMT_CMD; supports `{}` per-file placeholder) |
 | `yaml-lint.sh` | PostToolUse (Edit) | Validate YAML structure |
 | `check-references.sh` | PostToolUse (Write) | Validate all file references |
 | `check-plan-drift.sh` | PostToolUse (Write/Edit) | Detect plan drift during implementation |

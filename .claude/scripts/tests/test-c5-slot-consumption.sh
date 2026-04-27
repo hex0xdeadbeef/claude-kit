@@ -105,17 +105,39 @@ if [[ -d .git ]]; then
 
     git diff "$BASE"..HEAD -- .claude/settings.json > /tmp/c5-settings-diff.txt 2>&1 || true
     if [[ -s /tmp/c5-settings-diff.txt ]]; then
-      fail "AC-C5.13 — .claude/settings.json was modified (R2: defaults must be preserved)"
+      # post-1.18 auto-fmt-generic spec replaces 2 auto-fmt-go.sh if-clause hook entries
+      # with 1 single auto-fmt.sh entry. Allow diff if and only if all +/- lines belong
+      # to that hook-block consolidation.
+      bad_lines=$(grep -E '^[+-]' /tmp/c5-settings-diff.txt \
+        | grep -vE '^(\+\+\+|---) ' \
+        | grep -vE 'auto-fmt(-go)?\.sh|"if": "(Write|Edit)\(\*\*/\*\.go\)"|^[+-][[:space:]]*[}{,]+[[:space:]]*$|"type": "command"' \
+        || true)
+      if [[ -n "$bad_lines" ]]; then
+        fail "AC-C5.13 — .claude/settings.json has changes outside auto-fmt-generic hook-block consolidation"
+      fi
     fi
     rm -f /tmp/c5-settings-diff.txt
-    pass "AC-C5.13 — settings.json unchanged (R2 preserved)"
+    pass "AC-C5.13 — settings.json diff (if any) limited to auto-fmt-generic hook-block consolidation (R2 preserved)"
 
-    git diff "$BASE"..HEAD -- .claude/schemas/handoff.schema.json .claude/PROJECT-KNOWLEDGE.md.example > /tmp/c5-schema-diff.txt 2>&1 || true
+    # handoff.schema.json: hard-frozen
+    git diff "$BASE"..HEAD -- .claude/schemas/handoff.schema.json > /tmp/c5-schema-diff.txt 2>&1 || true
     if [[ -s /tmp/c5-schema-diff.txt ]]; then
-      fail "AC-C5.14/15 — handoff.schema.json or PROJECT-KNOWLEDGE.md.example was modified"
+      fail "AC-C5.14 — handoff.schema.json was modified (contract violation)"
     fi
     rm -f /tmp/c5-schema-diff.txt
-    pass "AC-C5.14/15 — handoff schema + PK schema unchanged"
+    # PROJECT-KNOWLEDGE.md.example: same auto-fmt-generic FMT_CMD doc-extension allowance as AC-C4.6
+    git diff "$BASE"..HEAD -- .claude/PROJECT-KNOWLEDGE.md.example > /tmp/c5-pk-diff.txt 2>&1 || true
+    if [[ -s /tmp/c5-pk-diff.txt ]]; then
+      bad_lines=$(grep -E '^[+-]' /tmp/c5-pk-diff.txt \
+        | grep -vE '^(\+\+\+|---) ' \
+        | grep -vE 'FMT_CMD|placeholder|per-file mode|whole-project|auto-fmt\.sh|changed file path|gofmt -w|black|prettier|make fmt' \
+        || true)
+      if [[ -n "$bad_lines" ]]; then
+        fail "AC-C5.15 — .claude/PROJECT-KNOWLEDGE.md.example has changes outside FMT_CMD doc-extension scope"
+      fi
+    fi
+    rm -f /tmp/c5-pk-diff.txt
+    pass "AC-C5.14/15 — handoff schema unchanged; PK.example diff (if any) limited to auto-fmt-generic FMT_CMD doc"
 
     git diff "$BASE"..HEAD -- .claude/scripts/inject-review-context.sh > /tmp/c5-inject-diff.txt 2>&1 || true
     if [[ -s /tmp/c5-inject-diff.txt ]]; then

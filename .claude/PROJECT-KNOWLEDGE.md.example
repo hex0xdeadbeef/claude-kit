@@ -29,7 +29,10 @@
 - BUILD_CMD: <your-build-command>      # e.g. `make build`, `npm run build`, `cargo build`
 - TEST_CMD: <your-test-command>        # e.g. `make test`, `pytest`, `npm test`
 - LINT_CMD: <your-lint-command>        # e.g. `make lint`, `ruff check`, `eslint`
-- FMT_CMD: <your-format-command>       # e.g. `make fmt`, `black .`, `prettier --write`
+- FMT_CMD: <your-format-command>       # e.g. `gofmt -w {}`, `black {}`, `make fmt`. Use `{}`
+                                       # placeholder for per-file mode (auto-fmt.sh substitutes
+                                       # the changed file path). Without `{}`, runs as-is
+                                       # (whole-project formatter).
 - DEPENDENCY_FILE: <your-dep-file>     # manifest used to declare external libraries; one of:
                                        # Go:        go.mod
                                        # Python:    pyproject.toml (or requirements.txt for legacy)

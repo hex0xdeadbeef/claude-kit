@@ -53,7 +53,7 @@ Write output to `.claude/prompts/{feature}-evaluate.md`.
 Follow Parts order from plan. The plan's Parts list is the source of truth.
 If plan unordered: use {LAYERS} slot dependency direction when {ARCHITECTURE_STYLE} == "layered";
 otherwise follow plan order verbatim and emit consolidated NIT if ambiguous.
-After each Part: PostToolUse hooks auto-format files (per language matcher; kit-default Go: `gofmt` via `auto-fmt-go.sh`). Run resolved {LINT_CMD} only for import/error checks. Check 5 CRITICAL Rules above continuously.
+After each Part: PostToolUse hooks auto-format files (slot-driven via `auto-fmt.sh`: reads `FMT_CMD` and `LANG_EXT` from PROJECT-KNOWLEDGE.md cascade; supports `{}` placeholder for per-file mode). Run resolved {LINT_CMD} only for import/error checks. Check 5 CRITICAL Rules above continuously.
 Do NOT run FMT manually between Parts — hooks handle formatting, VERIFY handles final FMT+LINT.
 IMPORTANT: Do NOT run tests (resolved {TEST_CMD}) between Parts. Tests run ONCE at Step 4 VERIFY.
 Running tests after each Part wastes time — compile errors are caught by LINT, logic errors are caught at VERIFY.
