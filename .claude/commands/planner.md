@@ -467,6 +467,8 @@ phases:
       note: |
         Follow dependency direction — lower layers first. Concrete layer names
         resolve from PROJECT-KNOWLEDGE.md → LAYERS (lowest-to-highest).
+      # Slot conventions: {LAYERS[N]} = numeric index when populated;
+      # <ROLE> = abstract role from data-flow.md when unset.
       pattern_when_layers_set: "{LAYERS[0]} → {LAYERS[1]} → ... → {LAYERS[N]} → Tests → Setup → Docs"
       pattern_when_layers_unset: "<DATA_ACCESS_LAYER> → <BUSINESS_LAYER> → <INPUT_LAYER> → Tests → Setup → Docs"
       fallback_skip_rule: |

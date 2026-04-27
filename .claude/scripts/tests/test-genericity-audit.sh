@@ -46,13 +46,14 @@ done
 pass "G1.3 — all 3 stacks (Django, Go, Spring) present"
 
 # G2.1 — no `internal/handler/` in delegation_prompt_example active body
-# (allowed inside <!-- EXAMPLE (lang: go) --> comment lines starting with '<!--')
+# Note: the awk range (delegation_prompt_example: → Context: Planning) ends BEFORE
+# the trailing <!-- EXAMPLE (lang: ...) --> comment blocks, so EXAMPLE markers are
+# already excluded by range alone — no <!--filter needed.
 if awk '/delegation_prompt_example:/,/Context: Planning/' .claude/commands/planner.md \
-     | grep -nE 'internal/handler/' \
-     | grep -vE '^[0-9]+:[[:space:]]*<!--' >/dev/null 2>&1; then
+     | grep -qE 'internal/handler/'; then
   fail "G2.1 — internal/handler/ found in active body of delegation_prompt_example"
 fi
-pass "G2.1 — internal/handler/ only in EXAMPLE comment blocks (or absent from active body)"
+pass "G2.1 — internal/handler/ absent from active body (EXAMPLE comments fall outside range)"
 
 # G2.2 — slot syntax used (<INPUT_LAYER> or {INPUT_LAYER})
 grep -qE '<INPUT_LAYER>|\{INPUT_LAYER\}' .claude/commands/planner.md \
