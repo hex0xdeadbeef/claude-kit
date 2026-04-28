@@ -51,7 +51,7 @@ Resolution order — highest precedence first:
 2. `LANGUAGE` slot is unset/empty (PROJECT-KNOWLEDGE.md missing OR slot empty) → fall back to `CLAUDE.md` Language Profile (kit-default = Go) → load `tdd-shapes/go.md`. **Kit-dogfood C5 constraint preserved.**
 3. `LANGUAGE` is set but does NOT match the 5-language enum (e.g., `ruby`, `kotlin`, kit's own `"config-as-code"`) → load `tdd-shapes/_default.md` silently AND emit a consolidated NIT in coder handoff `deviations_from_plan` array (mirrors CG1 SKIP idiom).
 
-`/coder` startup step "Conditional: Load TDD skill" duplicates this cascade — the two narratives MUST stay in sync (T3.6 single source of truth).
+`/coder` startup step "Load TDD skill (unconditional)" duplicates this cascade — the two narratives MUST stay in sync (T3.6 single source of truth).
 
 ## Integration with /coder Parts
 

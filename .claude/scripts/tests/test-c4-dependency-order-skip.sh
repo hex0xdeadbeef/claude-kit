@@ -51,13 +51,28 @@ if [[ -d .git ]]; then
     label "INFO" "AC-C4.6 — skipped (running on main; pre-merge gate only)"
   else
     BASE="$(git merge-base HEAD origin/main 2>/dev/null || echo main)"
-    # handoff.schema.json + plan-template.md: bytes-identical (hard contract)
-    for f in .claude/schemas/handoff.schema.json .claude/templates/plan-template.md; do
-      git diff "$BASE"..HEAD -- "$f" > /tmp/c4-diff.txt 2>&1 || true
-      if [[ -s /tmp/c4-diff.txt ]]; then
-        fail "AC-C4.6 — $f was modified (contract violation)"
+    # handoff.schema.json: bytes-identical (hard contract — no exceptions)
+    git diff "$BASE"..HEAD -- .claude/schemas/handoff.schema.json > /tmp/c4-diff.txt 2>&1 || true
+    if [[ -s /tmp/c4-diff.txt ]]; then
+      fail "AC-C4.6 — .claude/schemas/handoff.schema.json was modified (contract violation)"
+    fi
+    # plan-template.md: bytes-identical EXCEPT TDD-always-on documentation block
+    # (post-tdd-always-on-flip extension; mirrors the PROJECT-KNOWLEDGE.md.example FMT_CMD
+    # allowlist precedent below). Allow diff iff every +/- line is either:
+    #   (a) inside `# ===== TDD-always-on note =====` ... `# ===== end TDD-always-on note =====`
+    #       — i.e. starts with `+    # ` or `-    # ` (4-space indent + comment marker)
+    #   (b) the Tests-Part `description:` string edit (annotates RGR-interleaved as default)
+    git diff "$BASE"..HEAD -- .claude/templates/plan-template.md > /tmp/c4-pt-diff.txt 2>&1 || true
+    if [[ -s /tmp/c4-pt-diff.txt ]]; then
+      pt_bad_lines=$(grep -E '^[+-]' /tmp/c4-pt-diff.txt \
+        | grep -vE '^(\+\+\+|---) ' \
+        | grep -vE '^[+-][[:space:]]+#' \
+        | grep -vE '^[+-][[:space:]]+description: "Tests for new functionality' \
+        || true)
+      if [[ -n "$pt_bad_lines" ]]; then
+        fail "AC-C4.6 — .claude/templates/plan-template.md has changes outside TDD-always-on note/description scope"
       fi
-    done
+    fi
     # PROJECT-KNOWLEDGE.md.example: post-1.18 auto-fmt-generic spec extends FMT_CMD with
     # `{}` placeholder doc (per spec auto-fmt-generic §4.1). Allow diff if and only if
     # every +/- line is either (a) a `- FMT_CMD:` slot line, or (b) a comment-continuation
@@ -74,8 +89,8 @@ if [[ -d .git ]]; then
         fail "AC-C4.6 — .claude/PROJECT-KNOWLEDGE.md.example has changes outside FMT_CMD slot/comment scope"
       fi
     fi
-    rm -f /tmp/c4-diff.txt /tmp/c4-pk-diff.txt
-    pass "AC-C4.6 — schemas/plan-template unchanged; PK.example diff (if any) limited to auto-fmt-generic FMT_CMD doc"
+    rm -f /tmp/c4-diff.txt /tmp/c4-pt-diff.txt /tmp/c4-pk-diff.txt
+    pass "AC-C4.6 — handoff.schema unchanged; plan-template diff (if any) limited to TDD-always-on note/description; PK.example diff (if any) limited to auto-fmt-generic FMT_CMD doc"
   fi
 fi
 
