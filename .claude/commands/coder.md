@@ -156,8 +156,7 @@ startup:
     - action: "Read .claude/prompts/{feature-name}.md"
       purpose: "Load plan"
 
-    - action: "Conditional: Load TDD skill"
-      condition: "Plan file contains '## TDD' heading"
+    - action: "Load TDD skill (unconditional)"
       files:
         - ".claude/skills/tdd-rules/SKILL.md"
         - ".claude/skills/tdd-rules/tdd-shapes/<LANGUAGE>.md  # resolved via cascade below"
@@ -176,13 +175,16 @@ startup:
              (e.g., 'config-as-code', 'ruby', 'kotlin')
              → load tdd-shapes/_default.md silently
              → emit consolidated NIT in handoff.deviations_from_plan:
-               "TDD section present but kit lacks language-specific TDD reference for
-               {LANGUAGE}; coder applied generic Red-Green-Refactor from tdd-shapes/_default.md."
+               "Coder applied generic Red-Green-Refactor from tdd-shapes/_default.md
+               because LANGUAGE={LANGUAGE} is not in the 5-language enum."
       purpose: |
         Load TDD Red-Green-Refactor workflow with per-language test idioms.
         Mirror of P1 code-shapes pattern (planner-rules/code-shapes/<LANGUAGE>.md).
-        For unmatched LANGUAGE — _default.md pseudocode is strictly more informative
-        than the previous silent SKIP behaviour shipped in v1.17 CG1.
+        TDD is the unconditional default cycle for /coder Phase 2 — RGR runs are
+        part of implementation, not verification. Full VERIFY suite still runs
+        only at Phase 3. For unmatched LANGUAGE — _default.md pseudocode is
+        strictly more informative than the previous silent SKIP behaviour
+        shipped in v1.17 CG1.
 
     - action: "Conditional: Load Review Response protocol"
       condition: "Re-entry after CHANGES_REQUESTED (iteration > 1 in handoff context)"
@@ -386,16 +388,16 @@ workflow:
         follow plan order verbatim.
 
       tdd_mode:
-        when: "TDD skill loaded (plan contains ## TDD heading; LANGUAGE-resolved tdd-shapes file loaded per startup step 5 cascade)"
-        behavior: "Each Part follows RED-GREEN-REFACTOR instead of implement→test"
-        part_order: "Tests are NOT a separate Part — they are woven into each Part via Red-Green-Refactor cycles"
+        when: "Always — tdd-rules loaded unconditionally at /coder startup; LANGUAGE-resolved tdd-shapes file selected per cascade"
+        behavior: "Each Part follows RED-GREEN-REFACTOR (default cycle for Phase 2 IMPLEMENT)"
+        part_order: "Tests are NOT a separate final Part — they are interleaved into each Part via Red-Green-Refactor cycles"
         reference: ".claude/skills/tdd-rules/SKILL.md § 'Integration with /coder Parts'"
         per_language_idioms: ".claude/skills/tdd-rules/tdd-shapes/<LANGUAGE>.md (resolved via cascade)"
 
       after_each_part:
         - "TodoWrite — mark Part as completed"
         - "Hooks auto-run formatter + linter (SEE: .claude/PROJECT-KNOWLEDGE.md)"
-        - "Do NOT run tests (resolved {TEST_CMD}) between Parts — tests run ONCE at VERIFY phase. Exception: TDD mode (plan ## TDD) — RED-GREEN-REFACTOR test runs within a Part are implementation, not verification."
+        - "Do NOT run the FULL test suite (resolved {TEST_CMD}) between Parts — full verification runs ONCE at Phase 3 VERIFY. Targeted RED-GREEN-REFACTOR single-test runs within a Part are part of implementation (not verification) and are expected on every Part by default."
 
       complex_logic:
         when: "3+ conditions, state machines"

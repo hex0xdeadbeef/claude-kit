@@ -55,9 +55,9 @@ If plan unordered: use {LAYERS} slot dependency direction when {ARCHITECTURE_STY
 otherwise follow plan order verbatim and emit consolidated NIT if ambiguous.
 After each Part: PostToolUse hooks auto-format files (slot-driven via `auto-fmt.sh`: reads `FMT_CMD` and `LANG_EXT` from PROJECT-KNOWLEDGE.md cascade; supports `{}` placeholder for per-file mode). Run resolved {LINT_CMD} only for import/error checks. Check 5 CRITICAL Rules above continuously.
 Do NOT run FMT manually between Parts — hooks handle formatting, VERIFY handles final FMT+LINT.
-IMPORTANT: Do NOT run tests (resolved {TEST_CMD}) between Parts. Tests run ONCE at Step 4 VERIFY.
-Running tests after each Part wastes time — compile errors are caught by LINT, logic errors are caught at VERIFY.
-Exception: If plan contains ## TDD section, RED-GREEN-REFACTOR test runs within a Part are allowed (they are implementation, not verification).
+IMPORTANT: Do NOT run the FULL test suite (resolved {TEST_CMD}) between Parts — full verification runs ONCE at Step 4 VERIFY.
+Compile errors are caught by LINT; logic errors are caught at VERIFY.
+Targeted RED-GREEN-REFACTOR single-test runs within a Part are part of implementation (not verification) and are expected on every Part by default — see `.claude/skills/tdd-rules/SKILL.md` for the full cycle.
 
 ### Step 4: Verify
 Run full VERIFY using the resolved command from coder.md `verify_startup` cascade

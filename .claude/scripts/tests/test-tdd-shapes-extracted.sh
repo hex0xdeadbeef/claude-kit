@@ -72,7 +72,7 @@ grep -q '\.claude/skills/tdd-rules/SKILL\.md' .claude/commands/coder.md \
 grep -qE 'tdd-shapes/<LANGUAGE>\.md|tdd-shapes/[a-z_]+\.md' .claude/commands/coder.md \
   || fail "TD-4 — coder.md missing tdd-shapes path reference (T2.1)"
 # Cascade block present (T3.6 single source of truth: coder.md mirrors tdd-rules/SKILL.md cascade)
-awk '/Conditional: Load TDD skill/,/^[[:space:]]+purpose:/' .claude/commands/coder.md \
+awk '/Load TDD skill \(unconditional\)/,/^[[:space:]]+purpose:/' .claude/commands/coder.md \
   | grep -q 'cascade:' \
   || fail "TD-4 — coder.md TDD-load missing cascade block (T3.6)"
 pass "TD-4 — coder.md integrates tdd-rules + cascade documented"
