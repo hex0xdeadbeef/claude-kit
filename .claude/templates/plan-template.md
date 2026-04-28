@@ -90,11 +90,19 @@ plan:
       code: |
         # full code example in your project's language
 
+    # ===== TDD-always-on note =====
+    # /coder loads tdd-rules unconditionally; tests are interleaved per Part
+    # via Red-Green-Refactor. Listing a separate "Part N: Tests" block (as
+    # below) is OPTIONAL — planners may include it for legacy/documentation
+    # purposes, but the actual coder behaviour weaves RGR cycles into earlier
+    # Parts. See .claude/skills/tdd-rules/SKILL.md § 'Integration with
+    # /coder Parts' for the full contract.
+    # ===== end TDD-always-on note =====
     - part: N
       name: "Tests"
       file: "{path/to/{test-file-pattern}}"   # e.g. file_test.go (Go), test_file.py (Python)
       action: "CREATE"
-      description: "Tests for new functionality"
+      description: "Tests for new functionality (RGR-interleaved per Part is the default; this entry is OPTIONAL)"
       code: |
         # FULL test in your project's language.
         # See .claude/PROJECT-KNOWLEDGE.md → TEST_GLOB for naming convention.

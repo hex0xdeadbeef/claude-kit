@@ -25,20 +25,21 @@ cd "$PROJECT_ROOT"
 # AUTOMATED
 # ════════════════════════════════════════════════════════════════════════
 
-# CG1.1 — coder.md "Conditional: Load TDD skill" condition references LANGUAGE slot via tdd-shapes cascade
-awk '/Conditional: Load TDD skill/,/^[[:space:]]+purpose:/' .claude/commands/coder.md \
+# CG1.1 — coder.md "Load TDD skill (unconditional)" action references LANGUAGE slot via tdd-shapes cascade
+# Predicate retargeted post-tdd-always-on flip (was: "Conditional: Load TDD skill"; gate removed, action heading renamed).
+awk '/Load TDD skill \(unconditional\)/,/^[[:space:]]+purpose:/' .claude/commands/coder.md \
   | grep -qE 'PROJECT-KNOWLEDGE\.md → LANGUAGE|tdd-shapes/<LANGUAGE>\.md' \
   || fail "CG1.1 — coder.md TDD-load condition missing LANGUAGE slot reference (post-T3 refactor: must reference PROJECT-KNOWLEDGE.md → LANGUAGE OR tdd-shapes/<LANGUAGE>.md)"
 pass "CG1.1 — coder.md TDD-load condition gates on LANGUAGE slot via tdd-shapes cascade"
 
 # CG1.2 — cascade block present (replaces former skip_behavior block; cascade documents all 3 branches)
-awk '/Conditional: Load TDD skill/,/^[[:space:]]+purpose:/' .claude/commands/coder.md \
+awk '/Load TDD skill \(unconditional\)/,/^[[:space:]]+purpose:/' .claude/commands/coder.md \
   | grep -q 'cascade:' \
   || fail "CG1.2 — coder.md TDD-load missing cascade block (post-T3: cascade replaces skip_behavior)"
 pass "CG1.2 — cascade documented for LANGUAGE→file resolution and unmatched-LANGUAGE NIT path"
 
 # CG1.3 — tdd-shapes per-language pattern referenced (post-T1 refactor: skill is multi-lang, NOT Go-only)
-awk '/Conditional: Load TDD skill/,/^[[:space:]]+purpose:/' .claude/commands/coder.md \
+awk '/Load TDD skill \(unconditional\)/,/^[[:space:]]+purpose:/' .claude/commands/coder.md \
   | grep -qE 'tdd-shapes|per-language|5-language enum' \
   || fail "CG1.3 — coder.md TDD-load missing tdd-shapes per-language pattern reference"
 pass "CG1.3 — tdd-shapes per-language pattern referenced (replaces v1.17 Go-only acknowledgment)"

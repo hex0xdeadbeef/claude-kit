@@ -1,6 +1,6 @@
 ---
 name: tdd-rules
-description: Test-Driven Development workflow for any language. Enforces Red-Green-Refactor cycle (failing test first, minimal implementation, then refactor). Loaded by /coder when plan contains "## TDD" heading. Per-language test idioms live in tdd-shapes/<LANGUAGE>.md (resolved from PROJECT-KNOWLEDGE.md → LANGUAGE; falls back to tdd-shapes/_default.md).
+description: Test-Driven Development workflow for any language. Enforces Red-Green-Refactor cycle (failing test first, minimal implementation, then refactor). Loaded UNCONDITIONALLY by /coder at startup — TDD is the default Phase 2 cycle, no plan-level opt-in required. Per-language test idioms live in tdd-shapes/<LANGUAGE>.md (resolved from PROJECT-KNOWLEDGE.md → LANGUAGE; falls back to tdd-shapes/_default.md).
 disable-model-invocation: true
 ---
 
@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 ## When loaded
 
-`/coder` loads this skill when the plan file `.claude/prompts/{feature}.md` contains a `## TDD` heading. When NOT loaded, standard implement→test order applies.
+`/coder` loads this skill **unconditionally** at startup (alongside `coder-rules`, `spec-check`, and the LANGUAGE-resolved `tdd-shapes/<LANGUAGE>.md`). RGR is the default Phase 2 cycle for every implementation run — no plan-level marker required. Plans MAY still include a `## TDD` heading for human-reader emphasis, but the heading is NOT a load predicate (deprecated as a contract; tolerated as prose).
 
 ## The Iron Law
 
@@ -51,16 +51,13 @@ Resolution order — highest precedence first:
 2. `LANGUAGE` slot is unset/empty (PROJECT-KNOWLEDGE.md missing OR slot empty) → fall back to `CLAUDE.md` Language Profile (kit-default = Go) → load `tdd-shapes/go.md`. **Kit-dogfood C5 constraint preserved.**
 3. `LANGUAGE` is set but does NOT match the 5-language enum (e.g., `ruby`, `kotlin`, kit's own `"config-as-code"`) → load `tdd-shapes/_default.md` silently AND emit a consolidated NIT in coder handoff `deviations_from_plan` array (mirrors CG1 SKIP idiom).
 
-`/coder` startup step "Conditional: Load TDD skill" duplicates this cascade — the two narratives MUST stay in sync (T3.6 single source of truth).
+`/coder` startup step "Load TDD skill (unconditional)" duplicates this cascade — the two narratives MUST stay in sync (T3.6 single source of truth).
 
 ## Integration with /coder Parts
 
-When `tdd-rules` is loaded, `/coder` implements each Part with **interleaved tests** (RED → GREEN → REFACTOR per behaviour) instead of writing tests as a final separate Part:
+`/coder` implements each Part with **interleaved tests** by default — RED → GREEN → REFACTOR per behaviour. Tests are NOT a separate final Part; they are woven into each Part. Layer-dependency order from the plan is preserved either way.
 
-- Standard order (no `## TDD`): `Part N: Tests` is a separate final Part.
-- TDD-mode order: tests are woven into each Part via Red-Green-Refactor cycles. Tests are NOT a separate Part.
-
-Layer dependency order is preserved either way.
+Plans that still ship a `Part N: Tests` block (e.g. legacy plans authored before TDD-always-on, or plans following the documentation pattern in `.claude/templates/plan-template.md` L92-124) are tolerated — `/coder` will absorb the listed test cases into the per-Part RGR cycles rather than batching them into a final separate Part.
 
 ## Rules
 

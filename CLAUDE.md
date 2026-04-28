@@ -51,6 +51,16 @@ Optional tools used by hooks. Missing tools → graceful degradation (warn, non-
 
 **Log path & rotation (validate-handoff.sh):** validate-handoff.sh honors `CLAUDE_WORKFLOW_STATE_DIR` for both `handoff-validation.jsonl` and `handoff-validation-detail.log` paths. Default fallback: `${REPO_ROOT}/.claude/workflow-state/` (byte-identical legacy behavior when env unset). Test harnesses (`.claude/scripts/tests/test-validate-handoff.sh`, `test-save-review-checkpoint.sh`) set this env to a sandbox dir to prevent prod log pollution. `CLAUDE_VALIDATION_LOG_MAX_LINES` controls the rotation threshold (default `10000` lines). When a log file exceeds the threshold, it is rotated to `*.log.1` (single-archive strategy; prior `.log.1` is overwritten). Effective retention window = 2× threshold. Set lower for testing rotation; non-positive or non-numeric values fall back to the default. Detail log (`handoff-validation-detail.log`) entries are now written as JSONL — one JSON object per line (fields: `timestamp`, `file`, `record_kind`, `rc`, `error_summary`, `full_output`); programmatic filtering via `jq -c 'select(.record_kind=="verdict")'` is supported for new entries.
 
+## TDD Policy
+
+**TDD-always-on:** `/coder` unconditionally loads `.claude/skills/tdd-rules/SKILL.md` and the LANGUAGE-resolved `tdd-shapes/<LANGUAGE>.md` at startup. The Iron Law ("NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST") and the Red-Green-Refactor cycle are the default Phase 2 implementation rhythm — no plan-level marker required.
+
+**Deprecated contract:** the `## TDD` heading in plan files is no longer a load predicate. Existing plans that still ship the heading continue to work; the heading is treated as prose only. Planners (human + Claude) SHOULD stop emitting the heading on new plans.
+
+**Cascade preserved:** per-language test idioms still resolve via `PROJECT-KNOWLEDGE.md → LANGUAGE > CLAUDE.md fallback (kit-default Go) > tdd-shapes/_default.md`. See `.claude/skills/tdd-rules/SKILL.md § 'Cascade resolution'` for the single source of truth (mirrored verbatim by `.claude/commands/coder.md` startup step "Load TDD skill (unconditional)" — T3.6 contract scoped to the resolution-order narrative; verbatim NIT-message wording is intentionally not mirrored).
+
+**Verification:** `bash .claude/scripts/tests/test-tdd-shapes-extracted.sh` asserts the cascade-block + skill skeleton remain intact (TD-1..TD-5).
+
 ## Prompt Cache Policy
 
 Claude Code v2.1.108 introduced a 1-hour prompt cache TTL option. XL workflows span
