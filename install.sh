@@ -583,9 +583,19 @@ main() {
         cp -r "${src_dir}/.claude" "${target_dir}/.claude"
     fi
 
-    # Install CLAUDE.md
-    cp "${src_dir}/CLAUDE.md" "${target_dir}/CLAUDE.md"
-    info "Installed CLAUDE.md"
+    # Install CLAUDE.md — only if missing (preserve user's project-specific
+    # Language Profile on --update). Mirrors the PROJECT-KNOWLEDGE.md
+    # idempotency pattern below: kit ships its own CLAUDE.md as a starter
+    # template, but the user's customised CLAUDE.md is project-owned and
+    # MUST NOT be overwritten on update. Regression for v1.20.0 → v1.20.1
+    # (the unconditional cp here previously wiped user Language Profile
+    # on every --update run; see test-install-update-restore.sh T14).
+    if [ ! -f "${target_dir}/CLAUDE.md" ]; then
+        cp "${src_dir}/CLAUDE.md" "${target_dir}/CLAUDE.md"
+        info "Installed CLAUDE.md from kit template"
+    else
+        info "Preserved CLAUDE.md (existing copy)"
+    fi
 
     # Merge .gitignore
     merge_gitignore "${src_dir}/.gitignore" "$target_dir"

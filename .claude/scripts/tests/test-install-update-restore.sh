@@ -297,6 +297,23 @@ else
     FAIL=$((FAIL + 1))
 fi
 
+# ── T14: install.sh CLAUDE.md preservation guard (regression v1.20.0 → v1.20.1) ─
+# CLAUDE.md is user-owned (project Language Profile). The kit ships its own
+# CLAUDE.md as a starter template, but on --update the user's customised file
+# MUST NOT be overwritten. Predicate: install.sh must have an `if [ ! -f
+# "${target_dir}/CLAUDE.md" ]` existence-check guard around the cp call.
+# Static grep predicate — mirrors TD-4 cascade-block pattern in
+# test-tdd-shapes-extracted.sh.
+echo "T14: install.sh CLAUDE.md preservation guard"
+INSTALL_SH="$(cd "$(dirname "$0")/../../.." && pwd)/install.sh"
+if grep -q 'if \[ ! -f "${target_dir}/CLAUDE.md" \]' "$INSTALL_SH"; then
+    echo "  PASS: T14.claude-md-guard-present"
+    PASS=$((PASS + 1))
+else
+    echo "  FAIL: T14.claude-md-guard-present (install.sh missing 'if [ ! -f \"\${target_dir}/CLAUDE.md\" ]' guard — would overwrite user Language Profile on --update)"
+    FAIL=$((FAIL + 1))
+fi
+
 # ── Summary ────────────────────────────────────────────────────────────────────
 echo ""
 echo "Total: PASS=${PASS} FAIL=${FAIL}"
