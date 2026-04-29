@@ -62,17 +62,13 @@ for v in "${EXPECTED_ENV[@]}"; do
   fi
 done
 
-# ─── Expected external URLs (10) — verbatim ───────────────────────────────────
+# ─── Expected external URLs (6) — verbatim ────────────────────────────────────
 EXPECTED_URLS=(
   "https://astral.sh/uv/install.sh"
   "https://docs.anthropic.com/en/docs/claude-code"
   "https://github.com/hex0xdeadbeef/claude-kit.git"
   "https://github.com/juliusbrussee/caveman"
-  "https://img.shields.io/badge/agents-5_pipeline-1a73e8?style=flat-square"
   "https://img.shields.io/badge/Claude_Code-config_kit-5A45FF?style=flat-square"
-  "https://img.shields.io/badge/hooks-26_scripts-0d904f?style=flat-square"
-  "https://img.shields.io/badge/languages-31_via_tree--sitter-00897b?style=flat-square"
-  "https://img.shields.io/badge/skills-8_packages-f9ab00?style=flat-square"
   "https://raw.githubusercontent.com/hex0xdeadbeef/claude-kit/main/install.sh"
 )
 for u in "${EXPECTED_URLS[@]}"; do
@@ -81,10 +77,10 @@ for u in "${EXPECTED_URLS[@]}"; do
   fi
 done
 
-# ─── Mermaid block count (6) ───────────────────────────────────────────────────
+# ─── Mermaid block count (4) ───────────────────────────────────────────────────
 MERMAID_COUNT=$(grep -c '^```mermaid' "${README}")
-if [[ "${MERMAID_COUNT}" -ne 6 ]]; then
-  fail "expected 6 mermaid blocks, got ${MERMAID_COUNT}"
+if [[ "${MERMAID_COUNT}" -ne 4 ]]; then
+  fail "expected 4 mermaid blocks, got ${MERMAID_COUNT}"
 fi
 
 # ─── Expected internal anchor refs (10) — captured pre-refactor ───────────────
@@ -119,8 +115,6 @@ EXPECTED_PATHS=(
   ".claude/.kit-version"
   "CLAUDE.md"
   ".claude/schemas/handoff.schema.json"
-  ".claude/scripts/caveman-activate.sh"
-  ".claude/scripts/caveman-suspend-for-reviewer.sh"
 )
 for p in "${EXPECTED_PATHS[@]}"; do
   if ! grep -qF -e "${p}" "${README}"; then

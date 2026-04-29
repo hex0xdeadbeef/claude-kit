@@ -5,10 +5,6 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Claude_Code-config_kit-5A45FF?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDJMMiAxOWgyMEwxMiAyeiIgZmlsbD0id2hpdGUiLz48L3N2Zz4=" alt="Claude Code Config Kit"/>
-  <img src="https://img.shields.io/badge/agents-5_pipeline-1a73e8?style=flat-square" alt="Agents"/>
-  <img src="https://img.shields.io/badge/skills-8_packages-f9ab00?style=flat-square" alt="Skills"/>
-  <img src="https://img.shields.io/badge/hooks-26_scripts-0d904f?style=flat-square" alt="Hooks"/>
-  <img src="https://img.shields.io/badge/languages-31_via_tree--sitter-00897b?style=flat-square" alt="Languages"/>
 </p>
 
 ---
@@ -138,7 +134,7 @@ Master index of every config knob exposed by the kit. The `Reference` column lin
 | `.mcp.json` (3 servers) | gitignored after install | `sequential-thinking`, `context7`, `tree_sitter` MCP servers | personal/per-machine setup | `cp .mcp.json.example` | [`.mcp.json.example`](#mcpjsonexample--mcp-server-endpoints) |
 | `.claude/PROJECT-KNOWLEDGE.md` | committed per-project | codebase analysis injected as agent context | once per project, refresh on architecture change | run `/project-researcher` | [Project Knowledge Base](#claudeproject-knowledgemd--project-knowledge-base) |
 | `CLAUDE.md` > Language Profile | committed | language slots (`LANG_EXT`, `VERIFY_CMD`, etc.) cascade source | first-time install for non-Go stacks | edit `CLAUDE.md` directly | [Quick Start](#-quick-start) Step 2 |
-| `.claude/.kit-version` | auto-managed | tracks installed kit version for `install.sh --update` | never (managed by `install.sh`) | n/a | [Installation Tracker](#claudekit-version--installation-tracker) |
+| `.claude/.kit-version` | auto-managed | tracks installed kit version for `install.sh --update` | never (managed by `install.sh`) | n/a | auto-managed by `install.sh` |
 
 ### Files & Lifecycles
 
@@ -151,8 +147,6 @@ Each file has a different lifecycle and git status — copy the `.example` templ
 | `.mcp.json` | gitignored after `install.sh` (`.example` shipped) | personal / per-machine | MCP server endpoints (`sequential-thinking`, `context7`, `tree_sitter`) |
 | `.claude/PROJECT-KNOWLEDGE.md` | committed (preserved on `--update`) | per-project | Auto-generated codebase analysis used as context by all agents |
 | `.claude/.kit-version` | committed | per-installation | Tracks installed kit version for `install.sh --update` |
-
-> The kit's own repo commits `.mcp.json` and `settings.local.json` for dogfooding; `install.sh` ships a `.gitignore` block that ignores them in your project so personal config doesn't leak.
 
 ### `.claude/settings.local.json.example` — Personal Overrides
 
@@ -227,10 +221,6 @@ Auto-generated codebase analysis (architecture, modules, dependencies, language 
 ```
 
 Committed per project — not part of the kit. **Preserved across `install.sh --update`** so kit upgrades never clobber your project knowledge. Re-run `/project-researcher` when architecture changes significantly (new module, framework swap, schema migration). Missing file is non-fatal — agents fall back to the `Language Profile` block in `CLAUDE.md`.
-
-### `.claude/.kit-version` — Installation Tracker
-
-Auto-managed by `install.sh`. Records the installed kit version, source URL, and install timestamp so `--update` can compute changelogs and skip downgrades. Do not edit by hand.
 
 ---
 
@@ -341,13 +331,7 @@ Creates, enhances, audits, and manages Claude Code artifacts (commands, skills, 
 /meta-agent list                       # list all artifacts
 ```
 
-**Session management:**
-
-```bash
-/meta-agent --resume {run_id}          # resume from last checkpoint
-/meta-agent abort {run_id}             # mark run as aborted
-/meta-agent cleanup                    # remove runs older than 7 days
-```
+**Session management:** `--resume {run_id}`, `abort {run_id}`, `cleanup` (remove runs older than 7 days)
 
 **Flags:** `--dry-run` (preview) · `--explore` (Tree of Thought)
 
@@ -397,37 +381,6 @@ Displays the code review checklist: architecture, security (OWASP), code quality
 ## 🏗 Architecture
 
 The system is a **multi-phase development pipeline** managed by the orchestrator (`/workflow`), which sequentially delegates work to specialized agents. Active phases depend on complexity: **S=4** (skips Design and Plan Review) · **M=6** · **L/XL=8** (all phases including Design and Spec Check). Each agent has a strictly defined responsibility zone, model assignment, and skill set.
-
-<details>
-<summary>🎨 Color Legend</summary>
-
-```mermaid
-flowchart LR
-    L1["opus — planning,<br/>orchestration"]
-    L2["opus — implementation,<br/>review"]
-    L3["haiku — fast search,<br/>fallback"]
-    L4["completion,<br/>post-processing"]
-    L5["blocking gate,<br/>stop condition"]
-    L6["skills,<br/>context enrichment"]
-    L7["neutral —<br/>infrastructure"]
-
-    A1[ ] -->|"mandatory flow"| A2[ ]
-    B1[ ] -.->|"optional (L/XL only)"| B2[ ]
-
-    style L1 fill:#1a73e8,color:#fff,stroke:#1557b0
-    style L2 fill:#9334e6,color:#fff,stroke:#7627bb
-    style L3 fill:#00897b,color:#fff,stroke:#00695c
-    style L4 fill:#0d904f,color:#fff,stroke:#0a7040
-    style L5 fill:#d93025,color:#fff,stroke:#b3261e
-    style L6 fill:#f9ab00,color:#333,stroke:#e69500
-    style L7 fill:#e0e0e0,color:#333,stroke:#999
-    style A1 fill:none,stroke:none
-    style A2 fill:none,stroke:none
-    style B1 fill:none,stroke:none
-    style B2 fill:none,stroke:none
-```
-
-</details>
 
 <details>
 <summary>🔄 Development Pipeline</summary>
@@ -555,30 +508,6 @@ flowchart LR
 </details>
 
 <details>
-<summary>🧩 Standalone Commands</summary>
-
-```mermaid
-flowchart LR
-    subgraph META ["/meta-agent · opus"]
-        direction TB
-        MA1["INIT → EXPLORE → ANALYZE"] --> MA2["PLAN → CONSTITUTE → DRAFT"] --> MA3["APPLY → VERIFY → CLOSE"]
-    end
-    META --> ART["Artifacts:<br/>commands, skills,<br/>rules, agents"]
-
-    subgraph PROJ ["/project-researcher · opus"]
-        direction TB
-        PR1["discovery → detection → graph"] --> PR2["analysis → critique → generation"] --> PR3["verification → report"]
-    end
-    PROJ --> PK[".claude/PROJECT-KNOWLEDGE.md"]
-
-
-    style META fill:#1a73e8,color:#fff,stroke:#1557b0
-    style PROJ fill:#1a73e8,color:#fff,stroke:#1557b0
-```
-
-</details>
-
-<details>
 <summary>📦 Skill Loading</summary>
 
 ```mermaid
@@ -694,7 +623,7 @@ flowchart TB
 | **haiku** | medium | `code-researcher`, PR subagents (discovery, report) | 20 | Fast read-only codebase exploration |
 | **haiku** | low | `verdict-recovery` | 10 | Lightweight verdict fallback when reviewers omit `VERDICT:` |
 
-> **Note (v2.1.94+):** Claude Code default effort is now `high` for API-key/Team/Enterprise users (changed from `medium` in v2.1.94). All workflow pipeline agents explicitly set `effort: max` (Opus 4.6 only) to enable maximum extended thinking budget. Reviewers and coder migrated sonnet → opus in v1.9.0 (commit `09acec9`) to satisfy the `effort: max` constraint. Pair with `CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING=1` (set globally) to prevent mid-task adaptive throttling.
+> **Note:** All workflow pipeline agents set `effort: max` for maximum extended thinking budget (Opus 4.6+). Pair with `CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING=1` (set globally) to prevent mid-task adaptive throttling.
 
 ### 📊 Complexity Routing
 
@@ -722,7 +651,7 @@ flowchart TB
 <details>
 <summary>⚙️ Infrastructure Improvements (IMP series)</summary>
 
-Architectural improvements layered onto the pipeline since v1.9.0, tracked as IMP-XX task IDs in commits and planning docs. These improvements operate transparently — no user action required.
+Architectural improvements built into the pipeline. They operate transparently — no user action required.
 
 | ID | Improvement | What it does | Key artifact |
 |----|-------------|--------------|--------------|
@@ -733,15 +662,13 @@ Architectural improvements layered onto the pipeline since v1.9.0, tracked as IM
 | **IMP-05** | Effective Agent Type | Post-registry recovery resolves agent identity from transcript when SubagentStop fires without registration | `review-completions.jsonl` field `effective_agent_type` |
 | **IMP-06** | UNKNOWN Verdict Resolution | Tiered recovery: checkpoint → direct transcript read → verdict-recovery agent → manual user verdict | `orchestration-core.md` phases 2/4 |
 
-Enable strict validation: see the [Env variables matrix](#claudesettingslocaljsonexample--personal-overrides) under settings.local.json.example for `CLAUDE_HANDOFF_VALIDATION_MODE` and `CLAUDE_VERDICT_VALIDATION_MODE` (and the rest of the IMP-related strict-mode flags). See [⚙️ Configuration Files](#️-configuration-files) for the full env-vars matrix and worktree sparse-paths config.
-
 </details>
 
 ---
 
 ## 🪨 Token Optimization (Caveman)
 
-Project-local fork of the [caveman skill](https://github.com/juliusbrussee/caveman) (since v1.21.0) — always-on terse-output mode for `/workflow` runs. Trims filler / hedging / pleasantries from agent prose to reduce Messages-token cost while preserving all technical substance and contract-bearing structured output (JSON envelopes, plan headers, file paths, code blocks).
+Project-local fork of the [caveman skill](https://github.com/juliusbrussee/caveman) — always-on terse-output mode for `/workflow` runs. Trims filler / hedging / pleasantries from agent prose to reduce Messages-token cost while preserving all technical substance and contract-bearing structured output (JSON envelopes, plan headers, file paths, code blocks).
 
 **Activation:** ships disabled by default. See [Configuration at a Glance](#configuration-at-a-glance) for the `CLAUDE_CAVEMAN_MODE` row; per-machine enable via `.claude/settings.local.json`:
 
@@ -751,7 +678,7 @@ Project-local fork of the [caveman skill](https://github.com/juliusbrussee/cavem
 }
 ```
 
-The activation hook (`SessionStart` → `caveman-activate.sh`) reads the env var, falls back to `.claude/workflow-state/.caveman-mode` flag, then defaults to `lite`. Takes effect on the **next** Claude Code session start.
+Takes effect on the **next** Claude Code session start.
 
 **Modes:**
 
@@ -773,22 +700,7 @@ Either layer alone protects the contract; both together = robust against single-
 
 **Project-local invariant:** all caveman files live under `.claude/`. The kit never modifies `~/.claude/`. Disabling caveman in claude-kit does NOT affect any other Claude Code project.
 
-**Files (added in v1.21.0):**
-
-```
-.claude/skills/caveman/SKILL.md                                # lite-only, 7 VERBATIM clauses, disable-model-invocation: true
-.claude/scripts/caveman-activate.sh                            # SessionStart hook (bash, env-var python3 invocation)
-.claude/scripts/caveman-suspend-for-reviewer.sh                # SubagentStart hook (4-agent allowlist)
-.claude/scripts/tests/test-caveman-activate.sh                 # 6 scenarios
-.claude/scripts/tests/test-caveman-suspend-for-reviewer.sh     # 4 agents + 1 negative
-.claude/scripts/tests/test-caveman-no-regression.sh            # canonical_id stability + clause presence + AC15 grep
-```
-
-Also: 5 hook entries in `.claude/settings.json` (1 SessionStart + 4 SubagentStart matchers — `code-researcher`, `plan-reviewer`, `code-reviewer`, `verdict-recovery`).
-
 **Off-switch (rollback):** set `CLAUDE_CAVEMAN_MODE=off` (or remove the var entirely and delete `.claude/workflow-state/.caveman-mode` flag file). Hook exits with no output → byte-identical to disabled state.
-
-**Empirical validation (per AC13):** capture baseline `messages_token_count` from a representative `/workflow` XL run BEFORE setting `CLAUDE_CAVEMAN_MODE=lite`, then re-run after 1 week of caveman-on. Record both numbers in `.claude/workflow-state/pipeline-metrics.jsonl`. Expected: ≥20% reduction. The kit's `CLAUDE.md` § "Caveman Token Compression Policy" documents the measurement protocol.
 
 ---
 
@@ -819,8 +731,6 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
 For `.mcp.json` setup (copy from `.mcp.json.example`, gitignored), see [⚙️ Configuration Files → `.mcp.json.example`](#mcpjsonexample--mcp-server-endpoints).
-
-> **Note:** The patched fork is no longer needed. PR#29 (tree-sitter 0.24+ API compat) was merged into the official `wrale/mcp-server-tree-sitter` upstream on 2026-04-09.
 
 </details>
 
@@ -898,19 +808,6 @@ Configured in `.claude/settings.json`. Enforce quality automatically:
 | import matrix enforcer (type: prompt) | PreToolUse (Write / Edit `if: internal/**/*.go`) | Enforce Go architecture import matrix via LLM evaluation — fires only on internal Go files |
 | `caveman-activate.sh` | SessionStart | Inject project-local caveman lite-mode terse-output ruleset as `additionalContext` (token optimization, since v1.21.0) |
 | `caveman-suspend-for-reviewer.sh` | SubagentStart (`plan-reviewer` / `code-reviewer` / `verdict-recovery` / `code-researcher`) | Emit `[caveman OFF for this delegation]` exemption marker so reviewer/researcher VERDICT_JSON envelopes remain byte-stable across iterations (defence-in-depth for IMP-03 canonical_id stability) |
-
-### 🔌 Extension Points
-
-Supported Claude Code hook events not yet leveraged in the kit — available for customization:
-
-| Event | Potential use in claude-kit |
-|-------|----------------------------|
-| `FileChanged` | Watch `prompts/{feature}.md` for mid-session drift detection |
-| `WorktreeRemove` | Cleanup `workflow-state/` artifacts after code-review worktree is removed |
-| `TaskCompleted` | Pair with the active `TaskCreated` hook to close out `TodoWrite` task lifecycle in `pipeline-metrics.jsonl` |
-| `PostToolUseFailure` | Log failed tool calls for debugging and session analytics |
-| `PermissionRequest` | Pre-audit tool permission requests before user sees the dialog |
-| `UserPromptExpansion` | Track slash command invocation frequency in `session-analytics.sh` |
 
 ---
 
