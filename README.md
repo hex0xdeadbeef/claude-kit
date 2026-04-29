@@ -23,6 +23,8 @@ Structured multi-agent development workflow with built-in planning, implementati
 
 - [⚡ Quick Start](#-quick-start)
 - [⚙️ Configuration Files](#️-configuration-files)
+  - [Configuration at a Glance](#configuration-at-a-glance)
+  - [Files & Lifecycles](#files--lifecycles)
 - [🔧 Commands](#-commands)
 - [🏗 Architecture](#-architecture)
 - [🪨 Token Optimization (Caveman)](#-token-optimization-caveman)
@@ -35,13 +37,32 @@ Structured multi-agent development workflow with built-in planning, implementati
 
 ## ⚡ Quick Start
 
-### Installation
+Once installed, `/workflow` orchestrates planning → implementation → review → commit for any task. Three steps to a working kit:
 
-```bash
-curl -sL https://raw.githubusercontent.com/hex0xdeadbeef/claude-kit/main/install.sh | bash
-```
+1. **Install** the kit into your project root:
 
-### Update existing installation
+   ```bash
+   curl -sL https://raw.githubusercontent.com/hex0xdeadbeef/claude-kit/main/install.sh | bash
+   ```
+
+2. **Generate project knowledge** so agents have context for your codebase:
+
+   ```bash
+   /project-researcher
+   ```
+
+   This writes `.claude/PROJECT-KNOWLEDGE.md` (architecture, modules, dependencies, language profile). Edit `CLAUDE.md` Language Profile first if your stack is not Go (the kit's default). Then run `/meta-agent onboard` for a one-time configuration sanity check.
+
+3. **Start working** — let `/workflow` drive the full development cycle:
+
+   ```bash
+   /workflow Add new REST endpoint for profiles
+   ```
+
+Already using the kit? See **Updating an existing installation** below for the `--update` path.
+
+<details>
+<summary>Updating an existing installation</summary>
 
 ```bash
 curl -sL https://raw.githubusercontent.com/hex0xdeadbeef/claude-kit/main/install.sh | bash -s -- --update
@@ -58,26 +79,20 @@ curl -sL https://raw.githubusercontent.com/hex0xdeadbeef/claude-kit/main/install
 **Backup:** A timestamped copy is created at `.claude.backup.YYYYMMDD_HHMMSS/` before the update.
 **Soft dep:** `python3` is used to merge frontmatter skills. If absent, the update warns and proceeds without that step.
 
-### First Steps
+</details>
 
-```bash
-# 1. Edit CLAUDE.md — update Language Profile to match your project stack
-# 2. Analyze codebase and generate .claude/PROJECT-KNOWLEDGE.md
-/project-researcher
-
-# 3. Validate configuration
-/meta-agent onboard
-```
-
-### Options
+<details>
+<summary>Install options (KIT_VERSION, INSTALL_DIR)</summary>
 
 ```bash
 KIT_VERSION=v1.0.0 bash install.sh    # install specific version
 INSTALL_DIR=/path/to/project bash install.sh --update   # install to specific directory
 ```
 
+</details>
+
 <details>
-<summary>Manual Installation (advanced)</summary>
+<summary>Manual installation (advanced)</summary>
 
 ```bash
 git clone https://github.com/hex0xdeadbeef/claude-kit.git
@@ -100,7 +115,34 @@ cp .claude/settings.local.json.example /path/to/your/project/.claude/settings.lo
 
 ## ⚙️ Configuration Files
 
-Four files control kit behavior. Each has a different lifecycle and git status — copy the `.example` templates once after install, then customize per machine or per project.
+Five surfaces control kit behaviour: two settings files, one MCP file, one project-knowledge artifact, and the language profile inside `CLAUDE.md`. The **Configuration at a Glance** matrix below is the master index — every knob, where it lives, what it does, when to edit it, and where to find the deep-dive. **Files & Lifecycles** documents git status and ownership for each file. The four `### .claude/...` subsections below are the per-file deep-dives.
+
+### Configuration at a Glance
+
+Master index of every config knob exposed by the kit. The `Reference` column links to the deep-dive subsection in this section (or to `🪨 Token Optimization (Caveman)` for `CLAUDE_CAVEMAN_MODE`). Three install/global env vars (`KIT_VERSION`, `INSTALL_DIR`, `CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING`) are not listed here — they activate during install or via the global Claude Code shell env, not via `.claude/settings.local.json`. They are documented in **Quick Start** > Install options and in [⚙️ Model Routing](#️-model-routing).
+
+| Knob | Lives in | Controls | When to edit | Activation | Reference |
+|------|----------|----------|--------------|------------|-----------|
+| `CLAUDE_HANDOFF_VALIDATION_MODE` | `settings.local.json` env | strict-mode for IMP-01 schema validation of handoff JSON | tightening rollout | uncomment in env block | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `CLAUDE_VERDICT_VALIDATION_MODE` | `settings.local.json` env | strict-mode for IMP-02 verdict envelope schema | tightening rollout | uncomment in env block | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `CLAUDE_ISSUE_ID_VALIDATION_MODE` | `settings.local.json` env | strict-mode for IMP-03 canonical issue IDs | tightening rollout | uncomment in env block | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `CLAUDE_PROJECT_KNOWLEDGE_MODE` | `settings.local.json` env | block `/workflow` startup if `PROJECT-KNOWLEDGE.md` missing/stub for M+ tasks | enforcing PK presence | uncomment in env block | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `CLAUDE_PK_PATH_MODE` | `settings.local.json` env | block bare `PROJECT-KNOWLEDGE.md` references (without `.claude/` prefix) | strict reference checking | uncomment in env block | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `CLAUDE_DELTA_REVIEW_MODE` | `settings.local.json` env | inject delta-only context into reviewers on iter ≥ 2 | speeding iter ≥ 2 reviews | `warn` or `strict` | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `CLAUDE_CAVEMAN_MODE` | `settings.local.json` env | terse-output mode for `/workflow` runs | reducing Messages-token cost | `lite` (only mode in v1) | [🪨 Token Optimization (Caveman)](#-token-optimization-caveman) |
+| `ENABLE_PROMPT_CACHING_1H` | `settings.local.json` env | extend cache TTL 5 min → 1H for non-subscription tier | API-key/Bedrock/Vertex/Foundry users | `1` (default ON in `.example`) | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `FORCE_PROMPT_CACHING_5M` | `settings.local.json` env | force 5-min TTL regardless of tier | cost control for short S/M tasks | `1` (uncomment) | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `GIT_STRIP_CO_AUTHOR` | `settings.local.json` env | strip `Co-Authored-By` from auto-generated commits | personal preference | `true` | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `worktree.sparsePaths` | `settings.json` or `settings.local.json` | which subtrees `code-reviewer` worktree checks out | monorepos / large repos | edit JSON array | [Monorepo sparse paths](#claudesettingslocaljsonexample--personal-overrides) |
+| `permissions.allow` / `permissions.deny` | `settings.local.json` | extra allow/deny rules merged with shared `settings.json` | per-machine overrides | edit JSON arrays | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `.mcp.json` (3 servers) | gitignored after install | `sequential-thinking`, `context7`, `tree_sitter` MCP servers | personal/per-machine setup | `cp .mcp.json.example` | [`.mcp.json.example`](#mcpjsonexample--mcp-server-endpoints) |
+| `.claude/PROJECT-KNOWLEDGE.md` | committed per-project | codebase analysis injected as agent context | once per project, refresh on architecture change | run `/project-researcher` | [Project Knowledge Base](#claudeproject-knowledgemd--project-knowledge-base) |
+| `CLAUDE.md` > Language Profile | committed | language slots (`LANG_EXT`, `VERIFY_CMD`, etc.) cascade source | first-time install for non-Go stacks | edit `CLAUDE.md` directly | [Quick Start](#-quick-start) Step 2 |
+| `.claude/.kit-version` | auto-managed | tracks installed kit version for `install.sh --update` | never (managed by `install.sh`) | n/a | [Installation Tracker](#claudekit-version--installation-tracker) |
+
+### Files & Lifecycles
+
+Each file has a different lifecycle and git status — copy the `.example` templates once after install, then customize per machine or per project.
 
 | File | Git status (in your project) | Lifecycle | Purpose |
 |------|------------------------------|-----------|---------|
@@ -675,13 +717,7 @@ flowchart TB
 - **Re-Routing** — pipeline adjusts route on complexity mismatch (downgrade/upgrade)
 - **Cron Auto-Save** — periodic checkpoint auto-save for L/XL tasks via CronCreate (every 10min)
 - **Simplify Protocol** — optional code simplification before review (L/XL, ≥5 parts, 30% guard)
-- **Worktree Optimization** — sparse checkout via `worktree.sparsePaths` reduces worktree size in monorepos. Configure for your project structure in `.claude/settings.json`:
-  ```json
-  "worktree": {
-    "sparsePaths": [".claude/", "src/", "tests/", "package.json"]
-  }
-  ```
-  Default paths are Go-specific: `.claude/`, `internal/`, `cmd/`, `go.mod`, `go.sum`, `Makefile`, `CLAUDE.md`.
+- **Worktree Optimization** — sparse checkout via `worktree.sparsePaths` reduces worktree size in monorepos. Default paths are Go-specific: `.claude/`, `internal/`, `cmd/`, `go.mod`, `go.sum`, `Makefile`, `CLAUDE.md`. See [Configuration at a Glance](#configuration-at-a-glance) for the sparse-paths knob and the [Monorepo sparse paths](#claudesettingslocaljsonexample--personal-overrides) deep-dive.
 
 <details>
 <summary>⚙️ Infrastructure Improvements (IMP series)</summary>
@@ -697,17 +733,7 @@ Architectural improvements layered onto the pipeline since v1.9.0, tracked as IM
 | **IMP-05** | Effective Agent Type | Post-registry recovery resolves agent identity from transcript when SubagentStop fires without registration | `review-completions.jsonl` field `effective_agent_type` |
 | **IMP-06** | UNKNOWN Verdict Resolution | Tiered recovery: checkpoint → direct transcript read → verdict-recovery agent → manual user verdict | `orchestration-core.md` phases 2/4 |
 
-Enable strict validation via `.claude/settings.local.json`:
-```json
-{
-  "env": {
-    "CLAUDE_HANDOFF_VALIDATION_MODE": "strict",
-    "CLAUDE_VERDICT_VALIDATION_MODE": "strict"
-  }
-}
-```
-
-See [⚙️ Configuration Files](#️-configuration-files) for the full env-vars matrix and worktree sparse-paths config.
+Enable strict validation: see the [Env variables matrix](#claudesettingslocaljsonexample--personal-overrides) under settings.local.json.example for `CLAUDE_HANDOFF_VALIDATION_MODE` and `CLAUDE_VERDICT_VALIDATION_MODE` (and the rest of the IMP-related strict-mode flags). See [⚙️ Configuration Files](#️-configuration-files) for the full env-vars matrix and worktree sparse-paths config.
 
 </details>
 
@@ -717,7 +743,7 @@ See [⚙️ Configuration Files](#️-configuration-files) for the full env-vars
 
 Project-local fork of the [caveman skill](https://github.com/juliusbrussee/caveman) (since v1.21.0) — always-on terse-output mode for `/workflow` runs. Trims filler / hedging / pleasantries from agent prose to reduce Messages-token cost while preserving all technical substance and contract-bearing structured output (JSON envelopes, plan headers, file paths, code blocks).
 
-**Activation:** ships disabled by default. Enable per-machine in `.claude/settings.local.json`:
+**Activation:** ships disabled by default. See [Configuration at a Glance](#configuration-at-a-glance) for the `CLAUDE_CAVEMAN_MODE` row; per-machine enable via `.claude/settings.local.json`:
 
 ```json
 "env": {
@@ -768,7 +794,7 @@ Also: 5 hook entries in `.claude/settings.json` (1 SessionStart + 4 SubagentStar
 
 ## 🔌 MCP Servers
 
-Configure project-scoped servers in `.mcp.json` (copy from `.mcp.json.example` — see [⚙️ Configuration Files](#mcpjsonexample--mcp-server-endpoints)) or globally in `~/.claude/mcp.json`:
+See [`.mcp.json.example` — MCP Server Endpoints](#mcpjsonexample--mcp-server-endpoints) for setup. Servers can also be configured globally in `~/.claude/mcp.json`. The 3 servers ship by default:
 
 ### Required
 
