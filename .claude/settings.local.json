@@ -2,6 +2,7 @@
     "env": {
         "GIT_STRIP_CO_AUTHOR": "true",
         "CLAUDE_HANDOFF_VALIDATION_MODE": "strict",
+        "CLAUDE_CAVEMAN_MODE": "lite",
         "CLAUDE_VERDICT_VALIDATION_MODE": "strict",
         "CLAUDE_PROJECT_KNOWLEDGE_MODE": "strict",
         "CLAUDE_DELTA_REVIEW_MODE": "strict",
