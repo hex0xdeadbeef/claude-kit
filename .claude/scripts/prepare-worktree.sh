@@ -28,8 +28,7 @@ export _HOOK_INPUT="$INPUT"
 import json, os, shutil, subprocess, sys
 from datetime import datetime, timezone
 
-# P5: honour CLAUDE_WORKFLOW_STATE_DIR for sandbox isolation (mirrors save-review-checkpoint.sh:43).
-STATE_DIR = os.environ.get("CLAUDE_WORKFLOW_STATE_DIR", ".claude/workflow-state")
+STATE_DIR = ".claude/workflow-state"
 EVENTS_FILE = os.path.join(STATE_DIR, "worktree-events.jsonl")
 DEBUG_FILE = os.path.join(STATE_DIR, "worktree-events-debug.jsonl")
 

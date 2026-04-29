@@ -43,14 +43,6 @@ command -v python3 >/dev/null 2>&1 || {
 STATE_DIR="${CLAUDE_WORKFLOW_STATE_DIR:-.claude/workflow-state}"
 mkdir -p "$STATE_DIR"
 
-# P4: source shared JSONL flock helper (bash side). Helper is fire-and-forget;
-# CLAUDE_JSONL_APPEND_LOCK=on enables flock; default off → byte-identical legacy.
-_SCRIPT_DIR_SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck disable=SC1091
-. "${_SCRIPT_DIR_SRC}/lib/jsonl-lock.sh"
-# Pass python helper dir into heredoc.
-export _JSONL_LOCK_LIB_DIR="${_SCRIPT_DIR_SRC}/lib"
-
 # Read stdin JSON, parse once, write JSONL marker
 INPUT=$(cat)
 export _HOOK_INPUT="$INPUT"
@@ -61,26 +53,6 @@ from datetime import datetime, timezone
 
 STATE_DIR = os.environ.get("CLAUDE_WORKFLOW_STATE_DIR", ".claude/workflow-state")
 DEBUG_FILE = os.path.join(STATE_DIR, "worktree-events-debug.jsonl")
-
-# P4: import shared JSONL flock helper (python side). jsonl_lock.jsonl_append_locked
-# is fire-and-forget; CLAUDE_JSONL_APPEND_LOCK=on enables flock; default off → byte-identical.
-sys.path.insert(0, os.environ.get("_JSONL_LOCK_LIB_DIR", ".claude/scripts/lib"))
-try:
-    import jsonl_lock as _jl
-except Exception:
-    _jl = None  # graceful degradation — fall back to direct append if helper missing
-
-def _append_jsonl(path, obj):
-    """P4 — fire-and-forget JSONL append. Returns None; never raises."""
-    line = obj if isinstance(obj, str) else json.dumps(obj)
-    if _jl is not None:
-        _jl.jsonl_append_locked(path, line)
-        return
-    try:
-        with open(path, "a") as f:
-            f.write(line if line.endswith("\n") else line + "\n")
-    except Exception:
-        pass
 
 try:
     data = json.loads(os.environ.get("_HOOK_INPUT", "{}"))
@@ -144,13 +116,14 @@ REVIEW_AGENTS = {"plan-reviewer", "code-reviewer", "verdict-recovery"}
 if effective_agent_type in REVIEW_AGENTS and agent_id and effective_agent_type != agent_type:
     try:
         REGISTRY_FILE = os.path.join(STATE_DIR, "agent-id-registry.jsonl")
-        _append_jsonl(REGISTRY_FILE, {
-            "agent_id": agent_id,
-            "agent_type": effective_agent_type,
-            "session_id": session_id,
-            "registered_at": timestamp,
-            "registration_source": "SubagentStop-backfill",
-        })
+        with open(REGISTRY_FILE, "a") as f:
+            f.write(json.dumps({
+                "agent_id": agent_id,
+                "agent_type": effective_agent_type,
+                "session_id": session_id,
+                "registered_at": timestamp,
+                "registration_source": "SubagentStop-backfill",
+            }) + "\n")
     except Exception:
         pass  # NON_CRITICAL
 # --- End P1-2 ---
@@ -177,7 +150,8 @@ if _recovered_via_heuristic:
             "session_id": session_id,
             "message": "SubagentStart hook did not fire — type recovered via P0-2 heuristic (worktree isolation)",
         }
-        _append_jsonl(os.path.join(STATE_DIR, "anomalies.jsonl"), anomaly)
+        with open(os.path.join(STATE_DIR, "anomalies.jsonl"), "a") as f:
+            f.write(json.dumps(anomaly) + "\n")
     except Exception:
         pass
 # --- End P2-2 ---
@@ -334,16 +308,19 @@ if output:
             _dup_ids = [cid for cid, count in _seen_ids.items() if count > 1]
             if _dup_ids:
                 try:
-                    _hv_path = os.path.join(STATE_DIR, "handoff-validation.jsonl")
-                    for _dup in _dup_ids:
-                        _append_jsonl(_hv_path, {
-                            "timestamp": timestamp,
-                            "record_kind": "id_collision",
-                            "agent": effective_agent_type,
-                            "session_id": session_id,
-                            "canonical_id": _dup,
-                            "count": _seen_ids[_dup],
-                        })
+                    with open(
+                        os.path.join(STATE_DIR, "handoff-validation.jsonl"),
+                        "a",
+                    ) as _lf:
+                        for _dup in _dup_ids:
+                            _lf.write(json.dumps({
+                                "timestamp": timestamp,
+                                "record_kind": "id_collision",
+                                "agent": effective_agent_type,
+                                "session_id": session_id,
+                                "canonical_id": _dup,
+                                "count": _seen_ids[_dup],
+                            }) + "\n")
                 except Exception:
                     pass  # NON_CRITICAL
             # Re-serialise raw_json so the tempfile written below contains the
@@ -412,16 +389,17 @@ if output:
             verdict_source = "structured_json_schema_invalid"
             # Preserve malformed snippet (first 400 chars) for post-mortem.
             try:
-                _append_jsonl(
+                with open(
                     os.path.join(STATE_DIR, "handoff-validation.jsonl"),
-                    {
+                    "a",
+                ) as _lf:
+                    _lf.write(json.dumps({
                         "timestamp": timestamp,
                         "record_kind": "verdict_schema_invalid",
                         "agent": effective_agent_type,
                         "session_id": session_id,
                         "snippet": (raw_json or "")[:400],
-                    },
-                )
+                    }) + "\n")
             except Exception:
                 pass
     elif parsed is None and raw_json is not None:
@@ -429,16 +407,17 @@ if output:
         # "no sentinel" — log the malformed snippet so operators can diff the payload.
         # verdict_source stays "none"; regex fallback rescues below.
         try:
-            _append_jsonl(
+            with open(
                 os.path.join(STATE_DIR, "handoff-validation.jsonl"),
-                {
+                "a",
+            ) as _lf:
+                _lf.write(json.dumps({
                     "timestamp": timestamp,
                     "record_kind": "verdict_json_decode_error",
                     "agent": effective_agent_type,
                     "session_id": session_id,
                     "snippet": raw_json[:400],
-                },
-            )
+                }) + "\n")
         except Exception:
             pass
     # else: no sentinel at all — verdict_source stays "none"; regex handles it below.
@@ -483,39 +462,33 @@ is_review_agent = (
     or (effective_agent_type == "unknown" and data.get("agent_transcript_path"))
 )
 if verdict == "UNKNOWN" and is_review_agent and agent_id:
-    # P4 (PR-001): replace exists-check + open("w") chain with atomic mkdir/rmdir.
-    # os.makedirs(..., exist_ok=False) is POSIX-atomic — second concurrent caller raises
-    # FileExistsError. Pairs with os.rmdir on the unblock branch.
     block_marker = os.path.join(STATE_DIR, f".verdict-block-{agent_id}")
-    block_acquired = False
-    already_blocked = False
-    try:
-        os.makedirs(block_marker, exist_ok=False)
-        block_acquired = True
-    except FileExistsError:
-        # Second attempt — marker already present from prior stop in this iteration.
-        already_blocked = True
-    except Exception:
-        # Other I/O error — skip block (mirrors prior marker_written=False semantics).
-        print(f"save-review-checkpoint: block marker create failed, skipping block", file=sys.stderr)
-
-    if block_acquired:
-        # First attempt — block stop, give agent one more chance.
-        print(json.dumps({
-            "decision": "block",
-            "reason": (
-                "No verdict found in output. You MUST output your review verdict now. "
-                "Output VERDICT: {APPROVED|NEEDS_CHANGES|CHANGES_REQUESTED|REJECTED} "
-                "followed by a brief handoff section. Skip memory save."
-            )
-        }))
-        sys.exit(0)
-    elif already_blocked:
-        # Second attempt — allow stop, clean up marker (rmdir pairs with mkdir).
+    if not os.path.exists(block_marker):
+        # First attempt — block stop, give agent one more chance
+        # Guard: only block if marker write succeeds (prevents infinite loop)
+        marker_written = False
         try:
-            os.rmdir(block_marker)
-        except (FileNotFoundError, OSError):
-            pass  # NON_CRITICAL — best-effort cleanup
+            with open(block_marker, "w") as f:
+                f.write(timestamp)
+            marker_written = True
+        except Exception:
+            print(f"save-review-checkpoint: block marker write failed, skipping block", file=sys.stderr)
+        if marker_written:
+            print(json.dumps({
+                "decision": "block",
+                "reason": (
+                    "No verdict found in output. You MUST output your review verdict now. "
+                    "Output VERDICT: {APPROVED|NEEDS_CHANGES|CHANGES_REQUESTED|REJECTED} "
+                    "followed by a brief handoff section. Skip memory save."
+                )
+            }))
+            sys.exit(0)
+    else:
+        # Second attempt — allow stop, clean up marker
+        try:
+            os.remove(block_marker)
+        except Exception:
+            pass
         print(f"save-review-checkpoint: verdict still UNKNOWN after block, allowing stop", file=sys.stderr)
 # --- End IMP-H ---
 
@@ -539,7 +512,8 @@ try:
         if k not in ("last_assistant_message",)
     }
     discovery["payload_sample"] = payload_sample
-    _append_jsonl(DEBUG_FILE, discovery)
+    with open(DEBUG_FILE, "a") as f:
+        f.write(json.dumps(discovery) + "\n")
 except Exception:
     pass
 # --- End IMP-03 ---
@@ -614,7 +588,8 @@ if effective_agent_type in WORKTREE_AGENTS and worktree_path:
             "memory_sync_result": memory_sync_result,
             "files_synced": memory_files_synced,
         }
-        _append_jsonl(DEBUG_FILE, sync_log)
+        with open(DEBUG_FILE, "a") as f:
+            f.write(json.dumps(sync_log) + "\n")
     except Exception:
         pass
 
@@ -664,10 +639,8 @@ except Exception as e:
 # --- IMP-02: Append verdict_mismatch log if dual-VERDICT mismatch detected above ---
 if verdict_mismatch_record is not None:
     try:
-        _append_jsonl(
-            os.path.join(STATE_DIR, "handoff-validation.jsonl"),
-            verdict_mismatch_record,
-        )
+        with open(os.path.join(STATE_DIR, "handoff-validation.jsonl"), "a") as _lf:
+            _lf.write(json.dumps(verdict_mismatch_record) + "\n")
     except Exception:
         pass  # NON_CRITICAL
 
@@ -681,13 +654,14 @@ _iter_file = os.path.join(STATE_DIR, ".iteration-in-flight")
 if os.path.isfile(_iter_file):
     try:
         os.remove(_iter_file)
-        _append_jsonl(DEBUG_FILE, {
-            "timestamp": timestamp,
-            "hook": "SubagentStop",
-            "event": "iteration_in_flight_cleared",
-            "effective_agent_type": effective_agent_type,
-            "session_id": session_id,
-        })
+        with open(DEBUG_FILE, "a") as _df:
+            _df.write(json.dumps({
+                "timestamp": timestamp,
+                "hook": "SubagentStop",
+                "event": "iteration_in_flight_cleared",
+                "effective_agent_type": effective_agent_type,
+                "session_id": session_id,
+            }) + "\n")
     except Exception as _e:
         print(
             f"save-review-checkpoint: failed to clear .iteration-in-flight: {_e}",

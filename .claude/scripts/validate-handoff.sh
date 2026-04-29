@@ -23,10 +23,6 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 SCHEMA_FILE="${REPO_ROOT}/.claude/schemas/handoff.schema.json"
-
-# P4: source shared JSONL flock helper. Fire-and-forget; CLAUDE_JSONL_APPEND_LOCK=on enables flock.
-# shellcheck disable=SC1091
-. "${SCRIPT_DIR}/lib/jsonl-lock.sh"
 # Part 1 / P1: honor CLAUDE_WORKFLOW_STATE_DIR for log paths so test sandboxes
 # don't pollute the production log. Fallback preserves legacy hook-mode behavior
 # (env unset → identical to pre-P1 path).
@@ -166,11 +162,13 @@ MAX_LOG_LINES="${MAX_LINES_RAW}"
 # Behavior: if file exists and exceeds threshold, mv → ${file}.1 (overwriting prior archive).
 # Failures (e.g. permission denied) are silently swallowed — rotation must NEVER block validation.
 #
-# RACE-WINDOW NOTE (PR-52bb42a0, iter 2 — closed by P4 when CLAUDE_JSONL_APPEND_LOCK=on):
+# RACE-WINDOW NOTE (PR-52bb42a0, iter 2):
 #   Between `wc -l` (read) and `mv -f` (rename), another concurrent hook may append.
-#   When CLAUDE_JSONL_APPEND_LOCK=on, rotate_if_oversized_locked acquires flock on
-#   ${logfile}.lock so concurrent hooks block on either rotation or append (whichever
-#   ran first). Default-off path remains byte-identical to legacy unlocked behaviour.
+#   In the worst case: two processes both observe lines > threshold, both call mv -f;
+#   the second mv overwrites the rotated .log.1 with a freshly-created (very short) log,
+#   losing 1+ minute of entries from process A. Mitigation: rotation is infrequent
+#   (~6 weeks at observed 5KB/h), and effects are bounded (lost lines, not corruption).
+#   Acceptable per spec § Risk Register; flock-based locking is out-of-scope for v1.
 rotate_if_oversized() {
   local logfile="$1"
   local threshold="${2:-${MAX_LOG_LINES}}"
@@ -182,26 +180,6 @@ rotate_if_oversized() {
   if [[ "${lines}" -gt "${threshold}" ]]; then
     mv -f "${logfile}" "${logfile}.1" 2>/dev/null || true
   fi
-}
-
-# P4: lock-protected rotation when CLAUDE_JSONL_APPEND_LOCK=on. Default-off path
-# delegates to the unlocked rotate_if_oversized (byte-identical legacy behaviour).
-# Uses POSIX-portable mkdir-based atomic lock (no flock dependency — macOS-friendly).
-rotate_if_oversized_locked() {
-  local logfile="$1"
-  local threshold="${2:-${MAX_LOG_LINES}}"
-  local mode="${CLAUDE_JSONL_APPEND_LOCK:-off}"
-  if [[ "${mode}" != "on" ]]; then
-    rotate_if_oversized "${logfile}" "${threshold}"
-    return 0
-  fi
-  # Best-effort lock: try once; if held, skip rotation (safe — rotation is idempotent).
-  local lockdir="${logfile}.lockdir"
-  if mkdir "${lockdir}" 2>/dev/null; then
-    rotate_if_oversized "${logfile}" "${threshold}"
-    rmdir "${lockdir}" 2>/dev/null || true
-  fi
-  return 0
 }
 
 # ─── Run validation ─────────────────────────────────────────────────────────────
@@ -222,9 +200,8 @@ LOG_ENTRY+="\"file\":\"${HANDOFF_FILE}\",\"valid\":${VALID_BOOL},"
 LOG_ENTRY+="\"mode\":\"${MODE}\",\"rc\":${VALIDATION_RC},"
 LOG_ENTRY+="\"record_kind\":\"${RECORD_KIND}\"}"
 # Part 2 / P2: rotate before append to bound disk usage.
-# P4: flock-locked rotation + append when CLAUDE_JSONL_APPEND_LOCK=on (default-off byte-identical).
-rotate_if_oversized_locked "${VALIDATION_LOG}"
-jsonl_append_locked "${VALIDATION_LOG}" "${LOG_ENTRY}"
+rotate_if_oversized "${VALIDATION_LOG}"
+echo "${LOG_ENTRY}" >> "${VALIDATION_LOG}" 2>/dev/null || true
 
 # ─── Return result ───────────────────────────────────────────────────────────────
 if [[ "${VALIDATION_RC}" -eq 0 ]]; then
@@ -258,9 +235,8 @@ DETAIL_ENTRY=$(jq -n -c \
   '{timestamp: $ts, file: $file, record_kind: $kind, rc: $rc, error_summary: $summary, full_output: $full}' \
   2>/dev/null || echo "{}")
 # Part 2 / P2: rotate detail.log before append.
-# P4: flock-locked rotation + append when CLAUDE_JSONL_APPEND_LOCK=on.
-rotate_if_oversized_locked "${DETAIL_LOG}"
-jsonl_append_locked "${DETAIL_LOG}" "${DETAIL_ENTRY}"
+rotate_if_oversized "${DETAIL_LOG}"
+echo "${DETAIL_ENTRY}" >> "${DETAIL_LOG}" 2>/dev/null || true
 
 if [[ "${MODE}" == "strict" ]]; then
   echo "[validate-handoff] BLOCKING: fix the handoff payload and retry (strict mode)" >&2
