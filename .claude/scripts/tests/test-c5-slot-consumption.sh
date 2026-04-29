@@ -107,21 +107,26 @@ if [[ -d .git ]]; then
     if [[ -s /tmp/c5-settings-diff.txt ]]; then
       # post-1.18 auto-fmt-generic spec replaces 2 auto-fmt-go.sh if-clause hook entries
       # with 1 single auto-fmt.sh entry. Allow diff if and only if every +/- line is
-      # either (a) a "command" key referencing auto-fmt(-go).sh, (b) an "if" key matching
-      # the dropped Go-specific filter, (c) a "type": "command" line accompanying the new
-      # entry, or (d) a structural-brace/comma JSON line. Allowlist tokens are anchored to
-      # specific JSON-key shapes to prevent unrelated lines from slipping through
-      # (CR-iter2 NIT tightening).
+      # either (a) a "command" key referencing auto-fmt(-go).sh OR caveman-{activate,
+      # suspend-for-reviewer}.sh (the four allowlisted reviewer/researcher matcher
+      # bindings), (b) an "if" key matching the dropped Go-specific filter, (c) a
+      # "type": "command" line accompanying a new entry, (d) a structural-brace/comma
+      # JSON line including bracket variants for new arrays, (e) a "matcher" key
+      # for the new "verdict-recovery" SubagentStart entry or empty-matcher
+      # SessionStart entry, (f) a "hooks": [ array-open line, or (g) a "SessionStart": [
+      # top-level key line. Allowlist tokens are anchored to specific JSON-key shapes
+      # to prevent unrelated lines from slipping through (CR-iter2 NIT tightening,
+      # caveman-skill-integration extension).
       bad_lines=$(grep -E '^[+-]' /tmp/c5-settings-diff.txt \
         | grep -vE '^(\+\+\+|---) ' \
-        | grep -vE '^[+-][[:space:]]+"command":[[:space:]]+"\.claude/scripts/auto-fmt(-go)?\.sh",?$|^[+-][[:space:]]+"if":[[:space:]]+"(Write|Edit)\(\*\*/\*\.go\)"$|^[+-][[:space:]]+"type":[[:space:]]+"command",?$|^[+-][[:space:]]*[}{,]+[[:space:]]*$' \
+        | grep -vE '^[+-][[:space:]]+"command":[[:space:]]+"\.claude/scripts/auto-fmt(-go)?\.sh",?$|^[+-][[:space:]]+"if":[[:space:]]+"(Write|Edit)\(\*\*/\*\.go\)"$|^[+-][[:space:]]+"type":[[:space:]]+"command",?$|^[+-][[:space:]]*[][}{,]+[[:space:]]*$|^[+-][[:space:]]+"command":[[:space:]]+"\.claude/scripts/caveman-(activate\.sh|suspend-for-reviewer\.sh (code-researcher|plan-reviewer|code-reviewer|verdict-recovery))",?$|^[+-][[:space:]]+"matcher":[[:space:]]+"",?$|^[+-][[:space:]]+"matcher":[[:space:]]+"verdict-recovery",?$|^[+-][[:space:]]+"hooks":[[:space:]]+\[$|^[+-][[:space:]]+"SessionStart":[[:space:]]+\[$' \
         || true)
       if [[ -n "$bad_lines" ]]; then
-        fail "AC-C5.13 — .claude/settings.json has changes outside auto-fmt-generic hook-block consolidation"
+        fail "AC-C5.13 — .claude/settings.json has changes outside the allowlist (auto-fmt-generic consolidation OR caveman-skill-integration hook entries)"
       fi
     fi
     rm -f /tmp/c5-settings-diff.txt
-    pass "AC-C5.13 — settings.json diff (if any) limited to auto-fmt-generic hook-block consolidation (R2 preserved)"
+    pass "AC-C5.13 — settings.json diff (if any) limited to allowlist (auto-fmt-generic + caveman-skill-integration entries)"
 
     # handoff.schema.json: hard-frozen
     git diff "$BASE"..HEAD -- .claude/schemas/handoff.schema.json > /tmp/c5-schema-diff.txt 2>&1 || true
