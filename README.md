@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/badge/Claude_Code-config_kit-5A45FF?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDJMMiAxOWgyMEwxMiAyeiIgZmlsbD0id2hpdGUiLz48L3N2Zz4=" alt="Claude Code Config Kit"/>
   <img src="https://img.shields.io/badge/agents-5_pipeline-1a73e8?style=flat-square" alt="Agents"/>
   <img src="https://img.shields.io/badge/skills-8_packages-f9ab00?style=flat-square" alt="Skills"/>
-  <img src="https://img.shields.io/badge/hooks-24_scripts-0d904f?style=flat-square" alt="Hooks"/>
+  <img src="https://img.shields.io/badge/hooks-26_scripts-0d904f?style=flat-square" alt="Hooks"/>
   <img src="https://img.shields.io/badge/languages-31_via_tree--sitter-00897b?style=flat-square" alt="Languages"/>
 </p>
 
@@ -25,6 +25,7 @@ Structured multi-agent development workflow with built-in planning, implementati
 - [⚙️ Configuration Files](#️-configuration-files)
 - [🔧 Commands](#-commands)
 - [🏗 Architecture](#-architecture)
+- [🪨 Token Optimization (Caveman)](#-token-optimization-caveman)
 - [🔌 MCP Servers](#-mcp-servers)
 - [📂 Project Structure](#-project-structure)
 - [🪝 Hooks](#-hooks)
@@ -135,6 +136,7 @@ Merge semantics vs `settings.json`: scalars override, arrays merge, `deny` wins 
 | `ENABLE_PROMPT_CACHING_1H` | `1` | Extend prompt cache TTL 5 min → 1H for API-key/Bedrock/Vertex/Foundry users; noop on subscription tier (v2.1.108) |
 | `FORCE_PROMPT_CACHING_5M` | `_1` *(inactive)* | Force 5-min TTL regardless of platform tier — cost control for short S/M tasks |
 | `CLAUDE_DELTA_REVIEW_MODE` | `_warn` *(inactive)* | `warn` (HINT) / `strict` (FOCUS) injects delta-only context into reviewers on iter ≥2; `off` keeps full context |
+| `CLAUDE_CAVEMAN_MODE` | `_lite` *(inactive)* | `lite` activates project-local caveman terse-output mode for `/workflow` parent session (orchestrator/designer/planner/coder); reviewer/researcher agents are exempt regardless via SubagentStart suspend hook. `off` disables entirely. See [🪨 Token Optimization (Caveman)](#-token-optimization-caveman) |
 
 Top-level keys with leading `_` (e.g. `_comment`, `_env_comment`, `_worktree_comment`) are documentation, not env vars.
 
@@ -711,6 +713,59 @@ See [⚙️ Configuration Files](#️-configuration-files) for the full env-vars
 
 ---
 
+## 🪨 Token Optimization (Caveman)
+
+Project-local fork of the [caveman skill](https://github.com/juliusbrussee/caveman) (since v1.21.0) — always-on terse-output mode for `/workflow` runs. Trims filler / hedging / pleasantries from agent prose to reduce Messages-token cost while preserving all technical substance and contract-bearing structured output (JSON envelopes, plan headers, file paths, code blocks).
+
+**Activation:** ships disabled by default. Enable per-machine in `.claude/settings.local.json`:
+
+```json
+"env": {
+  "CLAUDE_CAVEMAN_MODE": "lite"
+}
+```
+
+The activation hook (`SessionStart` → `caveman-activate.sh`) reads the env var, falls back to `.claude/workflow-state/.caveman-mode` flag, then defaults to `lite`. Takes effect on the **next** Claude Code session start.
+
+**Modes:**
+
+| Value | Behavior |
+|-------|----------|
+| `lite` *(only intensity supported in v1)* | Drops filler ("just", "really", "basically"), pleasantries ("sure", "happy to"), hedging ("it might be worth"). Keeps complete sentences, articles, technical terms, code blocks. ~30-40% Messages-token reduction expected. |
+| `off` | SessionStart hook exits silently — zero injection, byte-identical to pre-v1.21.0 behavior. |
+
+> **Why `lite`-only:** upstream caveman ships 6 modes (`full`, `ultra`, `wenyan-*`); they permit sentence fragments which corrupt canonical issue ID hashing (`sha256(category|location|problem)[:8]` per IMP-03). Disabled in this fork to preserve VERDICT_JSON envelope and cross-iteration ID stability.
+
+**Reviewer/researcher exemption (defence-in-depth):**
+
+| Layer | Mechanism |
+|-------|-----------|
+| **1. Hook** | `SubagentStart` → `caveman-suspend-for-reviewer.sh` injects `[caveman OFF for this delegation]` clause for `plan-reviewer`, `code-reviewer`, `verdict-recovery`, `code-researcher`. |
+| **2. Skill** | `.claude/skills/caveman/SKILL.md` contains 7 VERBATIM clauses guarding contract-bearing output: `VERDICT:` enum line, `VERDICT_JSON:` fenced blocks, `$handoff_contract` / `$verdict_contract` discriminator values, plan/spec H2 headers (`## Scope`, `## Architecture Decision`, `## Tests`, `## Acceptance Criteria`, `## Parts`), `issue.problem` / `issue.suggestion` text, file paths and `file:line` refs, Part identifiers (`Part N:`). |
+
+Either layer alone protects the contract; both together = robust against single-point failure (matcher mistype OR prompt drift).
+
+**Project-local invariant:** all caveman files live under `.claude/`. The kit never modifies `~/.claude/`. Disabling caveman in claude-kit does NOT affect any other Claude Code project.
+
+**Files (added in v1.21.0):**
+
+```
+.claude/skills/caveman/SKILL.md                                # lite-only, 7 VERBATIM clauses, disable-model-invocation: true
+.claude/scripts/caveman-activate.sh                            # SessionStart hook (bash, env-var python3 invocation)
+.claude/scripts/caveman-suspend-for-reviewer.sh                # SubagentStart hook (4-agent allowlist)
+.claude/scripts/tests/test-caveman-activate.sh                 # 6 scenarios
+.claude/scripts/tests/test-caveman-suspend-for-reviewer.sh     # 4 agents + 1 negative
+.claude/scripts/tests/test-caveman-no-regression.sh            # canonical_id stability + clause presence + AC15 grep
+```
+
+Also: 5 hook entries in `.claude/settings.json` (1 SessionStart + 4 SubagentStart matchers — `code-researcher`, `plan-reviewer`, `code-reviewer`, `verdict-recovery`).
+
+**Off-switch (rollback):** set `CLAUDE_CAVEMAN_MODE=off` (or remove the var entirely and delete `.claude/workflow-state/.caveman-mode` flag file). Hook exits with no output → byte-identical to disabled state.
+
+**Empirical validation (per AC13):** capture baseline `messages_token_count` from a representative `/workflow` XL run BEFORE setting `CLAUDE_CAVEMAN_MODE=lite`, then re-run after 1 week of caveman-on. Record both numbers in `.claude/workflow-state/pipeline-metrics.jsonl`. Expected: ≥20% reduction. The kit's `CLAUDE.md` § "Caveman Token Compression Policy" documents the measurement protocol.
+
+---
+
 ## 🔌 MCP Servers
 
 Configure project-scoped servers in `.mcp.json` (copy from `.mcp.json.example` — see [⚙️ Configuration Files](#mcpjsonexample--mcp-server-endpoints)) or globally in `~/.claude/mcp.json`:
@@ -815,6 +870,8 @@ Configured in `.claude/settings.json`. Enforce quality automatically:
 | `audit-config-change.sh` | ConfigChange | Audit config changes; block writes during active workflow |
 | `log-permission-denied.sh` | PermissionDenied | Log tool-call denials by auto-mode classifier (not explicit deny rules) |
 | import matrix enforcer (type: prompt) | PreToolUse (Write / Edit `if: internal/**/*.go`) | Enforce Go architecture import matrix via LLM evaluation — fires only on internal Go files |
+| `caveman-activate.sh` | SessionStart | Inject project-local caveman lite-mode terse-output ruleset as `additionalContext` (token optimization, since v1.21.0) |
+| `caveman-suspend-for-reviewer.sh` | SubagentStart (`plan-reviewer` / `code-reviewer` / `verdict-recovery` / `code-researcher`) | Emit `[caveman OFF for this delegation]` exemption marker so reviewer/researcher VERDICT_JSON envelopes remain byte-stable across iterations (defence-in-depth for IMP-03 canonical_id stability) |
 
 ### 🔌 Extension Points
 
@@ -822,7 +879,6 @@ Supported Claude Code hook events not yet leveraged in the kit — available for
 
 | Event | Potential use in claude-kit |
 |-------|----------------------------|
-| `SessionStart` | Initialize workflow-state at session start; load environment from checkpoint |
 | `FileChanged` | Watch `prompts/{feature}.md` for mid-session drift detection |
 | `WorktreeRemove` | Cleanup `workflow-state/` artifacts after code-review worktree is removed |
 | `TaskCompleted` | Pair with the active `TaskCreated` hook to close out `TodoWrite` task lifecycle in `pipeline-metrics.jsonl` |
