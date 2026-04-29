@@ -97,6 +97,72 @@ iteration update). When no checkpoint is active, hash-guard is bypassed entirely
 
 See `settings.local.json.example` for the opt-in env block template.
 
+## Caveman Token Compression Policy
+
+Project-local always-on terse-output mode adapted from upstream caveman skill
+(https://github.com/juliusbrussee/caveman). Reduces Messages-token cost on `/workflow`
+runs by trimming filler words and hedging in agent prose. Default intensity: `lite`
+(the only intensity supported in v1). Activates via `.claude/scripts/caveman-activate.sh`
+(SessionStart hook) which reads `.claude/skills/caveman/SKILL.md` and injects it as
+`additionalContext` for the parent session.
+
+**Reviewer/researcher exemption:** plan-reviewer, code-reviewer, verdict-recovery,
+and code-researcher agents are exempt from caveman compression. Mechanism: a
+SubagentStart hook (`.claude/scripts/caveman-suspend-for-reviewer.sh`) injects an
+`additionalContext` clause instructing those agents to use standard prose. Combined
+with explicit VERBATIM clauses inside SKILL.md, this guarantees that VERDICT_JSON
+envelopes and canonical issue IDs (`sha256(category|location|problem)[:8]`) remain
+byte-stable across iterations — load-bearing for IMP-03 ID normalization and IMP-04
+diff-based replan.
+
+**Off-switch (per-machine):** set `CLAUDE_CAVEMAN_MODE=off` in `.claude/settings.local.json`
+env block. The activation hook then exits silently with no flag write and no context
+injection. Reverting to `CLAUDE_CAVEMAN_MODE=lite` (or unsetting the var) re-enables.
+
+**Why `lite`-only in v1:** upstream caveman ships 6 modes (lite, full, ultra,
+wenyan-lite, wenyan-full, wenyan-ultra). Only `lite` keeps complete sentences; the
+others permit fragments and abbreviations that would corrupt the canonical issue ID
+hash for the same logical issue across iterations. `full`/`ultra`/`wenyan-*` are
+deliberately disabled in this fork.
+
+**Boundaries that MUST be preserved verbatim** regardless of mode (enforced via
+SKILL.md clauses): `VERDICT:` enum line; fenced JSON block following `VERDICT_JSON:`;
+JSON discriminator keys (`$handoff_contract`, `$verdict_contract`); discriminator
+values (`planner_to_plan_review`, `plan_review_to_coder`, `coder_to_code_review`,
+`plan_review_verdict`, `code_review_verdict`); plan/spec H2 headers (`## Scope`,
+`## Architecture Decision`, `## Tests`, `## Acceptance Criteria`, `## Parts`); free-text
+values inside verdict envelopes (`issue.problem`, `issue.suggestion`); file paths and
+`file:line` references; Part identifiers (`Part N:`).
+
+**Project-local invariant:** caveman files live under `.claude/` (never `~/.claude/`).
+Settings via `.claude/settings.json` (committed) and `.claude/settings.local.json`
+(per-machine, gitignored). Disabling caveman in claude-kit does NOT affect any other
+Claude Code project.
+
+**Files added:** `.claude/skills/caveman/SKILL.md`, `.claude/scripts/caveman-activate.sh`,
+`.claude/scripts/caveman-suspend-for-reviewer.sh`, three tests in
+`.claude/scripts/tests/test-caveman-*.sh`. Five new hook entries in
+`.claude/settings.json` (1 SessionStart, 4 SubagentStart matchers).
+
+**Tests:** `.claude/scripts/tests/test-caveman-activate.sh` (6 scenarios),
+`test-caveman-suspend-for-reviewer.sh` (4 agents + 1 negative),
+`test-caveman-no-regression.sh` (golden-file canonical_id stability + clause presence
++ subset of existing tests under `lite` mode). All 27 pre-existing tests in
+`.claude/scripts/tests/` continue to pass under both `lite` and `off`.
+
+**References:** design spec at `.claude/prompts/caveman-skill-integration-spec.md`;
+full research with interaction graph + per-artifact compatibility matrix at
+`.claude/prompts/caveman-integration-research.md`. Slot-driven architecture checks
+from `.claude/PROJECT-KNOWLEDGE.md` are unaffected (caveman is orthogonal to language
+profile).
+
+**Empirical validation (AC13):** capture Messages-token count from a representative
+`/workflow` XL run BEFORE setting `CLAUDE_CAVEMAN_MODE=lite`, then re-run an
+equivalent task after one week of caveman-on. Record both numbers in
+`.claude/workflow-state/pipeline-metrics.jsonl` (fields: `caveman_mode`,
+`messages_token_count`, `pipeline_duration_s`) so the ≥20% reduction lower bound
+can be validated on real workloads.
+
 ## Error Handling (All Agents)
 
 | Error                                                                                  | Severity            | Action                                                                                         |
