@@ -267,6 +267,36 @@ workflow:
           Context: Implementing {feature}, evaluating plan feasibility
         note: "NON_CRITICAL — if Task tool unavailable, proceed with inline Grep/Glob"
 
+        background_mode:
+          when: "Complexity L/XL AND env CLAUDE_PARALLEL_EVALUATE=on"
+          skip_when: "S/M complexity, --minimal mode, or env flag unset/off"
+          rationale: |
+            Mirrors /planner Phase 3 complex_search.background_mode. On L/XL,
+            code-researcher may take 30-60 s. EVALUATE has its own 12-18 read
+            budget — overlap research with local reads to avoid serialising.
+          protocol:
+            step_1: "Complete first 3-5 reads from local budget"
+            step_2: "Launch code-researcher with run_in_background: true via Agent tool"
+            step_3: "Continue local reads in parallel until decision boundary"
+            step_4: "Check for background results at async_integration_point"
+          async_integration_point:
+            when: "At decision boundary (immediately before emitting PROCEED/REVISE/RETURN)"
+            protocol:
+              step_1: "Check whether background result is available"
+              step_2_if_ready: "Integrate findings into decision rationale"
+              step_2_if_pending: "Block-wait up to budget — 5 s for L, 10 s for XL"
+              step_3_on_timeout: "Decide with available info; note 'background research timed out' in evaluate output"
+          delegation_example: |
+            Agent tool:
+              subagent_type: "code-researcher"
+              run_in_background: true
+              prompt: |
+                Research the codebase for: {evaluate gap question}
+                Focus areas: {areas not covered by direct reads}
+                Context: Evaluating {feature} plan for /coder, complexity {L/XL}
+          fallback: "If Agent tool unavailable, fall back to blocking Task delegation (legacy path)"
+          contract_preservation: "coder_to_code_review handoff payload byte-identical to flag-off path (spec ACX.2)"
+
       evaluate_budget:
         purpose: "Prevent evaluation loops. When budget exceeded → make PROCEED/REVISE/RETURN decision with available information."
         budgets:
@@ -494,6 +524,41 @@ workflow:
 
         - result: FAIL
           action: "Fix → retry"
+
+      parallel_debug_dispatch:
+        when: "Complexity L/XL AND env CLAUDE_PARALLEL_DEBUG_DISPATCH=on AND VERIFY detected 3+ test failures"
+        skip_when: "S/M complexity, env flag unset/off, fewer than 3 failures, or pre-dispatch independence check fails"
+        rationale: |
+          Implements parallel-dispatch.md Use Case 2 (was: FUTURE PATTERN, NOT IMPLEMENTED).
+          k independent failures debugged in O(1) parallel agent passes vs O(k) sequential.
+          Independence guaranteed by pre-dispatch checklist; conflicts caught by post-merge
+          detection. Placed at Phase 3 sibling level (verify_results sibling) because this
+          activates on the verify-failure path, not on test execution itself.
+        pre_dispatch_independence_check:
+          reference: "parallel-dispatch.md § Use Case 2 → Pre-dispatch checklist (verbatim)"
+          checks:
+            - "Failures confirmed independent (fix-one doesn't fix-others)"
+            - "File overlap check: agents edit different files"
+            - "No shared mocks or test fixtures between failure domains"
+          on_check_fail: "Fall back to single-agent sequential debugging (legacy path)"
+        dispatch_protocol:
+          reference: "parallel-dispatch.md § Use Case 2 → Pattern (verbatim)"
+          pattern: |
+            Single message with multiple Task tool calls — one per failure domain.
+            Each Task gets a focused prompt (parallel-dispatch.md § Use Case 2 → Focused prompt template, verbatim).
+          concurrency_limit: "Max 4 concurrent Task agents — beyond that, sequential fallback"
+        post_merge_conflict_detection:
+          reference: "parallel-dispatch.md § Post-Merge Conflict Detection (verbatim)"
+          steps:
+            step_1: "Read each agent's summary (what each changed)"
+            step_2: "Check file overlap: git diff --name-only per agent"
+            step_3: "If overlap detected → manual review of conflicting sections"
+            step_4: "Run full test suite (not just targeted tests)"
+            step_5: "Spot check: agents can make systematic errors"
+        loop_limit_accounting:
+          rule: "A single parallel-dispatch round counts as ONE iteration of the code_review_cycle counter"
+          rationale: "Otherwise k parallel agents would consume k iterations from the 3-iteration loop limit"
+        contract_preservation: "coder_to_code_review handoff payload byte-identical to flag-off path (spec ACX.2)"
 
       output_format: |
         Implementation complete.

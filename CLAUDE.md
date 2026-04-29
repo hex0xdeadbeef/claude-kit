@@ -163,6 +163,29 @@ equivalent task after one week of caveman-on. Record both numbers in
 `messages_token_count`, `pipeline_duration_s`) so the ≥20% reduction lower bound
 can be validated on real workloads.
 
+## Parallelization Switches (opt-in, default off)
+
+Project-local flags that opt the `/workflow` pipeline into parallel-execution paths
+identified by the `workflow-parallelization-audit` initiative (5 problems P1-P5,
+implemented 2026-04-30). Defaults are off; behaviour is byte-identical to legacy
+until a flag is flipped. Add to `.claude/settings.local.json` env block to enable
+per-machine.
+
+| Env flag | Where it acts | Default | Effect when on |
+| --- | --- | --- | --- |
+| `CLAUDE_PARALLEL_EVALUATE` | `/coder` Phase 1.5 EVALUATE (L/XL) | off | code-researcher invoked with `run_in_background: true`; mirrors `/planner` Phase 3 async_integration_point pattern |
+| `CLAUDE_PARALLEL_DEBUG_DISPATCH` | `/coder` Phase 3 VERIFY-on-failure (L/XL, ≥3 failures) | off | parallel-dispatch.md Use Case 2 dispatch with pre-dispatch independence check + post-merge conflict detection |
+| `CLAUDE_PARALLEL_REVIEW_CONCERNS` | code-reviewer REVIEW concerns 4a-4e | off | greps for the 5 concern areas batched into a single tool-use round; `## REVIEW ✓` block format unchanged |
+| `CLAUDE_JSONL_APPEND_LOCK` | `save-review-checkpoint.sh`, `track-task-lifecycle.sh`, `validate-handoff.sh` | off | flock-protected JSONL appends (50 attempts × 0.1 s = 5 s budget); verdict-block uses atomic `os.makedirs(exist_ok=False)` instead of exists-check + open chain |
+
+`CLAUDE_WORKFLOW_STATE_DIR` (existing, reused): coverage extended to `track-task-lifecycle.sh` and `prepare-worktree.sh` (previously hard-coded `.claude/workflow-state`). Default fallback unchanged. Set in tests to redirect writes to a sandbox dir.
+
+**Backwards compatibility:** every flag-off path is byte-identical to pre-fix behaviour. None of the flags modify the 5 phase-to-phase handoff contracts in `.claude/skills/workflow-protocols/handoff-contracts.md`, the VERDICT_JSON envelope schema, or the canonical issue ID format `sha256(category|location|problem)[:8]`. Caveman boundaries 1-7 (CLAUDE.md § Caveman Token Compression Policy) preserved verbatim.
+
+**Soak protocol:** flip a single flag in `settings.local.json`, run a representative `/workflow` XL pipeline, capture metrics in `.claude/workflow-state/pipeline-metrics.jsonl` (fields: `parallel_flag_set`, `pipeline_duration_s`, `messages_token_count`). After ≥10 successful runs across 3+ feature types, consider proposing default-on in a follow-up PR.
+
+**Settings.json SubagentStart matcher consolidation (P5, manual user step):** The audit also identifies a structural improvement — consolidating the 3 separate SubagentStart matcher entries that all register `track-task-lifecycle.sh` into 1 entry with regex matcher `code-researcher|plan-reviewer|code-reviewer`. The runtime behaviour is unchanged in either structure. Because `.claude/settings.json` is protected by `protect-files.sh` (user-only edits), this consolidation is a one-line manual diff documented in the audit research artifact (`.claude/prompts/workflow-parallelization-research.md`). The behavioural test `test-subagent-start-matcher-regex.sh` reports the current state (`INFO: settings.json SubagentStart legacy structure (3 separate matcher entries) — consolidation pending user action` vs. `INFO: settings.json SubagentStart consolidated`) without failing.
+
 ## Error Handling (All Agents)
 
 | Error                                                                                  | Severity            | Action                                                                                         |

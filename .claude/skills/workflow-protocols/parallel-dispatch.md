@@ -59,9 +59,14 @@ Async integration point:
 - Check results at transition to DESIGN
 - If late findings contradict design → inline revision (≤1 part) or re-evaluate
 
-## Use Case 2: Independent Failure Investigation — /coder debugging (FUTURE PATTERN)
+## Use Case 2: Independent Failure Investigation — /coder debugging (ACTIVATION CONDITIONS)
 
-> **NOTE:** This is a planned pattern, not yet implemented. /coder does not currently dispatch multiple Task agents for debugging. Document describes the target architecture for future adoption.
+> **Status:** Implemented as of 2026-04-30 (Part 5 of workflow-parallelization-audit).
+> Activation: env `CLAUDE_PARALLEL_DEBUG_DISPATCH=on` AND complexity in {L, XL} AND
+> VERIFY detected 3+ independent test failures (pre-dispatch independence check passes).
+> Implementation site: `.claude/commands/coder.md` Phase 3 → `parallel_debug_dispatch`
+> (sibling of `verify_results`).
+> Default behaviour (env unset OR off) is unchanged: single-agent sequential debugging.
 
 When to use:
 - 3+ test files failing with different root causes

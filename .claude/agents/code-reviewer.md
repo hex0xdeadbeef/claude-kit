@@ -115,6 +115,20 @@ role:
 4. **REVIEW**
    Review each concern area. For large diffs (>100 lines, >5 files, 3+ layers): use Sequential Thinking for structured analysis.
 
+   **Concurrent gather mode (opt-in, P3):**
+
+   When `CLAUDE_PARALLEL_REVIEW_CONCERNS=on`, issue ALL greps for concerns
+   4a-4e in a SINGLE tool-use round (one assistant message with multiple
+   Grep tool calls) BEFORE composing the `## REVIEW ✓` block. This batches
+   the 5 independent grep passes into one round-trip. The block format,
+   ordering, and PASS/FAIL/N/A vocabulary remain UNCHANGED — only the
+   gather phase is parallelised. Slot-driven SKIPs (see 4a, 4e) preserve
+   their current SKIP semantics; batched mode still skips slot-disabled
+   concerns.
+
+   Default behaviour (env unset OR `off`): sequential greps as documented
+   below. The two paths produce byte-identical `## REVIEW ✓` output.
+
    **4a. Architecture:**
    - Layer-dependency compliance per PROJECT-KNOWLEDGE.md → {LAYER_RULE} — example shapes are language/architecture-dependent (see ../skills/planner-rules/code-shapes/). SKIP if {LAYER_RULE} unset OR {ARCHITECTURE_STYLE} != "layered".
    - No cross-layer imports

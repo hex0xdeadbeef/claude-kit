@@ -1,25 +1,51 @@
 #!/bin/bash
-# Hook: SubagentStart (matcher: code-researcher)
-# Purpose: Log code-researcher invocations for pipeline metrics
+# Hook: SubagentStart (matcher: code-researcher|plan-reviewer|code-reviewer per consolidated entry, P5)
+# Purpose: Log review/researcher agent invocations for pipeline metrics
 # Non-blocking: always exit 0 (logging only)
 #
-# Output: .claude/workflow-state/task-events.jsonl
+# Output: ${CLAUDE_WORKFLOW_STATE_DIR:-.claude/workflow-state}/task-events.jsonl  (P5)
 # Fields: timestamp, event, agent_type, agent_id, session_id
 
 set -uo pipefail
 
-STATE_DIR=".claude/workflow-state"
+# P5: honour CLAUDE_WORKFLOW_STATE_DIR for sandbox isolation (mirrors save-review-checkpoint.sh:43).
+STATE_DIR="${CLAUDE_WORKFLOW_STATE_DIR:-.claude/workflow-state}"
 mkdir -p "$STATE_DIR" 2>/dev/null || true
+
+# P4: source shared JSONL flock helper. Fire-and-forget; CLAUDE_JSONL_APPEND_LOCK=on enables flock.
+_SCRIPT_DIR_TT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+. "${_SCRIPT_DIR_TT}/lib/jsonl-lock.sh"
+export _JSONL_LOCK_LIB_DIR="${_SCRIPT_DIR_TT}/lib"
 
 INPUT=$(cat)
 export _HOOK_INPUT="$INPUT"
 
 python3 << 'PYTHON_EOF' 2>/dev/null || true
-import json, os
+import json, os, sys
 from datetime import datetime, timezone
 
-STATE_DIR = ".claude/workflow-state"
+# P5: honour CLAUDE_WORKFLOW_STATE_DIR for sandbox isolation.
+STATE_DIR = os.environ.get("CLAUDE_WORKFLOW_STATE_DIR", ".claude/workflow-state")
 EVENTS_FILE = os.path.join(STATE_DIR, "task-events.jsonl")
+
+# P4: import shared JSONL flock helper.
+sys.path.insert(0, os.environ.get("_JSONL_LOCK_LIB_DIR", ".claude/scripts/lib"))
+try:
+    import jsonl_lock as _jl
+except Exception:
+    _jl = None
+
+def _append_jsonl(path, obj):
+    line = obj if isinstance(obj, str) else json.dumps(obj)
+    if _jl is not None:
+        _jl.jsonl_append_locked(path, line)
+        return
+    try:
+        with open(path, "a") as f:
+            f.write(line if line.endswith("\n") else line + "\n")
+    except Exception:
+        pass
 
 try:
     data = json.loads(os.environ.get("_HOOK_INPUT", "{}"))
@@ -34,21 +60,19 @@ entry = {
     "session_id": data.get("session_id", ""),
 }
 
-with open(EVENTS_FILE, "a") as f:
-    f.write(json.dumps(entry) + "\n")
+_append_jsonl(EVENTS_FILE, entry)
 
 # IMP-01: Agent-ID Registry
 REGISTRY_FILE = os.path.join(STATE_DIR, "agent-id-registry.jsonl")
 REVIEW_AGENTS = {"plan-reviewer", "code-reviewer"}
 if entry["agent_type"] in REVIEW_AGENTS and entry["agent_id"]:
     try:
-        with open(REGISTRY_FILE, "a") as f:
-            f.write(json.dumps({
-                "agent_id": entry["agent_id"],
-                "agent_type": entry["agent_type"],
-                "session_id": entry["session_id"],
-                "registered_at": entry["timestamp"],
-            }) + "\n")
+        _append_jsonl(REGISTRY_FILE, {
+            "agent_id": entry["agent_id"],
+            "agent_type": entry["agent_type"],
+            "session_id": entry["session_id"],
+            "registered_at": entry["timestamp"],
+        })
     except Exception:
         pass  # NON_CRITICAL
 
@@ -66,8 +90,7 @@ try:
         "payload_sample": {k: str(v)[:200] for k, v in data.items()
                           if k not in ("last_assistant_message",)},
     }
-    with open(DEBUG_FILE, "a") as f:
-        f.write(json.dumps(debug_entry) + "\n")
+    _append_jsonl(DEBUG_FILE, debug_entry)
 except Exception:
     pass
 
@@ -88,8 +111,7 @@ if entry["agent_type"] == "code-reviewer" and entry["agent_id"]:
             "session_id": entry["session_id"],
             "message": "SubagentStart fired for code-reviewer — P0-2 worktree heuristic may be obsolete",
         }
-        with open(os.path.join(STATE_DIR, "anomalies.jsonl"), "a") as f:
-            f.write(json.dumps(anomaly) + "\n")
+        _append_jsonl(os.path.join(STATE_DIR, "anomalies.jsonl"), anomaly)
     except Exception:
         pass  # NON_CRITICAL — diagnostic only
 
