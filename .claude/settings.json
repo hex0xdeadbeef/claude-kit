@@ -278,6 +278,10 @@
           {
             "type": "command",
             "command": ".claude/scripts/track-task-lifecycle.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/scripts/caveman-suspend-for-reviewer.sh code-researcher"
           }
         ]
       },
@@ -291,6 +295,10 @@
           {
             "type": "command",
             "command": ".claude/scripts/inject-review-context.sh plan-reviewer"
+          },
+          {
+            "type": "command",
+            "command": ".claude/scripts/caveman-suspend-for-reviewer.sh plan-reviewer"
           }
         ]
       },
@@ -304,6 +312,19 @@
           {
             "type": "command",
             "command": ".claude/scripts/inject-review-context.sh code-reviewer"
+          },
+          {
+            "type": "command",
+            "command": ".claude/scripts/caveman-suspend-for-reviewer.sh code-reviewer"
+          }
+        ]
+      },
+      {
+        "matcher": "verdict-recovery",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/scripts/caveman-suspend-for-reviewer.sh verdict-recovery"
           }
         ]
       }
@@ -408,6 +429,17 @@
           {
             "type": "command",
             "command": ".claude/scripts/log-permission-denied.sh"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/scripts/caveman-activate.sh"
           }
         ]
       }
