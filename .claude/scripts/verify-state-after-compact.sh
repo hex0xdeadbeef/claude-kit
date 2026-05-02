@@ -164,8 +164,8 @@ print(json.dumps({"additionalContext": text}))
 PYTHON_EOF
 )
 
-# Size cap — 8K (was: no cap at all; AC-4)
-CAP=8192
+# Size cap — P5: lowered 8192 → 6000 (keeps in sync with state_render.CONTEXT_SIZE_CAP)
+CAP=6000
 SIZE=${#OUTPUT}
 if [[ $SIZE -gt $CAP ]]; then
     mkdir -p "$STATE_DIR"

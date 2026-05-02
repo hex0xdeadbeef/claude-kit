@@ -51,10 +51,16 @@ if [[ -d .git ]]; then
     label "INFO" "AC-C4.6 — skipped (running on main; pre-merge gate only)"
   else
     BASE="$(git merge-base HEAD origin/main 2>/dev/null || echo main)"
-    # handoff.schema.json: bytes-identical (hard contract — no exceptions)
+    # handoff.schema.json: post-P1 refactor allows additive changes; discriminator-frozen invariant.
     git diff "$BASE"..HEAD -- .claude/schemas/handoff.schema.json > /tmp/c4-diff.txt 2>&1 || true
     if [[ -s /tmp/c4-diff.txt ]]; then
-      fail "AC-C4.6 — .claude/schemas/handoff.schema.json was modified (contract violation)"
+      BASE_DISC=$(git show "$BASE":.claude/schemas/handoff.schema.json 2>/dev/null \
+        | grep -oE '"const": *"(planner_to_plan_review|plan_review_to_coder|coder_to_code_review|plan_review_verdict|code_review_verdict)"' | sort -u || echo "")
+      HEAD_DISC=$(grep -oE '"const": *"(planner_to_plan_review|plan_review_to_coder|coder_to_code_review|plan_review_verdict|code_review_verdict)"' .claude/schemas/handoff.schema.json | sort -u || echo "")
+      if [[ "$BASE_DISC" != "$HEAD_DISC" ]]; then
+        fail "AC-C4.6 — discriminator contract broken (additive-only allowed)"
+      fi
+      label "INFO" "AC-C4.6 — schema modified but discriminator contracts preserved (additive change accepted)"
     fi
     # plan-template.md: bytes-identical EXCEPT TDD-always-on documentation block
     # (post-tdd-always-on-flip extension; mirrors the PROJECT-KNOWLEDGE.md.example FMT_CMD

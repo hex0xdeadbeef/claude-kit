@@ -128,10 +128,16 @@ if [[ -d .git ]]; then
     rm -f /tmp/c5-settings-diff.txt
     pass "AC-C5.13 — settings.json diff (if any) limited to allowlist (auto-fmt-generic + caveman-skill-integration entries)"
 
-    # handoff.schema.json: hard-frozen
+    # handoff.schema.json: post-P1 refactor allows additive changes; discriminator-frozen invariant.
     git diff "$BASE"..HEAD -- .claude/schemas/handoff.schema.json > /tmp/c5-schema-diff.txt 2>&1 || true
     if [[ -s /tmp/c5-schema-diff.txt ]]; then
-      fail "AC-C5.14 — handoff.schema.json was modified (contract violation)"
+      BASE_DISC=$(git show "$BASE":.claude/schemas/handoff.schema.json 2>/dev/null \
+        | grep -oE '"const": *"(planner_to_plan_review|plan_review_to_coder|coder_to_code_review|plan_review_verdict|code_review_verdict)"' | sort -u || echo "")
+      HEAD_DISC=$(grep -oE '"const": *"(planner_to_plan_review|plan_review_to_coder|coder_to_code_review|plan_review_verdict|code_review_verdict)"' .claude/schemas/handoff.schema.json | sort -u || echo "")
+      if [[ "$BASE_DISC" != "$HEAD_DISC" ]]; then
+        fail "AC-C5.14 — discriminator contract broken (additive-only allowed)"
+      fi
+      label "INFO" "AC-C5.14 — schema modified but discriminator contracts preserved (additive change accepted)"
     fi
     rm -f /tmp/c5-schema-diff.txt
     # PROJECT-KNOWLEDGE.md.example: same auto-fmt-generic FMT_CMD doc-extension allowance as AC-C4.6

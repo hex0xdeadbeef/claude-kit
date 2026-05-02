@@ -123,8 +123,8 @@ except Exception:
 PYTHON_EOF
 )
 
-# Size cap — 8K chars (lower from absent to explicit; keeps in sync with CONTEXT_SIZE_CAP)
-CAP=8192
+# Size cap — P5: lowered 8192 → 6000 (keeps in sync with state_render.CONTEXT_SIZE_CAP)
+CAP=6000
 SIZE=${#OUTPUT}
 if [[ $SIZE -gt $CAP ]]; then
     mkdir -p "$STATE_DIR"

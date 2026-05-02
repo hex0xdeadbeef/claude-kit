@@ -141,7 +141,7 @@ def build_additional_context():
         "issues_history_text",
         "implementation_progress_text",
         "checkpoint_ref",          # KD-7: was f"...{content}" (full body)
-        "recent_completions_5",
+        "recent_completions_summary",  # P5: per-iter summary (renamed from recent_completions_5)
     ]) or "No workflow state found before compaction."
 
 # --- UNCHANGED: Main decision (mid-Part + iteration-in-flight) ---
@@ -235,9 +235,9 @@ else:
 PYTHON_EOF
 )
 
-# Size cap — lowered from 40K → 8K (AC-4)
-# Note: decision:block output is ~200 bytes — safely under 8K, no special case needed.
-CAP=8192
+# Size cap — P5: lowered from 8192 → 6000.
+# decision:block output is ~200 bytes — safely under 6K, no special case needed.
+CAP=6000
 SIZE=${#OUTPUT}
 if [[ $SIZE -gt $CAP ]]; then
     mkdir -p "$STATE_DIR"

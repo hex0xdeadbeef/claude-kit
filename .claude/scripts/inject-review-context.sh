@@ -443,23 +443,20 @@ if comp_lines:
         if relevant:
             lines.append("")
             lines.append("Prior review completions (this pipeline):")
+            # P5: per-iter summary line; embedded problem/suggestion text dropped
+            # (recoverable from review-completions.jsonl on disk).
             for r in relevant[-3:]:  # Last 3
-                lines.append(f"  - {r.get('completed_at', '?')}: {r.get('verdict', '?')}")
-                # IMP-03: surface canonical IDs so reviewer can reference them in VERDICT_JSON
                 _cids = r.get("canonical_issue_ids") or []
-                if _cids:
-                    _id_list = [c.get("id", "?") for c in _cids if isinstance(c, dict)]
-                    if _id_list:
-                        lines.append(f"    Canonical IDs: {', '.join(_id_list)}")
-                    if r is relevant[-1]:
-                        lines.append("    (most recent issues by canonical id)")
-                        for _c in _cids[:5]:
-                            if isinstance(_c, dict):
-                                lines.append(
-                                    f"      - {_c.get('id', '?')} "
-                                    f"[{_c.get('category', '?')}] "
-                                    f"@{_c.get('location', 'n/a')}"
-                                )
+                _ids = [c.get("id", "?") for c in _cids if isinstance(c, dict)]
+                _ids_str = " ".join(_ids[:8]) if _ids else "[]"
+                if _ids and len(_ids) > 8:
+                    _ids_str += f" +{len(_ids) - 8}more"
+                lines.append(
+                    f"  - {r.get('completed_at', '?')}: {r.get('verdict', '?')} "
+                    f"ids=[{_ids_str}] n={len(_ids)}"
+                )
+            # No per-issue category/location detail — the IDs are referenceable;
+            # full text is in review-completions.jsonl on disk.
         if failed_attempts:
             lines.append(f"prior_failed_attempts: {len(failed_attempts)}")
             lines.append(f"  Last failed at: {failed_attempts[-1].get('completed_at', '?')}")
@@ -556,8 +553,9 @@ print(json.dumps({"additionalContext": text}))
 PYTHON_EOF
 )
 
-# Size cap — lowered from 40K → 8K (AC-4)
-CAP=8192
+# Size cap — P5: lowered from 8192 → 6000 to leave 4000 chars of slack
+# under Claude Code's documented 10000-char hook-output cap (code.claude.com/docs/en/hooks).
+CAP=6000
 SIZE=${#OUTPUT}
 if [[ $SIZE -gt $CAP ]]; then
     mkdir -p "$STATE_DIR"
