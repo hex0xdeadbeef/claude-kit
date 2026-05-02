@@ -22,7 +22,6 @@ disable-model-invocation: true
 - 5+ MINOR in same file → escalate to MAJOR (files are the natural unit for code review)
 - Security issue (any severity) → always BLOCKER
 - Layer-dependency violation (when {LAYER_RULE} SET AND {ARCHITECTURE_STYLE} == "layered") → always BLOCKER. SKIP entries (slot unset/non-layered) → consolidated NIT, NOT BLOCKER.
-- Note: function-length flag uses `{FUNC_LOC_LIMIT}` cascade (PROJECT-KNOWLEDGE.md > CLAUDE.md > kit-default 30; numeric-parse guard). Threshold is a soft heuristic — flag at MAJOR severity, not BLOCKER.
 
 ## Spec Check Trust
 **Iteration 1:** If coder handoff includes spec_check with status=PASS → trust spec compliance, skip plan compliance re-check during REVIEW. Focus REVIEW entirely on code quality (architecture, error handling, security, test coverage). This preserves the S/M happy-path performance — first-pass coverage is high-trust.

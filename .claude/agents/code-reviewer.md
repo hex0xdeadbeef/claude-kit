@@ -76,7 +76,8 @@ role:
      - If spec_check.status == PASS AND iteration >= 2:
        - Perform Parts-coverage spot-check via `git diff --name-only $BASE...HEAD`
        - Read `.claude/prompts/{feature}.md` Parts list
-       - For each plan Part: verify at least one changed file maps to it
+       - For each plan Part: extract every file path mentioned in that Part's body via grep on the Part section (between this Part's heading and the next `Part N:` heading or end-of-file). File-path detection is glob-suffix-based — match tokens ending in `.md`, `.sh`, `.json`, `.yaml`, `.yml`, `.go`, `.py`, `.ts`, `.tsx`, `.rs`, `.java` (extend per project SOURCE_GLOB / LANG_EXT slots). Build the per-Part file set, then intersect with the changed-files list from `git diff`.
+       - Match rule: a Part is considered covered when its file set intersects the changed-files set non-emptily (substring match on full path, not basename). Auto-generated files (e.g. matching {GENERATED_PATTERN}) are excluded from the changed-files set before intersection.
        - If a Part has zero matching changed files in this iteration's diff:
          - Raise a MINOR with category=`completeness`, stable problem text
            `"Iter ≥2 spot-check: Part \"{Part name}\" claimed implemented but no matching changed files in this iteration's diff. Possible silent regression."`
@@ -135,7 +136,7 @@ role:
    **4b. Error Handling:**
    - All errors propagate context per {ERROR_WRAP} slot (resolved from PROJECT-KNOWLEDGE.md → ERROR_WRAP; CLAUDE.md fallback; SKIP if slot unset). Reference: ../skills/planner-rules/code-shapes/<LANGUAGE>.md for syntax-correct example.
    - No log AND return same error
-   - Functions ≤ {FUNC_LOC_LIMIT} lines (flag if exceeded; resolved from PROJECT-KNOWLEDGE.md → FUNC_LOC_LIMIT; CLAUDE.md fallback; kit-default 30 when both unset; numeric-parse-guard: malformed values fall back to 30 with a NIT log)
+   - Functions ≤ 30 lines (flag if exceeded)
    - Grep: search for `log.*err` patterns near `return.*err`
 
    **4c. Security:**
