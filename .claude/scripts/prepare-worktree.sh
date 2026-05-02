@@ -180,6 +180,29 @@ except Exception as e:
     setup_actions.append("agent_memory_seed_failed")
     print(f"prepare-worktree: memory pre-seed failed: {e}", file=sys.stderr)
 
+# 3d. P3: copy code-reviewer sidecar into worktree as INJECTED-CONTEXT.md
+# Compensates for SubagentStart hook NOT firing for worktree-isolated code-reviewer
+# (3/3 confirmed in corpus 2026-04-29..05-02). The orchestrator (workflow.md
+# code_review_delegation pre_delegation) writes the sidecar via
+# `inject-review-context.sh code-reviewer --sidecar-only`. We copy it into the
+# worktree, then remove the source to keep the staging dir clean.
+try:
+    sidecar_src = os.path.join(original_repo_dir, ".claude", "workflow-state", "code-reviewer-INJECTED-CONTEXT.md")
+    sidecar_dst = os.path.join(worktree_path, "INJECTED-CONTEXT.md")
+    if os.path.isfile(sidecar_src):
+        shutil.copy2(sidecar_src, sidecar_dst)
+        setup_actions.append("sidecar_injected_context_copied")
+        # Remove source so a stale sidecar from a prior delegation does not leak.
+        try:
+            os.remove(sidecar_src)
+        except OSError:
+            pass
+    else:
+        setup_actions.append("sidecar_injected_context_absent")
+except Exception as e:
+    setup_actions.append("sidecar_injected_context_failed")
+    print(f"prepare-worktree: sidecar copy failed: {e}", file=sys.stderr)
+
 # Node: npm ci (if package-lock.json exists) — uncomment for Node projects
 # try:
 #     package_lock = os.path.join(worktree_path, "package-lock.json")

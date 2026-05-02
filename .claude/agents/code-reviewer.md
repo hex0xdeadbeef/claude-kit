@@ -55,7 +55,8 @@ role:
 ## Process
 
 1. **STARTUP**
-   - **Context already injected:** Workflow context (feature, complexity, iteration, verify_status, prior iterations, prior verdicts) is pre-injected via `additionalContext` by SubagentStart hook (`inject-review-context.sh`). Do NOT manually read `{feature}-checkpoint.yaml`, `review-completions.jsonl`, or any `.claude/workflow-state/` files — use the injected context directly.
+   - **Context already injected (preferred path):** Workflow context (feature, complexity, iteration, verify_status, prior iterations, prior verdicts) is pre-injected via `additionalContext` by SubagentStart hook (`inject-review-context.sh`). Do NOT manually read `{feature}-checkpoint.yaml`, `review-completions.jsonl`, or any `.claude/workflow-state/` files when present in additionalContext.
+   - **Sidecar fallback (worktree isolation):** If `INJECTED-CONTEXT.md` exists in your working dir (the worktree root), read it BEFORE QUICK CHECK. This is the orchestrator-written equivalent of the SubagentStart context for worktree-isolated launches where the hook does not fire. Treat its content as additionalContext-equivalent. If the file is absent, proceed without it — sidecar is best-effort.
    - TodoWrite: create review checklist (Quick Check, Architecture, Error Handling, Security, Test Coverage, Verdict)
 
 2. **QUICK CHECK (blocking)**

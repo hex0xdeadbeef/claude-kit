@@ -240,6 +240,19 @@ diff-manifest — both required for iteration 2+ correctness.
     log WARN, do NOT block delegation. Hook will detect missing SHA and
     skip code delta emission gracefully (non-blocking, AC-5).
 
+    STEP -2 (P3 — sidecar write for worktree-isolated code-reviewer):
+    Before STEP -1 (.iteration-in-flight write), invoke:
+      echo '{"session_id": "{session_id}"}' \
+        | bash .claude/scripts/inject-review-context.sh code-reviewer --sidecar-only
+    Produces .claude/workflow-state/code-reviewer-INJECTED-CONTEXT.md.
+    prepare-worktree.sh copies this file into the worktree as INJECTED-CONTEXT.md;
+    code-reviewer.md startup reads it as additionalContext-equivalent.
+    Best-effort: missing sidecar is non-blocking — code-reviewer falls back to
+    its current "no prior context" path.
+    Rationale: SubagentStart hook does NOT fire for worktree-isolated code-reviewer
+    (3/3 confirmed in corpus 2026-04-29..2026-05-02). Sidecar is the orchestrator-
+    written equivalent of the SubagentStart additionalContext injection.
+
     STEP -1 (P0-04): Write .claude/workflow-state/.iteration-in-flight BEFORE delegating.
     Use Write tool (auto-allowed). Content (JSON, one file per session):
       {"agent": "code-reviewer", "started_at": "{ISO-8601 UTC timestamp, e.g. 2026-04-23T14:30:00Z}", "feature": "{feature}", "iteration": {N}}
