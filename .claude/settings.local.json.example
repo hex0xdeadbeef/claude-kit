@@ -20,7 +20,9 @@
     "ENABLE_PROMPT_CACHING_1H  (v2.1.108) — 1H TTL for API-key/Bedrock/Vertex/Foundry (2× write cost; noop for subscription users). See CLAUDE.md > Prompt Cache Policy.",
     "FORCE_PROMPT_CACHING_5M   (v2.1.108) — force 5-min TTL regardless of tier (cost control for S/M tasks)",
     "CLAUDE_DELTA_REVIEW_MODE    (delta-review-mode) off|warn|strict — off=disabled (default, byte-identical, zero behavioral change). warn=HINT advisory delta-focus for iter >=2 reviewers (plan: Part list; code: file list via git diff). strict=FOCUS narrower scope (opt-in indefinitely, no planned default flip).",
-    "CLAUDE_CAVEMAN_MODE         (caveman) lite|off — lite (default if hook present and var unset) activates project-local caveman terse-output mode for /workflow parent session (orchestrator/designer/planner/coder). off disables caveman entirely; reviewer/researcher agents are exempt regardless via SubagentStart suspend hook. Resolution: env > .claude/workflow-state/.caveman-mode flag > 'lite'."
+    "CLAUDE_CAVEMAN_MODE         (caveman) lite|off — lite (default if hook present and var unset) activates project-local caveman terse-output mode for /workflow parent session (orchestrator/designer/planner/coder). off disables caveman entirely; reviewer/researcher agents are exempt regardless via SubagentStart suspend hook. Resolution: env > .claude/workflow-state/.caveman-mode flag > 'lite'.",
+    "CLAUDE_ISSUE_ID_NORMALIZE_VERSION (P2) 2|1 — 2 (default) applies NFKC + strip + collapse-whitespace + lowercase + strip-terminal-punctuation before sha256 in save-review-checkpoint.sh::_compute_canonical_id. 1 reverts to raw v1 hashing for forensic re-run of pre-2026-05-02 canonical IDs.",
+    "CLAUDE_VERDICT_BLOCK_TTL_HOURS (P3) integer hours — TTL for .verdict-block-{agent_id} sentinels. Default 6. Setting 0 disables eviction (pre-Part-4 never-evict behaviour). Eviction runs at the entry of inject-review-context.sh and save-review-checkpoint.sh; counter verdict_blocks_evicted appended to pipeline-metrics.jsonl."
   ],
   "env": {
     "GIT_STRIP_CO_AUTHOR": "false",
@@ -32,7 +34,9 @@
     "ENABLE_PROMPT_CACHING_1H": "1",
     "_FORCE_PROMPT_CACHING_5M": "1",
     "_CLAUDE_DELTA_REVIEW_MODE": "warn",
-    "_CLAUDE_CAVEMAN_MODE": "lite"
+    "_CLAUDE_CAVEMAN_MODE": "lite",
+    "CLAUDE_ISSUE_ID_NORMALIZE_VERSION": "2",
+    "CLAUDE_VERDICT_BLOCK_TTL_HOURS": "6"
   },
   "permissions": {
     "allow": [],

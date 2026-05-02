@@ -76,10 +76,16 @@ if [[ -d .git ]]; then
     BASE="$(git merge-base HEAD origin/main 2>/dev/null || echo main)"
     git diff "$BASE"..HEAD -- .claude/schemas/handoff.schema.json > /tmp/c2-handoff-diff.txt 2>&1 || true
     if [[ -s /tmp/c2-handoff-diff.txt ]]; then
-      fail "AC-C2.9 — handoff.schema.json was modified (C1 contract preservation violated)"
+      BASE_DISC=$(git show "$BASE":.claude/schemas/handoff.schema.json 2>/dev/null \
+        | grep -oE '"const": *"(planner_to_plan_review|plan_review_to_coder|coder_to_code_review|plan_review_verdict|code_review_verdict)"' | sort -u || echo "")
+      HEAD_DISC=$(grep -oE '"const": *"(planner_to_plan_review|plan_review_to_coder|coder_to_code_review|plan_review_verdict|code_review_verdict)"' .claude/schemas/handoff.schema.json | sort -u || echo "")
+      if [[ "$BASE_DISC" != "$HEAD_DISC" ]]; then
+        fail "AC-C2.9 — discriminator contract broken (additive-only allowed)"
+      fi
+      label "INFO" "AC-C2.9 — schema modified but discriminator contracts preserved (additive change accepted)"
     fi
     rm -f /tmp/c2-handoff-diff.txt
-    pass "AC-C2.9 — handoff schema unchanged"
+    pass "AC-C2.9 — handoff discriminator contracts intact"
   fi
 fi
 

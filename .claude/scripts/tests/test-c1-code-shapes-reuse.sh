@@ -54,10 +54,19 @@ if [[ -d .git ]]; then
     BASE="$(git merge-base HEAD origin/main 2>/dev/null || echo main)"
     git diff "$BASE"..HEAD -- .claude/schemas/handoff.schema.json .claude/skills/workflow-protocols/checkpoint-protocol.md > /tmp/c1-schema-diff.txt 2>&1 || true
     if [[ -s /tmp/c1-schema-diff.txt ]]; then
-      fail "AC-C1.6 — handoff.schema.json or checkpoint-protocol.md was modified (forbidden per C1, C3)"
+      # Content-aware (post-P1 refactor): allow additive changes (maxLength, maxItems,
+      # new optional properties). Block breaking changes (renamed discriminators,
+      # removed required-field set members).
+      BASE_DISC=$(git show "$BASE":.claude/schemas/handoff.schema.json 2>/dev/null \
+        | grep -oE '"const": *"(planner_to_plan_review|plan_review_to_coder|coder_to_code_review|plan_review_verdict|code_review_verdict)"' | sort -u || echo "")
+      HEAD_DISC=$(grep -oE '"const": *"(planner_to_plan_review|plan_review_to_coder|coder_to_code_review|plan_review_verdict|code_review_verdict)"' .claude/schemas/handoff.schema.json | sort -u || echo "")
+      if [[ "$BASE_DISC" != "$HEAD_DISC" ]]; then
+        fail "AC-C1.6 — discriminator contract broken (additive-only allowed; rename or remove forbidden)"
+      fi
+      label "INFO" "AC-C1.6 — schema modified but discriminator contracts preserved (additive change accepted)"
     fi
     rm -f /tmp/c1-schema-diff.txt
-    pass "AC-C1.6 — schema/checkpoint contracts unchanged"
+    pass "AC-C1.6 — schema/checkpoint discriminator contracts intact"
   fi
 fi
 

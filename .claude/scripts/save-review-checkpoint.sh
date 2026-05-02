@@ -54,6 +54,47 @@ from datetime import datetime, timezone
 STATE_DIR = os.environ.get("CLAUDE_WORKFLOW_STATE_DIR", ".claude/workflow-state")
 DEBUG_FILE = os.path.join(STATE_DIR, "worktree-events-debug.jsonl")
 
+# --- P3: eager .verdict-block-{agent_id} TTL eviction ---
+# Sentinels created on IMP-H first attempt are only removed if the agent retries
+# (saving the second attempt). When the user does not retry, sentinels orphan
+# indefinitely and prevent re-injection.
+# CLAUDE_VERDICT_BLOCK_TTL_HOURS=6 (default) evicts files older than 6 h.
+# Setting it to 0 disables eviction (pre-Part-4 behaviour).
+def _evict_stale_verdict_blocks(state_dir):
+    import time as _t, glob as _g
+    try:
+        ttl_hours = int(os.environ.get("CLAUDE_VERDICT_BLOCK_TTL_HOURS", "6"))
+    except (ValueError, TypeError):
+        ttl_hours = 6
+    if ttl_hours <= 0:
+        return 0
+    ttl_seconds = ttl_hours * 3600
+    now = _t.time()
+    evicted = 0
+    for f in _g.glob(os.path.join(state_dir, ".verdict-block-*")):
+        try:
+            age = now - os.path.getmtime(f)
+            if age > ttl_seconds:
+                os.remove(f)
+                evicted += 1
+        except OSError:
+            pass
+    if evicted > 0:
+        try:
+            with open(os.path.join(state_dir, "pipeline-metrics.jsonl"), "a") as _pm:
+                _pm.write(json.dumps({
+                    "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "event": "verdict_blocks_evicted",
+                    "count": evicted,
+                    "ttl_hours": ttl_hours,
+                }) + "\n")
+        except OSError:
+            pass
+    return evicted
+
+_evict_stale_verdict_blocks(STATE_DIR)
+# --- end P3 ---
+
 try:
     data = json.loads(os.environ.get("_HOOK_INPUT", "{}"))
 except Exception:
@@ -243,18 +284,41 @@ def _extract_verdict_json(text):
 
 
 def _compute_canonical_id(prefix, category, location, problem):
-    """Deterministic content-addressed ID per spec KD-2.
+    """Deterministic content-addressed ID with input normalization (P2 fix).
 
-    Canonical form: {prefix}{sha256(category + '|' + (location or '') + '|' + problem)[:8]}
-    - prefix:   'PR-' for plan-review verdicts, 'CR-' for code-review verdicts
-    - category: schema-enum-like string (architecture | security | error_handling | ...)
-    - location: optional human-readable reference; None/'' treated as empty string
-    - problem:  free-form issue description
+    Canonical form: {prefix}{sha256(norm(category) + '|' + norm(location or '') + '|' + norm(problem))[:8]}
+      where norm(s) = NFKC -> strip -> collapse internal whitespace -> lowercase -> strip terminal [.;:,]+
+
+    Rationale: corpus shows 50/50 unique IDs across 15 multi-iter reviews — meaning the same
+    logical issue is hashed to a fresh ID after any whitespace, case, or trailing-punctuation
+    drift between iterations. IMP-03/IMP-04 delta-mode is silently a no-op without normalization.
+
+    Backwards compatibility: CLAUDE_ISSUE_ID_NORMALIZE_VERSION=1 reverts to the v1 (raw) hash.
+    Default v2 is the normalized hash. Pre-cutover IDs in review-completions.jsonl are NOT
+    rewritten — enrich-context.sh tail-3 self-heals within 3 iterations.
 
     The '|' separator prevents field-boundary ambiguity (hash('ab'+'cd') != hash('a'+'bcd')).
     """
     import hashlib as _hashlib
-    src = f"{category}|{location or ''}|{problem}"
+    import os as _os
+    import re as _re
+    import unicodedata as _unicodedata
+
+    def _norm(s):
+        if s is None:
+            return ""
+        s = _unicodedata.normalize("NFKC", str(s))
+        s = s.strip()
+        s = _re.sub(r"\s+", " ", s)
+        s = s.lower()
+        s = _re.sub(r"[.;:,]+$", "", s)
+        return s
+
+    version = _os.environ.get("CLAUDE_ISSUE_ID_NORMALIZE_VERSION", "2")
+    if version == "1":
+        src = f"{category}|{location or ''}|{problem}"
+    else:
+        src = f"{_norm(category)}|{_norm(location)}|{_norm(problem)}"
     h = _hashlib.sha256(src.encode("utf-8")).hexdigest()[:8]
     return f"{prefix}{h}"
 
@@ -598,8 +662,16 @@ if effective_agent_type in WORKTREE_AGENTS and worktree_path:
 # IMP-05: "agent" holds raw payload agent_type; "effective_agent_type" always
 # present and reflects post-registry-recovery value. Lets consumers distinguish
 # noise unknowns from recovered ones without a conditional schema.
+# P3: when raw agent_type is empty or "unknown" but the registry/heuristic recovered
+# effective_agent_type (e.g. code-reviewer via P0-2 worktree heuristic), promote
+# the marker's "agent" field too. Without this, downstream consumers (inject-review-
+# context.sh on the next iteration) read 'unknown' and skip session-relevant entries.
+_agent_marker = agent_type
+if (not agent_type or agent_type == "unknown") and effective_agent_type and effective_agent_type != "unknown":
+    _agent_marker = effective_agent_type
 marker = {
-    "agent": agent_type,
+    "agent": _agent_marker,
+    "agent_raw": agent_type,                   # P3: keep the raw payload value for forensic
     "effective_agent_type": effective_agent_type,
     "completed_at": timestamp,
     "session_id": session_id,

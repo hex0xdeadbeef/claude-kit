@@ -85,6 +85,13 @@ output:
             - "AC 2: covered by TestListUsers"
           issues: []
 
+    serialization_note: |
+      Since release v1.21.x: the orchestrator (workflow.md) serializes this narrative to
+      .claude/workflow-state/{feature}-handoff.json with $handoff_contract: "coder_to_code_review"
+      via STEP 0 of code_review_delegation.pre_delegation. validate-handoff.sh runs on the write.
+      The coder's responsibility is the narrative (above); the orchestrator's responsibility is
+      the JSON serialization. See .claude/skills/workflow-protocols/delegation-templates.md.
+
 ## TRIGGERS
 triggers:
   - if: "Complex logic (3+ conditions, state machines)"

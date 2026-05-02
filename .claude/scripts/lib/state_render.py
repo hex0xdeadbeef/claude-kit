@@ -1,7 +1,7 @@
 """Shared state renderer for Claude Kit workflow hooks.
 
 Public API:
-  CONTEXT_SIZE_CAP: int = 8192  -- shared cap constant (hooks enforce in bash)
+  CONTEXT_SIZE_CAP: int = 6000  -- shared cap constant (P5: lowered from 8192; hooks enforce in bash)
   load_state(state_dir, prompts_dir) -> dict  -- loads workflow state
   render(state, include, **kwargs) -> str  -- renders additionalContext sections
   rotate_spillover_files(state_dir, keep=5) -> None  -- LRU cleanup
@@ -19,7 +19,7 @@ import os
 import subprocess
 import sys
 
-CONTEXT_SIZE_CAP: int = 8192
+CONTEXT_SIZE_CAP: int = 6000  # P5: lowered from 8192 to leave 4 000 chars of slack under Claude Code's 10 000-char hook-output cap
 
 # ---------------------------------------------------------------------------
 # Shared YAML helpers — migrated from inject-review-context.sh,
@@ -348,13 +348,42 @@ def _render_checkpoint_ref(state: dict) -> "str | None":
     )
 
 
-def _render_recent_completions_5(state: dict) -> "str | None":
-    """Last 5 completions (raw JSONL) — for save-progress-before-compact."""
+def _render_recent_completions_summary(state: dict) -> "str | None":
+    """Last 5 completions as one-line summaries (P5).
+
+    Per-completion line: '{verdict} {agent}@{ts} ids=[CR-xxxx CR-yyyy] n={N}'
+    Hard cap: 200 chars/line. Embedded `problem` text is dropped (recoverable from JSONL).
+    """
     lines = state.get("review_completions_lines", [])
     tail = lines[-5:] if len(lines) > 5 else lines
     if not tail:
         return None
-    return "## Recent Review Completions\n" + "".join(tail)
+    summaries = []
+    for raw in tail:
+        try:
+            entry = json.loads(raw.strip())
+        except (json.JSONDecodeError, AttributeError):
+            continue
+        agent = entry.get("effective_agent_type") or entry.get("agent", "unknown")
+        ts = entry.get("completed_at", "?")
+        verdict = entry.get("verdict", "?")
+        cids = entry.get("canonical_issue_ids") or []
+        ids = [c.get("id", "?") for c in cids if isinstance(c, dict)]
+        ids_str = " ".join(ids[:8]) if ids else "[]"
+        if ids and len(ids) > 8:
+            ids_str += f" +{len(ids) - 8}more"
+        line = f"{verdict} {agent}@{ts} ids=[{ids_str}] n={len(ids)}"
+        if len(line) > 200:
+            line = line[:197] + "..."
+        summaries.append(line)
+    if not summaries:
+        return None
+    return "## Recent Review Completions\n" + "\n".join(summaries)
+
+
+# Backward-compat shim: keep old name dispatching to the new renderer so any
+# external caller importing _render_recent_completions_5 directly does not break.
+_render_recent_completions_5 = _render_recent_completions_summary
 
 
 # ---------------------------------------------------------------------------
@@ -373,7 +402,8 @@ _SECTIONS = {
     "issues_history_text": _render_issues_history_text,
     "implementation_progress_text": _render_implementation_progress_text,
     "checkpoint_ref": _render_checkpoint_ref,         # KD-7: reference-link
-    "recent_completions_5": _render_recent_completions_5,
+    "recent_completions_5": _render_recent_completions_summary,    # backward-compat key
+    "recent_completions_summary": _render_recent_completions_summary,  # canonical key (P5)
 }
 
 

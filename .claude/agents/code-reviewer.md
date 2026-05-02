@@ -55,7 +55,8 @@ role:
 ## Process
 
 1. **STARTUP**
-   - **Context already injected:** Workflow context (feature, complexity, iteration, verify_status, prior iterations, prior verdicts) is pre-injected via `additionalContext` by SubagentStart hook (`inject-review-context.sh`). Do NOT manually read `{feature}-checkpoint.yaml`, `review-completions.jsonl`, or any `.claude/workflow-state/` files — use the injected context directly.
+   - **Context already injected (preferred path):** Workflow context (feature, complexity, iteration, verify_status, prior iterations, prior verdicts) is pre-injected via `additionalContext` by SubagentStart hook (`inject-review-context.sh`). Do NOT manually read `{feature}-checkpoint.yaml`, `review-completions.jsonl`, or any `.claude/workflow-state/` files when present in additionalContext.
+   - **Sidecar fallback (worktree isolation):** If `INJECTED-CONTEXT.md` exists in your working dir (the worktree root), read it BEFORE QUICK CHECK. This is the orchestrator-written equivalent of the SubagentStart context for worktree-isolated launches where the hook does not fire. Treat its content as additionalContext-equivalent. If the file is absent, proceed without it — sidecar is best-effort.
    - TodoWrite: create review checklist (Quick Check, Architecture, Error Handling, Security, Test Coverage, Verdict)
 
 2. **QUICK CHECK (blocking)**
@@ -69,9 +70,19 @@ role:
        - Run: `{TEST_CMD}` (resolved from PROJECT-KNOWLEDGE.md → TEST_CMD; CLAUDE.md fallback; kit-default Go: `make test`) — if FAIL → STOP, return to author with test failures
        - If both slots unset AND no CLAUDE.md fallback: SKIP QUICK CHECK, emit consolidated NIT in VERDICT_JSON.
    - Check handoff spec_check:
-     - If spec_check.status == PASS:
+     - If spec_check.status == PASS AND iteration == 1:
        - TRUST coder spec compliance — skip plan compliance re-check
        - Output: `- Spec compliance: PASS (trusted from coder Phase 3.5)`
+     - If spec_check.status == PASS AND iteration >= 2:
+       - Perform Parts-coverage spot-check via `git diff --name-only $BASE...HEAD`
+       - Read `.claude/prompts/{feature}.md` Parts list
+       - For each plan Part: extract every file path mentioned in that Part's body via grep on the Part section (between this Part's heading and the next `Part N:` heading or end-of-file). File-path detection is glob-suffix-based — match tokens ending in `.md`, `.sh`, `.json`, `.yaml`, `.yml`, `.go`, `.py`, `.ts`, `.tsx`, `.rs`, `.java` (extend per project SOURCE_GLOB / LANG_EXT slots). Build the per-Part file set, then intersect with the changed-files list from `git diff`.
+       - Match rule: a Part is considered covered when its file set intersects the changed-files set non-emptily (substring match on full path, not basename). Auto-generated files (e.g. matching {GENERATED_PATTERN}) are excluded from the changed-files set before intersection.
+       - If a Part has zero matching changed files in this iteration's diff:
+         - Raise a MINOR with category=`completeness`, stable problem text
+           `"Iter ≥2 spot-check: Part \"{Part name}\" claimed implemented but no matching changed files in this iteration's diff. Possible silent regression."`
+       - Output (no spot-check finding): `- Spec compliance: PASS (spot-checked iter ≥2)`
+       - Output (spot-check raised N MINORs): `- Spec compliance: PASS (spot-checked iter ≥2 — {N} drift MINOR raised)`
      - If spec_check.status == PARTIAL:
        - Note gaps from spec_check.issues, factor into REVIEW as MINOR
        - Output: `- Spec compliance: PARTIAL ({N} gaps — see issues)`
@@ -168,6 +179,7 @@ role:
    - CHANGES_REQUESTED: 1+ BLOCKER or 1+ MAJOR or 5+ MINOR same file (return to coder; default for non-trivial issues)
    - NEEDS_CHANGES: legacy alias for CHANGES_REQUESTED. Emit ONLY when orchestrator explicitly signals planner re-route via iteration counter; agent default is to prefer CHANGES_REQUESTED.
    - REJECTED: irrecoverable issue (security exploit, data corruption risk, scope-violation requiring task abort). Triggers workflow STOP, not normal coder retry. Emit ONLY when justification is documented in handoff narrative.
+   - See also `.claude/skills/code-review-rules/SKILL.md` § Decision Matrix — the `5+ MINOR same file` threshold is byte-identical between the two files.
 
    All 5 values are schema-legal per cross-version compatibility (legacy NEEDS_CHANGES/REJECTED + modern APPROVED_WITH_COMMENTS/CHANGES_REQUESTED). Hook (`save-review-checkpoint.sh`) accepts all 5; downstream `incomplete-output-recovery.md` lists all 5.
 
@@ -223,13 +235,46 @@ available: `git diff $BASE...HEAD` gives the full picture per step 3.
 
 ## Output Format
 
-CRITICAL: Output the verdict in TWO steps to guarantee capture even if you run out of turns:
-1. **Immediately after completing REVIEW analysis**, output a short text with ONLY `VERDICT: {value}` and a one-line issue summary. This ensures `save-review-checkpoint.sh` can extract the verdict from the transcript regardless of what happens next.
-2. **Then** continue with the full structured output below (starting with the same `VERDICT:` line — duplication is intentional and harmless).
+**P4 ordering (canonical):** emit in this exact order:
+
+1. **`VERDICT:` line** (first; regex extractor anchor).
+2. **`VERDICT_JSON:` fenced JSON block** (second; structured-source primary path). The full IMP-02 envelope, schema-validated.
+3. **`## REVIEW`** narrative + per-issue commentary (last; may be truncated by the 32 K subagent token cap without losing the verdict).
+
+This order is critical: subagents launched via the Task tool have a hardcoded 32 000-output-token cap that `CLAUDE_CODE_MAX_OUTPUT_TOKENS` does NOT propagate to (see anthropics/claude-code#25569). Putting the structured envelope second guarantees the verdict survives a truncation cut even on long XL reviews. The narrative is the fungible part.
+
+The two extractors in `save-review-checkpoint.sh` are position-agnostic — both regex and `_extract_verdict_json` scan the whole transcript by sentinel.
 
 Structure your output as follows:
 
 VERDICT: {APPROVED|APPROVED_WITH_COMMENTS|CHANGES_REQUESTED|NEEDS_CHANGES|REJECTED}
+
+VERDICT_JSON:
+```json
+{
+  "$verdict_contract": "code_review_verdict",
+  "verdict": "APPROVED_WITH_COMMENTS",
+  "issues": [
+    {"id": "CR-001", "severity": "MINOR", "category": "style", "location": "internal/service/foo:Create", "problem": "…"}
+  ],
+  "handoff": {
+    "verdict": "APPROVED_WITH_COMMENTS",
+    "iteration": "1/3"
+  }
+}
+```
+
+**VERDICT_JSON rules (apply to the example above):**
+
+- `"$verdict_contract"` MUST be the literal string `"code_review_verdict"`.
+- `"verdict"` enum for code-review (5 values): `APPROVED` | `APPROVED_WITH_COMMENTS` | `CHANGES_REQUESTED` | `NEEDS_CHANGES` | `REJECTED` (MUST match the `VERDICT:` line above — hook logs a warning on mismatch).
+- `"issues"` is an array; use `[]` if none (empty array is legal — required when verdict is APPROVED with no findings).
+- `"handoff"` object: minimally `{"verdict": "…", "iteration": "N/3"}`. The code-review-to-completion contract is less strict than plan-review-to-coder because completion is a terminal node.
+- Per-issue field caps (P1): `problem` / `suggestion` / `reference` ≤ 400 chars; `location` ≤ 200 chars; `category` ≤ 64 chars; `issues` array ≤ 30 items.
+- Do NOT wrap the block in markdown preamble ("Here is the JSON…") — the `VERDICT_JSON:` sentinel is the only anchor the hook searches for.
+- If the JSON block is malformed, missing, or fails schema validation, the hook falls back to regex on the `VERDICT:` line — your review is still captured, but `verdict_source` in `review-completions.jsonl` will record `regex_fallback` instead of `structured_json`.
+
+Why P4 ordering: putting `VERDICT_JSON:` immediately after `VERDICT:` guarantees the structured envelope arrives whole even when narrative is truncated by the 32 K subagent token cap. The trailing narrative is the fungible part.
 
 ### Code Review: {branch}
 Issues: {N} BLOCKER, {N} MAJOR, {N} MINOR
@@ -270,39 +315,9 @@ For handoff contract see [handoff-protocol.md] in workflow-protocols skill → c
 
 **Ready for:** merge | /coder (if CHANGES_REQUESTED)
 
-**VERDICT_JSON (MANDATORY — structured verdict marker, IMP-02):**
+<!-- P4: VERDICT_JSON rules moved adjacent to the example block in § Output Format above. -->
+<!-- The trailing duplicate previously here (deleted per Edit 5.2). -->
 
-After all above output is complete, emit a fenced JSON block prefixed by the literal sentinel `VERDICT_JSON:` on its own line. The hook (`save-review-checkpoint.sh`) parses this JSON and validates it against `.claude/schemas/handoff.schema.json` (contract `code_review_verdict`) for reliable verdict extraction. The human-readable `VERDICT:` line at the top of your response is preserved as a regex fallback.
-
-Emit EXACTLY this form as the **last content** of your response (no prose after the closing fence):
-
-````
-VERDICT_JSON:
-```json
-{
-  "$verdict_contract": "code_review_verdict",
-  "verdict": "APPROVED_WITH_COMMENTS",
-  "issues": [
-    {"id": "CR-001", "severity": "MINOR", "category": "style", "location": "internal/service/foo:Create", "problem": "…"}
-  ],
-  "handoff": {
-    "verdict": "APPROVED_WITH_COMMENTS",
-    "iteration": "1/3"
-  }
-}
-```
-````
-
-Rules:
-- `"$verdict_contract"` MUST be the literal string `"code_review_verdict"`.
-- `"verdict"` enum for code-review (5 values): `APPROVED` | `APPROVED_WITH_COMMENTS` | `CHANGES_REQUESTED` | `NEEDS_CHANGES` | `REJECTED` (MUST match the `VERDICT:` line above — hook logs a warning on mismatch).
-- `"issues"` is an array; use `[]` if none (empty array is legal — required when verdict is APPROVED with no findings).
-- `"handoff"` object: minimally `{"verdict": "…", "iteration": "N/3"}`. The code-review-to-completion contract is less strict than plan-review-to-coder because completion is a terminal node (no further review consumer).
-- Do NOT wrap the block in markdown preamble ("Here is the JSON…") — the `VERDICT_JSON:` sentinel is the only anchor the hook searches for.
-- Do NOT emit any prose, bullet points, or additional text after the closing triple-backtick fence. The hook parses up to end-of-message.
-- If the JSON block is malformed, missing, or fails schema validation, the hook falls back to regex on the `VERDICT:` line — your review is still captured, but `verdict_source` in `review-completions.jsonl` will record `regex_fallback` instead of `structured_json`.
-
-Why dual emission: The human-readable `VERDICT:` line is a defense-in-depth fallback for graceful degradation (IMP-01 warn-default philosophy). Both the top-of-response `VERDICT:` line AND the bottom-of-response `VERDICT_JSON:` block are required.
 
 ### Canonical IDs (IMP-03)
 

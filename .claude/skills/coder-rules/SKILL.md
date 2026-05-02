@@ -38,6 +38,8 @@ After VERIFY passes, run spec compliance self-check (Phase 3.5):
 
 Full checklist: [Spec Check](spec-check.md)
 
+> **Reviewer-side note:** since release v1.21.x, code-reviewer applies an iter-≥2 spot-check on spec_check.status=PASS to guard against silent regressions. The coder is unaffected; the spot-check is performed entirely on the reviewer side via `git diff --name-only`.
+
 ## Instructions
 
 ### Step 1: Load plan and verify approval

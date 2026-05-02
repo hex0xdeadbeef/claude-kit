@@ -17,8 +17,22 @@
 set -euo pipefail
 
 AGENT_TYPE="${1:-unknown}"
+# P3: --sidecar-only mode writes additionalContext to a sidecar file under
+# .claude/workflow-state/{name}-INJECTED-CONTEXT.md and emits no stdout JSON.
+# Used by orchestrator pre-delegation for worktree-isolated code-reviewer launches
+# where SubagentStart hook does NOT fire (3/3 confirmed in corpus 2026-04-29..05-02).
+SIDECAR_ONLY=0
+SIDECAR_NAME="${CLAUDE_SIDECAR_NAME:-code-reviewer}"
+for arg in "$@"; do
+    case "$arg" in
+        --sidecar-only) SIDECAR_ONLY=1 ;;
+        --sidecar-name=*) SIDECAR_NAME="${arg#--sidecar-name=}" ;;
+    esac
+done
+export _SIDECAR_ONLY="$SIDECAR_ONLY"
+export _SIDECAR_NAME="$SIDECAR_NAME"
 
-# Read SubagentStart payload — need session_id for IMP-02 filtering
+# Read SubagentStart payload (or empty in sidecar mode) — need session_id for IMP-02 filtering
 HOOK_INPUT=$(cat 2>/dev/null || echo '{}')
 export _HOOK_INPUT="$HOOK_INPUT"
 
@@ -255,6 +269,30 @@ except Exception:
 state_dir = os.environ.get("CLAUDE_WORKFLOW_STATE_DIR", ".claude/workflow-state")
 prompts_dir = ".claude/prompts"
 
+# --- P3: eager .verdict-block-{agent_id} TTL eviction (mirrors save-review-checkpoint) ---
+def _evict_stale_verdict_blocks_inject(_dir):
+    import time as _t, glob as _g
+    try:
+        ttl_hours = int(os.environ.get("CLAUDE_VERDICT_BLOCK_TTL_HOURS", "6"))
+    except (ValueError, TypeError):
+        ttl_hours = 6
+    if ttl_hours <= 0:
+        return 0
+    ttl_seconds = ttl_hours * 3600
+    now = _t.time()
+    evicted = 0
+    for f in _g.glob(os.path.join(_dir, ".verdict-block-*")):
+        try:
+            if (now - os.path.getmtime(f)) > ttl_seconds:
+                os.remove(f)
+                evicted += 1
+        except OSError:
+            pass
+    return evicted
+
+_evict_stale_verdict_blocks_inject(state_dir)
+# --- end P3 eviction ---
+
 # Find latest checkpoint
 checkpoints = sorted(glob.glob(os.path.join(state_dir, "*-checkpoint.yaml")))
 if not checkpoints:
@@ -443,23 +481,20 @@ if comp_lines:
         if relevant:
             lines.append("")
             lines.append("Prior review completions (this pipeline):")
+            # P5: per-iter summary line; embedded problem/suggestion text dropped
+            # (recoverable from review-completions.jsonl on disk).
             for r in relevant[-3:]:  # Last 3
-                lines.append(f"  - {r.get('completed_at', '?')}: {r.get('verdict', '?')}")
-                # IMP-03: surface canonical IDs so reviewer can reference them in VERDICT_JSON
                 _cids = r.get("canonical_issue_ids") or []
-                if _cids:
-                    _id_list = [c.get("id", "?") for c in _cids if isinstance(c, dict)]
-                    if _id_list:
-                        lines.append(f"    Canonical IDs: {', '.join(_id_list)}")
-                    if r is relevant[-1]:
-                        lines.append("    (most recent issues by canonical id)")
-                        for _c in _cids[:5]:
-                            if isinstance(_c, dict):
-                                lines.append(
-                                    f"      - {_c.get('id', '?')} "
-                                    f"[{_c.get('category', '?')}] "
-                                    f"@{_c.get('location', 'n/a')}"
-                                )
+                _ids = [c.get("id", "?") for c in _cids if isinstance(c, dict)]
+                _ids_str = " ".join(_ids[:8]) if _ids else "[]"
+                if _ids and len(_ids) > 8:
+                    _ids_str += f" +{len(_ids) - 8}more"
+                lines.append(
+                    f"  - {r.get('completed_at', '?')}: {r.get('verdict', '?')} "
+                    f"ids=[{_ids_str}] n={len(_ids)}"
+                )
+            # No per-issue category/location detail — the IDs are referenceable;
+            # full text is in review-completions.jsonl on disk.
         if failed_attempts:
             lines.append(f"prior_failed_attempts: {len(failed_attempts)}")
             lines.append(f"  Last failed at: {failed_attempts[-1].get('completed_at', '?')}")
@@ -552,12 +587,30 @@ if not pk_block_added:
         pass  # Telemetry is best-effort; never block injection
 
 text = "\n".join(lines)
-print(json.dumps({"additionalContext": text}))
+# P3: sidecar mode — write to file, emit empty additionalContext.
+_sidecar_only = os.environ.get("_SIDECAR_ONLY", "0") == "1"
+_sidecar_name = os.environ.get("_SIDECAR_NAME", "code-reviewer")
+if _sidecar_only:
+    _sidecar_path = os.path.join(state_dir, f"{_sidecar_name}-INJECTED-CONTEXT.md")
+    try:
+        os.makedirs(state_dir, exist_ok=True)
+        # Atomic write: tempfile + os.rename
+        import tempfile as _tempfile
+        _tmp_fd, _tmp_path = _tempfile.mkstemp(prefix=f".{_sidecar_name}-INJECTED-", dir=state_dir)
+        with os.fdopen(_tmp_fd, "w") as _tf:
+            _tf.write(text)
+        os.rename(_tmp_path, _sidecar_path)
+        print(json.dumps({"additionalContext": "", "sidecar_written": _sidecar_path}))
+    except Exception as _e:
+        print(json.dumps({"additionalContext": f"[sidecar write failed: {_e}]"}))
+else:
+    print(json.dumps({"additionalContext": text}))
 PYTHON_EOF
 )
 
-# Size cap — lowered from 40K → 8K (AC-4)
-CAP=8192
+# Size cap — P5: lowered from 8192 → 6000 to leave 4000 chars of slack
+# under Claude Code's documented 10000-char hook-output cap (code.claude.com/docs/en/hooks).
+CAP=6000
 SIZE=${#OUTPUT}
 if [[ $SIZE -gt $CAP ]]; then
     mkdir -p "$STATE_DIR"

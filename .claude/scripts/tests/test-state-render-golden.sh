@@ -231,13 +231,13 @@ rm -f "${STATE_DIR}"/compact-overflow-*.log
 # CR-004: CAP sync guard — all 4 bash hooks must have CAP=8192
 # Prevents CONTEXT_SIZE_CAP drift between state_render.py and bash scripts.
 # -----------------------------------------------------------------------
-echo "--- CR-004: CAP=8192 sync across all hooks ---"
+echo "--- CR-004: CAP=6000 sync across all hooks (P5) ---"
 for hook in "enrich-context.sh" "inject-review-context.sh" "save-progress-before-compact.sh" "verify-state-after-compact.sh"; do
-    if grep -q "CAP=8192" "${SCRIPTS_DIR}/${hook}"; then
-        echo "  PASS: ${hook}: CAP=8192 present"
+    if grep -q "CAP=6000" "${SCRIPTS_DIR}/${hook}"; then
+        echo "  PASS: ${hook}: CAP=6000 present"
         PASS=$((PASS + 1))
     else
-        echo "  FAIL: ${hook}: CAP=8192 missing (drift from state_render.CONTEXT_SIZE_CAP)"
+        echo "  FAIL: ${hook}: CAP=6000 missing (drift from state_render.CONTEXT_SIZE_CAP)"
         FAIL=$((FAIL + 1))
     fi
 done

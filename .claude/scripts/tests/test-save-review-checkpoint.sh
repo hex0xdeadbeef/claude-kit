@@ -282,7 +282,8 @@ assert_eq "verdict_source structured_json"       "structured_json"    "$(marker_
 assert_eq "canonical_issue_ids has 1 entry"      "1"                  "$(canonical_ids_field "${SCENARIO_6_SANDBOX}" length)"
 assert_eq "canonical id has PR- prefix"          "PR-"                "$(canonical_ids_field "${SCENARIO_6_SANDBOX}" first_prefix)"
 # Verify deterministic hash: sha256("style|Part 3|missing test for edge case")[:8]
-EXPECTED_HASH_6=$(python3 -c 'import hashlib; print(hashlib.sha256(b"style|Part 3|missing test for edge case").hexdigest()[:8])')
+# P2 normalization: lowercases location "Part 3" -> "part 3" before sha256.
+EXPECTED_HASH_6=$(python3 -c 'import hashlib; print(hashlib.sha256(b"style|part 3|missing test for edge case").hexdigest()[:8])')
 assert_eq "canonical id matches expected hash"   "PR-${EXPECTED_HASH_6}" "$(canonical_ids_field "${SCENARIO_6_SANDBOX}" first_id)"
 rm -rf "${SCENARIO_6_SANDBOX}"
 echo
@@ -294,7 +295,8 @@ SCENARIO_7_SANDBOX=$(run_hook "$(make_payload_with_issues "code_review_verdict" 
 echo "Scenario 7: ID normalization (code-review, CR- prefix)"
 assert_eq "canonical_issue_ids has 1 entry"      "1"                  "$(canonical_ids_field "${SCENARIO_7_SANDBOX}" length)"
 assert_eq "canonical id has CR- prefix"          "CR-"                "$(canonical_ids_field "${SCENARIO_7_SANDBOX}" first_prefix)"
-EXPECTED_HASH_7=$(python3 -c 'import hashlib; print(hashlib.sha256(b"error_handling|internal/handler/user.go:Create|nil pointer not guarded").hexdigest()[:8])')
+# P2 normalization: lowercases location "...:Create" -> "...:create" before sha256.
+EXPECTED_HASH_7=$(python3 -c 'import hashlib; print(hashlib.sha256(b"error_handling|internal/handler/user.go:create|nil pointer not guarded").hexdigest()[:8])')
 assert_eq "canonical id matches expected hash"   "CR-${EXPECTED_HASH_7}"  "$(canonical_ids_field "${SCENARIO_7_SANDBOX}" first_id)"
 rm -rf "${SCENARIO_7_SANDBOX}"
 echo
@@ -326,7 +328,8 @@ assert_eq "verdict_source structured_json"      "structured_json"   "$(marker_fi
 assert_eq "canonical_issue_ids has 1 entry"     "1"                 "$(canonical_ids_field "${SCENARIO_9_SANDBOX}" length)"
 assert_eq "canonical id has PR- prefix"         "PR-"               "$(canonical_ids_field "${SCENARIO_9_SANDBOX}" first_prefix)"
 # PR-003 strengthening: deterministic hash equality matches scenarios 6/7 pattern
-EXPECTED_HASH_9=$(python3 -c 'import hashlib; print(hashlib.sha256(b"architecture|Part 5|repository layer imports handler").hexdigest()[:8])')
+# P2 normalization: lowercases location "Part 5" -> "part 5" before sha256.
+EXPECTED_HASH_9=$(python3 -c 'import hashlib; print(hashlib.sha256(b"architecture|part 5|repository layer imports handler").hexdigest()[:8])')
 assert_eq "canonical id matches expected hash"  "PR-${EXPECTED_HASH_9}" "$(canonical_ids_field "${SCENARIO_9_SANDBOX}" first_id)"
 rm -rf "${SCENARIO_9_SANDBOX}"
 echo

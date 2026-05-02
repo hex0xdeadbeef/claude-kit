@@ -212,6 +212,7 @@
         "issues": {
           "type": "array",
           "description": "Review issues. Empty array is valid — zero issues is a legitimate APPROVED state.",
+          "maxItems": 30,
           "items": {
             "type": "object",
             "required": ["id", "severity", "category", "problem"],
@@ -219,14 +220,14 @@
               "id":         {
                 "type": "string",
                 "pattern": "^CR-[0-9a-f]{8}$",
-                "description": "Canonical issue identifier: CR-<first-8-hex-chars-of-sha256(category|location|problem)>. Computed by save-review-checkpoint.sh (IMP-03) before schema validation."
+                "description": "Canonical issue identifier: CR-<first-8-hex-chars-of-sha256(category|location|problem)>. Computed by save-review-checkpoint.sh (IMP-03) before schema validation. Input normalization (P2): NFKC + strip + collapse-ws + lower + strip terminal punct."
               },
               "severity":   { "type": "string", "enum": ["BLOCKER", "MAJOR", "MINOR", "NIT"] },
-              "category":   { "type": "string" },
-              "location":   { "type": "string" },
-              "problem":    { "type": "string" },
-              "suggestion": { "type": "string" },
-              "reference":  { "type": "string" }
+              "category":   { "type": "string", "maxLength": 64 },
+              "location":   { "type": "string", "maxLength": 200 },
+              "problem":    { "type": "string", "maxLength": 400 },
+              "suggestion": { "type": "string", "maxLength": 400 },
+              "reference":  { "type": "string", "maxLength": 400 }
             },
             "additionalProperties": false
           }
@@ -267,22 +268,37 @@
         "parts_implemented": {
           "type": "array",
           "description": "Parts implemented per plan, one string per Part with brief description.",
-          "items": { "type": "string" }
+          "maxItems": 30,
+          "items": { "type": "string", "maxLength": 500 }
         },
         "evaluate_adjustments": {
           "type": "array",
           "description": "Inline adjustments documented during /coder Phase 1.5 EVALUATE (REVISE decisions).",
-          "items": { "type": "string" }
+          "maxItems": 8,
+          "items": { "type": "string", "maxLength": 200 }
         },
         "risks_mitigated": {
           "type": "array",
           "description": "Risks identified during EVALUATE/IMPLEMENT and how they were resolved.",
-          "items": { "type": "string" }
+          "maxItems": 8,
+          "items": { "type": "string", "maxLength": 200 }
         },
         "deviations_from_plan": {
           "type": "array",
           "description": "Deviations from approved plan with rationale; empty array = no deviations.",
-          "items": { "type": "string" }
+          "maxItems": 8,
+          "items": { "type": "string", "maxLength": 200 }
+        },
+        "narrative_for_reviewer": {
+          "type": "string",
+          "description": "Free-prose narrative for code-reviewer. Producers MUST cap at 600 chars to keep handoffs under 8 KB and reduce additionalContext re-injection footprint.",
+          "maxLength": 600
+        },
+        "high_risk_areas": {
+          "type": "array",
+          "description": "Free-text bullets flagging high-risk areas in the implementation.",
+          "maxItems": 8,
+          "items": { "type": "string", "maxLength": 200 }
         },
         "verify_status": {
           "type": "object",
