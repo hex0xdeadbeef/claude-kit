@@ -195,10 +195,17 @@ VALIDATION_OUTPUT=$("${VALIDATOR_CMD[@]}" \
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 FEATURE=$(basename "${HANDOFF_FILE}" .json | sed 's/-handoff$//')
 VALID_BOOL=$([ "${VALIDATION_RC}" -eq 0 ] && echo "true" || echo "false")
+# P1: size gauge — log byte count and WARN at >= 8000 B (warn-only; strict mode follows MODE).
+HANDOFF_BYTES=$(wc -c < "${HANDOFF_FILE}" 2>/dev/null | tr -d ' ' || echo 0)
+[[ "${HANDOFF_BYTES}" =~ ^[0-9]+$ ]] || HANDOFF_BYTES=0
+if [[ "${HANDOFF_BYTES}" -ge 8000 ]]; then
+  echo "[validate-handoff] WARN: handoff size ${HANDOFF_BYTES} bytes exceeds 8000 — consider tightening producer prose" >&2
+fi
 LOG_ENTRY="{\"timestamp\":\"${TIMESTAMP}\",\"feature\":\"${FEATURE}\","
 LOG_ENTRY+="\"file\":\"${HANDOFF_FILE}\",\"valid\":${VALID_BOOL},"
 LOG_ENTRY+="\"mode\":\"${MODE}\",\"rc\":${VALIDATION_RC},"
-LOG_ENTRY+="\"record_kind\":\"${RECORD_KIND}\"}"
+LOG_ENTRY+="\"record_kind\":\"${RECORD_KIND}\","
+LOG_ENTRY+="\"bytes\":${HANDOFF_BYTES}}"
 # Part 2 / P2: rotate before append to bound disk usage.
 rotate_if_oversized "${VALIDATION_LOG}"
 echo "${LOG_ENTRY}" >> "${VALIDATION_LOG}" 2>/dev/null || true
