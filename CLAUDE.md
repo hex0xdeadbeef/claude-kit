@@ -16,7 +16,7 @@ Reusable Claude Code configuration kit for any project. Provides a structured mu
 
 ## Project Knowledge Schema
 
-Plan-stage cascade contract: `.claude/PROJECT-KNOWLEDGE.md` → `CLAUDE.md` Language Profile → SKIP. Canonical schema lives in `.claude/PROJECT-KNOWLEDGE.md.example` (`pk_schema_version: 1.1.0`); governance and slot inventory (17 required + 5 optional = 22 across 7 sections) live in `.claude/agents/project-researcher/AGENT.md`. Per-language code-shape references for planner live in `.claude/skills/planner-rules/code-shapes/<LANGUAGE>.md`. Backwards-compatible: slot consumers SKIP unset slots with a consolidated NIT.
+Plan-stage cascade contract: `.claude/PROJECT-KNOWLEDGE.md` → `CLAUDE.md` Language Profile → SKIP. Canonical schema lives in `.claude/PROJECT-KNOWLEDGE.md.example` (`pk_schema_version: 1.1.0`); governance and slot inventory (17 required + 5 optional = 22 across 7 sections) live in `.claude/agents/project-researcher/AGENT.md`. Per-language code-shape references for planner live in `.claude/skills/planner-rules/code-shapes/<LANGUAGE>.md`. Backwards-compatible: slot consumers SKIP unset slots with a consolidated NIT. Optional additive slots may be introduced without bumping `pk_schema_version` when they default to a backwards-compatible kit value when unset. Example (since release v1.21.x): `FUNC_LOC_LIMIT` (defaults to 30); consumed by code-reviewer Section 4b — see `.claude/agents/code-reviewer.md` for the cascade rule. Users who want a non-default value add the slot to their own `.claude/PROJECT-KNOWLEDGE.md`.
 
 ## Soft Prerequisites
 

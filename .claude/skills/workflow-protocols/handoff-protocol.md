@@ -152,8 +152,9 @@ handoff_protocol:
     contracts_covered:
       - "planner_to_plan_review — written in plan_review_delegation.pre_delegation step 0"
       - "plan_review_to_coder — written in plan_review_delegation.post_delegation step 4.5"
+      - "coder_to_code_review — written in code_review_delegation.pre_delegation STEP 0 (since this Part)"
     contracts_not_yet_covered:
-      - "designer_to_planner, coder_to_code_review, code_review_to_completion → IMP-01.2"
+      - "designer_to_planner, code_review_to_completion → IMP-01.2"
 
   verdict_envelopes:
     purpose: "Structured VERDICT_JSON envelopes emitted by review agents (IMP-02)"

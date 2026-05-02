@@ -70,9 +70,18 @@ role:
        - Run: `{TEST_CMD}` (resolved from PROJECT-KNOWLEDGE.md → TEST_CMD; CLAUDE.md fallback; kit-default Go: `make test`) — if FAIL → STOP, return to author with test failures
        - If both slots unset AND no CLAUDE.md fallback: SKIP QUICK CHECK, emit consolidated NIT in VERDICT_JSON.
    - Check handoff spec_check:
-     - If spec_check.status == PASS:
+     - If spec_check.status == PASS AND iteration == 1:
        - TRUST coder spec compliance — skip plan compliance re-check
        - Output: `- Spec compliance: PASS (trusted from coder Phase 3.5)`
+     - If spec_check.status == PASS AND iteration >= 2:
+       - Perform Parts-coverage spot-check via `git diff --name-only $BASE...HEAD`
+       - Read `.claude/prompts/{feature}.md` Parts list
+       - For each plan Part: verify at least one changed file maps to it
+       - If a Part has zero matching changed files in this iteration's diff:
+         - Raise a MINOR with category=`completeness`, stable problem text
+           `"Iter ≥2 spot-check: Part \"{Part name}\" claimed implemented but no matching changed files in this iteration's diff. Possible silent regression."`
+       - Output (no spot-check finding): `- Spec compliance: PASS (spot-checked iter ≥2)`
+       - Output (spot-check raised N MINORs): `- Spec compliance: PASS (spot-checked iter ≥2 — {N} drift MINOR raised)`
      - If spec_check.status == PARTIAL:
        - Note gaps from spec_check.issues, factor into REVIEW as MINOR
        - Output: `- Spec compliance: PARTIAL ({N} gaps — see issues)`
@@ -126,7 +135,7 @@ role:
    **4b. Error Handling:**
    - All errors propagate context per {ERROR_WRAP} slot (resolved from PROJECT-KNOWLEDGE.md → ERROR_WRAP; CLAUDE.md fallback; SKIP if slot unset). Reference: ../skills/planner-rules/code-shapes/<LANGUAGE>.md for syntax-correct example.
    - No log AND return same error
-   - Functions ≤ 30 lines (flag if exceeded)
+   - Functions ≤ {FUNC_LOC_LIMIT} lines (flag if exceeded; resolved from PROJECT-KNOWLEDGE.md → FUNC_LOC_LIMIT; CLAUDE.md fallback; kit-default 30 when both unset; numeric-parse-guard: malformed values fall back to 30 with a NIT log)
    - Grep: search for `log.*err` patterns near `return.*err`
 
    **4c. Security:**
@@ -169,6 +178,7 @@ role:
    - CHANGES_REQUESTED: 1+ BLOCKER or 1+ MAJOR or 5+ MINOR same file (return to coder; default for non-trivial issues)
    - NEEDS_CHANGES: legacy alias for CHANGES_REQUESTED. Emit ONLY when orchestrator explicitly signals planner re-route via iteration counter; agent default is to prefer CHANGES_REQUESTED.
    - REJECTED: irrecoverable issue (security exploit, data corruption risk, scope-violation requiring task abort). Triggers workflow STOP, not normal coder retry. Emit ONLY when justification is documented in handoff narrative.
+   - See also `.claude/skills/code-review-rules/SKILL.md` § Decision Matrix — the `5+ MINOR same file` threshold is byte-identical between the two files.
 
    All 5 values are schema-legal per cross-version compatibility (legacy NEEDS_CHANGES/REJECTED + modern APPROVED_WITH_COMMENTS/CHANGES_REQUESTED). Hook (`save-review-checkpoint.sh`) accepts all 5; downstream `incomplete-output-recovery.md` lists all 5.
 

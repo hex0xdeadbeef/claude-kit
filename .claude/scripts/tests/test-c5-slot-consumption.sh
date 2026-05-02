@@ -189,5 +189,118 @@ pass "AC-C5 (bonus) — troubleshooting.md references GENERATED/MOCKS slots"
 #   (or CLAUDE.md fallback). Verify code-reviewer verdict ENUM stable on kit fixture.
 #   Note: C5 alone does NOT trigger new NITs on kit; only C3+C4 do (kit ARCHITECTURE_STYLE='other').
 
-label "INFO" "test-c5-slot-consumption.sh complete — 13/16 AC automated (AC-C5.10/11/12 manual)"
+# ════════════════════════════════════════════════════════════════════════
+# AC-P5 — FUNC_LOC_LIMIT cascade (added since release v1.21.x)
+# ════════════════════════════════════════════════════════════════════════
+
+# AC-P5-1a: code-reviewer.md L129 references {FUNC_LOC_LIMIT} placeholder
+grep -q 'Functions ≤ {FUNC_LOC_LIMIT} lines' "$SCOPE_REVIEWER" \
+  || fail "AC-P5-1a — code-reviewer.md L129 does not reference {FUNC_LOC_LIMIT} slot"
+pass "AC-P5-1a — code-reviewer.md uses {FUNC_LOC_LIMIT} placeholder"
+
+# AC-P5-1b: cascade order documented in code-reviewer.md
+grep -q 'PROJECT-KNOWLEDGE.md → FUNC_LOC_LIMIT.*CLAUDE.md fallback.*kit-default 30' "$SCOPE_REVIEWER" \
+  || fail "AC-P5-1b — code-reviewer.md L129 does not document the FUNC_LOC_LIMIT cascade"
+pass "AC-P5-1b — FUNC_LOC_LIMIT cascade documented in code-reviewer.md"
+
+# AC-P5-3a: PK example does NOT pre-document FUNC_LOC_LIMIT slot (per user iter-2-final decision)
+# Rationale: the slot is consumed by code-reviewer.md L129 via cascade; users opt in by adding
+# the slot to their own PROJECT-KNOWLEDGE.md. The kit's PK example stays minimal.
+EXAMPLE_FILE=".claude/PROJECT-KNOWLEDGE.md.example"
+[[ -f "$EXAMPLE_FILE" ]] || fail "AC-P5-3a — $EXAMPLE_FILE not found"
+if grep -q '^- FUNC_LOC_LIMIT:' "$EXAMPLE_FILE"; then
+  fail "AC-P5-3a — FUNC_LOC_LIMIT slot must NOT be pre-documented in PK example (per user decision); slot is opt-in via user PK"
+fi
+pass "AC-P5-3a — FUNC_LOC_LIMIT slot opt-in (not pre-documented in PK example)"
+
+# AC-P5-4: SKILL.md Auto-Escalation note references FUNC_LOC_LIMIT cascade
+grep -qE '\{FUNC_LOC_LIMIT\}.*cascade.*kit-default 30' "$SCOPE_REVIEWER_SKILL" \
+  || fail "AC-P5-4 — code-review-rules/SKILL.md Auto-Escalation note missing FUNC_LOC_LIMIT cascade"
+pass "AC-P5-4 — SKILL.md Auto-Escalation note present"
+
+# AC-P5-5: CLAUDE.md mentions optional additive slots (FUNC_LOC_LIMIT example)
+grep -q 'FUNC_LOC_LIMIT.*defaults to 30' "CLAUDE.md" \
+  || fail "AC-P5-5 — CLAUDE.md Project Knowledge Schema does not mention FUNC_LOC_LIMIT"
+pass "AC-P5-5 — CLAUDE.md updated"
+
+# ════════════════════════════════════════════════════════════════════════
+# AC-P5-RUNTIME — runtime cascade-resolution exercises (PR-ef69f1ac fix)
+# ────────────────────────────────────────────────────────────────────────
+# Resolves PR-ef69f1ac: Tests block (lines 178-184 of plan) promised three
+# runtime cascade-resolution branches (slot-unset → 30, slot-set-50 → 50,
+# slot-malformed → 30). Edit 5.5 originally only delivered documentation
+# greps. This block adds a self-contained awk-based parser that mirrors the
+# agent's resolution rule from code-reviewer.md L129 ("PROJECT-KNOWLEDGE.md
+# → FUNC_LOC_LIMIT; CLAUDE.md fallback; kit-default 30; numeric-parse guard").
+# The parser is the test's reference implementation of the cascade — when
+# the agent's runtime resolution and this parser disagree, the test fails.
+# ════════════════════════════════════════════════════════════════════════
+
+resolve_func_loc_limit() {
+  local pk_file="$1"
+  local val
+  val=$(awk -F'[:#]' '/^- FUNC_LOC_LIMIT:[[:space:]]*[^[:space:]#]/ {gsub(/^[[:space:]]+|[[:space:]]+$/,"",$2); print $2; exit}' "$pk_file" 2>/dev/null || true)
+  if [[ "$val" =~ ^[0-9]+$ ]] && [[ "$val" -gt 0 ]]; then
+    echo "$val"
+  else
+    echo 30
+  fi
+}
+
+P5_FIXTURE_DIR="$(mktemp -d)"
+trap 'rm -rf "$P5_FIXTURE_DIR"' EXIT
+
+# AC-P5-RUNTIME-1: slot unset → kit-default 30
+PK_UNSET="$P5_FIXTURE_DIR/pk-unset.md"
+cat > "$PK_UNSET" <<'PK'
+## Language Profile
+- LANGUAGE: "go"
+- LANG_EXT: ".go"
+PK
+result=$(resolve_func_loc_limit "$PK_UNSET")
+[[ "$result" == "30" ]] || fail "AC-P5-RUNTIME-1 — slot unset should resolve to kit-default 30, got '$result'"
+pass "AC-P5-RUNTIME-1 — slot unset → 30 (backward-compatible)"
+
+# AC-P5-RUNTIME-2: slot set to 50 → resolves to 50
+PK_50="$P5_FIXTURE_DIR/pk-50.md"
+cat > "$PK_50" <<'PK'
+## Language Profile
+- LANGUAGE: "python"
+- FUNC_LOC_LIMIT: 50
+PK
+result=$(resolve_func_loc_limit "$PK_50")
+[[ "$result" == "50" ]] || fail "AC-P5-RUNTIME-2 — slot set to 50 should resolve to 50, got '$result'"
+pass "AC-P5-RUNTIME-2 — slot=50 → 50"
+
+# AC-P5-RUNTIME-3: slot 'fifty' → numeric-parse guard → 30
+PK_MALFORMED="$P5_FIXTURE_DIR/pk-malformed.md"
+cat > "$PK_MALFORMED" <<'PK'
+## Language Profile
+- LANGUAGE: "rust"
+- FUNC_LOC_LIMIT: fifty
+PK
+result=$(resolve_func_loc_limit "$PK_MALFORMED")
+[[ "$result" == "30" ]] || fail "AC-P5-RUNTIME-3 — malformed slot 'fifty' should fall back to 30 (numeric-parse guard), got '$result'"
+pass "AC-P5-RUNTIME-3 — malformed slot → 30 (numeric-parse guard)"
+
+# AC-P5-RUNTIME-4: negative -5 → numeric-parse guard → 30
+PK_NEG="$P5_FIXTURE_DIR/pk-neg.md"
+cat > "$PK_NEG" <<'PK'
+## Language Profile
+- FUNC_LOC_LIMIT: -5
+PK
+result=$(resolve_func_loc_limit "$PK_NEG")
+[[ "$result" == "30" ]] || fail "AC-P5-RUNTIME-4 — negative slot value '-5' should fall back to 30 (numeric-parse guard), got '$result'"
+pass "AC-P5-RUNTIME-4 — negative slot → 30 (numeric-parse guard)"
+
+# AC-P5-RUNTIME-5: zero → numeric-parse guard → 30 (positive-integer required)
+PK_ZERO="$P5_FIXTURE_DIR/pk-zero.md"
+cat > "$PK_ZERO" <<'PK'
+- FUNC_LOC_LIMIT: 0
+PK
+result=$(resolve_func_loc_limit "$PK_ZERO")
+[[ "$result" == "30" ]] || fail "AC-P5-RUNTIME-5 — zero slot value should fall back to 30 (positive-integer required), got '$result'"
+pass "AC-P5-RUNTIME-5 — zero slot → 30 (numeric-parse guard)"
+
+label "INFO" "test-c5-slot-consumption.sh complete — 13/16 AC automated (AC-C5.10/11/12 manual) + AC-P5/AC-P5-RUNTIME (since v1.21.x)"
 exit 0

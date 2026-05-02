@@ -15,17 +15,20 @@ disable-model-invocation: true
 ## Decision Matrix
 - APPROVED: 0 BLOCKER, 0 MAJOR (clean merge)
 - APPROVED_WITH_COMMENTS: 0 BLOCKER, 0 MAJOR, has MINOR/NIT (merge with notes)
-- CHANGES_REQUESTED: 1+ BLOCKER or 1+ MAJOR or 3+ MINOR (return to coder)
+- CHANGES_REQUESTED: 1+ BLOCKER or 1+ MAJOR or 5+ MINOR same file (return to coder)
+- Note: the per-file `5+ MINOR same file` threshold mirrors the Auto-Escalation rule below — both files use the file as the natural unit for code review, giving a single decision point.
 
 ## Auto-Escalation
-- 5+ MINOR in same file → escalate to MAJOR
+- 5+ MINOR in same file → escalate to MAJOR (files are the natural unit for code review)
 - Security issue (any severity) → always BLOCKER
 - Layer-dependency violation (when {LAYER_RULE} SET AND {ARCHITECTURE_STYLE} == "layered") → always BLOCKER. SKIP entries (slot unset/non-layered) → consolidated NIT, NOT BLOCKER.
+- Note: function-length flag uses `{FUNC_LOC_LIMIT}` cascade (PROJECT-KNOWLEDGE.md > CLAUDE.md > kit-default 30; numeric-parse guard). Threshold is a soft heuristic — flag at MAJOR severity, not BLOCKER.
 
 ## Spec Check Trust
-If coder handoff includes spec_check with status=PASS → trust spec compliance, skip plan compliance re-check during REVIEW. Focus REVIEW entirely on code quality (architecture, error handling, security, test coverage).
-If spec_check.status=PARTIAL → note documented gaps as MINOR during REVIEW.
-If spec_check missing → backward compat: check plan coverage during REVIEW.
+**Iteration 1:** If coder handoff includes spec_check with status=PASS → trust spec compliance, skip plan compliance re-check during REVIEW. Focus REVIEW entirely on code quality (architecture, error handling, security, test coverage). This preserves the S/M happy-path performance — first-pass coverage is high-trust.
+**Iteration 2+ (CHANGES_REQUESTED loop):** Even when spec_check.status=PASS, perform a Parts-coverage spot-check by running `git diff --name-only $BASE...HEAD` and verifying each plan Part has at least one associated changed file. The verification is mechanical: read `.claude/prompts/{feature}.md` Parts list, map each Part name to one or more files mentioned in the Part body, then assert the changed-files set covers each Part. If any Part is found in `parts_implemented` but has zero matching changed files, raise a MINOR with category=`completeness` and a stable problem string `"Iter ≥2 spot-check: Part \"{Part name}\" claimed implemented but no matching changed files in this iteration's diff. Possible silent regression."`. The spot-check is targeted (not a full re-run) and adds 1-3 extra Bash invocations only on iter ≥ 2.
+**spec_check.status=PARTIAL:** note documented gaps as MINOR during REVIEW (unchanged).
+**spec_check missing:** backward compat — check plan coverage during REVIEW (unchanged).
 
 ## Instructions
 

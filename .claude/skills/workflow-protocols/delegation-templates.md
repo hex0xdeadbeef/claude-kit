@@ -259,6 +259,40 @@ diff-manifest — both required for iteration 2+ correctness.
     Lifecycle: created here → auto-deleted by save-review-checkpoint.sh on SubagentStop.
     Purpose: prevents auto-compaction from fragmenting the verdict narrative mid-review.
 
+    STEP 0 (IMP-01.2 — symmetry with plan_review_delegation STEP 0):
+      Write coder→code-review handoff to .claude/workflow-state/{feature}-handoff.json
+      BEFORE delegating to code-reviewer. Hook auto-validates on write.
+      Format (must match .claude/schemas/handoff.schema.json, contract coder_to_code_review):
+        {
+          "$handoff_contract": "coder_to_code_review",
+          "branch": "{branch}",
+          "parts_implemented": ["Part 1: ...", "Part 2: ..."],
+          "evaluate_adjustments": ["{adj}", ...],   # OPTIONAL
+          "risks_mitigated":     ["{risk}", ...],   # OPTIONAL
+          "deviations_from_plan": ["{dev}", ...],   # OPTIONAL
+          "narrative_for_reviewer": "{narrative}",  # OPTIONAL — MUST be capped at 600 chars
+          "high_risk_areas":     ["{area}", ...],   # OPTIONAL
+          "verify_status": {
+            "lint": "PASS|FAIL|SKIPPED",
+            "test": "PASS|FAIL|SKIPPED",
+            "command_used": "{resolved VERIFY_CMD}"
+          },
+          "spec_check": {              # OPTIONAL — present for L/XL complexity
+            "status": "PASS|PARTIAL|FAIL",
+            "coverage_pct": 100,
+            "deviations_confirmed": [],
+            "ac_coverage": [],
+            "issues": []
+          },
+          "iteration": "{N}/3"
+        }
+      Source of fields: extract from coder's emitted handoff narrative.
+      Cap rule (P1 schema constraint): truncate `narrative_for_reviewer` at 600 chars
+      BEFORE write — schema validation rejects payloads exceeding the cap.
+      Failure handling: if write fails (disk error) or validation fails in strict mode →
+      log WARN and proceed with delegation (graceful degradation; agent still gets the
+      narrative via the delegation prompt template).
+
     Before delegating to code-reviewer (iteration 2+ only):
     1. Read .claude/workflow-state/review-completions.jsonl for the most recent entry
        where effective_agent_type == "code-reviewer" in this session_id.
