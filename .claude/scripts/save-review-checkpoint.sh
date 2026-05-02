@@ -243,18 +243,41 @@ def _extract_verdict_json(text):
 
 
 def _compute_canonical_id(prefix, category, location, problem):
-    """Deterministic content-addressed ID per spec KD-2.
+    """Deterministic content-addressed ID with input normalization (P2 fix).
 
-    Canonical form: {prefix}{sha256(category + '|' + (location or '') + '|' + problem)[:8]}
-    - prefix:   'PR-' for plan-review verdicts, 'CR-' for code-review verdicts
-    - category: schema-enum-like string (architecture | security | error_handling | ...)
-    - location: optional human-readable reference; None/'' treated as empty string
-    - problem:  free-form issue description
+    Canonical form: {prefix}{sha256(norm(category) + '|' + norm(location or '') + '|' + norm(problem))[:8]}
+      where norm(s) = NFKC -> strip -> collapse internal whitespace -> lowercase -> strip terminal [.;:,]+
+
+    Rationale: corpus shows 50/50 unique IDs across 15 multi-iter reviews — meaning the same
+    logical issue is hashed to a fresh ID after any whitespace, case, or trailing-punctuation
+    drift between iterations. IMP-03/IMP-04 delta-mode is silently a no-op without normalization.
+
+    Backwards compatibility: CLAUDE_ISSUE_ID_NORMALIZE_VERSION=1 reverts to the v1 (raw) hash.
+    Default v2 is the normalized hash. Pre-cutover IDs in review-completions.jsonl are NOT
+    rewritten — enrich-context.sh tail-3 self-heals within 3 iterations.
 
     The '|' separator prevents field-boundary ambiguity (hash('ab'+'cd') != hash('a'+'bcd')).
     """
     import hashlib as _hashlib
-    src = f"{category}|{location or ''}|{problem}"
+    import os as _os
+    import re as _re
+    import unicodedata as _unicodedata
+
+    def _norm(s):
+        if s is None:
+            return ""
+        s = _unicodedata.normalize("NFKC", str(s))
+        s = s.strip()
+        s = _re.sub(r"\s+", " ", s)
+        s = s.lower()
+        s = _re.sub(r"[.;:,]+$", "", s)
+        return s
+
+    version = _os.environ.get("CLAUDE_ISSUE_ID_NORMALIZE_VERSION", "2")
+    if version == "1":
+        src = f"{category}|{location or ''}|{problem}"
+    else:
+        src = f"{_norm(category)}|{_norm(location)}|{_norm(problem)}"
     h = _hashlib.sha256(src.encode("utf-8")).hexdigest()[:8]
     return f"{prefix}{h}"
 

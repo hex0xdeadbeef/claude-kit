@@ -37,6 +37,8 @@ Optional tools used by hooks. Missing tools → graceful degradation (warn, non-
 - `CLAUDE_VERDICT_VALIDATION_MODE` — VERDICT_JSON envelope validation (IMP-02); `strict` skips regex-fallback when structured JSON fails.
 - `CLAUDE_ISSUE_ID_VALIDATION_MODE` — issue ID canonical pattern `^[PC]R-[0-9a-f]{8}$` (IMP-03); `strict` blocks verdicts with non-canonical IDs.
 - `CLAUDE_DELTA_REVIEW_MODE` — delta-only reviewer focus on iter ≥2 (IMP-04 extension); values `off|warn|strict`.
+- `CLAUDE_ISSUE_ID_NORMALIZE_VERSION` — canonical-ID hash input normalization version. `2` (default) applies NFKC + strip + collapse-whitespace + lowercase + strip-terminal-punctuation before sha256. `1` reverts to raw v1 hashing for forensic re-run of pre-2026-05-02 IDs.
+- `CLAUDE_VERDICT_BLOCK_TTL_HOURS` — TTL (in hours) for `.verdict-block-{agent_id}` sentinels. Default `6`. `0` disables eviction (pre-Part-4 behaviour).
 
 Full rationale + log rotation tunables (`CLAUDE_WORKFLOW_STATE_DIR`, `CLAUDE_VALIDATION_LOG_MAX_LINES`) in `.claude/settings.local.json.example`.
 
