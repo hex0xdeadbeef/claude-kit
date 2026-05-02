@@ -90,6 +90,16 @@ search_patterns:
 3. Cross-reference findings with `examples` for issue descriptions
 4. Mark findings with appropriate severity (BLOCKER/MAJOR/MINOR/NIT)
 
+## Canonical emission shape (P4)
+
+Code-reviewer output order is fixed (see code-reviewer.md § Output Format):
+
+1. `VERDICT: <enum>` (first line — regex fallback anchor).
+2. `VERDICT_JSON:` followed by fenced ` ```json` block (second — structured-source primary).
+3. `## REVIEW` narrative + per-issue commentary (last — fungible under 32 K subagent token cap).
+
+This ordering survives subagent truncation: if the agent runs out of output budget mid-narrative, both the regex and structured extractors still find the verdict above. Verified by `test-verdict-ordering-first.sh`.
+
 ## SEE ALSO
 
 - `security-checklist.md` — OWASP security checks

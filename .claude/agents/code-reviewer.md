@@ -224,13 +224,46 @@ available: `git diff $BASE...HEAD` gives the full picture per step 3.
 
 ## Output Format
 
-CRITICAL: Output the verdict in TWO steps to guarantee capture even if you run out of turns:
-1. **Immediately after completing REVIEW analysis**, output a short text with ONLY `VERDICT: {value}` and a one-line issue summary. This ensures `save-review-checkpoint.sh` can extract the verdict from the transcript regardless of what happens next.
-2. **Then** continue with the full structured output below (starting with the same `VERDICT:` line — duplication is intentional and harmless).
+**P4 ordering (canonical):** emit in this exact order:
+
+1. **`VERDICT:` line** (first; regex extractor anchor).
+2. **`VERDICT_JSON:` fenced JSON block** (second; structured-source primary path). The full IMP-02 envelope, schema-validated.
+3. **`## REVIEW`** narrative + per-issue commentary (last; may be truncated by the 32 K subagent token cap without losing the verdict).
+
+This order is critical: subagents launched via the Task tool have a hardcoded 32 000-output-token cap that `CLAUDE_CODE_MAX_OUTPUT_TOKENS` does NOT propagate to (see anthropics/claude-code#25569). Putting the structured envelope second guarantees the verdict survives a truncation cut even on long XL reviews. The narrative is the fungible part.
+
+The two extractors in `save-review-checkpoint.sh` are position-agnostic — both regex and `_extract_verdict_json` scan the whole transcript by sentinel.
 
 Structure your output as follows:
 
 VERDICT: {APPROVED|APPROVED_WITH_COMMENTS|CHANGES_REQUESTED|NEEDS_CHANGES|REJECTED}
+
+VERDICT_JSON:
+```json
+{
+  "$verdict_contract": "code_review_verdict",
+  "verdict": "APPROVED_WITH_COMMENTS",
+  "issues": [
+    {"id": "CR-001", "severity": "MINOR", "category": "style", "location": "internal/service/foo:Create", "problem": "…"}
+  ],
+  "handoff": {
+    "verdict": "APPROVED_WITH_COMMENTS",
+    "iteration": "1/3"
+  }
+}
+```
+
+**VERDICT_JSON rules (apply to the example above):**
+
+- `"$verdict_contract"` MUST be the literal string `"code_review_verdict"`.
+- `"verdict"` enum for code-review (5 values): `APPROVED` | `APPROVED_WITH_COMMENTS` | `CHANGES_REQUESTED` | `NEEDS_CHANGES` | `REJECTED` (MUST match the `VERDICT:` line above — hook logs a warning on mismatch).
+- `"issues"` is an array; use `[]` if none (empty array is legal — required when verdict is APPROVED with no findings).
+- `"handoff"` object: minimally `{"verdict": "…", "iteration": "N/3"}`. The code-review-to-completion contract is less strict than plan-review-to-coder because completion is a terminal node.
+- Per-issue field caps (P1): `problem` / `suggestion` / `reference` ≤ 400 chars; `location` ≤ 200 chars; `category` ≤ 64 chars; `issues` array ≤ 30 items.
+- Do NOT wrap the block in markdown preamble ("Here is the JSON…") — the `VERDICT_JSON:` sentinel is the only anchor the hook searches for.
+- If the JSON block is malformed, missing, or fails schema validation, the hook falls back to regex on the `VERDICT:` line — your review is still captured, but `verdict_source` in `review-completions.jsonl` will record `regex_fallback` instead of `structured_json`.
+
+Why P4 ordering: putting `VERDICT_JSON:` immediately after `VERDICT:` guarantees the structured envelope arrives whole even when narrative is truncated by the 32 K subagent token cap. The trailing narrative is the fungible part.
 
 ### Code Review: {branch}
 Issues: {N} BLOCKER, {N} MAJOR, {N} MINOR
@@ -271,39 +304,9 @@ For handoff contract see [handoff-protocol.md] in workflow-protocols skill → c
 
 **Ready for:** merge | /coder (if CHANGES_REQUESTED)
 
-**VERDICT_JSON (MANDATORY — structured verdict marker, IMP-02):**
+<!-- P4: VERDICT_JSON rules moved adjacent to the example block in § Output Format above. -->
+<!-- The trailing duplicate previously here (deleted per Edit 5.2). -->
 
-After all above output is complete, emit a fenced JSON block prefixed by the literal sentinel `VERDICT_JSON:` on its own line. The hook (`save-review-checkpoint.sh`) parses this JSON and validates it against `.claude/schemas/handoff.schema.json` (contract `code_review_verdict`) for reliable verdict extraction. The human-readable `VERDICT:` line at the top of your response is preserved as a regex fallback.
-
-Emit EXACTLY this form as the **last content** of your response (no prose after the closing fence):
-
-````
-VERDICT_JSON:
-```json
-{
-  "$verdict_contract": "code_review_verdict",
-  "verdict": "APPROVED_WITH_COMMENTS",
-  "issues": [
-    {"id": "CR-001", "severity": "MINOR", "category": "style", "location": "internal/service/foo:Create", "problem": "…"}
-  ],
-  "handoff": {
-    "verdict": "APPROVED_WITH_COMMENTS",
-    "iteration": "1/3"
-  }
-}
-```
-````
-
-Rules:
-- `"$verdict_contract"` MUST be the literal string `"code_review_verdict"`.
-- `"verdict"` enum for code-review (5 values): `APPROVED` | `APPROVED_WITH_COMMENTS` | `CHANGES_REQUESTED` | `NEEDS_CHANGES` | `REJECTED` (MUST match the `VERDICT:` line above — hook logs a warning on mismatch).
-- `"issues"` is an array; use `[]` if none (empty array is legal — required when verdict is APPROVED with no findings).
-- `"handoff"` object: minimally `{"verdict": "…", "iteration": "N/3"}`. The code-review-to-completion contract is less strict than plan-review-to-coder because completion is a terminal node (no further review consumer).
-- Do NOT wrap the block in markdown preamble ("Here is the JSON…") — the `VERDICT_JSON:` sentinel is the only anchor the hook searches for.
-- Do NOT emit any prose, bullet points, or additional text after the closing triple-backtick fence. The hook parses up to end-of-message.
-- If the JSON block is malformed, missing, or fails schema validation, the hook falls back to regex on the `VERDICT:` line — your review is still captured, but `verdict_source` in `review-completions.jsonl` will record `regex_fallback` instead of `structured_json`.
-
-Why dual emission: The human-readable `VERDICT:` line is a defense-in-depth fallback for graceful degradation (IMP-01 warn-default philosophy). Both the top-of-response `VERDICT:` line AND the bottom-of-response `VERDICT_JSON:` block are required.
 
 ### Canonical IDs (IMP-03)
 
