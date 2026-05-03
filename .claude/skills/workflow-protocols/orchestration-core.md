@@ -39,7 +39,7 @@ flowchart LR
     SC -->|PASS/PARTIAL| CR{code-reviewer\nagent\nworktree}
 
     CR -->|APPROVED\nAPPROVED_WITH_COMMENTS| COMP[Phase 5\nCompletion]
-    CR -->|CHANGES_REQUESTED\nmax 3x| COD
+    CR -->|"CHANGES_REQUESTED | NEEDS_CHANGES (alias)\nmax 3x"| COD
 
     COMP --> GIT([git commit\n+ metrics])
 
@@ -61,7 +61,7 @@ flowchart LR
 
 **Phase 3.5 — Spec Check:** Inline in /coder. Verifies plan compliance after VERIFY passes. PASS/PARTIAL → Phase 4. FAIL → inline fix (max 1 retry) → re-run VERIFY → re-check.
 
-**Phase 4 — Code Review:** Before delegating, run `git worktree prune 2>/dev/null || true` to clean stale worktree metadata from crashed sessions. Delegate to code-reviewer agent. APPROVED → Done. APPROVED_WITH_COMMENTS → Done (log comments, proceed to completion). CHANGES_REQUESTED → Phase 3 (iteration N/3).
+**Phase 4 — Code Review:** Before delegating, run `git worktree prune 2>/dev/null || true` to clean stale worktree metadata from crashed sessions. Delegate to code-reviewer agent. APPROVED → Done. APPROVED_WITH_COMMENTS → Done (log comments, proceed to completion). CHANGES_REQUESTED OR NEEDS_CHANGES (legacy alias, normalized to CHANGES_REQUESTED) → Phase 3 (iteration N/3). Alias normalization emits `record_kind: "verdict_alias_normalized"` to handoff-validation.jsonl (see re-routing.md → verdict_aliases).
 
 **Phase 2/4 — Incomplete Output Recovery:** If a review agent (plan-reviewer or code-reviewer) returns without a clear verdict, the orchestrator runs an 8-step recovery procedure: filter review-completions.jsonl → direct transcript read (P3-1) → launch lightweight verdict-recovery agent if needed. This scenario is rare (after RULE_5 "Output First" was added to agents) but the recovery path is mandatory when triggered.
 
@@ -113,6 +113,20 @@ tracking_protocol:
       action: "code_review_counter += 1"
       then: "Append issues_history entry (phase=4, verdict, issues, resolved=[]) → Guard check → write checkpoint → re-run /coder"
       resolved_population: "pre_delegation step (before next code-reviewer launch) populates resolved[] in previous entry from coder handoff"
+    - trigger: "code-review verdict = NEEDS_CHANGES (legacy alias)"
+      action: "code_review_counter += 1 (treated identically to CHANGES_REQUESTED via re-routing.md → verdict_aliases)"
+      then: "Normalize verdict to CHANGES_REQUESTED → append issues_history entry (phase=4, verdict=CHANGES_REQUESTED, original_verdict=NEEDS_CHANGES, issues, resolved=[]) → emit `verdict_alias_normalized` telemetry record → Guard check → write checkpoint → re-run /coder"
+      telemetry: |
+        Append to .claude/workflow-state/handoff-validation.jsonl:
+          {
+            "ts": "{ISO-8601 UTC}",
+            "record_kind": "verdict_alias_normalized",
+            "agent": "code-reviewer",
+            "original_verdict": "NEEDS_CHANGES",
+            "normalized_verdict": "CHANGES_REQUESTED",
+            "iteration": "{N}/3",
+            "session_id": "{session_id}"
+          }
 
   guard_check:
     when: "BEFORE launching re-loop phase (planner or coder)"

@@ -54,8 +54,9 @@ spec_check:
 ## Inline Fix Protocol
 
 - FAIL (missing Part): implement missing Part → re-run VERIFY → re-run SPEC CHECK
-- **Max 1 inline fix retry.** If still FAIL after retry → set status: PARTIAL, proceed
-- PARTIAL: document gaps, proceed to handoff. code-reviewer treats gaps as MINOR
+- **Max 1 inline fix retry.** If still FAIL after retry → set status: PARTIAL AND set `failure_after_retry: true` in spec_check output, proceed
+- PARTIAL (no failure_after_retry flag): document gaps, proceed to handoff. code-reviewer treats gaps as MINOR
+- PARTIAL with `failure_after_retry: true`: code-reviewer escalates to BLOCKER (category: completeness) — see code-reviewer.md QUICK CHECK spec_check branch. This is the safety net for retry exhaustion: silent FAIL→PARTIAL→MINOR demotion is closed.
 - PASS: proceed to handoff
 
 ## Lightweight Mode (S complexity)

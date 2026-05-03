@@ -90,7 +90,9 @@ handoff_protocol:
       producer: "code-reviewer (agent)"
       consumer: "workflow/completion"
       payload:
+        "$handoff_contract": "code_review_to_completion"  # IMP-01.2 discriminator
         verdict: "APPROVED|APPROVED_WITH_COMMENTS|CHANGES_REQUESTED"
+        original_verdict: "{pre-normalization verdict, e.g. NEEDS_CHANGES}"  # OPTIONAL
         issues:
           - id: "CR-001"
             severity: "BLOCKER|MAJOR|MINOR|NIT"
@@ -99,6 +101,7 @@ handoff_protocol:
             problem: "..."
             suggestion: "..."
         iteration: "N/3"
+        narrative_for_coder: "{brief recommendation summary ≤400 chars}"  # OPTIONAL
 
   narrative_casting:
     purpose: "Context handoff to review phases without creation-process bias"
@@ -153,8 +156,9 @@ handoff_protocol:
       - "planner_to_plan_review — written in plan_review_delegation.pre_delegation step 0"
       - "plan_review_to_coder — written in plan_review_delegation.post_delegation step 4.5"
       - "coder_to_code_review — written in code_review_delegation.pre_delegation STEP 0 (since this Part)"
+      - "code_review_to_completion — written in code_review_delegation.post_delegation step 6.5 (since v1.23.x — closes IMP-01.2)"
     contracts_not_yet_covered:
-      - "designer_to_planner, code_review_to_completion → IMP-01.2"
+      - "designer_to_planner → future"
 
   verdict_envelopes:
     purpose: "Structured VERDICT_JSON envelopes emitted by review agents (IMP-02)"

@@ -56,21 +56,35 @@ output:
     description: "MUST generate on completion — passed to /code-review"
     # For handoff contract see [handoff-protocol.md] in workflow-protocols skill → coder_to_code_review
     narrative_for_reviewer: |
-      [Context from coder]:
-      - Coder implemented {N} Parts per plan {feature}.md
-      - Evaluate phase: {PROCEED|REVISE|RETURN} — adjustments: {list}
-      - Deviations from plan: {list or "none"}
-      - Spec check: {PASS|PARTIAL|FAIL} (coverage: {pct}%)
-      - High-risk areas: {list}
+      SUMMARY-ONLY contract (P-5, schema maxLength: 600):
+      Emit 1-2 sentences capturing the work + most critical risk.
+      Bullets/details MUST go into structured arrays (deviations_from_plan,
+      risks_mitigated, high_risk_areas, evaluate_adjustments) — those are NOT
+      subject to the 600 cap.
+
+      Template (single line):
+        "Implemented {N} Parts per {feature}.md; evaluate {PROCEED|REVISE|RETURN}; spec check {PASS|PARTIAL|FAIL}; primary risk: {one_word_or_short_phrase}."
+
+      ANTI-pattern (DO NOT emit):
+        - Multi-line bullets or [Context from coder]: blocks → exceed 600 chars → orchestrator silent-truncates
+          last (high-risk) section, leaving reviewer with incomplete picture.
+        - Embedding deviations / risks lists in narrative — those go in their own arrays.
+
+      Telemetry: orchestrator pre_delegation STEP 0 logs `narrative_truncated` to
+      handoff-validation.jsonl when narrative > 600 chars (P-5 record_kind).
     example: |
       Handoff → /code-review:
         branch: feature/{name}
         parts_implemented: ["Part 1: DB migration + queries", "Part 2: Domain models", "Part 3: Service/UseCase", "Part 4: API handler", "Part 5: Tests"]
+        narrative_for_reviewer: "Implemented 5 Parts per user-create.md; evaluate REVISE; spec check PASS; primary risk: race in service mutex."
         evaluate_adjustments:
           - "Part 3: Simplified error handling — using sentinel instead of custom error type"
         risks_mitigated:
           - "N+1 query in Part 2 — optimized with batch query"
+          - "Race in service mutex — added Lock around user-write path (Part 3)"
         deviations_from_plan: []
+        high_risk_areas:
+          - "Part 3: service mutex Lock ordering"
         verify_status:
           lint: PASS
           test: PASS
@@ -221,6 +235,19 @@ workflow:
       condition: "Active when /coder re-enters after CHANGES_REQUESTED"
       skip_when: "First run (no prior code-review)"
       reference: ".claude/skills/coder-rules/review-response.md"
+      structured_handoff_read:
+        when: "On Phase 0.5 entry, BEFORE TRIAGE step"
+        action: |
+          Check for .claude/workflow-state/{feature}-handoff.json with discriminator
+          $handoff_contract == "code_review_to_completion" (IMP-01.2). If present:
+          - Use issues[] from JSON as authoritative source (canonical CR-IDs included).
+          - Use original_verdict (if set) to detect alias-normalized cases.
+          - Use narrative_for_coder (if set) as supplemental context.
+          If absent OR discriminator mismatch:
+          - Fall back to delegation-prompt-text path (existing behavior).
+          - Issues parsed from prompt text + checkpoint.issues_history[].
+        rationale: "Closes IMP-01.2 asymmetry. Schema-validated issues replace text parsing."
+        reference: ".claude/schemas/handoff.schema.json → code_review_to_completion"
       steps:
         - "TRIAGE: Parse issues by severity from code-reviewer handoff"
         - "VERIFY: Check each issue against current codebase"

@@ -289,6 +289,21 @@ diff-manifest — both required for iteration 2+ correctness.
       Source of fields: extract from coder's emitted handoff narrative.
       Cap rule (P1 schema constraint): truncate `narrative_for_reviewer` at 600 chars
       BEFORE write — schema validation rejects payloads exceeding the cap.
+      Telemetry (P-5): when truncation occurs, append record to
+      .claude/workflow-state/handoff-validation.jsonl:
+          {
+            "ts": "{ISO-8601 UTC}",
+            "record_kind": "narrative_truncated",
+            "agent": "/coder",
+            "feature": "{feature}",
+            "iteration": "{N}/3",
+            "original_length": {pre-trim length, integer},
+            "truncated_length": 600,
+            "session_id": "{session_id}"
+          }
+      Rationale: silent truncation hides the loss of high_risk_areas / deviations
+      narrative content. Telemetry makes it observable; root-cause fix is
+      coder.md narrative_for_reviewer summary-only contract (see coder.md → handoff_output).
       Failure handling: if write fails (disk error) or validation fails in strict mode →
       log WARN and proceed with delegation (graceful degradation; agent still gets the
       narrative via the delegation prompt template).
@@ -307,6 +322,21 @@ diff-manifest — both required for iteration 2+ correctness.
     1. Validate output (SEE output_validation in incomplete-output-recovery.md —
        load that file if INCOMPLETE verdict detected)
     2. Extract verdict from VERDICT: header (first line)
+    2.1 (P-1 alias normalization): If extracted verdict == "NEEDS_CHANGES" (code-review legacy alias):
+        a. Normalize: routing_verdict = "CHANGES_REQUESTED"
+        b. Append record to .claude/workflow-state/handoff-validation.jsonl:
+             {
+               "ts": "{ISO-8601 UTC now}",
+               "record_kind": "verdict_alias_normalized",
+               "agent": "code-reviewer",
+               "original_verdict": "NEEDS_CHANGES",
+               "normalized_verdict": "CHANGES_REQUESTED",
+               "iteration": "{N}/3",
+               "session_id": "{session_id}"
+             }
+        c. Use routing_verdict for ALL downstream routing decisions (counter increment, issues_history, re-route).
+        d. Preserve original_verdict in checkpoint.issues_history[entry].original_verdict for audit trail.
+        e. Reference: re-routing.md → verdict_aliases.
     3. Read canonical_issue_ids from latest .claude/workflow-state/review-completions.jsonl
        entry for code-reviewer in this session.
        current_canonical_ids = [c.id for c in canonical_issue_ids]
@@ -325,6 +355,26 @@ diff-manifest — both required for iteration 2+ correctness.
            regression_ids: regression_ids,
          }
     6. Write checkpoint: phase_completed=4, verdict={extracted_verdict}
+    6.5 (IMP-01.2 — symmetry with plan_review_delegation step 6.5):
+        Write code-review handoff JSON to .claude/workflow-state/{feature}-handoff.json.
+        Hook auto-validates on write. Format (contract code_review_to_completion):
+          {
+            "$handoff_contract": "code_review_to_completion",
+            "verdict": "{normalized verdict}",
+            "original_verdict": "{pre-normalization verdict if alias normalised, omit otherwise}",
+            "issues": [{ ...canonical-ID issues from latest review-completions.jsonl entry... }],
+            "iteration": "{N}/3",
+            "narrative_for_coder": "{≤400 char summary, OPTIONAL}"
+          }
+        Source of fields:
+          - verdict, original_verdict: from step 2 + step 2.1 (alias normalization)
+          - issues: read canonical_issue_ids[] from latest review-completions.jsonl entry; map to schema shape using IMP-03 normalised IDs; severity/category/problem/suggestion/location populated from canonical_issue_ids[].* fields written by save-review-checkpoint.sh
+          - iteration: from checkpoint.iteration.code_review
+          - narrative_for_coder: extract from agent's narrative section if ≤400 chars, omit otherwise
+        Failure handling: if write fails (disk error) or validation fails in strict mode →
+          log WARN to handoff-validation.jsonl (record_kind: "code_review_to_completion_write_failed")
+          and proceed with re-route (graceful degradation; coder falls back to delegation-prompt-text path).
+        Backwards compat: file is OPTIONAL on coder side — Phase 0.5 reads if present, falls back if absent.
     7. If verdict is INCOMPLETE → Read .claude/skills/workflow-protocols/incomplete-output-recovery.md
        and follow on_incomplete_output fallback chain (step_0..step_5).
 

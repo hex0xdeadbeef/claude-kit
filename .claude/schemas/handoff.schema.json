@@ -1,15 +1,16 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://claude-kit/schemas/handoff.schema.json",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "title": "Claude Kit — Handoff & Verdict Payload Schema",
-  "description": "Validates .claude/workflow-state/*-handoff.json inter-phase payloads AND structured review verdicts emitted by plan-reviewer / code-reviewer agents. oneOf switches on either $handoff_contract (handoff envelope) or $verdict_contract (verdict envelope). Schema version 1.1.0 (additive minor): added coder_to_code_review contract (D2 from post-1.17-symmetry-audit). Existing 1.0.0 fixtures remain valid (additive only).",
+  "description": "Validates .claude/workflow-state/*-handoff.json inter-phase payloads AND structured review verdicts emitted by plan-reviewer / code-reviewer agents. oneOf switches on either $handoff_contract (handoff envelope) or $verdict_contract (verdict envelope). Schema version 1.2.0 (additive minor): added code_review_to_completion contract (closes IMP-01.2). Existing 1.0.0/1.1.0 fixtures remain valid (additive only).",
   "oneOf": [
     { "$ref": "#/$defs/planner_to_plan_review" },
     { "$ref": "#/$defs/plan_review_to_coder" },
     { "$ref": "#/$defs/coder_to_code_review" },
     { "$ref": "#/$defs/plan_review_verdict" },
-    { "$ref": "#/$defs/code_review_verdict" }
+    { "$ref": "#/$defs/code_review_verdict" },
+    { "$ref": "#/$defs/code_review_to_completion" }
   ],
   "$defs": {
     "planner_to_plan_review": {
@@ -328,6 +329,10 @@
             "issues": {
               "type": "array",
               "items": { "type": "object" }
+            },
+            "failure_after_retry": {
+              "type": "boolean",
+              "description": "OPTIONAL flag (default: absent → false). Set to true by /coder Phase 3.5 when status=PARTIAL was reached via retry exhaustion (FAIL → 1 retry → still FAIL → status set to PARTIAL per spec-check.md). Code-reviewer treats PARTIAL+failure_after_retry==true as BLOCKER (category: completeness), not MINOR. Closes silent demotion bypass."
             }
           },
           "additionalProperties": true
@@ -336,6 +341,63 @@
           "type": "string",
           "description": "Code-review iteration counter, format N/3 where N in {1,2,3} (max 3 per workflow loop limit).",
           "pattern": "^[123]/3$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "code_review_to_completion": {
+      "title": "code_review_to_completion",
+      "description": "Handoff from code-reviewer agent to workflow/completion (or coder re-entry on CHANGES_REQUESTED). Closes IMP-01.2 — symmetry with plan_review_to_coder. Written by orchestrator post_delegation step 6.5 after verdict extraction.",
+      "type": "object",
+      "required": [
+        "$handoff_contract",
+        "verdict",
+        "issues",
+        "iteration"
+      ],
+      "properties": {
+        "$handoff_contract": {
+          "const": "code_review_to_completion",
+          "description": "Discriminator — must be 'code_review_to_completion'."
+        },
+        "verdict": {
+          "type": "string",
+          "enum": ["APPROVED", "APPROVED_WITH_COMMENTS", "CHANGES_REQUESTED", "NEEDS_CHANGES", "REJECTED"],
+          "description": "Code-reviewer verdict (post-alias-normalization at orchestrator). NEEDS_CHANGES retained for cross-version compatibility — see re-routing.md verdict_aliases."
+        },
+        "original_verdict": {
+          "type": "string",
+          "enum": ["APPROVED", "APPROVED_WITH_COMMENTS", "CHANGES_REQUESTED", "NEEDS_CHANGES", "REJECTED"],
+          "description": "OPTIONAL. Pre-normalization verdict. Set when alias normalization occurred (e.g., NEEDS_CHANGES → CHANGES_REQUESTED). Absent when no normalization."
+        },
+        "issues": {
+          "type": "array",
+          "description": "Canonical-ID issues from code-reviewer's structured verdict. Mirror of code_review_verdict.issues shape — same per-issue caps.",
+          "maxItems": 30,
+          "items": {
+            "type": "object",
+            "required": ["id", "severity", "category", "problem"],
+            "properties": {
+              "id":         { "type": "string", "pattern": "^CR-[0-9a-f]{8}$" },
+              "severity":   { "type": "string", "enum": ["BLOCKER", "MAJOR", "MINOR", "NIT"] },
+              "category":   { "type": "string", "maxLength": 64 },
+              "location":   { "type": "string", "maxLength": 200 },
+              "problem":    { "type": "string", "maxLength": 400 },
+              "suggestion": { "type": "string", "maxLength": 400 },
+              "reference":  { "type": "string", "maxLength": 400 }
+            },
+            "additionalProperties": false
+          }
+        },
+        "iteration": {
+          "type": "string",
+          "description": "Code-review iteration counter. Format N/3 where N in {1,2,3} (max 3 per workflow loop limit).",
+          "pattern": "^[123]/3$"
+        },
+        "narrative_for_coder": {
+          "type": "string",
+          "description": "OPTIONAL. Brief recommendation summary for coder re-entry (≤400 chars). Detailed issues live in issues[].",
+          "maxLength": 400
         }
       },
       "additionalProperties": false
