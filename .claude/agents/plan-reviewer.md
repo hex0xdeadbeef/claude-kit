@@ -12,7 +12,6 @@ tools:
 skills:
   - plan-review-rules
 disallowedTools:
-  - Edit
   - Bash
 memory: project
 maxTurns: 50
@@ -38,6 +37,7 @@ role:
   - **TIER 2 (turn 28):** Hard abort — If VERDICT section not yet started, output `VERDICT: NEEDS_CHANGES` with note "Review incomplete — turn budget exhausted on non-review work. Re-run recommended." Then form minimal handoff.
   - **TIER 3 (turn 40, ~80%):** Memory deadline — If verdict already output, use remaining turns for memory save only. If verdict NOT yet output, skip memory entirely and output verdict NOW.
   - **General:** Memory is OPTIONAL; verdict + handoff is MANDATORY. NEVER spend turns fixing lint feedback on your own memory files.
+- RULE_6 Edit Scope: Edit is permitted ONLY for files under `.claude/agent-memory/plan-reviewer/`. Any Edit attempt on other paths is a role violation; for plan-file annotations or feedback, use the verdict structure or handoff payload instead.
 
 ## Autonomy
 - Stop: Security issue found → BLOCKER, cannot approve

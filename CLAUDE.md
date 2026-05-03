@@ -39,8 +39,27 @@ Optional tools used by hooks. Missing tools → graceful degradation (warn, non-
 - `CLAUDE_DELTA_REVIEW_MODE` — delta-only reviewer focus on iter ≥2 (IMP-04 extension); values `off|warn|strict`.
 - `CLAUDE_ISSUE_ID_NORMALIZE_VERSION` — canonical-ID hash input normalization version. `2` (default) applies NFKC + strip + collapse-whitespace + lowercase + strip-terminal-punctuation before sha256. `1` reverts to raw v1 hashing for forensic re-run of pre-2026-05-02 IDs.
 - `CLAUDE_VERDICT_BLOCK_TTL_HOURS` — TTL (in hours) for `.verdict-block-{agent_id}` sentinels. Default `6`. `0` disables eviction (pre-Part-4 behaviour).
+- `CLAUDE_MEMORY_FRESHNESS_MODE` — workflow startup step 0.06 memory-staleness scan (auto-memory + agent-memory dirs); values `off|warn|strict`, default `warn`. `strict` blocks runs of complexity ≥ M when any tracked memory file is older than 30 days.
 
 Full rationale + log rotation tunables (`CLAUDE_WORKFLOW_STATE_DIR`, `CLAUDE_VALIDATION_LOG_MAX_LINES`) in `.claude/settings.local.json.example`.
+
+## Memory Mechanisms
+
+Claude Code v2.1.118 ships two independent native memory mechanisms; both write a `MEMORY.md` index whose first 200 lines / 25 KB load into context at session/agent start. They are NOT the same feature.
+
+| Scope | Path | Owner | Persistence |
+| ----- | ---- | ----- | ----------- |
+| Auto-memory | `~/.claude/projects/<slug>/memory/` | Main session (Claude itself) | Machine-local; not shared via VCS |
+| Subagent (`memory: project`) | `.claude/agent-memory/<name>/` | Subagent declaring `memory: project` | Project-shared via VCS |
+| Subagent (`memory: user`) | `~/.claude/agent-memory/<name>/` | Subagent declaring `memory: user` | User-local; all your projects |
+
+**Auto-memory** (`autoMemoryEnabled: true` in `settings.json`) is owned by the main session: Claude decides when something is worth remembering and writes to the path above. Path includes a user-specific slug derived from git repo root; project-wide override is REJECTED by Claude Code by design.
+
+**Subagent memory** at `project` scope is the kit's primary integration surface. Three agents declare `memory: project`: `code-reviewer`, `plan-reviewer`, `code-researcher`. The native loader injects the first 200 lines of `.claude/agent-memory/<name>/MEMORY.md` into the agent's system prompt at SubagentStart and auto-grants Read/Write/Edit on that dir. Worktree-isolated agents (`code-reviewer`) sync via `prepare-worktree.sh` (forward) and `sync-agent-memory.sh` (back) — see `.claude/skills/workflow-protocols/agent-memory-protocol.md`.
+
+Workflow startup step 0.06 (see `.claude/commands/workflow.md`) scans both paths for staleness; the `CLAUDE_MEMORY_FRESHNESS_MODE` env var (above) toggles WARN/strict behavior.
+
+Canonical references: <https://code.claude.com/docs/en/memory> (auto-memory), <https://code.claude.com/docs/en/sub-agents#enable-persistent-memory> (subagent memory).
 
 ## TDD Policy
 

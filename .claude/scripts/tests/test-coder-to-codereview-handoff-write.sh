@@ -38,6 +38,7 @@ pass "AC-P2-4 — narrative_for_reviewer + 600-char cap both documented within S
 # AC-P2-2: Build a fixture and run validate-handoff.sh on it
 FIXTURE_DIR="$(mktemp -d)"
 trap 'rm -rf "$FIXTURE_DIR"' EXIT
+export CLAUDE_WORKFLOW_STATE_DIR="$FIXTURE_DIR"
 VALID_FIXTURE="$FIXTURE_DIR/valid-handoff.json"
 cat > "$VALID_FIXTURE" <<'JSON'
 {

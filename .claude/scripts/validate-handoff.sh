@@ -152,6 +152,18 @@ if [[ ! "${MAX_LINES_RAW}" =~ ^[0-9]+$ ]] || [[ "${MAX_LINES_RAW}" -le 0 ]]; the
 fi
 MAX_LOG_LINES="${MAX_LINES_RAW}"
 
+# ─── P-PRE-2: full_output truncation cap (env-tunable) ─────────────────────────
+# Detail-log full_output field is bounded to limit per-line size. Default 800
+# chars; override via CLAUDE_VALIDATION_DETAIL_FULL_OUTPUT_CAP. Invalid value
+# falls back to default. Truncated output gets a clear suffix indicating
+# original length so operators can grep for entries needing investigation.
+DETAIL_FULL_OUTPUT_CAP_RAW="${CLAUDE_VALIDATION_DETAIL_FULL_OUTPUT_CAP:-800}"
+if [[ ! "${DETAIL_FULL_OUTPUT_CAP_RAW}" =~ ^[0-9]+$ ]] || [[ "${DETAIL_FULL_OUTPUT_CAP_RAW}" -le 0 ]]; then
+  DETAIL_FULL_OUTPUT_CAP=800
+else
+  DETAIL_FULL_OUTPUT_CAP="${DETAIL_FULL_OUTPUT_CAP_RAW}"
+fi
+
 # rotate_if_oversized — best-effort single-archive rotation.
 # Args:
 #   $1 = log file path
@@ -232,13 +244,23 @@ ERROR_SUMMARY=$(printf '%s\n' "${VALIDATION_OUTPUT}" \
   | tr '\n' ' ' \
   | tr -s ' ' \
   | cut -c1-300)
+
+# P-PRE-2: cap full_output at DETAIL_FULL_OUTPUT_CAP chars + truncation suffix
+FULL_OUTPUT_RAW="${VALIDATION_OUTPUT}"
+FULL_OUTPUT_LEN=${#FULL_OUTPUT_RAW}
+if [[ "${FULL_OUTPUT_LEN}" -gt "${DETAIL_FULL_OUTPUT_CAP}" ]]; then
+  FULL_OUTPUT_CAPPED="${FULL_OUTPUT_RAW:0:${DETAIL_FULL_OUTPUT_CAP}}"$'\n'"[truncated — original ${FULL_OUTPUT_LEN} chars]"
+else
+  FULL_OUTPUT_CAPPED="${FULL_OUTPUT_RAW}"
+fi
+
 DETAIL_ENTRY=$(jq -n -c \
   --arg ts "${TIMESTAMP}" \
   --arg file "${HANDOFF_FILE}" \
   --arg kind "${RECORD_KIND}" \
   --argjson rc "${VALIDATION_RC}" \
   --arg summary "${ERROR_SUMMARY}" \
-  --arg full "${VALIDATION_OUTPUT}" \
+  --arg full "${FULL_OUTPUT_CAPPED}" \
   '{timestamp: $ts, file: $file, record_kind: $kind, rc: $rc, error_summary: $summary, full_output: $full}' \
   2>/dev/null || echo "{}")
 # Part 2 / P2: rotate detail.log before append.

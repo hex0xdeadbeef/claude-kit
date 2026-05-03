@@ -51,6 +51,7 @@ pass "AC-P2.5 — graceful fallback documented"
 # AC-P2.6: validator accepts valid + rejects invalid fixture
 FIXTURE_DIR="$(mktemp -d)"
 trap 'rm -rf "$FIXTURE_DIR"' EXIT
+export CLAUDE_WORKFLOW_STATE_DIR="$FIXTURE_DIR"
 
 VALID_FIXTURE="$FIXTURE_DIR/valid-completion.json"
 cat > "$VALID_FIXTURE" <<'JSON'

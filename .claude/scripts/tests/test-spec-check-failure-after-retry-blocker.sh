@@ -54,6 +54,7 @@ pass "AC-P3.5 — existing PARTIAL→MINOR fallback preserved for non-failure ca
 # AC-P3.6: fixtures (valid with flag, invalid bad-type, valid without flag)
 FIXTURE_DIR="$(mktemp -d)"
 trap 'rm -rf "$FIXTURE_DIR"' EXIT
+export CLAUDE_WORKFLOW_STATE_DIR="$FIXTURE_DIR"
 
 cat > "$FIXTURE_DIR/with-flag.json" <<'JSON'
 {

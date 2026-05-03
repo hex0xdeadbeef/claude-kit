@@ -133,6 +133,37 @@ startup:
         '<your-[a-z-]+>' is extensible to future PK slot additions without
         grep-pattern updates.
 
+    - step: 0.06
+      action: "Pre-flight: native memory freshness check"
+      tool: "Bash (read-only)"
+      check: |
+        Scan both memory paths for file mtime:
+          ~/.claude/projects/{slug}/memory/MEMORY.md (auto-memory; main session-owned)
+          .claude/agent-memory/{plan-reviewer,code-reviewer,code-researcher}/MEMORY.md
+        Count files where mtime > 30 days ago. Track oldest age in days.
+      mode_env: "CLAUDE_MEMORY_FRESHNESS_MODE (off|warn|strict, default warn)"
+      behavior:
+        - if: "Mode is off"
+          then: "PROCEED silently"
+        - if: "Stale count == 0 (no files >30 days)"
+          then: "PROCEED silently"
+        - if: "Stale count >= 1 AND mode is warn"
+          then: "[workflow] WARN: memory N file(s) stale/expired (oldest: NNNN days)"
+        - if: "Stale count >= 1 AND mode is strict AND complexity >= M"
+          then: "BLOCK; emit FATAL message [workflow] WARN: memory N file(s) stale/expired (oldest: NNNN days) and exit 2"
+        - if: "Memory dirs missing entirely (fresh clone — never bootstrapped)"
+          then: "PROCEED silently (treat as not-yet-bootstrapped, not stale)"
+      exit_on_strict: 2
+      probe_for_acceptance: |
+        Falsifiable predicate: Touch a file's mtime to >60 days ago, run
+        /workflow with default mode, observe exactly one stderr WARN line
+        matching the template above.
+      purpose: |
+        Surfaces the silent staleness that auto-memory and subagent memory can
+        accumulate. Default warn-only is non-blocking; opt-in strict is for
+        environments where stale memory must be cleared before XL runs proceed.
+        Mirrors the step 0.05 PROJECT-KNOWLEDGE.md pre-flight pattern.
+
     - step: 0
       action: "Task Analysis — task classification"
       reference: "For details see [task-analysis.md] in planner-rules skill"

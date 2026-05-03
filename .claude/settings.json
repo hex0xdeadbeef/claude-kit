@@ -46,7 +46,10 @@
       "Edit(/.claude/skills/systematic-debugging/**)",
       "Bash(git worktree:*)",
       "Bash(npx markdownlint-cli:*)",
-      "Bash(.claude/scripts/tests/*.sh)"
+      "Bash(.claude/scripts/tests/*.sh)",
+      "Bash(grep -nE '^tools:$' .claude/agents/code-researcher.md)",
+      "Bash(grep -c '^## Memory Mechanisms$' CLAUDE.md)",
+      "Bash(bash .claude/scripts/tests/test-memory-freshness-warn.sh)"
     ],
     "deny": [
       "Bash(rm -rf *)",
@@ -69,12 +72,12 @@
     ]
   },
   "model": "opus",
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "sequential-thinking",
     "context7",
     "tree_sitter"
   ],
-  "enableAllProjectMcpServers": true,
   "hooks": {
     "InstructionsLoaded": [
       {
@@ -335,8 +338,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/scripts/save-review-checkpoint.sh",
-            "blocking": true
+            "command": ".claude/scripts/save-review-checkpoint.sh"
           }
         ]
       }

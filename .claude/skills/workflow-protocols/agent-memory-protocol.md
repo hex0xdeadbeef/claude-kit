@@ -22,9 +22,15 @@ agent_memory_protocol:
       code-researcher: "Package locations, key interfaces, codebase topology, patterns found"
       code-reviewer: "Code anti-patterns, recurring issues, good patterns from APPROVED reviews"
       plan-reviewer: "Plan anti-patterns, common section gaps, successful architecture patterns"
+    what_to_save_template: |
+      Self-check before writing:
+      1. Was anything novel this iteration that future me should know?
+      2. Did the user push back on a previous default or correct an assumption?
+      3. Was a non-obvious project fact uncovered (cross-file invariant, hidden constraint)?
+      If all three answer "no" → SKIP memory update for this run.
 
   first_run:
-    trigger: "MEMORY.md does not exist in agent memory dir"
+    trigger: "MEMORY.md does not exist in agent memory dir OR file is empty (size==0)"
     action: "Initialize MEMORY.md with brief project structure summary"
     what_to_save:
       code-researcher: "Package structure, key entry points"
