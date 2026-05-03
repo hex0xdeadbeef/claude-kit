@@ -368,7 +368,10 @@ diff-manifest — both required for iteration 2+ correctness.
           }
         Source of fields:
           - verdict, original_verdict: from step 2 + step 2.1 (alias normalization)
-          - issues: read canonical_issue_ids[] from latest review-completions.jsonl entry; map to schema shape using IMP-03 normalised IDs; severity/category/problem/suggestion/location populated from canonical_issue_ids[].* fields written by save-review-checkpoint.sh
+          - issues: cross-join two sources by id —
+              * id, category, location, problem: from canonical_issue_ids[] in latest review-completions.jsonl entry (IMP-03 normalised IDs; canonical-only fields stored by save-review-checkpoint.sh:365-370)
+              * severity, suggestion, reference: from raw extracted issues in checkpoint.issues_history[latest phase=4 entry].issues[] (full per-issue shape including severity/suggestion preserved from VERDICT_JSON parsed.issues at hook extraction time)
+              Schema requires {id, severity, category, problem}; severity must come from raw issues — canonical_issue_ids[] does NOT carry severity by design (IMP-03 hashes only category|location|problem for stable IDs).
           - iteration: from checkpoint.iteration.code_review
           - narrative_for_coder: extract from agent's narrative section if ≤400 chars, omit otherwise
         Failure handling: if write fails (disk error) or validation fails in strict mode →

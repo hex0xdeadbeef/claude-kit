@@ -86,15 +86,17 @@ role:
      - If spec_check.status == PARTIAL:
        - If spec_check.failure_after_retry == true:
          - Raise BLOCKER issue:
-             {
-               "id": "(advisory; hook normalises to canonical CR-)",
-               "severity": "BLOCKER",
-               "category": "completeness",
-               "location": "Part {first missing or earliest gap}",
-               "problem": "Spec check FAIL persisted after retry exhaustion (Phase 3.5 max 1 inline fix retry). Coder set failure_after_retry=true. Plan compliance unmet — silent demotion to MINOR is bypassed.",
-               "suggestion": "Re-iterate from /coder with explicit attention to the unimplemented Part(s). If Part is genuinely infeasible, re-route to /planner via RETURN decision in Phase 1.5 EVALUATE.",
-               "reference": ".claude/skills/coder-rules/spec-check.md → Inline Fix Protocol"
-             }
+           ```json
+           {
+             "id": "(advisory; hook normalises to canonical CR-)",
+             "severity": "BLOCKER",
+             "category": "completeness",
+             "location": "Part {first missing or earliest gap}",
+             "problem": "Spec check FAIL persisted after retry exhaustion (Phase 3.5 max 1 inline fix retry). Coder set failure_after_retry=true. Plan compliance unmet — silent demotion to MINOR is bypassed.",
+             "suggestion": "Re-iterate from /coder with explicit attention to the unimplemented Part(s). If Part is genuinely infeasible, re-route to /planner via RETURN decision in Phase 1.5 EVALUATE.",
+             "reference": ".claude/skills/coder-rules/spec-check.md → Inline Fix Protocol"
+           }
+           ```
          - Output: `- Spec compliance: PARTIAL+failure_after_retry → BLOCKER raised (Part {N} unimplemented after retry exhaustion)`
        - Else (failure_after_retry absent or false):
          - Note gaps from spec_check.issues, factor into REVIEW as MINOR (existing behavior — unchanged)
