@@ -42,3 +42,4 @@ caveman/
 .meta-agent/runs/
 !.meta-agent/runs/.gitkeep
 # --- End Claude Kit ---
+docs/research/
