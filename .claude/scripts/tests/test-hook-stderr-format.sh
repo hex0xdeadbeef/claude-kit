@@ -53,16 +53,20 @@ run_test \
 # Test 3: grep-check yields 0 violations in current tree (AC-2 regression guard)
 # Verifies that after all P1-06 fixes are applied, no echo >&2 lines are non-conforming.
 echo "--- grep-check: 0 non-conforming >&2 lines in tree ---"
-VIOLATIONS=$(grep -rn --include='*.sh' --exclude-dir=tests '>&2[[:space:]]*$' .claude/scripts/ \
-  | grep -cvE '\[[a-zA-Z0-9_-]+\][[:space:]]+(INFO|WARN|ERROR|FATAL|SKIP|PASS|FAIL|BLOCKING):' \
+# Two shapes accepted (Part 3 / Proposal J extension):
+#   legacy: "[name] LABEL: msg"
+#   new:    "[name][session=<sid>][eff=<level>] LABEL: msg"  (from lib/log.sh)
+# The trailing "LABEL: msg" predicate is the byte-stable invariant.
+VIOLATIONS=$(grep -rn --include='*.sh' --exclude-dir=tests --exclude-dir=lib '>&2[[:space:]]*$' .claude/scripts/ \
+  | grep -cvE '\[[a-zA-Z0-9_-]+\](\[[a-zA-Z0-9_=-]+\])*[[:space:]]+(INFO|WARN|ERROR|FATAL|SKIP|PASS|FAIL|BLOCKING):' \
   || true)
 if [[ "$VIOLATIONS" -eq 0 ]]; then
   echo "  PASS: grep-check → 0 non-conforming echo >&2 lines"
   PASS=$((PASS + 1))
 else
   echo "  FAIL: grep-check → $VIOLATIONS non-conforming >&2 line(s)"
-  grep -rn --include='*.sh' --exclude-dir=tests '>&2[[:space:]]*$' .claude/scripts/ \
-    | grep -vE '\[[a-zA-Z0-9_-]+\][[:space:]]+(INFO|WARN|ERROR|FATAL|SKIP|PASS|FAIL|BLOCKING):' \
+  grep -rn --include='*.sh' --exclude-dir=tests --exclude-dir=lib '>&2[[:space:]]*$' .claude/scripts/ \
+    | grep -vE '\[[a-zA-Z0-9_-]+\](\[[a-zA-Z0-9_=-]+\])*[[:space:]]+(INFO|WARN|ERROR|FATAL|SKIP|PASS|FAIL|BLOCKING):' \
     | head -5 | sed 's/^/    /'
   FAIL=$((FAIL + 1))
 fi

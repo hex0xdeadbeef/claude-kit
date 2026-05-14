@@ -117,6 +117,17 @@ files:
     lifecycle: cross-session
     cleanup: "Manual — user decides when to archive/clear. Suggest at 100+ entries."
 
+  - name: "tool-failures.jsonl"
+    format: JSONL
+    written_by:
+      - "log-tool-failure.sh (PostToolUseFailure, matcher: Bash)"
+    read_by:
+      - "Operator on-demand — failure-pattern detection across iterations"
+      - "systematic-debugging skill — Phase 1 Root Cause Investigation input (last 3 entries)"
+    schema: "{ts, session_id, tool_name, command_excerpt, exit_signature, effort_level}"
+    lifecycle: cross-session
+    cleanup: "Head-trim rotation at CLAUDE_TOOL_FAILURES_MAX_LINES (default 1000); never auto-deleted."
+
   - name: "session-analytics.jsonl"
     format: JSONL
     written_by:
@@ -172,8 +183,8 @@ lifecycle_categories:
 
   cross-session:
     description: "Persistent data that accumulates across workflows"
-    files: ["pipeline-metrics.jsonl", "session-analytics.jsonl", "config-changes.jsonl"]
-    retention: "Manual cleanup — suggest archiving when file exceeds 100 entries"
+    files: ["pipeline-metrics.jsonl", "session-analytics.jsonl", "config-changes.jsonl", "tool-failures.jsonl"]
+    retention: "Manual cleanup — suggest archiving when file exceeds 100 entries (tool-failures.jsonl auto-rotates at CLAUDE_TOOL_FAILURES_MAX_LINES, default 1000)"
 
   debug:
     description: "Ephemeral debug/discovery data, no pipeline dependency"

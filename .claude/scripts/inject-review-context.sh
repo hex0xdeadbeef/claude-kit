@@ -586,6 +586,22 @@ if not pk_block_added:
     except Exception:
         pass  # Telemetry is best-effort; never block injection
 
+# Proposal G: surface current effort level to reviewer when available.
+# Reads $CLAUDE_EFFORT (v2.1.133+ hook subprocess env) first; falls back to
+# effort.level from the SubagentStart hook payload. Omitted when both absent.
+_eff_level = os.environ.get("CLAUDE_EFFORT", "").strip()
+if not _eff_level:
+    try:
+        _hook_payload = json.loads(os.environ.get("_HOOK_INPUT", "{}"))
+        _eff_obj = _hook_payload.get("effort") if isinstance(_hook_payload, dict) else None
+        if isinstance(_eff_obj, dict):
+            _eff_level = str(_eff_obj.get("level", "")).strip()
+    except Exception:
+        _eff_level = ""
+if _eff_level:
+    lines.append("")
+    lines.append(f"Effort: {_eff_level}")
+
 text = "\n".join(lines)
 # P3: sidecar mode — write to file, emit empty additionalContext.
 _sidecar_only = os.environ.get("_SIDECAR_ONLY", "0") == "1"

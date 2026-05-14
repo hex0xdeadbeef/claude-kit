@@ -85,7 +85,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/scripts/validate-instructions.sh"
+            "command": ".claude/scripts/validate-instructions.sh",
+            "args": []
           }
         ]
       }
@@ -96,7 +97,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/scripts/protect-files.sh"
+            "command": ".claude/scripts/protect-files.sh",
+            "args": []
           }
         ]
       },
@@ -123,7 +125,8 @@
           {
             "type": "command",
             "command": ".claude/agents/meta-agent/scripts/check-artifact-size.sh",
-            "if": "Write(.claude/**)"
+            "if": "Write(.claude/**)",
+            "args": []
           }
         ]
       },
@@ -132,7 +135,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/scripts/block-dangerous-commands.sh"
+            "command": ".claude/scripts/block-dangerous-commands.sh",
+            "args": []
           }
         ]
       },
@@ -142,7 +146,8 @@
           {
             "type": "command",
             "command": ".claude/scripts/pre-commit-build.sh",
-            "if": "Bash(git commit*)"
+            "if": "Bash(git commit*)",
+            "args": []
           }
         ]
       }
@@ -153,7 +158,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/scripts/auto-fmt.sh"
+            "command": ".claude/scripts/auto-fmt.sh",
+            "args": []
           }
         ]
       },
@@ -163,7 +169,8 @@
           {
             "type": "command",
             "command": ".claude/agents/meta-agent/scripts/yaml-lint.sh",
-            "if": "Edit(.claude/**)"
+            "if": "Edit(.claude/**)",
+            "args": []
           }
         ]
       },
@@ -173,42 +180,50 @@
           {
             "type": "command",
             "command": ".claude/agents/meta-agent/scripts/check-references.sh",
-            "if": "Write(.claude/**)"
+            "if": "Write(.claude/**)",
+            "args": []
           },
           {
             "type": "command",
             "command": ".claude/agents/meta-agent/scripts/check-references.sh",
-            "if": "Edit(.claude/**)"
+            "if": "Edit(.claude/**)",
+            "args": []
           },
           {
             "type": "command",
             "command": ".claude/agents/meta-agent/scripts/check-references.sh",
-            "if": "Write(README.md)"
+            "if": "Write(README.md)",
+            "args": []
           },
           {
             "type": "command",
             "command": ".claude/agents/meta-agent/scripts/check-references.sh",
-            "if": "Edit(README.md)"
+            "if": "Edit(README.md)",
+            "args": []
           },
           {
             "type": "command",
             "command": ".claude/agents/meta-agent/scripts/check-references.sh",
-            "if": "Write(CLAUDE.md)"
+            "if": "Write(CLAUDE.md)",
+            "args": []
           },
           {
             "type": "command",
             "command": ".claude/agents/meta-agent/scripts/check-references.sh",
-            "if": "Edit(CLAUDE.md)"
+            "if": "Edit(CLAUDE.md)",
+            "args": []
           },
           {
             "type": "command",
             "command": ".claude/agents/meta-agent/scripts/check-references.sh",
-            "if": "Write(install.sh)"
+            "if": "Write(install.sh)",
+            "args": []
           },
           {
             "type": "command",
             "command": ".claude/agents/meta-agent/scripts/check-references.sh",
-            "if": "Edit(install.sh)"
+            "if": "Edit(install.sh)",
+            "args": []
           }
         ]
       },
@@ -218,12 +233,14 @@
           {
             "type": "command",
             "command": ".claude/agents/meta-agent/scripts/check-plan-drift.sh",
-            "if": "Write(.claude/**)"
+            "if": "Write(.claude/**)",
+            "args": []
           },
           {
             "type": "command",
             "command": ".claude/agents/meta-agent/scripts/check-plan-drift.sh",
-            "if": "Edit(.claude/**)"
+            "if": "Edit(.claude/**)",
+            "args": []
           }
         ]
       },
@@ -233,12 +250,16 @@
           {
             "type": "command",
             "command": ".claude/scripts/validate-handoff.sh",
-            "if": "Write(.claude/workflow-state/*-handoff.json)"
+            "if": "Write(.claude/workflow-state/*-handoff.json)",
+            "args": [],
+            "continueOnBlock": true
           },
           {
             "type": "command",
             "command": ".claude/scripts/validate-handoff.sh",
-            "if": "Edit(.claude/workflow-state/*-handoff.json)"
+            "if": "Edit(.claude/workflow-state/*-handoff.json)",
+            "args": [],
+            "continueOnBlock": true
           }
         ]
       }
@@ -249,7 +270,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/scripts/save-progress-before-compact.sh"
+            "command": ".claude/scripts/save-progress-before-compact.sh",
+            "args": []
           }
         ]
       },
@@ -258,7 +280,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/scripts/save-progress-before-compact.sh"
+            "command": ".claude/scripts/save-progress-before-compact.sh",
+            "args": []
           }
         ]
       }
@@ -269,7 +292,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/scripts/verify-state-after-compact.sh"
+            "command": ".claude/scripts/verify-state-after-compact.sh",
+            "args": []
           }
         ]
       }
@@ -280,11 +304,15 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/scripts/track-task-lifecycle.sh"
+            "command": ".claude/scripts/track-task-lifecycle.sh",
+            "args": []
           },
           {
             "type": "command",
-            "command": ".claude/scripts/caveman-suspend-for-reviewer.sh code-researcher"
+            "command": ".claude/scripts/caveman-suspend-for-reviewer.sh",
+            "args": [
+              "code-researcher"
+            ]
           }
         ]
       },
@@ -293,15 +321,22 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/scripts/track-task-lifecycle.sh"
+            "command": ".claude/scripts/track-task-lifecycle.sh",
+            "args": []
           },
           {
             "type": "command",
-            "command": ".claude/scripts/inject-review-context.sh plan-reviewer"
+            "command": ".claude/scripts/inject-review-context.sh",
+            "args": [
+              "plan-reviewer"
+            ]
           },
           {
             "type": "command",
-            "command": ".claude/scripts/caveman-suspend-for-reviewer.sh plan-reviewer"
+            "command": ".claude/scripts/caveman-suspend-for-reviewer.sh",
+            "args": [
+              "plan-reviewer"
+            ]
           }
         ]
       },
@@ -310,15 +345,22 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/scripts/track-task-lifecycle.sh"
+            "command": ".claude/scripts/track-task-lifecycle.sh",
+            "args": []
           },
           {
             "type": "command",
-            "command": ".claude/scripts/inject-review-context.sh code-reviewer"
+            "command": ".claude/scripts/inject-review-context.sh",
+            "args": [
+              "code-reviewer"
+            ]
           },
           {
             "type": "command",
-            "command": ".claude/scripts/caveman-suspend-for-reviewer.sh code-reviewer"
+            "command": ".claude/scripts/caveman-suspend-for-reviewer.sh",
+            "args": [
+              "code-reviewer"
+            ]
           }
         ]
       },
@@ -327,7 +369,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/scripts/caveman-suspend-for-reviewer.sh verdict-recovery"
+            "command": ".claude/scripts/caveman-suspend-for-reviewer.sh",
+            "args": [
+              "verdict-recovery"
+            ]
           }
         ]
       }
@@ -338,7 +383,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/scripts/save-review-checkpoint.sh"
+            "command": ".claude/scripts/save-review-checkpoint.sh",
+            "args": []
           }
         ]
       }
@@ -349,7 +395,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/scripts/prepare-worktree.sh"
+            "command": ".claude/scripts/prepare-worktree.sh",
+            "args": []
           }
         ]
       }
@@ -360,7 +407,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/scripts/enrich-context.sh"
+            "command": ".claude/scripts/enrich-context.sh",
+            "args": []
           }
         ]
       }
@@ -371,11 +419,18 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/agents/meta-agent/scripts/verify-phase-completion.sh"
+            "command": ".claude/agents/meta-agent/scripts/verify-phase-completion.sh",
+            "args": []
           },
           {
             "type": "command",
-            "command": ".claude/scripts/check-uncommitted.sh"
+            "command": ".claude/scripts/check-uncommitted.sh",
+            "args": []
+          },
+          {
+            "type": "command",
+            "command": ".claude/scripts/notify-workflow-complete.sh",
+            "args": []
           }
         ]
       }
@@ -386,7 +441,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/scripts/session-analytics.sh"
+            "command": ".claude/scripts/session-analytics.sh",
+            "args": []
           }
         ]
       }
@@ -397,7 +453,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/scripts/log-stop-failure.sh"
+            "command": ".claude/scripts/log-stop-failure.sh",
+            "args": []
           }
         ]
       }
@@ -408,7 +465,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/scripts/notify-user.sh"
+            "command": ".claude/scripts/notify-user.sh",
+            "args": []
           }
         ]
       }
@@ -419,7 +477,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/scripts/audit-config-change.sh"
+            "command": ".claude/scripts/audit-config-change.sh",
+            "args": []
           }
         ]
       }
@@ -430,7 +489,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/scripts/log-permission-denied.sh"
+            "command": ".claude/scripts/log-permission-denied.sh",
+            "args": []
           }
         ]
       }
@@ -441,7 +501,25 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/scripts/caveman-activate.sh"
+            "command": ".claude/scripts/caveman-activate.sh",
+            "args": []
+          },
+          {
+            "type": "command",
+            "command": ".claude/scripts/mcp-preload-warn.sh",
+            "args": []
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/scripts/log-tool-failure.sh",
+            "args": []
           }
         ]
       }
@@ -456,7 +534,8 @@
       "go.sum",
       "Makefile",
       "CLAUDE.md"
-    ]
+    ],
+    "baseRef": "fresh"
   },
   "autoMemoryEnabled": true
 }

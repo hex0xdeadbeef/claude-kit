@@ -272,6 +272,13 @@ if [[ "${MODE}" == "strict" ]]; then
   exit 2
 fi
 
-# warn mode: log failure but do not block
+# warn mode: emit structured JSON for continueOnBlock contract (v2.1.139+); Claude sees
+# the rejection reason in transcript and can self-heal by issuing a follow-up Edit.
+# Strict mode users (exit 2 above) are unaffected.
+jq -nc \
+  --arg reason "Handoff schema validation FAILED: ${ERROR_SUMMARY}" \
+  --arg ctx "Schema: .claude/schemas/handoff.schema.json | Record kind: ${RECORD_KIND}" \
+  '{decision: "block", reason: $reason, hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext: $ctx}}' \
+  2>/dev/null || true
 echo "[validate-handoff] WARN: validation failed (warn-mode) — set CLAUDE_HANDOFF_VALIDATION_MODE=strict to block" >&2
 exit 0
