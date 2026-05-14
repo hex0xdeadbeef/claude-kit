@@ -5,7 +5,8 @@
       "args": [
         "-y",
         "@modelcontextprotocol/server-sequential-thinking"
-      ]
+      ],
+      "alwaysLoad": true
     },
     "context7": {
       "command": "npx",
