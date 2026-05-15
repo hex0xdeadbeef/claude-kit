@@ -24,10 +24,6 @@ Thumbs.db
 .env
 .env.local
 
-# Third-party research sources (not part of this project)
-superpowers-main/
-caveman/
-
 # --- Claude Kit (managed by install.sh -- do not edit this section) ---
 # Claude Code local settings (personal dev overrides)
 .claude/settings.local.json
