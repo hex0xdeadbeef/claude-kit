@@ -43,3 +43,6 @@ caveman/
 !.meta-agent/runs/.gitkeep
 # --- End Claude Kit ---
 docs/research/
+
+# Claude Code platform CHANGELOG (upstream — not part of this kit)
+CHANGELOG.md
