@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Kit Workflow</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/reveal.js@5.0.5/dist/reveal.css">
+  <link rel="stylesheet" href="https://unpkg.com/reveal.js@5.0.5/dist/theme/white.css">
+
+  <style>
+    /* Projector-friendly typography */
+    .reveal h1 { font-size: 2.2em; line-height: 1.2; color: #1a1a2e; }
+    .reveal h2 { font-size: 1.6em; line-height: 1.2; color: #1a1a2e; margin-bottom: 0.4em; }
+    .reveal h3 { font-size: 1.2em; color: #4a4a8a; }
+    .reveal p, .reveal li { font-size: 1.4em; line-height: 1.4; }
+    .reveal ul li { margin: 0.4em 0; }
+    .reveal ul { max-width: 88%; margin: 0.4em auto; text-align: left; }
+
+    /* Tables */
+    .reveal table { font-size: 0.78em; border-collapse: collapse; margin: 0.5em auto; }
+    .reveal table th { background: #1a1a2e; color: #fff; padding: 0.4em 0.8em; font-weight: 600; text-align: left; }
+    .reveal table td { padding: 0.4em 0.8em; border-bottom: 1px solid #ddd; }
+    .reveal table tr:hover { background: #f5f5fa; }
+
+    /* Code blocks */
+    .reveal pre { box-shadow: none; font-size: 0.62em; margin: 0.4em auto; max-width: 90%; }
+    .reveal pre code { padding: 0.7em 1em; background: #1a1a2e; color: #f8f8f2; border-radius: 6px; display: block; overflow-x: auto; }
+    .reveal code { font-family: 'Menlo', 'Monaco', 'Consolas', monospace; }
+
+    /* Mermaid */
+    .reveal .mermaid { background: #fff; padding: 0.3em; }
+    .reveal pre.mermaid { background: transparent; box-shadow: none; font-size: 0.95em; max-width: 95%; margin: 0.3em auto; }
+
+    /* Bar charts (inline CSS) */
+    .bar-chart { margin: 0.6em auto; max-width: 90%; font-size: 0.78em; }
+    .bar-chart .bar-title { font-weight: 600; margin-bottom: 0.4em; text-align: left; }
+    .bar-chart .bar-row { display: flex; align-items: center; margin: 0.25em 0; }
+    .bar-chart .bar-label { width: 28%; text-align: right; padding-right: 0.8em; font-weight: 600; }
+    .bar-chart .bar-track { flex: 1; background: #eef; height: 1.6em; border-radius: 3px; position: relative; }
+    .bar-chart .bar-fill { background: linear-gradient(90deg, #4a4af0, #7474ff); height: 100%; border-radius: 3px; display: flex; align-items: center; padding: 0 0.6em; color: #fff; font-weight: 600; }
+    .bar-chart .bar-fill.alt { background: linear-gradient(90deg, #f04a4a, #ff7474); }
+    .bar-chart .bar-note { font-size: 0.85em; color: #555; margin-top: 0.4em; font-style: italic; }
+
+    /* Callouts */
+    .callout { background: #fff8dc; border-left: 4px solid #f4c430; padding: 0.5em 1em; margin: 0.5em auto; font-size: 0.95em; max-width: 88%; text-align: left; }
+    .callout-strong { background: #ffe8e8; border-left-color: #c0392b; font-weight: 600; text-align: center; }
+
+    /* Slide section spacing */
+    .reveal .slides section { padding: 0.8em 0; text-align: center; }
+    .reveal .slides section h2 + ul,
+    .reveal .slides section h2 + p { margin-top: 0.5em; }
+
+    /* Footnote-like methodology line */
+    .methodology { font-size: 0.78em; color: #555; margin-top: 0.6em; text-align: left; max-width: 90%; margin-left: auto; margin-right: auto; }
+  </style>
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+      <!-- Slide 1: Title -->
+      <section>
+        <h1>Claude Kit Workflow</h1>
+        <h3>Структурированная AI-разработка</h3>
+        <ul style="margin-top: 1em;">
+          <li>Структурированный multi-agent pipeline</li>
+          <li>Типизированные handoff'ы и clean-context review</li>
+          <li>TDD и SDD как базовые методологии</li>
+        </ul>
+        <aside class="notes">
+          Презентация о claude-kit — framework для AI-driven разработки на базе Claude Code.
+          Цель: показать архитектуру pipeline и обосновать пилот в одной из команд.
+          Источники: CLAUDE.md:1, README.md:12.
+        </aside>
+      </section>
+
+      <!-- Slide 2: Problem 1 -->
+      <section>
+        <h2>Проблема: хаос AI-coding</h2>
+        <ul>
+          <li>Один промпт превращается в код без планирования</li>
+          <li>Нет ревью и тестов перед merge</li>
+          <li>Каждый запуск даёт разный результат</li>
+          <li>Контекст модели загрязняется предыдущими шагами</li>
+        </ul>
+        <aside class="notes">
+          AI-разработка сегодня ведётся ad-hoc: один промпт, сразу код, сразу коммит. Это приводит
+          к невоспроизводимости и накопленному техдолгу. Контраст со claude-kit pipeline далее.
+          Источник для сравнения: CLAUDE.md:1-15.
+        </aside>
+      </section>
+
+      <!-- Slide 3: Problem 2 -->
+      <section>
+        <h2>Bias и отсутствие аудита</h2>
+        <ul>
+          <li>Модель сама пишет план и сама его одобряет</li>
+          <li>Переходы между этапами не отслеживаются</li>
+          <li>Нет типизированных контрактов между фазами</li>
+          <li>Невозможно вернуться к промежуточному состоянию</li>
+        </ul>
+        <aside class="notes">
+          Когда одна модель пишет и ревьюит — возникает creation-history bias. Нет audit-trail.
+          Источники: .claude/PROJECT-KNOWLEDGE.md:201 (Commands shared vs Agents clean),
+          .claude/skills/workflow-protocols/orchestration-core.md:65.
+        </aside>
+      </section>
+
+      <!-- Slide 4: Pipeline overview -->
+      <section>
+        <h2>Решение: 5-фазный pipeline</h2>
+        <pre class="mermaid">
+flowchart LR
+    T[Task] --> A[Phase 0.5<br/>Analysis]
+    A --> D[Phase 0.7<br/>Designer]
+    D --> P[Phase 1<br/>Planner]
+    P --> PR{Phase 2<br/>Plan Review}
+    PR -->|APPROVED| C[Phase 3<br/>Coder]
+    PR -->|NEEDS_CHANGES| P
+    C --> CR{Phase 4<br/>Code Review}
+    CR -->|APPROVED| DONE[Phase 5<br/>Commit]
+    CR -->|CHANGES_REQUESTED| C
+    style D fill:#fff8dc
+    style PR fill:#e6f3ff
+    style CR fill:#e6f3ff
+    style DONE fill:#e6ffe6
+        </pre>
+        <aside class="notes">
+          Пять фаз: task-analysis, designer (опц.), planner, plan-review, coder, code-review, commit.
+          Каждый переход — типизированный handoff с JSON-валидацией. Review запускается в чистом
+          контексте. Источники: .claude/skills/workflow-protocols/orchestration-core.md:6-48,
+          .claude/PROJECT-KNOWLEDGE.md:155-173.
+        </aside>
+      </section>
+
+      <!-- Slide 5: Commands vs Agents -->
+      <section>
+        <h2>Commands vs Agents</h2>
+        <table>
+          <thead>
+            <tr><th>Тип</th><th>Контекст</th><th>Где живёт</th><th>Назначение</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Commands</td><td>shared (orchestration)</td><td>.claude/commands/</td><td>Управляют pipeline</td></tr>
+            <tr><td>Agents</td><td>clean (review)</td><td>.claude/agents/</td><td>Unbiased ревью</td></tr>
+            <tr><td>Tool-agents</td><td>isolated (one-shot)</td><td>.claude/agents/</td><td>Code-researcher exploration</td></tr>
+          </tbody>
+        </table>
+        <div class="callout">Clean context устраняет creation-history bias на этапе ревью</div>
+        <aside class="notes">
+          Commands видят историю задачи, agents — нет. Это исключает creation-history bias:
+          ревьюер судит по артефакту, не по тому, как он создавался. Источники:
+          .claude/rules/workflow.md:3-16, .claude/PROJECT-KNOWLEDGE.md:201.
+        </aside>
+      </section>
+
+      <!-- Slide 6: Complexity routing -->
+      <section>
+        <h2>Complexity routing: S / M / L / XL</h2>
+        <table>
+          <thead>
+            <tr><th>Complexity</th><th>Parts</th><th>Layers</th><th>Designer</th><th>Plan Review</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>S</td><td>1</td><td>1</td><td>SKIP</td><td>SKIP</td></tr>
+            <tr><td>M</td><td>2–3</td><td>2</td><td>опц.</td><td>обязательно</td></tr>
+            <tr><td>L</td><td>4–6</td><td>3+</td><td>обязательно</td><td>обязательно</td></tr>
+            <tr><td>XL</td><td>7+</td><td>4+</td><td>обязательно</td><td>обязательно (+ST)</td></tr>
+          </tbody>
+        </table>
+        <aside class="notes">
+          Сложность определяется на Phase 0.5 и фиксирует маршрут. S — fast-path, XL — полный
+          pipeline с Sequential Thinking. Размер задачи определяет артефакты и compute.
+          Источник: .claude/skills/planner-rules/SKILL.md:22-28.
+        </aside>
+      </section>
+
+      <!-- Slide 7: Model routing -->
+      <section>
+        <h2>Model routing</h2>
+        <table>
+          <thead>
+            <tr><th>Агент</th><th>Модель</th><th>Effort</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>workflow / planner / designer / coder</td><td>claude-opus</td><td>max</td></tr>
+            <tr><td>plan-reviewer / code-reviewer</td><td>claude-opus</td><td>max</td></tr>
+            <tr><td>code-researcher</td><td>claude-haiku</td><td>medium</td></tr>
+            <tr><td>verdict-recovery</td><td>claude-haiku</td><td>low</td></tr>
+          </tbody>
+        </table>
+        <aside class="notes">
+          Pipeline-агенты на opus и effort:max — flagship Claude Code режим с максимальным
+          extended thinking budget. Tool-агенты на haiku — быстрее и дешевле. Распределение
+          моделей оптимизирует качество там, где нужно. Источник: .claude/rules/workflow.md:18-21.
+        </aside>
+      </section>
+
+      <!-- Slide 8: Designer + SDD -->
+      <section>
+        <h2>Phase 0.7 Designer — SDD</h2>
+        <ul>
+          <li>Активируется на L/XL задачах</li>
+          <li>Spec как источник истины</li>
+          <li>2–3 альтернативы с pros и cons</li>
+          <li>User approval gate перед planner</li>
+        </ul>
+        <div class="callout">Spec-driven development: всё начинается со spec'а, не с кода</div>
+        <aside class="notes">
+          Designer запускается до planner на L/XL задачах. Производит approved spec — выбранный
+          подход, альтернативы, acceptance criteria. Без spec'а planner может уйти в сторону.
+          Источники: .claude/commands/designer.md, .claude/skills/workflow-protocols/orchestration-core.md:52-55.
+        </aside>
+      </section>
+
+      <!-- Slide 9: Planner -->
+      <section>
+        <h2>Phase 1 Planner</h2>
+        <ul>
+          <li>Ресерч кодовой базы (Grep, Glob, code-researcher агент)</li>
+          <li>Sequential Thinking на L/XL</li>
+          <li>Полный план: Scope, Architecture, Tests, AC, Parts</li>
+          <li>Полные code examples, не сигнатуры</li>
+        </ul>
+        <aside class="notes">
+          Planner делает ресерч и пишет детальный план с полными примерами кода. Для L/XL
+          используется Sequential Thinking MCP. Структура плана фиксирована: ## Scope, ## Architecture,
+          ## Tests, ## Acceptance Criteria, ## Parts. Источники: .claude/commands/planner.md,
+          .claude/skills/planner-rules/SKILL.md:51-55.
+        </aside>
+      </section>
+
+      <!-- Slide 10: Plan Review -->
+      <section>
+        <h2>Phase 2 Plan Review — clean context</h2>
+        <ul>
+          <li>Запускается как изолированный agent</li>
+          <li>Не видит истории создания плана</li>
+          <li>Verdict: APPROVED / NEEDS_CHANGES / REJECTED</li>
+          <li>Max 3 итерации plan-review cycle</li>
+        </ul>
+        <aside class="notes">
+          Plan-reviewer — native Claude Code agent в чистом контексте. Получает план и типизированный
+          handoff, возвращает verdict. Не знает, как planner создавал план — судит по артефакту.
+          Источники: .claude/agents/plan-reviewer.md, .claude/PROJECT-KNOWLEDGE.md:217.
+        </aside>
+      </section>
+
+      <!-- Slide 11: Coder + TDD -->
+      <section>
+        <h2>Phase 3 Coder + TDD</h2>
+        <pre class="mermaid">
+flowchart LR
+    R[RED<br/>Write failing test] --> G[GREEN<br/>Minimum code to pass]
+    G --> RF[REFACTOR<br/>Improve structure]
+    RF --> R
+    style R fill:#ffd6d6
+    style G fill:#d6ffd6
+    style RF fill:#d6e6ff
+        </pre>
+        <div class="callout callout-strong">Iron Law: NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST</div>
+        <aside class="notes">
+          Iron Law TDD: нет production-кода без падающего теста первым. Red-Green-Refactor —
+          стандартный цикл. Spec-check на Phase 3.5 проверяет соответствие плану. Источники:
+          .claude/skills/tdd-rules/SKILL.md:14-29, .claude/skills/workflow-protocols/orchestration-core.md:62.
+        </aside>
+      </section>
+
+      <!-- Slide 12: Code Review -->
+      <section>
+        <h2>Phase 4 Code Review — clean context</h2>
+        <ul>
+          <li>Native agent в worktree-изоляции</li>
+          <li>Видит только committed diff</li>
+          <li>Verdict: APPROVED / APPROVED_WITH_COMMENTS / CHANGES_REQUESTED</li>
+          <li>Max 3 итерации code-review cycle</li>
+        </ul>
+        <aside class="notes">
+          Code-reviewer запускается в git worktree — видит только закоммиченные изменения,
+          не историю работы coder'а. Категории issues: blocker, major, minor, nit. Источники:
+          .claude/agents/code-reviewer.md, .claude/skills/workflow-protocols/orchestration-core.md:63-66.
+        </aside>
+      </section>
+
+      <!-- Slide 13: Completion + audit-trail + hooks -->
+      <section>
+        <h2>Phase 5 Completion + audit-trail</h2>
+        <table>
+          <thead>
+            <tr><th>Hook event</th><th>Скрипт</th><th>Блокирует?</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>PostToolUse(handoff write)</td><td>validate-handoff.sh</td><td>strict-mode</td></tr>
+            <tr><td>SubagentStop(review)</td><td>save-review-checkpoint.sh</td><td>yes</td></tr>
+            <tr><td>PreToolUse(git commit)</td><td>pre-commit-build.sh</td><td>yes</td></tr>
+            <tr><td>UserPromptSubmit</td><td>enrich-context.sh</td><td>no</td></tr>
+            <tr><td>Stop</td><td>check-uncommitted.sh</td><td>yes</td></tr>
+          </tbody>
+        </table>
+        <pre><code class="language-yaml"># .claude/workflow-state/{feature}-checkpoint.yaml
+feature: "user-create"
+phase_completed: 4
+phase_name: "code-review"
+verdict: "APPROVED"
+iteration:
+  code_review: "1/3"</code></pre>
+        <aside class="notes">
+          Phase 5 — orchestrator-owned: commit, metrics, финальный checkpoint. 16 hook'ов
+          валидируют переходы автоматически (validate-handoff, save-review-checkpoint,
+          pre-commit-build, enrich-context). Источники:
+          .claude/skills/workflow-protocols/orchestration-core.md:72-88,
+          .claude/PROJECT-KNOWLEDGE.md:262-280.
+        </aside>
+      </section>
+
+      <!-- Slide 14: Handoff contracts -->
+      <section>
+        <h2>Типизированные handoff contracts</h2>
+        <pre class="mermaid">
+flowchart LR
+    D[designer] -->|spec_artifact| P[planner]
+    P -->|planner_to_plan_review| PR[plan-reviewer]
+    PR -->|plan_review_to_coder| C[coder]
+    C -->|coder_to_code_review| CR[code-reviewer]
+    CR -->|code_review_to_completion| OUT[commit]
+    style P fill:#fff8dc
+    style PR fill:#e6f3ff
+    style CR fill:#e6f3ff
+        </pre>
+        <pre><code class="language-json">{
+  "$handoff_contract": "planner_to_plan_review",
+  "artifact": ".claude/prompts/feature.md",
+  "metadata": { "complexity": "L", "spec_referenced": true },
+  "key_decisions": ["..."],
+  "known_risks": ["..."]
+}</code></pre>
+        <aside class="notes">
+          Пять контрактов: designer→planner, planner→plan-review, plan-review→coder,
+          coder→code-review, code-review→completion. Каждый — JSON с дискриминатором
+          $handoff_contract, валидируется validate-handoff.sh против handoff.schema.json (v1.2.0).
+          Источники: .claude/skills/workflow-protocols/handoff-contracts.md:13-110,
+          .claude/schemas/handoff.schema.json:6-14.
+        </aside>
+      </section>
+
+      <!-- Slide 15: Verdict state machine -->
+      <section>
+        <h2>Verdict state machine</h2>
+        <pre class="mermaid">
+stateDiagram-v2
+    [*] --> Review
+    Review --> APPROVED: code OK
+    Review --> APPROVED_WITH_COMMENTS: minor issues
+    Review --> CHANGES_REQUESTED: major issues
+    Review --> NEEDS_CHANGES: plan issues
+    Review --> REJECTED: scope wrong
+    APPROVED --> [*]
+    APPROVED_WITH_COMMENTS --> [*]
+    CHANGES_REQUESTED --> Review: iter N+1
+    NEEDS_CHANGES --> Review: iter N+1
+    REJECTED --> [*]
+        </pre>
+        <aside class="notes">
+          Structured verdict: APPROVED и APPROVED_WITH_COMMENTS — done; NEEDS_CHANGES и
+          CHANGES_REQUESTED — loop to previous phase (max 3); REJECTED — стоп с user
+          intervention. Routing определяется verdict'ом автоматически orchestrator'ом.
+          Источник: .claude/skills/workflow-protocols/orchestration-core.md:58-66.
+        </aside>
+      </section>
+
+      <!-- Slide 16: PROJECT-KNOWLEDGE generic mechanism -->
+      <section>
+        <h2>Generic: PROJECT-KNOWLEDGE.md</h2>
+        <ul>
+          <li>22 slot'а в 7 секциях</li>
+          <li>pk_schema_version: 1.1.0</li>
+          <li>Cascade: PK → CLAUDE.md → SKIP</li>
+          <li>Авто-генерация через /project-researcher</li>
+        </ul>
+        <pre><code class="language-yaml"># .claude/PROJECT-KNOWLEDGE.md
+## Language Profile
+- LANGUAGE: python
+- LANG_EXT: .py
+- VERIFY_CMD: pytest &amp;&amp; ruff check
+- LAYERS: [repository, service, view]</code></pre>
+        <div class="callout">Один и тот же pipeline — на Go, Python, TypeScript, Rust, Java и других языках</div>
+        <aside class="notes">
+          PROJECT-KNOWLEDGE.md — контракт между проектом и pipeline. 22 слота в 7 секциях.
+          Cascade: PK → CLAUDE.md Language Profile → SKIP. Авто-генерация через /project-researcher.
+          Источники: .claude/PROJECT-KNOWLEDGE.md.example:24-80,
+          .claude/agents/project-researcher/AGENT.md.
+        </aside>
+      </section>
+
+      <!-- Slide 17: End-to-end b2b case -->
+      <section>
+        <h2>End-to-end: b2b-store-cli</h2>
+        <ul>
+          <li>162 не-merge коммита, 23 активных дня</li>
+          <li>26 647 LOC прод-кода (без vendor / generated / mocks)</li>
+          <li>57 календарных дней разработки</li>
+          <li>Pair-programming с первого коммита</li>
+        </ul>
+        <pre><code class="language-json">{
+  "$verdict_contract": "code_review_verdict",
+  "verdict": "APPROVED",
+  "issues": [],
+  "iteration": "1/3"
+}</code></pre>
+        <div class="callout">162 коммита и 26.6K LOC — реальный feature-flow на claude-kit</div>
+        <aside class="notes">
+          b2b-store-cli — production CLI на Go, разработан в pair-programming с Claude Code через
+          kit с первого коммита. 162 не-merge коммита за 57 календарных дней, 23 активных дня,
+          26 647 LOC прод-кода. Источник: cost-analysis-b2b-store-cli-2026-05-17.md:36-46.
+        </aside>
+      </section>
+
+      <!-- Slide 18: Metrics + bar charts -->
+      <section>
+        <h2>Метрики: экономия времени</h2>
+
+        <div class="bar-chart">
+          <div class="bar-title">b2b-store-cli — часы оператор-времени</div>
+          <div class="bar-row">
+            <div class="bar-label">Solo Human</div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width: 71%;">35.6 ч</div>
+            </div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label">+ Claude (×0.55)</div>
+            <div class="bar-track">
+              <div class="bar-fill alt" style="width: 39%;">19.6 ч</div>
+            </div>
+          </div>
+          <div class="bar-note">−16 ч сэкономлено (≈45%); диапазон 10.7–21.4 ч (30–60%)</div>
+        </div>
+
+        <div class="bar-chart">
+          <div class="bar-title">osb-golden-broker — часы оператор-времени</div>
+          <div class="bar-row">
+            <div class="bar-label">Solo Human</div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width: 62%;">49.2 ч</div>
+            </div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label">+ Claude (×0.55)</div>
+            <div class="bar-track">
+              <div class="bar-fill alt" style="width: 34%;">27.0 ч</div>
+            </div>
+          </div>
+          <div class="bar-note">−22.1 ч сэкономлено (≈45%); throughput ×1.82</div>
+        </div>
+
+        <div class="methodology">
+          Методология: session-based git-анализ (gap=45 мин, warmup=+15), multiplier ×0.55
+          (диапазон 0.40–0.70 — METR study, Copilot reports, опыт оператора).
+        </div>
+
+        <aside class="notes">
+          Два независимых проекта, та же методология: session-based анализ и multiplier ×0.55
+          (диапазон 0.40–0.70 — METR study, Copilot reports, личный опыт оператора). Throughput
+          в обоих ×1.82. Источники: cost-analysis-b2b-store-cli-2026-05-17.md:10-15,225-227,253-261;
+          cost-analysis-osb-golden-broker-2026-05-17.md:10-15.
+        </aside>
+      </section>
+
+      <!-- Slide 19: Theses + CTA (final) -->
+      <section>
+        <h2>Тезисы и следующий шаг</h2>
+        <ul>
+          <li>Структурированный pipeline вместо хаоса</li>
+          <li>Clean-context review устраняет creation bias</li>
+          <li>TDD и SDD как базовые методологии</li>
+          <li>Generic-механизм работает на любом стэке</li>
+          <li>Реальная экономия 45% оператор-времени</li>
+        </ul>
+        <div class="callout callout-strong" style="margin-top: 1em;">
+          Следующий шаг: пилот claude-kit на 1–2 командах в следующем спринте
+        </div>
+        <aside class="notes">
+          Резюме: pipeline вместо хаоса, clean-context review без bias, TDD и SDD как базовые
+          подходы, generic-механизм для любого стэка, измеренная экономия 45% времени. Call to action:
+          пилот на 1–2 командах. Финальная плотность 19 слайдов на 20 мин (≈63 с/слайд) — расширение
+          spec-коридора 17–18 ради visual impact bar charts на отдельном слайде. Источники:
+          cost-analysis-b2b-store-cli-2026-05-17.md:10-15, cost-analysis-osb-golden-broker-2026-05-17.md:10-15.
+        </aside>
+      </section>
+
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/reveal.js@5.0.5/dist/reveal.js"></script>
+  <script src="https://unpkg.com/reveal.js@5.0.5/plugin/notes/notes.js"></script>
+  <script src="https://unpkg.com/mermaid@10.9.1/dist/mermaid.min.js"></script>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'default',
+      securityLevel: 'loose',
+      flowchart: { curve: 'basis', useMaxWidth: true }
+    });
+
+    const RevealMermaid = {
+      id: 'mermaid',
+      init: (reveal) => {
+        const blocks = reveal.getRevealElement().querySelectorAll('pre.mermaid');
+        const renderAll = () => {
+          blocks.forEach((block, idx) => {
+            if (block.dataset.processed) return;
+            const id = 'mermaid-' + idx;
+            const code = block.textContent.trim();
+            mermaid.render(id, code).then(({ svg }) => {
+              block.innerHTML = svg;
+              block.dataset.processed = 'true';
+            }).catch((err) => {
+              console.error('Mermaid render error for block ' + idx, err);
+            });
+          });
+        };
+        renderAll();
+        reveal.on('slidechanged', renderAll);
+      }
+    };
+
+    Reveal.initialize({
+      hash: true,
+      controls: true,
+      progress: true,
+      slideNumber: 'c/t',
+      transition: 'slide',
+      plugins: [RevealNotes, RevealMermaid]
+    });
+  </script>
+</body>
+</html>
