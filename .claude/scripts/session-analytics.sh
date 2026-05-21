@@ -198,4 +198,7 @@ git worktree prune 2>/dev/null || true
 # P1-09: Clean up overflow files older than 7 days
 find "$STATE_DIR" -name "compact-overflow-*.log" -mtime +7 -delete 2>/dev/null || true
 
+# P3: Clean up per-session stop-block-attempt counters (Stop hook circuit breaker)
+find "$STATE_DIR" -maxdepth 1 -name ".stop-block-attempts-*" -type f -delete 2>/dev/null || true
+
 exit 0

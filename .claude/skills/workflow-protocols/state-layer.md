@@ -103,6 +103,24 @@ files:
     cleanup: "Phase 5 completion"
     note: "Enables IMP-H to work for code-reviewer (isolation:worktree) where SubagentStop payload has empty agent_type"
 
+  - name: ".stop-block-attempts-{session_id}"
+    format: "plaintext (single line: COUNT:UNCOMMITTED_COUNT)"
+    written_by:
+      - "check-uncommitted.sh (Stop) — increments per block; resets when UNCOMMITTED count changes"
+    read_by:
+      - "check-uncommitted.sh (Stop) — circuit-breaker check"
+    schema: "single line, format `<int>:<int>` (block count : uncommitted file count at last block)"
+    lifecycle: session-specific
+    cleanup: "SessionEnd via session-analytics.sh glob `find … -name '.stop-block-attempts-*' -delete`"
+    purpose: |
+      P3 circuit breaker (audit § P3 — .claude/prompts/workflow-hook-loop-audit.md):
+      prevents infinite Stop-block loop when user cannot satisfy commit precondition
+      (e.g. pre-commit-build.sh denies git commit because build fails). After
+      STOP_BLOCK_MAX=5 consecutive blocks with unchanged UNCOMMITTED count, the
+      Stop hook emits a WARN and allows stop instead of re-emitting decision:block.
+    fallback: "`.stop-block-attempts-default` when session_id unavailable in stdin payload"
+    knob: "STOP_BLOCK_MAX hard-coded to 5 at top of check-uncommitted.sh (no env var per user direction 2026-05-22)"
+
   - name: ".enrich-last-hash"
     format: "Plain text (one-line SHA256 hex)"
     written_by:
