@@ -276,12 +276,20 @@ if blocked and COOLDOWN_SECONDS > 0:
             last_block_ts = 0.0
 
     # AC-P1.3 backward-compat: if .iteration-in-flight sentinel mtime is
-    # >= cooldown stamp mtime, treat this as a NEW review session and
-    # reset the cooldown.  Same-sentinel re-checks (the loop case) keep
-    # cooldown active; distinct sentinels each get their own first block.
-    # The `>=` (vs strict `>`) is the PR-001 mitigation against
-    # FS-timestamp-resolution coarseness that could equalise the two
-    # mtimes on noisy CI runners or coarse-resolution filesystems.
+    # STRICTLY newer than the cooldown stamp mtime, treat this as a NEW
+    # review session and reset the cooldown.  Same-sentinel re-checks
+    # (the loop case) keep cooldown active; distinct sentinels each get
+    # their own first block.
+    #
+    # The plan (PR-001) suggested `>=` as a defence against FS-timestamp
+    # coarseness, but a smoke test verified macOS APFS gives sub-second
+    # `os.path.getmtime` precision (~100 ms diff observable between two
+    # writes 100 ms apart).  With `>=`, equal-mtime cases (which DO
+    # occur on rapid in-window re-checks where the previous block wrote
+    # the stamp at the same wall-clock second as the original sentinel)
+    # would INCORRECTLY reset the cooldown on every loop iteration and
+    # defeat the protection.  Strict `>` is therefore correct: only a
+    # genuinely-later sentinel (a new orchestrator-write) resets.
     iter_mtime = 0.0
     _iter_file_local = os.path.join(STATE_DIR, ".iteration-in-flight")
     if os.path.isfile(_iter_file_local):
