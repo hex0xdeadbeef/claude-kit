@@ -2,6 +2,7 @@
 
 Public API:
   CONTEXT_SIZE_CAP: int = 6000  -- shared cap constant (P5: lowered from 8192; hooks enforce in bash)
+  latest_checkpoint(state_dir) -> str | None  -- mtime-newest checkpoint selector (P2 fix)
   load_state(state_dir, prompts_dir) -> dict  -- loads workflow state
   render(state, include, **kwargs) -> str  -- renders additionalContext sections
   rotate_spillover_files(state_dir, keep=5) -> None  -- LRU cleanup
@@ -82,13 +83,36 @@ _CHECKPOINT_SCALAR_KEYS = {
 }
 
 
+def latest_checkpoint(state_dir: str) -> "str | None":
+    """Return the absolute path of the mtime-most-recent checkpoint, or None.
+
+    Selection is by file mtime (descending), not by filename (alphabetical),
+    so two checkpoints whose alphabetical and mtime orders diverge resolve
+    deterministically.  Matches the semantics of notify-workflow-complete.sh
+    (the only pre-existing correct site).
+
+    Ties on identical mtimes resolve by alphabetically-larger name (stable,
+    deterministic).  Returns None on no candidates or on OSError reading
+    mtimes (e.g. permission denied on the state dir).
+
+    Audit ref: .claude/prompts/workflow-hook-loop-audit.md § P2.
+    """
+    try:
+        candidates = glob.glob(os.path.join(state_dir, "*-checkpoint.yaml"))
+        if not candidates:
+            return None
+        candidates.sort(key=lambda p: (os.path.getmtime(p), p), reverse=True)
+        return candidates[0]
+    except OSError:
+        return None
+
+
 def _load_checkpoint(state: dict) -> None:
     """Populate checkpoint_*, feature, phase, iteration_* fields in state."""
     try:
-        checkpoints = sorted(glob.glob(os.path.join(state["state_dir"], "*-checkpoint.yaml")))
-        if not checkpoints:
+        path = latest_checkpoint(state["state_dir"])
+        if not path:
             return
-        path = checkpoints[-1]
         state["checkpoint_path"] = path
         with open(path) as f:
             content = f.read()

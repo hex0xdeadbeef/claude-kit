@@ -13,6 +13,24 @@ directory:
   access_pattern: "SubagentStart hook reads files → injects via additionalContext JSON"
   creation: "mkdir -p .claude/workflow-state 2>/dev/null || true (each script ensures dir exists)"
   concurrency: "Hooks run sequentially per event — no concurrent writes to same file"
+  checkpoint_selection:
+    rule: "Latest checkpoint is mtime-most-recent, NOT alphabetically-last"
+    canonical_helper: ".claude/scripts/lib/state_render.py::latest_checkpoint(state_dir)"
+    bash_pattern: "ls -t .claude/workflow-state/*-checkpoint.yaml 2>/dev/null | head -n1"
+    rationale: |
+      P2 fix (audit ref: .claude/prompts/workflow-hook-loop-audit.md § P2).
+      Five readers historically used `sorted(glob.glob(...))[-1]` (alphabetical)
+      while one (`notify-workflow-complete.sh:24`) used `ls -t | head -n1` (mtime).
+      With divergent feature names the two orders disagree → different hooks make
+      different decisions about which workflow is active. The mtime semantics is
+      the correct one; the helper localises it so future drift requires changing
+      one line in one file.
+    documented_exceptions:
+      - script: ".claude/scripts/check-uncommitted.sh:28"
+        form: "ls -t … | head -n1 (inline bash, single call site, no Python entry-point)"
+      - script: ".claude/scripts/log-permission-denied.sh:62"
+        form: "candidates.sort(key=lambda p: (os.path.getmtime(p), p), reverse=True); candidates[0] (inline Python; heredoc does NOT import state_render)"
+    tie_break: "Equal mtimes → alphabetically-larger name wins (tuple (mtime, name) with reverse=True). Deterministic and stable."
 
 # ─────────────────────────────────────────────────────
 # FILE CONTRACTS

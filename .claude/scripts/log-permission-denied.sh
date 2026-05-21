@@ -59,9 +59,18 @@ except Exception:
 # Condition: active workflow AND phase_completed == 2 (Phase 3 Implementation in progress)
 emit_retry = False
 try:
-    checkpoints = sorted(glob.glob(os.path.join(STATE_DIR, "*-checkpoint.yaml")))
-    if checkpoints:
-        with open(checkpoints[-1]) as f:
+    # P2: mtime-newest selection (was alphabetical sorted(...)[-1] — latent bug
+    # when feature naming and write order diverge).  Inline carve-out symmetric
+    # to check-uncommitted.sh's bash one-liner because this heredoc does NOT
+    # import state_render (no LIB_DIR machinery in the bash preamble) — see
+    # .claude/prompts/p2-checkpoint-mtime-selector.md § Audit Deviations / AC-P2.3.
+    # Tuple (mtime, name) with reverse=True matches state_render.latest_checkpoint
+    # semantics exactly (asserted by T9 in test-checkpoint-selection-mtime.sh).
+    candidates = glob.glob(os.path.join(STATE_DIR, "*-checkpoint.yaml"))
+    if candidates:
+        candidates.sort(key=lambda p: (os.path.getmtime(p), p), reverse=True)
+        latest_cp = candidates[0]
+        with open(latest_cp) as f:
             for raw_line in f:
                 s = raw_line.strip()
                 if s.startswith("phase_completed:"):

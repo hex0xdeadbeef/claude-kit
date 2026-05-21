@@ -23,7 +23,10 @@ if [ "$UNCOMMITTED" -gt 0 ]; then
   # Only block during active workflows (checkpoint exists, not completed, not stale).
   # Non-workflow sessions get a warning only — don't block ad-hoc work.
   IS_WORKFLOW="false"
-  CHECKPOINT=$(ls .claude/workflow-state/*-checkpoint.yaml 2>/dev/null | tail -1)
+  # P2: mtime-newest selection (was alphabetical `ls | tail -1` — latent bug
+  # when feature naming and write order diverge).  Matches the established
+  # mtime-correct pattern at notify-workflow-complete.sh:24.
+  CHECKPOINT=$(ls -t .claude/workflow-state/*-checkpoint.yaml 2>/dev/null | head -n1)
   if [[ -n "$CHECKPOINT" ]]; then
     # Check 1: phase_completed < 5 (workflow not yet finished)
     PHASE_RAW=$(grep 'phase_completed:' "$CHECKPOINT" 2>/dev/null | sed 's/.*phase_completed:[[:space:]]*//' | tr -d '"'"'" || echo "0")

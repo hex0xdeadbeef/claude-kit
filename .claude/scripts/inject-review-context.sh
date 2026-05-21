@@ -55,7 +55,7 @@ import json, os, glob, re, subprocess, sys
 # Uniform import fallback (AC-3, KD-6)
 try:
     sys.path.insert(0, os.environ['LIB_DIR'])
-    from state_render import _extract_yaml_section, _extract_scalar, _extract_top_level
+    from state_render import _extract_yaml_section, _extract_scalar, _extract_top_level, latest_checkpoint
 except Exception as _import_err:
     print(f'[inject-review-context] WARN: shared state-render unavailable — {_import_err}',
           file=sys.stderr)
@@ -293,15 +293,15 @@ def _evict_stale_verdict_blocks_inject(_dir):
 _evict_stale_verdict_blocks_inject(state_dir)
 # --- end P3 eviction ---
 
-# Find latest checkpoint
-checkpoints = sorted(glob.glob(os.path.join(state_dir, "*-checkpoint.yaml")))
-if not checkpoints:
+# Find latest checkpoint (P2: mtime-newest via shared helper; was alphabetical sorted()[-1])
+_latest_cp_path = latest_checkpoint(state_dir)
+if not _latest_cp_path:
     print(json.dumps({"additionalContext":
         "[Workflow Context] No checkpoint found — running outside workflow or first phase."}))
     raise SystemExit(0)
 
 try:
-    with open(checkpoints[-1]) as f:
+    with open(_latest_cp_path) as f:
         content = f.read()
 except Exception:
     print(json.dumps({"additionalContext":

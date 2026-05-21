@@ -31,7 +31,7 @@ import json, os, glob, sys
 # Uniform import fallback (AC-3, KD-6)
 try:
     sys.path.insert(0, os.environ['LIB_DIR'])
-    from state_render import _extract_yaml_section, _extract_scalar
+    from state_render import _extract_yaml_section, _extract_scalar, latest_checkpoint
 except Exception as _import_err:
     print(f'[verify-state-after-compact] WARN: shared state-render unavailable — {_import_err}',
           file=sys.stderr)
@@ -45,10 +45,9 @@ state_summary = []
 # --- REMOVED: extract_yaml_section, extract_scalar definitions (AC-2) ---
 # These are now imported from state_render.
 
-# 1. Verify checkpoint (UNCHANGED logic — uses imported helpers)
-checkpoints = sorted(glob.glob(os.path.join(state_dir, "*-checkpoint.yaml")))
-if checkpoints:
-    latest = checkpoints[-1]
+# 1. Verify checkpoint (P2: mtime-newest via shared helper; was alphabetical sorted()[-1])
+latest = latest_checkpoint(state_dir)
+if latest:
     try:
         with open(latest) as f:
             content = f.read()

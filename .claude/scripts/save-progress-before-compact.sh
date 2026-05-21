@@ -40,6 +40,7 @@ try:
         load_state,
         render,
         CONTEXT_SIZE_CAP,
+        latest_checkpoint,
     )
 except Exception as _import_err:
     print(f'[save-progress-before-compact] WARN: shared state-render unavailable — {_import_err}',
@@ -69,10 +70,12 @@ def append_log(msg):
 
 def load_checkpoint():
     try:
-        checkpoints = sorted(glob.glob(os.path.join(STATE_DIR, "*-checkpoint.yaml")))
-        if not checkpoints:
+        # P2: mtime-newest selection (was alphabetical sorted()[-1] — latent bug
+        # when feature naming and write order diverge).  Helper returns None on
+        # no candidates; existing call sites handle (None, None) sentinel.
+        path = latest_checkpoint(STATE_DIR)
+        if not path:
             return None, None
-        path = checkpoints[-1]
         feature = os.path.basename(path).replace("-checkpoint.yaml", "")
         with open(path) as f:
             return feature, f.read()

@@ -43,9 +43,8 @@ session_title = None
 # Hash-guard: skip re-injection if checkpoint content unchanged since last run.
 # VERBATIM from IMP-03 (commit 39a4893) — must not change for AC-10.
 _checkpoint_hash = None
-_checkpoints_pre = sorted(glob.glob(os.path.join(STATE_DIR, "*-checkpoint.yaml")))
-if _checkpoints_pre:
-    _latest_pre = _checkpoints_pre[-1]
+_latest_pre = state_render.latest_checkpoint(STATE_DIR)  # P2: mtime-newest (was alphabetical sorted()[-1])
+if _latest_pre:
     try:
         with open(_latest_pre, 'rb') as _f:
             _cp_bytes = _f.read()
