@@ -103,6 +103,28 @@ files:
     cleanup: "Phase 5 completion"
     note: "Enables IMP-H to work for code-reviewer (isolation:worktree) where SubagentStop payload has empty agent_type"
 
+  - name: ".iteration-in-flight"
+    format: "JSON (single object: agent, started_at, feature, source)"
+    written_by:
+      - "inject-review-context.sh (SubagentStart, matcher: plan-reviewer|code-reviewer) — P5 auto-write at hook entry; idempotent over orchestrator's manual write"
+      - "Orchestrator — delegation-templates.md STEP -1 (legacy-but-idempotent since P5 fix 2026-05-22; harmless if both fire — same content shape, last-writer-wins on the `agent` field)"
+    read_by:
+      - "save-progress-before-compact.sh (PreCompact auto) — reads `agent` field for the BLOCKED reason text; ignores all other fields; checks mtime for 30-min staleness window"
+    deleted_by:
+      - "save-review-checkpoint.sh (SubagentStop, matcher: plan-reviewer|code-reviewer|verdict-recovery) — P0-04 deletion on successful review completion"
+      - "save-progress-before-compact.sh (PreCompact auto) — staleness auto-delete when mtime > 30 min"
+    schema: "JSON object — required: `agent` (string, e.g. 'plan-reviewer'); optional: `started_at` (ISO-8601 UTC), `feature` (checkpoint feature name or 'unknown'), `source` (forensic — 'inject-review-context.sh' if hook-written, omitted by orchestrator), `iteration` (legacy orchestrator field, ignored by consumer)"
+    lifecycle: session-specific
+    cleanup: "SubagentStop deletion (primary) → PreCompact 30-min staleness auto-delete (secondary, crash recovery)"
+    purpose: |
+      Sentinel that PreCompact auto-trigger reads to BLOCK auto-compaction
+      mid-review (would otherwise fragment the reviewer's verdict narrative).
+      Audit refs: .claude/prompts/workflow-hook-loop-audit.md § P1 (PreCompact
+      consumer cooldown) + § P5 (write-side automation). Before P5, the write
+      side was a manual orchestrator step that could be silently skipped,
+      disabling the protection. P5 moved the write into inject-review-context.sh
+      so the lifecycle is symmetric with SubagentStop deletion.
+
   - name: ".stop-block-attempts-{session_id}"
     format: "plaintext (single line: COUNT:UNCOMMITTED_COUNT)"
     written_by:

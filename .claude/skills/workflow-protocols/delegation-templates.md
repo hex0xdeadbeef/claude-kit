@@ -61,6 +61,15 @@ diff-manifest — both required for iteration 2+ correctness.
     to enable delta-focus hints (see spec §10 rollout plan + CLAUDE.md docs).
 
     STEP -1 (P0-04): Write .claude/workflow-state/.iteration-in-flight BEFORE delegating.
+
+    STATUS (since P5 fix 2026-05-22, commit landing this task): this STEP is now
+    legacy-but-idempotent. `inject-review-context.sh` writes the sentinel
+    automatically at SubagentStart (and at orchestrator pre_delegation
+    `--sidecar-only` for worktree code-reviewer via the STEP -2 sidecar
+    invocation, which calls the same hook). Emitting the manual Write here is
+    still permitted and harmless (the hook overwrites with the same shape on
+    its fire); skipping it is now safe. See .claude/prompts/p5-iif-autowrite.md.
+
     Use Write tool (auto-allowed). Content (JSON, one file per session):
       {"agent": "plan-reviewer", "started_at": "{ISO-8601 UTC timestamp, e.g. 2026-04-23T14:30:00Z}", "feature": "{feature}", "iteration": {N}}
     Lifecycle: created here → auto-deleted by save-review-checkpoint.sh on SubagentStop.
@@ -254,6 +263,15 @@ diff-manifest — both required for iteration 2+ correctness.
     written equivalent of the SubagentStart additionalContext injection.
 
     STEP -1 (P0-04): Write .claude/workflow-state/.iteration-in-flight BEFORE delegating.
+
+    STATUS (since P5 fix 2026-05-22, commit landing this task): this STEP is now
+    legacy-but-idempotent. `inject-review-context.sh` writes the sentinel
+    automatically at SubagentStart (and at orchestrator pre_delegation
+    `--sidecar-only` for worktree code-reviewer via the STEP -2 sidecar
+    invocation, which calls the same hook). Emitting the manual Write here is
+    still permitted and harmless (the hook overwrites with the same shape on
+    its fire); skipping it is now safe. See .claude/prompts/p5-iif-autowrite.md.
+
     Use Write tool (auto-allowed). Content (JSON, one file per session):
       {"agent": "code-reviewer", "started_at": "{ISO-8601 UTC timestamp, e.g. 2026-04-23T14:30:00Z}", "feature": "{feature}", "iteration": {N}}
     Lifecycle: created here → auto-deleted by save-review-checkpoint.sh on SubagentStop.

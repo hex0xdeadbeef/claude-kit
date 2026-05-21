@@ -49,6 +49,42 @@ export LIB_DIR
 
 STATE_DIR="${CLAUDE_WORKFLOW_STATE_DIR:-.claude/workflow-state}"
 
+# P5: write .iteration-in-flight for review agents so PreCompact protection
+# is symmetric with the SubagentStop deletion at save-review-checkpoint.sh:725-741.
+# Idempotent: overwrites any prior orchestrator STEP -1 write (same content shape).
+# Best-effort: write failure logs a WARN per kit convention and proceeds with
+# context injection (the harness is not blocked on sentinel write failure per AC-P5.4).
+# Audit ref: .claude/prompts/workflow-hook-loop-audit.md § P5.
+# Plan ref:  .claude/prompts/p5-iif-autowrite.md.
+case "$AGENT_TYPE" in
+  plan-reviewer|code-reviewer)
+    IIF_FILE="${STATE_DIR}/.iteration-in-flight"
+    IIF_NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    # Best-effort feature extraction from the mtime-newest checkpoint (P2 convention:
+    # ls -t … | head -n1).  Fallback to "unknown" when no checkpoint exists yet
+    # (e.g. plan-reviewer fires before the planner writes its first checkpoint).
+    # `|| true` because `ls` returns non-zero on empty glob under `set -euo pipefail`
+    # via pipefail propagation through the head; we want IIF_CP to be empty in that
+    # case so the fallback feature='unknown' branch kicks in.
+    IIF_CP=$(ls -t "${STATE_DIR}"/*-checkpoint.yaml 2>/dev/null | head -n1 || true)
+    IIF_FEATURE="unknown"
+    if [[ -n "$IIF_CP" ]]; then
+      IIF_FEATURE=$(grep '^feature:' "$IIF_CP" 2>/dev/null \
+        | head -n1 \
+        | sed 's/^feature:[[:space:]]*//' \
+        | tr -d '"' \
+        | tr -d "'" \
+        || echo "unknown")
+      [[ -z "$IIF_FEATURE" ]] && IIF_FEATURE="unknown"
+    fi
+    mkdir -p "$STATE_DIR" 2>/dev/null || true
+    printf '{"agent":"%s","started_at":"%s","feature":"%s","source":"inject-review-context.sh"}\n' \
+      "$AGENT_TYPE" "$IIF_NOW" "$IIF_FEATURE" \
+      > "$IIF_FILE" 2>/dev/null \
+      || echo "[inject-review-context] WARN: failed to write .iteration-in-flight" >&2
+    ;;
+esac
+
 OUTPUT=$(python3 << 'PYTHON_EOF'
 import json, os, glob, re, subprocess, sys
 
