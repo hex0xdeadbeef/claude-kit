@@ -215,6 +215,49 @@ run_stop_hook "session-T7"
 find "$REPO_DIR" -mindepth 1 -delete 2>/dev/null; rmdir "$REPO_DIR" 2>/dev/null || true
 
 # ============================================================================
+# T7.c (CR-002): non-git invocation — drain stdin cleanly, exit 0, no counter file
+# Pins the invariant that the stdin drain runs BEFORE the git rev-parse
+# short-circuit so the harness's piped JSON is always consumed (preventing
+# SIGPIPE on the next event).  A future refactor moving the drain below the
+# git check would silently break this; this test would catch it.
+# ============================================================================
+echo "--- T7.c (CR-002): non-git invocation → drain stdin + exit 0 + no counter ---"
+NONGIT_DIR="$(mktemp -d)"
+# No git init — directory is NOT a git repo
+cd "$NONGIT_DIR"
+STDOUT_NG=$(echo '{"session_id":"session-T7c","reason":"end"}' | bash "$HOOK" 2>&1)
+NG_RC=$?
+cd - >/dev/null
+[[ "$NG_RC" == "0" ]]; assert_pass "T7.c.a — non-git invocation exits 0" "$?"
+[[ -z "$STDOUT_NG" ]]; assert_pass "T7.c.b — non-git invocation emits no stdout/stderr" "$?"
+# No counter file should be created anywhere reachable via default STATE_DIR
+[[ ! -f "${NONGIT_DIR}/.claude/workflow-state/.stop-block-attempts-session-T7c" ]]
+assert_pass "T7.c.c — non-git invocation does NOT create counter file" "$?"
+find "$NONGIT_DIR" -mindepth 1 -delete 2>/dev/null; rmdir "$NONGIT_DIR" 2>/dev/null || true
+
+# ============================================================================
+# T7.d (CR-001): malicious session_id with path-traversal chars → default bucket
+# ============================================================================
+echo "--- T7.d (CR-001): session_id with '/' or '..' falls back to default bucket ---"
+build_repo_with_uncommitted 3
+# Pre-create the attacker-prepped sibling directory
+mkdir -p "${STATE_DIR}/.stop-block-attempts-evil"
+# Send malicious session_id
+cd "$REPO_DIR"
+echo '{"session_id":"evil/HIJACK"}' | bash "$HOOK" >/dev/null 2>&1
+cd - >/dev/null
+# Counter should go to .stop-block-attempts-default, NOT into the evil dir
+[[ ! -f "${STATE_DIR}/.stop-block-attempts-evil/HIJACK" ]]
+assert_pass "T7.d.a — malicious session_id does NOT write inside attacker-prepped dir" "$?"
+[[ -f "${STATE_DIR}/.stop-block-attempts-default" ]]
+assert_pass "T7.d.b — malicious session_id falls back to .stop-block-attempts-default" "$?"
+# Also test '..' and other shell-unsafe chars
+echo '{"session_id":"../escape"}' | (cd "$REPO_DIR" && bash "$HOOK" >/dev/null 2>&1)
+[[ ! -f "${STATE_DIR}/../escape" ]] && [[ ! -f "${REPO_DIR}/.claude/workflow-state/.stop-block-attempts-../escape" ]]
+assert_pass "T7.d.c — session_id with '..' falls back to default (no parent-dir escape)" "$?"
+find "$REPO_DIR" -mindepth 1 -delete 2>/dev/null; rmdir "$REPO_DIR" 2>/dev/null || true
+
+# ============================================================================
 # T8: SessionEnd cleanup deletes .stop-block-attempts-*
 # PR-002 honoured: session-analytics.sh invoked under CLAUDE_WORKFLOW_STATE_DIR=sandbox
 # so analytics JSONL append does NOT pollute the real .claude/workflow-state/.

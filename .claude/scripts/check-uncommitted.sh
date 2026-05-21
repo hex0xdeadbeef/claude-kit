@@ -88,6 +88,15 @@ except Exception:
     print('default')
 " 2>/dev/null || echo "default")
     fi
+    # CR-001: charset guard against path-traversal via malicious session_id.
+    # A payload like `session_id: "evil/HIJACK"` would otherwise let the
+    # BLOCK_LOG concat write to STATE_DIR/.stop-block-attempts-evil/HIJACK
+    # under an attacker-prepped sibling dir (which the SessionEnd glob
+    # `-type f` cleanup would NOT remove).  Restrict to [A-Za-z0-9_-]+;
+    # anything else falls back to the default bucket per AC-P3.5.
+    case "$SESSION_ID" in
+      ''|*[!A-Za-z0-9_-]*) SESSION_ID="default" ;;
+    esac
     BLOCK_LOG="${STATE_DIR_LOCAL}/.stop-block-attempts-${SESSION_ID}"
 
     PRIOR_COUNT=0
