@@ -228,10 +228,92 @@ if trigger == "auto":
             if state_dict.get("feature") is not None:
                 save_block_state({"feature": None, "current_part": None, "block_count": 0})
 
-if blocked:
+# --- P1 (audit AC-P1.1..7): cooldown on decision:block emission ---
+# Rate-limit repeated decision:block emissions to prevent the harness
+# from looping auto-compact attempts during long review iterations.
+# Protection itself is preserved — the FIRST block per cooldown window
+# still fires; only subsequent re-fires within the window are suppressed
+# and replaced with informational additionalContext carrying the original
+# reason.  Audit ref: .claude/prompts/workflow-hook-loop-audit.md § P1.
+def _cooldown_seconds():
+    raw = os.environ.get("CLAUDE_PRECOMPACT_COOLDOWN_S", "90")
+    try:
+        v = int(raw)
+    except (ValueError, TypeError):
+        v = 90
+    if v == 0:
+        return 0                # disabled — legacy behaviour
+    return v if v >= 30 else 30  # safety floor: never below 30s (AC-P1.11)
+
+COOLDOWN_FILE = os.path.join(STATE_DIR, ".precompact-last-block")
+COOLDOWN_SECONDS = _cooldown_seconds()
+
+def _emit_block_with_cooldown(reason_text):
+    """Emit decision:block and refresh the cooldown stamp.
+
+    AC-P1.6: on stamp-write failure, log WARN per kit convention and
+    emit the block anyway (fail-open — never lose protection due to FS
+    error).  The next invocation retries the stamp write.
+    """
+    try:
+        with open(COOLDOWN_FILE, "w") as _cf:
+            _cf.write(str(time.time()) + "\n")
+    except OSError as _e:
+        print(
+            f"[save-progress-before-compact] WARN: cooldown-stamp write failed: {_e}",
+            file=sys.stderr,
+        )
+    append_log(f"BLOCKED auto-compact (cooldown stamp refreshed, window={COOLDOWN_SECONDS}s)")
+    print(json.dumps({"decision": "block", "reason": reason_text}))
+
+if blocked and COOLDOWN_SECONDS > 0:
+    now = time.time()
+    last_block_ts = 0.0
+    if os.path.isfile(COOLDOWN_FILE):
+        try:
+            last_block_ts = os.path.getmtime(COOLDOWN_FILE)
+        except OSError:
+            last_block_ts = 0.0
+
+    # AC-P1.3 backward-compat: if .iteration-in-flight sentinel mtime is
+    # >= cooldown stamp mtime, treat this as a NEW review session and
+    # reset the cooldown.  Same-sentinel re-checks (the loop case) keep
+    # cooldown active; distinct sentinels each get their own first block.
+    # The `>=` (vs strict `>`) is the PR-001 mitigation against
+    # FS-timestamp-resolution coarseness that could equalise the two
+    # mtimes on noisy CI runners or coarse-resolution filesystems.
+    iter_mtime = 0.0
+    _iter_file_local = os.path.join(STATE_DIR, ".iteration-in-flight")
+    if os.path.isfile(_iter_file_local):
+        try:
+            iter_mtime = os.path.getmtime(_iter_file_local)
+        except OSError:
+            iter_mtime = 0.0
+    if iter_mtime > last_block_ts:
+        last_block_ts = 0.0  # fresh sentinel → reset cooldown
+
+    # Float comparison — int() truncates sub-second deltas to 0 and would
+    # incorrectly fall through to the block branch on rapid same-second
+    # invocations.  Integer cast is for display only.
+    elapsed = (now - last_block_ts) if last_block_ts > 0 else float(COOLDOWN_SECONDS + 1)
+    if 0 < elapsed < COOLDOWN_SECONDS:
+        # Cooldown active — emit informational additionalContext.
+        notice = (
+            f"[PreCompact COOLDOWN] {reason} "
+            f"(blocked {int(elapsed)}s ago; cooldown {COOLDOWN_SECONDS}s active to prevent block-storm)"
+        )
+        append_log(f"COOLDOWN_PASS auto-compact (elapsed={int(elapsed)}s, window={COOLDOWN_SECONDS}s)")
+        print(json.dumps({"additionalContext": build_additional_context() + "\n\n" + notice}))
+    else:
+        # Outside cooldown (or stamp absent / sentinel newer) — block + refresh.
+        _emit_block_with_cooldown(reason)
+elif blocked:
+    # CLAUDE_PRECOMPACT_COOLDOWN_S=0 — cooldown disabled, legacy behaviour.
+    append_log("BLOCKED auto-compact (cooldown disabled via CLAUDE_PRECOMPACT_COOLDOWN_S=0)")
     print(json.dumps({"decision": "block", "reason": reason}))
 else:
     print(json.dumps({"additionalContext": build_additional_context()}))
+# --- End P1 cooldown ---
 PYTHON_EOF
 )
 

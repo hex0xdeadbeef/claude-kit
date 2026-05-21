@@ -22,7 +22,8 @@
     "CLAUDE_DELTA_REVIEW_MODE    (delta-review-mode) off|warn|strict — off=disabled (default, byte-identical, zero behavioral change). warn=HINT advisory delta-focus for iter >=2 reviewers (plan: Part list; code: file list via git diff). strict=FOCUS narrower scope (opt-in indefinitely, no planned default flip).",
     "CLAUDE_CAVEMAN_MODE         (caveman) lite|off — lite (default if hook present and var unset) activates project-local caveman terse-output mode for /workflow parent session (orchestrator/designer/planner/coder). off disables caveman entirely; reviewer/researcher agents are exempt regardless via SubagentStart suspend hook. Resolution: env > .claude/workflow-state/.caveman-mode flag > 'lite'.",
     "CLAUDE_ISSUE_ID_NORMALIZE_VERSION (P2) 2|1 — 2 (default) applies NFKC + strip + collapse-whitespace + lowercase + strip-terminal-punctuation before sha256 in save-review-checkpoint.sh::_compute_canonical_id. 1 reverts to raw v1 hashing for forensic re-run of pre-2026-05-02 canonical IDs.",
-    "CLAUDE_VERDICT_BLOCK_TTL_HOURS (P3) integer hours — TTL for .verdict-block-{agent_id} sentinels. Default 6. Setting 0 disables eviction (pre-Part-4 never-evict behaviour). Eviction runs at the entry of inject-review-context.sh and save-review-checkpoint.sh; counter verdict_blocks_evicted appended to pipeline-metrics.jsonl."
+    "CLAUDE_VERDICT_BLOCK_TTL_HOURS (P3) integer hours — TTL for .verdict-block-{agent_id} sentinels. Default 6. Setting 0 disables eviction (pre-Part-4 never-evict behaviour). Eviction runs at the entry of inject-review-context.sh and save-review-checkpoint.sh; counter verdict_blocks_evicted appended to pipeline-metrics.jsonl.",
+    "CLAUDE_PRECOMPACT_COOLDOWN_S (P1) integer seconds — cooldown for repeated PreCompact decision:block emissions in save-progress-before-compact.sh. Default 90. Floor 30 (values below silently clamped). 0 disables (legacy — every block fires). Cooldown stamp at .claude/workflow-state/.precompact-last-block; reset on fresh .iteration-in-flight mtime so each new review iteration gets its own first block. Audit ref: .claude/prompts/workflow-hook-loop-audit.md § P1."
   ],
   "env": {
     "GIT_STRIP_CO_AUTHOR": "false",
@@ -36,7 +37,8 @@
     "_CLAUDE_DELTA_REVIEW_MODE": "warn",
     "_CLAUDE_CAVEMAN_MODE": "lite",
     "CLAUDE_ISSUE_ID_NORMALIZE_VERSION": "2",
-    "CLAUDE_VERDICT_BLOCK_TTL_HOURS": "6"
+    "CLAUDE_VERDICT_BLOCK_TTL_HOURS": "6",
+    "_CLAUDE_PRECOMPACT_COOLDOWN_S": "90"
   },
   "permissions": {
     "allow": [],
