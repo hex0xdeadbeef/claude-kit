@@ -100,6 +100,17 @@ try:
 except Exception:
     data = {}
 
+# I-04: defensive normalization of subagent_type. Platform v2.1.140 made the Agent-tool
+# subagent_type match case/separator-insensitive; this hardens the SubagentStop payload
+# compare the same way. agent_type is NOT part of the canonical-ID hash
+# (sha256(category|location|problem)), so normalization cannot affect issue-ID byte-stability.
+# It is identity on already-canonical inputs ("code-reviewer"/"plan-reviewer"), so marker
+# fields stay byte-identical for canonical payloads.
+def _normalize_agent_type(s):
+    if not s:
+        return s
+    return s.strip().lower().replace(" ", "-").replace("_", "-")
+
 # IMP-07: agent_type fallback includes "name" (WorktreeCreate uses "name" field)
 agent_type = (
     data.get("agent_type")
@@ -133,7 +144,7 @@ def lookup_agent_registry(aid):
         pass
     return None
 
-effective_agent_type = agent_type
+effective_agent_type = _normalize_agent_type(agent_type)  # I-04: canonical on variant casing; identity on canonical
 if not effective_agent_type or effective_agent_type == "unknown":
     recovered = lookup_agent_registry(agent_id)
     if recovered:

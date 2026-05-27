@@ -36,6 +36,20 @@ case "${verdict}" in
   *) exit 0 ;;
 esac
 
+# I-03: read the Stop payload (v2.1.145+ includes background_tasks). Suppress the
+# "workflow complete" notification while genuine background work is still running
+# (e.g. a backgrounded code-researcher) — firing now would be premature. Placed on the
+# emit path only (after the env/phase/verdict gates) per PR-002 review note: the
+# default-OFF and non-final-Stop early-exits never need to drain stdin (harmless — each
+# Stop hook gets its own stdin copy and exits at once). session_crons is intentionally
+# NOT gated on — that is the kit's own auto-checkpoint cron, expected during a run.
+STOP_INPUT="$(cat 2>/dev/null || echo "")"
+if [[ -n "${STOP_INPUT}" ]] && command -v jq >/dev/null 2>&1; then
+  bg_count="$(printf '%s' "${STOP_INPUT}" | jq -r '(.background_tasks // []) | length' 2>/dev/null || echo 0)"
+  case "${bg_count}" in ''|*[!0-9]*) bg_count=0 ;; esac
+  if [[ "${bg_count}" -gt 0 ]]; then exit 0; fi
+fi
+
 # Allowlisted OSC 9 sequence with BEL terminator
 seq="$(printf '\033]9;Claude Code: workflow complete\007')"
 jq -n --arg s "${seq}" '{hookSpecificOutput: {hookEventName: "Stop", terminalSequence: $s}}'

@@ -462,10 +462,10 @@ workflow:
       name: "SIMPLIFY (optional)"
       condition: "complexity L/XL AND total_parts >= 5"
       skip_when: "S/M complexity, total_parts < 5, or --no-simplify flag"
-      purpose: "Reduce code complexity before review — eliminates NIT/MINOR issues that would cause extra review iterations"
+      purpose: "Reduce code complexity before review — eliminates NIT/MINOR issues that would cause extra review iterations. On Claude Code v2.1.152+ /simplify is an alias for /code-review --fix, which applies reuse/simplification/efficiency and minor correctness fixes (broader than NIT/MINOR-only)."
       action:
         step_1: "Snapshot changed files: git diff --name-only (save list)"
-        step_2: "Run /simplify on changed files"
+        step_2: "Run /simplify on changed files (on Claude Code v2.1.152+ this is identical to /code-review --fix). If /simplify is unavailable (v2.1.147–2.1.151, where it was renamed to /code-review without the alias), SKIP gracefully: set simplify_applied: skipped and record 'simplify skipped — /simplify unavailable on this Claude Code version'."
         step_3: "Review simplify diff: git diff --stat"
         step_4: "Guard check — if simplify changed > 30% of lines touched → revert (git checkout -- {files}), note in handoff: 'simplify skipped — changes too broad'"
         step_5: "If guard passed → accept simplify changes"
@@ -473,7 +473,7 @@ workflow:
         purpose: "Prevent /simplify from introducing unintended changes"
         threshold: "Simplify diff adds/removes > 30% of total lines changed by IMPLEMENT"
         on_exceeded: "Revert simplify changes, proceed to VERIFY with original code"
-        note: "30% threshold is conservative. If simplify mostly removes dead code, that's fine. If it restructures logic, that's too risky."
+        note: "30% threshold is conservative. If simplify mostly removes dead code, that's fine. If it restructures logic, that's too risky. Under the v2.1.152 /code-review --fix semantics the guard also bounds correctness-fix-driven diff expansion, not just stylistic restructuring."
       handoff_impact: "Add simplify_applied: true|false|skipped to coder handoff"
 
     - phase: 3

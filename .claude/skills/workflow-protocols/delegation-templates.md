@@ -399,6 +399,18 @@ diff-manifest — both required for iteration 2+ correctness.
     7. If verdict is INCOMPLETE → Read .claude/skills/workflow-protocols/incomplete-output-recovery.md
        and follow on_incomplete_output fallback chain (step_0..step_5).
 
+## subagent_type normalization (I-04)
+
+Platform Claude Code v2.1.140 matches the Agent-tool `subagent_type` case- and
+separator-insensitively (e.g. `"Code Reviewer"` → `code-reviewer`). As defense-in-depth,
+`save-review-checkpoint.sh` additionally normalizes the SubagentStop payload's `agent_type`
+(`_normalize_agent_type`: strip → lower → spaces/underscores → hyphens) before comparing
+against `REVIEW_AGENTS` / `WORKTREE_AGENTS`. `agent_type` is NOT part of the canonical
+issue-ID hash (`sha256(category|location|problem)`), so this does not affect ID stability;
+the normalization is identity on already-canonical names, so canonical payloads are byte-stable.
+Note: for non-canonical non-empty inputs the post-normalization mismatch makes the P1-2
+registry backfill and P2-2 anomaly paths reachable — both NON_CRITICAL and self-healing.
+
 ## Degraded mode
 
 If this file is not found (missing, permission error, or rollout race):
