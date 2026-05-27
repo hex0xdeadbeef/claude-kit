@@ -269,6 +269,14 @@ def _normalize_agent_type(s):
 
 ### Part 4: I-05 — `skillOverrides: name-only` for internal skills
 
+> **DEVIATION (CR-001 / NEEDS_VALIDATION-driven, applied during implementation):** this Part was
+> REFRAMED — the `settings.json` `skillOverrides: name-only` change described below was **NOT
+> implemented**. The NEEDS_VALIDATION step found 7/8 target skills already carry
+> `disable-model-invocation: true` (strictly stronger than `name-only`; applying `name-only` would
+> be a no-op or could un-hide fully-hidden skills = a false-positive token saving). Shipped
+> instead: `test-skill-model-invocation-locked.sh`, which locks the existing optimization. No
+> `settings.json` change. The original plan text below is retained as the historical record.
+
 - **Files:** `.claude/settings.json` (UPDATE), `.claude/scripts/tests/test-skilloverrides-internal-name-only.sh` (CREATE).
 - **NEEDS_VALIDATION (do FIRST):** confirm the exact `skillOverrides` JSON shape (map vs array;
   key = skill `name` vs directory) via Claude Code docs (context7 `resolve-library-id` →
@@ -346,5 +354,5 @@ descriptions. The `test-protect-files.sh` hotfix is independent and stays.
 | `.claude/scripts/save-review-checkpoint.sh` | UPDATE | 3 |
 | `.claude/skills/workflow-protocols/delegation-templates.md` | UPDATE | 3 |
 | `.claude/scripts/tests/test-subagent-type-normalize.sh` | CREATE | 3 |
-| `.claude/settings.json` | UPDATE | 4 |
-| `.claude/scripts/tests/test-skilloverrides-internal-name-only.sh` | CREATE | 4 |
+| `.claude/settings.json` | ~~UPDATE~~ → NOT changed (I-05 reframed, CR-001) | 4 |
+| `.claude/scripts/tests/test-skill-model-invocation-locked.sh` (replaces planned `test-skilloverrides-internal-name-only.sh`) | CREATE | 4 |
