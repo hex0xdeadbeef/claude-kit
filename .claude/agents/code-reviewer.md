@@ -56,7 +56,7 @@ role:
 
 1. **STARTUP**
    - **Context already injected (preferred path):** Workflow context (feature, complexity, iteration, verify_status, prior iterations, prior verdicts) is pre-injected via `additionalContext` by SubagentStart hook (`inject-review-context.sh`). Do NOT manually read `{feature}-checkpoint.yaml`, `review-completions.jsonl`, or any `.claude/workflow-state/` files when present in additionalContext.
-   - **Sidecar fallback (worktree isolation):** If `INJECTED-CONTEXT.md` exists in your working dir (the worktree root), read it BEFORE QUICK CHECK. This is the orchestrator-written equivalent of the SubagentStart context for worktree-isolated launches where the hook does not fire. Treat its content as additionalContext-equivalent. If the file is absent, proceed without it — sidecar is best-effort.
+   - **Sidecar fallback (worktree isolation):** If `.claude/workflow-state/code-reviewer-INJECTED-CONTEXT.md` exists in your worktree (delivered by native `.worktreeinclude` from the main repo), read it BEFORE QUICK CHECK. This is the orchestrator-written equivalent of the SubagentStart context: a worktree runs origin/main's hooks (worktree.baseRef:"fresh") and cannot see the main-repo checkpoint, so `inject-review-context.sh` additionalContext is unreliable inside a worktree — the sidecar file is the reliable channel. Treat its content as additionalContext-equivalent. If the file is absent, proceed without it — sidecar is best-effort.
    - TodoWrite: create review checklist (Quick Check, Architecture, Error Handling, Security, Test Coverage, Verdict)
 
 2. **QUICK CHECK (blocking)**

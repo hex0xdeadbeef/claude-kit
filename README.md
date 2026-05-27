@@ -583,7 +583,7 @@ flowchart TB
     CONT -->|"context limit"| COMPACT["PreCompact (non-blocking):<br/>save-progress-before-compact.sh"]
     COMPACT --> PCOMPACT["PostCompact (non-blocking):<br/>verify-state-after-compact.sh"]
     CONT -->|"subagent exits"| SUBSTOP["SubagentStop (blocking):<br/>save-review-checkpoint.sh"]
-    CONT -->|"worktree created"| WT["WorktreeCreate (non-blocking):<br/>prepare-worktree.sh"]
+    CONT -->|"worktree created"| WT["worktree created (native git):<br/>.worktreeinclude → review-context sidecar"]
     CONT --> STOP["Stop (blocking):<br/>1. verify-phase-completion.sh<br/>2. check-uncommitted.sh"]
     CONT -.->|"API error"| SFAIL["StopFailure:<br/>log-stop-failure.sh"]
 
@@ -794,7 +794,6 @@ Configured in `.claude/settings.json`. Enforce quality automatically:
 | `save-progress-before-compact.sh` | PreCompact | Save checkpoint before context compaction |
 | `verify-state-after-compact.sh` | PostCompact | Verify workflow state integrity after compaction |
 | `save-review-checkpoint.sh` | SubagentStop | Persist review completion state |
-| `prepare-worktree.sh` | WorktreeCreate | Prepare worktree environment for code review |
 | `verify-phase-completion.sh` | Stop | Ensure all meta-agent phases completed |
 | `check-uncommitted.sh` | Stop | Warn on uncommitted changes |
 | `session-analytics.sh` | SessionEnd | Record session analytics |

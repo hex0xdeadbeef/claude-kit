@@ -388,18 +388,6 @@
         ]
       }
     ],
-    "WorktreeCreate": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".claude/scripts/prepare-worktree.sh",
-            "args": []
-          }
-        ]
-      }
-    ],
     "UserPromptSubmit": [
       {
         "matcher": "",

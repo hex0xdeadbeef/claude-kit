@@ -254,13 +254,16 @@ diff-manifest — both required for iteration 2+ correctness.
       echo '{"session_id": "{session_id}"}' \
         | bash .claude/scripts/inject-review-context.sh code-reviewer --sidecar-only
     Produces .claude/workflow-state/code-reviewer-INJECTED-CONTEXT.md.
-    prepare-worktree.sh copies this file into the worktree as INJECTED-CONTEXT.md;
-    code-reviewer.md startup reads it as additionalContext-equivalent.
+    Native worktree creation copies this file into the worktree via repo-root .worktreeinclude;
+    code-reviewer.md startup reads it from .claude/workflow-state/code-reviewer-INJECTED-CONTEXT.md
+    as additionalContext-equivalent.
     Best-effort: missing sidecar is non-blocking — code-reviewer falls back to
     its current "no prior context" path.
-    Rationale: SubagentStart hook does NOT fire for worktree-isolated code-reviewer
-    (3/3 confirmed in corpus 2026-04-29..2026-05-02). Sidecar is the orchestrator-
-    written equivalent of the SubagentStart additionalContext injection.
+    Rationale (revised 2026-05-27): SubagentStart fires for worktree agents, but
+    inject-review-context's additionalContext does not reliably reach a worktree reviewer —
+    the worktree runs origin/main's hooks (worktree.baseRef:"fresh") and the main-repo checkpoint
+    is absent from the worktree. The file-sidecar (delivered via .worktreeinclude) is the reliable
+    channel. Confirmed by probe: pre-fix additionalContext=no; sidecar-via-.worktreeinclude=delivered.
 
     STEP -1 (P0-04): Write .claude/workflow-state/.iteration-in-flight BEFORE delegating.
 

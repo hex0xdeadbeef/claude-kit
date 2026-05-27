@@ -116,17 +116,19 @@ if [[ -d .git ]]; then
       # SessionStart entry, (f) a "hooks": [ array-open line, or (g) a "SessionStart": [
       # top-level key line. Allowlist tokens are anchored to specific JSON-key shapes
       # to prevent unrelated lines from slipping through (CR-iter2 NIT tightening,
-      # caveman-skill-integration extension).
+      # caveman-skill-integration extension). Also allows the WorktreeCreate-hook
+      # removal (fix/worktree-create-contract): the prepare-worktree.sh "command" line,
+      # the "WorktreeCreate": [ event-key line, and the empty "args": [] array line.
       bad_lines=$(grep -E '^[+-]' /tmp/c5-settings-diff.txt \
         | grep -vE '^(\+\+\+|---) ' \
-        | grep -vE '^[+-][[:space:]]+"command":[[:space:]]+"\.claude/scripts/auto-fmt(-go)?\.sh",?$|^[+-][[:space:]]+"if":[[:space:]]+"(Write|Edit)\(\*\*/\*\.go\)"$|^[+-][[:space:]]+"type":[[:space:]]+"command",?$|^[+-][[:space:]]*[][}{,]+[[:space:]]*$|^[+-][[:space:]]+"command":[[:space:]]+"\.claude/scripts/caveman-(activate\.sh|suspend-for-reviewer\.sh (code-researcher|plan-reviewer|code-reviewer|verdict-recovery))",?$|^[+-][[:space:]]+"matcher":[[:space:]]+"",?$|^[+-][[:space:]]+"matcher":[[:space:]]+"verdict-recovery",?$|^[+-][[:space:]]+"hooks":[[:space:]]+\[$|^[+-][[:space:]]+"SessionStart":[[:space:]]+\[$' \
+        | grep -vE '^[+-][[:space:]]+"command":[[:space:]]+"\.claude/scripts/auto-fmt(-go)?\.sh",?$|^[+-][[:space:]]+"if":[[:space:]]+"(Write|Edit)\(\*\*/\*\.go\)"$|^[+-][[:space:]]+"type":[[:space:]]+"command",?$|^[+-][[:space:]]*[][}{,]+[[:space:]]*$|^[+-][[:space:]]+"command":[[:space:]]+"\.claude/scripts/caveman-(activate\.sh|suspend-for-reviewer\.sh (code-researcher|plan-reviewer|code-reviewer|verdict-recovery))",?$|^[+-][[:space:]]+"matcher":[[:space:]]+"",?$|^[+-][[:space:]]+"matcher":[[:space:]]+"verdict-recovery",?$|^[+-][[:space:]]+"hooks":[[:space:]]+\[$|^[+-][[:space:]]+"SessionStart":[[:space:]]+\[$|^[+-][[:space:]]+"WorktreeCreate":[[:space:]]+\[$|^[+-][[:space:]]+"command":[[:space:]]+"\.claude/scripts/prepare-worktree\.sh",?$|^[+-][[:space:]]+"args":[[:space:]]+\[\],?$' \
         || true)
       if [[ -n "$bad_lines" ]]; then
-        fail "AC-C5.13 — .claude/settings.json has changes outside the allowlist (auto-fmt-generic consolidation OR caveman-skill-integration hook entries)"
+        fail "AC-C5.13 — .claude/settings.json has changes outside the allowlist (auto-fmt-generic consolidation OR caveman-skill-integration hook entries OR WorktreeCreate-hook removal)"
       fi
     fi
     rm -f /tmp/c5-settings-diff.txt
-    pass "AC-C5.13 — settings.json diff (if any) limited to allowlist (auto-fmt-generic + caveman-skill-integration entries)"
+    pass "AC-C5.13 — settings.json diff (if any) limited to allowlist (auto-fmt-generic + caveman-skill-integration + WorktreeCreate-removal entries)"
 
     # handoff.schema.json: post-P1 refactor allows additive changes; discriminator-frozen invariant.
     git diff "$BASE"..HEAD -- .claude/schemas/handoff.schema.json > /tmp/c5-schema-diff.txt 2>&1 || true

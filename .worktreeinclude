@@ -1,0 +1,9 @@
+# .worktreeinclude — copy gitignored files into each new git worktree (native Claude Code feature).
+# .gitignore syntax; only files that match AND are themselves gitignored are copied.
+#
+# code-reviewer worktree context sidecar: the orchestrator writes this in the main repo
+# (delegation-templates.md STEP -2) BEFORE delegating to the worktree-isolated code-reviewer.
+# Native worktree creation copies it in, so the reviewer has workflow context even though the
+# worktree runs origin/main's hooks (worktree.baseRef:"fresh") and the main-repo checkpoint is
+# absent from the worktree. Replaces the deleted prepare-worktree.sh sidecar copy.
+.claude/workflow-state/code-reviewer-INJECTED-CONTEXT.md

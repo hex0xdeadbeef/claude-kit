@@ -27,7 +27,7 @@ input='{"session_id":"abcd1234","tool_name":"Agent"}'
 
 # Case 1: CLAUDE_EFFORT set → expect "Effort: high" text inside additionalContext
 out_with=$(echo "${input}" | CLAUDE_EFFORT="high" bash "${SCRIPT}" plan-reviewer 2>/dev/null || true)
-ac_with=$(echo "${out_with}" | jq -r '.additionalContext // ""' 2>/dev/null || echo "")
+ac_with=$(echo "${out_with}" |jq -r '.hookSpecificOutput.additionalContext // .additionalContext // ""' 2>/dev/null || echo "")
 if ! echo "${ac_with}" | grep -qE 'Effort:[ ]*high'; then
   echo "[test-inject-review-effort-context] FAIL: with-env expected 'Effort: high' in additionalContext" >&2
   echo "Got: ${ac_with}" >&2
@@ -36,7 +36,7 @@ fi
 
 # Case 2: env unset → effort line absent
 out_without=$(echo "${input}" | env -u CLAUDE_EFFORT bash "${SCRIPT}" plan-reviewer 2>/dev/null || true)
-ac_without=$(echo "${out_without}" | jq -r '.additionalContext // ""' 2>/dev/null || echo "")
+ac_without=$(echo "${out_without}" |jq -r '.hookSpecificOutput.additionalContext // .additionalContext // ""' 2>/dev/null || echo "")
 if echo "${ac_without}" | grep -qE 'Effort:[ ]*(unknown|\$)'; then
   echo "[test-inject-review-effort-context] FAIL: env-unset must omit Effort line (not emit empty placeholder)" >&2
   exit 1
