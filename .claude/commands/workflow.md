@@ -245,7 +245,9 @@ pipeline:
   simplify_note: |
     /coder runs optional SIMPLIFY sub-phase (Phase 2.5) between IMPLEMENT and VERIFY.
     Condition: complexity L/XL AND total_parts >= 5.
-    Runs /simplify on changed files to eliminate NIT/MINOR issues before code-review.
+    Runs /simplify (= /code-review --fix on Claude Code v2.1.152+) on changed files to apply
+    low-risk reuse/simplification/efficiency (and minor correctness) fixes before code-review;
+    skips gracefully (simplify_applied: skipped) if /simplify is unavailable (v2.1.147–2.1.151).
     Guard: if simplify changes > 30% of lines touched → revert, proceed with original code.
 
   load_phases:

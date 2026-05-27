@@ -10,7 +10,12 @@
 set -euo pipefail
 
 # P3: hard-coded breaker threshold (no env var per user direction 2026-05-22).
-# To tune, edit this line and `git revert` later — there is no per-machine knob.
+# I-02 INVARIANT: STOP_BLOCK_MAX MUST stay < the platform's stop-hook block cap
+# (CLAUDE_CODE_STOP_HOOK_BLOCK_CAP, default 8 since Claude Code v2.1.143). Our breaker
+# must fire FIRST and allow stop with a saved state, before the platform force-ends the
+# turn mid-block. The kit deliberately does NOT set CLAUDE_CODE_STOP_HOOK_BLOCK_CAP
+# (env-restraint) — it designs under the platform default. Verified by
+# test-stop-block-cap-invariant.sh. To tune, edit this line and `git revert` later.
 STOP_BLOCK_MAX=5
 
 # Drain stdin (Stop event JSON payload).  Read BEFORE the git short-circuit

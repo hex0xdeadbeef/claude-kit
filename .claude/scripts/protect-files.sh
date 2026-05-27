@@ -86,8 +86,9 @@ elif [[ "$FILE_PATH" == */.git/* ]] || [[ "$FILE_PATH" == .git/* ]]; then
 elif [[ "$FILE_PATH" =~ \.claude/settings\.json$ ]]; then
   DENY_REASON="Workflow config (.claude/settings.json). Changes must be made by user, not by agent."
 
+# Fix MAJOR-1: regex catches any file under .claude/scripts/ including subdirectories
+# Re-enabled for release (user direction): agents must not edit hook scripts directly.
 elif [[ "$FILE_PATH" =~ \.claude/scripts/ ]]; then
-  # Fix MAJOR-1: regex catches any file under .claude/scripts/ including subdirectories
   DENY_REASON="Hook script (.claude/scripts/). Changes must be made by user, not by agent."
 fi
 
