@@ -95,7 +95,8 @@ OUTPUT=$(echo '{"session_id": "test-session-cap6k"}' | bash "${HOOK_INJECT}" "co
 ADDITIONAL=$(echo "${OUTPUT}" | python3 -c "
 import json, sys
 d = json.loads(sys.stdin.read() or '{}')
-print(d.get('additionalContext', ''), end='')
+hs = d.get('hookSpecificOutput', {})
+print(hs.get('additionalContext', '') or d.get('additionalContext', ''), end='')
 ")
 
 # AC-P5.3

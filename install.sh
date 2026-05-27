@@ -177,6 +177,56 @@ merge_gitignore() {
     info "Merged .gitignore (kit patterns updated)"
 }
 
+# ── Merge .worktreeinclude ─────────────────────────────────────────────────────
+# Worktree review-context sidecar delivery. .worktreeinclude is a repo-ROOT file
+# (Claude Code native) — it is NOT under .claude/, so it is provisioned here like
+# .gitignore (marker-merged, idempotent), not copied by the .claude/ payload.
+merge_worktreeinclude() {
+    local kit_worktreeinclude="$1"
+    local target_dir="$2"
+    local target_worktreeinclude="${target_dir}/.worktreeinclude"
+
+    if [ ! -f "$kit_worktreeinclude" ]; then
+        return
+    fi
+
+    local start_marker="# --- Claude Kit (managed by install.sh -- do not edit this section) ---"
+    local end_marker="# --- End Claude Kit ---"
+
+    if [ ! -f "$target_worktreeinclude" ]; then
+        # No existing .worktreeinclude — create with markers
+        {
+            echo "$start_marker"
+            cat "$kit_worktreeinclude"
+            echo "$end_marker"
+        } > "$target_worktreeinclude"
+        info "Created .worktreeinclude with kit patterns"
+        return
+    fi
+
+    # Remove existing kit section if present (cross-platform: awk + tmp file, no sed -i)
+    if grep -qF "$start_marker" "$target_worktreeinclude"; then
+        local tmp_file
+        tmp_file=$(mktemp)
+        awk -v start="$start_marker" -v end="$end_marker" '
+            $0 == start { skip=1; next }
+            $0 == end   { skip=0; next }
+            !skip
+        ' "$target_worktreeinclude" > "$tmp_file"
+        mv "$tmp_file" "$target_worktreeinclude"
+    fi
+
+    # Append updated kit section
+    {
+        echo ""
+        echo "$start_marker"
+        cat "$kit_worktreeinclude"
+        echo "$end_marker"
+    } >> "$target_worktreeinclude"
+
+    info "Merged .worktreeinclude (kit patterns updated)"
+}
+
 # ── Write version file ─────────────────────────────────────────────────────────
 write_version() {
     local version="$1"
@@ -599,6 +649,9 @@ main() {
 
     # Merge .gitignore
     merge_gitignore "${src_dir}/.gitignore" "$target_dir"
+
+    # Merge .worktreeinclude (worktree review-context sidecar delivery)
+    merge_worktreeinclude "${src_dir}/.worktreeinclude" "$target_dir"
 
     # Write version
     write_version "$version" "$target_dir"

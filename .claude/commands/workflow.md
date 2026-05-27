@@ -408,10 +408,9 @@ hooks:
       behavior: "Validates handoff JSON against .claude/schemas/handoff.schema.json (IMP-01). Non-blocking by default; set CLAUDE_HANDOFF_VALIDATION_MODE=strict to block on failure."
       blocking: false
 
-    - event: WorktreeCreate
-      script: ".claude/scripts/prepare-worktree.sh"
-      behavior: "Prepares worktree environment (env vars, Go deps, analytics logging)"
-      blocking: false
+    # WorktreeCreate hook removed (F1, 2026-05-27): worktree creation is native (echoing a
+    # WorktreeCreate command hook's stdout as the worktree path broke creation). Review-context
+    # sidecar is now delivered into worktrees via repo-root .worktreeinclude (see code_review_delegation).
 
     - event: Stop
       script: ".claude/scripts/check-uncommitted.sh"

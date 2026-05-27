@@ -37,7 +37,7 @@ HOOK_INPUT=$(cat 2>/dev/null || echo '{}')
 export _HOOK_INPUT="$HOOK_INPUT"
 
 command -v python3 >/dev/null 2>&1 || {
-  echo '{"additionalContext": "[Workflow Context] python3 not available — context injection skipped"}'
+  echo '{"hookSpecificOutput":{"hookEventName":"SubagentStart","additionalContext":"[Workflow Context] python3 not available — context injection skipped"}}'
   exit 0
 }
 
@@ -88,6 +88,14 @@ esac
 OUTPUT=$(python3 << 'PYTHON_EOF'
 import json, os, glob, re, subprocess, sys
 
+
+def _emit(ctx):
+    # SubagentStart additionalContext MUST be nested under hookSpecificOutput
+    # (docs: "it is not a top-level field"). shape must match the bash
+    # python3-unavailable fallback echo (:~40) + caveman-suspend-for-reviewer.sh.
+    print(json.dumps({"hookSpecificOutput": {"hookEventName": "SubagentStart", "additionalContext": ctx}}))
+
+
 # Uniform import fallback (AC-3, KD-6)
 try:
     sys.path.insert(0, os.environ['LIB_DIR'])
@@ -95,7 +103,7 @@ try:
 except Exception as _import_err:
     print(f'[inject-review-context] WARN: shared state-render unavailable — {_import_err}',
           file=sys.stderr)
-    print('{"additionalContext": ""}')
+    _emit("")
     sys.exit(0)
 
 
@@ -332,16 +340,14 @@ _evict_stale_verdict_blocks_inject(state_dir)
 # Find latest checkpoint (P2: mtime-newest via shared helper; was alphabetical sorted()[-1])
 _latest_cp_path = latest_checkpoint(state_dir)
 if not _latest_cp_path:
-    print(json.dumps({"additionalContext":
-        "[Workflow Context] No checkpoint found — running outside workflow or first phase."}))
+    _emit("[Workflow Context] No checkpoint found — running outside workflow or first phase.")
     raise SystemExit(0)
 
 try:
     with open(_latest_cp_path) as f:
         content = f.read()
 except Exception:
-    print(json.dumps({"additionalContext":
-        "[Workflow Context] Checkpoint unreadable — context injection skipped."}))
+    _emit("[Workflow Context] Checkpoint unreadable — context injection skipped.")
     raise SystemExit(0)
 
 # Extract scalars (using imported helpers — AC-2, rename: no underscore → underscore)
@@ -656,7 +662,7 @@ if _sidecar_only:
     except Exception as _e:
         print(json.dumps({"additionalContext": f"[sidecar write failed: {_e}]"}))
 else:
-    print(json.dumps({"additionalContext": text}))
+    _emit(text)
 PYTHON_EOF
 )
 
@@ -677,7 +683,7 @@ import state_render; state_render.rotate_spillover_files(os.environ['STATE_DIR']
     _REF="$OVERFLOW_FILE" _SIZE="$SIZE" _PREVIEW="$PREVIEW" python3 -c "
 import json, os
 ref = os.environ['_REF']; size = os.environ['_SIZE']; preview = os.environ['_PREVIEW']
-print(json.dumps({'additionalContext': '[Overflow] Full output (' + size + ' chars) saved to ' + ref + '. Preview:\n' + preview + '\n…'}))
+print(json.dumps({'hookSpecificOutput': {'hookEventName': 'SubagentStart', 'additionalContext': '[Overflow] Full output (' + size + ' chars) saved to ' + ref + '. Preview:\n' + preview + '\n…'}}))
 "
 else
     printf '%s\n' "$OUTPUT"
