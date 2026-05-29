@@ -8,7 +8,7 @@ description: >-
   Features 9-phase workflow with quality gates, constitutional evaluation, and progress tracking.
   Do NOT use for writing application code, file operations, or general coding tasks.
 model: opus
-effort: max
+effort: xhigh
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Task, Agent, WebSearch, mcp__memory__read_graph, mcp__memory__add_observations, mcp__memory__search_nodes, mcp__memory__create_entities, mcp__memory__create_relations
 ---
 

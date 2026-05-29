@@ -29,7 +29,7 @@ flowchart LR
     EVAL -->|PROCEED/REVISE| IMPL[Implement Parts]
 
     IMPL --> SIMP{Simplify?\nL/XL + parts≥5}
-    SIMP -->|Yes| SMP["/simplify = /code-review --fix"]
+    SIMP -->|Yes| SMP["/simplify (cleanup-only review)"]
     SIMP -->|No| VRF
     SMP --> VRF[VERIFY\nvet+fmt+lint+test]
 

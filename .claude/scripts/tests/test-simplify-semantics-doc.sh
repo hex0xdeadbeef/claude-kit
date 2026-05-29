@@ -1,32 +1,51 @@
-#!/usr/bin/env bash
-# test-simplify-semantics-doc.sh — I-01: Phase 2.5 SIMPLIFY ↔ /code-review --fix doc consistency.
-# Asserts the four docs that reference /simplify agree on the v2.1.147→v2.1.152 semantics:
-#   - coder.md Phase 2.5 step_2 has a graceful-skip branch + simplify_applied: skipped
-#   - coder.md / workflow.md / orchestration-core.md reference the /code-review --fix identity
-#   - CLAUDE.md Soft Prerequisites name >= 2.1.152 for native SIMPLIFY
-# RED before the I-01 edits; GREEN after.
+#!/bin/bash
+# Test: SIMPLIFY (Phase 2.5) /simplify semantics documented consistently (IMP-2, 2.1.154).
+#
+# Claude Code 2.1.154 redefined /simplify: it now runs a CLEANUP-ONLY review
+# (reuse, simplification, efficiency, altitude) and applies the fixes — NOT the bug-hunting
+# /code-review --fix it aliased on 2.1.152. Guards cross-file consistency of the SIMPLIFY wording
+# across coder.md, workflow.md, orchestration-core.md, CLAUDE.md after that revert.
+#
+# CHANGELOG evidence: line 14 ("/simplify now runs a cleanup-only review (reuse, simplification,
+# efficiency, altitude) ... instead of running the full /code-review --fix bug-hunting review").
+#
+# Part of changelog-2153-156-opus48-uplift (IMP-2). Supersedes the 2.1.152 identity assertion
+# from changelog-2142-152-core (I-01).
 
 set -uo pipefail
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
-PASS=0; FAIL=0
+FAIL=0
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+cd "$ROOT" || { echo "FAIL: cannot cd to repo root"; exit 1; }
+err() { echo "FAIL: $1"; FAIL=1; }
 
-chk() {  # name  file  fixed-string
-  local name="$1" file="$2" needle="$3"
-  if grep -Fq -- "$needle" "${ROOT}/${file}" 2>/dev/null; then
-    echo "  PASS: $name"; PASS=$((PASS+1))
-  else
-    echo "  FAIL: $name (missing in ${file}: '${needle}')"; FAIL=$((FAIL+1))
-  fi
-}
+CODER=".claude/commands/coder.md"
+WF=".claude/commands/workflow.md"
+ORCH=".claude/skills/workflow-protocols/orchestration-core.md"
 
-echo "=== test-simplify-semantics-doc.sh ==="
-chk "coder.md references /code-review --fix"        ".claude/commands/coder.md"                              "/code-review --fix"
-chk "coder.md graceful-skip simplify_applied"       ".claude/commands/coder.md"                              "simplify_applied: skipped"
-chk "workflow.md references /code-review --fix"     ".claude/commands/workflow.md"                           "/code-review --fix"
-chk "orchestration-core.md mermaid identity"        ".claude/skills/workflow-protocols/orchestration-core.md" "/code-review --fix"
-chk "CLAUDE.md names >= 2.1.152 floor for SIMPLIFY" "CLAUDE.md"                                              "2.1.152"
-chk "CLAUDE.md ties note to SIMPLIFY sub-phase"     "CLAUDE.md"                                              "SIMPLIFY"
+# 1. coder.md describes the 2.1.154 cleanup-only semantics, NOT the stale 2.1.152 identity.
+grep -q 'cleanup-only' "$CODER" || err "coder.md missing 2.1.154 'cleanup-only' SIMPLIFY semantics"
+if grep -q 'identical to /code-review --fix' "$CODER"; then
+  err "coder.md still asserts stale '/simplify identical to /code-review --fix' (reverted in 2.1.154)"
+fi
+grep -q 'simplify_applied: skipped' "$CODER" || err "coder.md missing graceful-skip (simplify_applied: skipped)"
 
-echo "=== Results: ${PASS} passed, ${FAIL} failed ==="
-[[ "${FAIL}" -eq 0 ]] && exit 0 || exit 1
+# 2. workflow.md simplify_note uses cleanup-only framing, not the stale identity.
+grep -q 'cleanup-only' "$WF" || err "workflow.md simplify_note missing 'cleanup-only' framing"
+if grep -q '= /code-review --fix' "$WF"; then
+  err "workflow.md still asserts stale '/simplify = /code-review --fix' identity"
+fi
+
+# 3. orchestration-core.md mermaid node uses a cleanup-only label, not the stale identity.
+grep -q 'cleanup-only' "$ORCH" || err "orchestration-core.md mermaid SMP node missing 'cleanup-only' label"
+if grep -q '/simplify = /code-review --fix' "$ORCH"; then
+  err "orchestration-core.md mermaid still shows stale '/simplify = /code-review --fix'"
+fi
+
+# 4. CLAUDE.md SIMPLIFY sub-phase note reflects 2.1.154 cleanup-only.
+grep -q 'SIMPLIFY sub-phase' CLAUDE.md || err "CLAUDE.md missing SIMPLIFY sub-phase note"
+grep -q 'cleanup-only' CLAUDE.md || err "CLAUDE.md SIMPLIFY note missing 2.1.154 'cleanup-only' semantics"
+
+if [[ "$FAIL" -eq 0 ]]; then
+  echo "PASS: SIMPLIFY cleanup-only (2.1.154) semantics documented consistently across 4 files"
+fi
+exit "$FAIL"

@@ -5,6 +5,7 @@ model: haiku
 effort: medium
 memory: project
 maxTurns: 20
+disallowedTools: [Write, Edit, NotebookEdit]
 ---
 <!-- CACHE_BREAKPOINT: static_instructions -->
 

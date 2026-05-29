@@ -2,8 +2,15 @@
 name: workflow
 description: "Full development cycle: task-analysis → [/designer (L/XL)] → planner → plan-review (agent) → coder → code-review (agent)"
 model: opus
-effort: max
+effort: xhigh
 ---
+
+> **Disambiguation:** this `/workflow` (singular) is the claude-kit multi-agent development
+> pipeline (planner → plan-reviewer → coder → code-reviewer). It is **distinct from** Claude
+> Code's native `/workflows` (plural) "dynamic workflows" feature (2.1.154) and the `Workflow`
+> tool, which orchestrate ad-hoc background agent fan-out (up to 1000 subagents). `/workflow`
+> runs the kit pipeline; `/workflows` lists native dynamic-workflow runs. Do not conflate them.
+
 
 role:
   identity: "Orchestrator"
@@ -245,8 +252,8 @@ pipeline:
   simplify_note: |
     /coder runs optional SIMPLIFY sub-phase (Phase 2.5) between IMPLEMENT and VERIFY.
     Condition: complexity L/XL AND total_parts >= 5.
-    Runs /simplify (= /code-review --fix on Claude Code v2.1.152+) on changed files to apply
-    low-risk reuse/simplification/efficiency (and minor correctness) fixes before code-review;
+    Runs /simplify (a cleanup-only review on Claude Code v2.1.154+: reuse, simplification,
+    efficiency, altitude) on changed files to apply low-risk cleanups before code-review;
     skips gracefully (simplify_applied: skipped) if /simplify is unavailable (v2.1.147–2.1.151).
     Guard: if simplify changes > 30% of lines touched → revert, proceed with original code.
 

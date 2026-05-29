@@ -2,7 +2,7 @@
 name: plan-reviewer
 description: Reviews implementation plans for architecture compliance, completeness, and security. Use when a plan needs validation before coding begins.
 model: opus
-effort: max
+effort: xhigh
 tools:
   - Read
   - Grep
