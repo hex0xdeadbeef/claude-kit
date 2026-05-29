@@ -1,5 +1,8 @@
 # Workflow Architecture (global — loaded every session)
 
+> Note: the kit's `/workflow` (singular) command below is the dev pipeline — distinct from Claude Code's native `/workflows` (plural) dynamic-workflows feature + `Workflow` tool (2.1.154).
+
+
 Commands (`.claude/commands/` — shared context with orchestrator):
 - `/workflow` — full dev cycle (orchestrator)
 - `/planner` — codebase research + plan creation
@@ -15,15 +18,15 @@ Design Decision — Commands vs Agents:
 - Agents run in CLEAN context → unbiased review, no creation history bias
 - This split is intentional. Do NOT migrate commands to agents.
 
-Model Routing (all workflow pipeline agents: opus + effort:max):
-- opus (effort: max): /workflow, /planner, /designer, /coder, /meta-agent, /project-researcher, plan-reviewer, code-reviewer
+Model Routing (all workflow pipeline agents: opus + effort:xhigh):
+- opus (effort: xhigh): /workflow, /planner, /designer, /coder, /meta-agent, /project-researcher, plan-reviewer, code-reviewer
 - haiku (effort: medium): code-researcher — fast read-only codebase exploration
 - haiku (effort: low): verdict-recovery — minimal fallback agent for missing verdicts
 
 Context (v2.1.94+):
 - Claude Code default effort changed from `medium` → `high` for API-key/Team/Enterprise users in v2.1.94
-- `effort: max` is Opus 4.6 exclusive — enables maximum extended thinking budget
-- Reviewers and coder migrated sonnet → opus in v1.9.0 (09acec9) to satisfy `effort: max` constraint
+- `effort: xhigh` is the top frontmatter/settings effort tier on Opus 4.8 (which defaults to `high`). `max` is a session-only `/effort` value and is NOT honored in agent/skill frontmatter or settings — an `effort: max` frontmatter silently degrades to the default `high`. Valid frontmatter values: `low|medium|high|xhigh` (Claude Code 2.1.154+; CHANGELOG `2.1.154`, `2.1.111` introduced `xhigh`).
+- Reviewers and coder migrated sonnet → opus in v1.9.0 (09acec9) to satisfy the maximum-effort (`xhigh`) constraint
 - Pair with `CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING=1` (set globally) to prevent mid-task adaptive throttling
 
 ## Hook stderr Convention

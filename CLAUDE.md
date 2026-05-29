@@ -31,7 +31,7 @@ Optional tools used by hooks. Missing tools → graceful degradation (warn, non-
 
 **Minimum Claude Code version `>= 2.1.141`:** the kit's hook handlers use the exec-form `args: string[]` syntax (v2.1.139), `continueOnBlock` on PostToolUse hooks (v2.1.139), `PostToolUseFailure` event (v2.1.139), `terminalSequence` JSON output (v2.1.141), and `worktree.baseRef` setting (v2.1.133). Users on earlier versions encounter graceful degradation in many paths (silently-ignored config fields), but the hook exec-form invariant requires v2.1.139 or later. The v2.1.141 floor selects the first release on which every feature consumed by this kit is GA. Prior baseline (`>= 2.1.113`) covered the `Bash(...)` deny-rule wrapper-stripping for `env`/`sudo`/`watch`/`ionice`/`setsid`; that platform feature is still relied on, and `block-dangerous-commands.sh` still provides defence-in-depth on all versions.
 
-**SIMPLIFY sub-phase (`>= 2.1.152` for native `/simplify`):** the optional Phase 2.5 SIMPLIFY sub-phase invokes `/simplify`, which Claude Code v2.1.152 restored as an alias for `/code-review --fix` (it was renamed to `/code-review` without an alias in v2.1.147, removing the old cleanup-and-fix behaviour). On v2.1.147–2.1.151 `/coder` degrades gracefully — it skips SIMPLIFY and records `simplify_applied: skipped`. Native SIMPLIFY needs `>= 2.1.152`; this does NOT raise the kit's overall `>= 2.1.141` floor (SIMPLIFY is optional and gated on L/XL + parts ≥ 5).
+**SIMPLIFY sub-phase (`>= 2.1.154` for native `/simplify`):** the optional Phase 2.5 SIMPLIFY sub-phase invokes `/simplify`. On Claude Code v2.1.154+ `/simplify` runs a cleanup-only review (reuse, simplification, efficiency, altitude) and applies the fixes — it does NOT run the bug-hunting `/code-review --fix`. (Version history: `/simplify` was removed in v2.1.147, aliased to `/code-review --fix` in v2.1.152–2.1.153, and reverted to cleanup-only in v2.1.154.) On v2.1.147–2.1.151 `/coder` degrades gracefully — it skips SIMPLIFY and records `simplify_applied: skipped`. Native SIMPLIFY needs `>= 2.1.154` for the cleanup-only behaviour; this does NOT raise the kit's overall `>= 2.1.141` floor (SIMPLIFY is optional and gated on L/XL + parts ≥ 5).
 
 **Stop-hook block cap (`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`):** Claude Code v2.1.143 force-ends a turn after 8 consecutive Stop-hook blocks (override via `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`). The kit's own Stop circuit breaker (`STOP_BLOCK_MAX=5` in `check-uncommitted.sh`) is set deliberately BELOW that default of 8, so the kit breaker fires first — allowing stop with a loud WARN and an intact saved state — before the platform force-ends the turn mid-block. The kit does NOT set `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` (env-restraint); it designs under the default. `test-stop-block-cap-invariant.sh` locks the `STOP_BLOCK_MAX < 8` invariant.
 
@@ -50,6 +50,24 @@ Optional tools used by hooks. Missing tools → graceful degradation (warn, non-
 - `CLAUDE_TOOL_FAILURES_MAX_LINES` — head-trim cap for `.claude/workflow-state/tool-failures.jsonl` (Proposal B, AD-4). Default `1000`. Lower for tight disk budgets; `0` disables rotation.
 
 Full rationale + log rotation tunables (`CLAUDE_WORKFLOW_STATE_DIR`, `CLAUDE_VALIDATION_LOG_MAX_LINES`) in `.claude/settings.local.json.example`.
+
+## Platform Guarantees Relied Upon
+
+The kit depends on these Claude Code platform behaviours. Do NOT lower the `>= 2.1.141` version
+floor or roll back a reliance without re-checking this list — each row is load-bearing for the
+pipeline. (Sources: local `CHANGELOG.md` at the cited versions.)
+
+| Platform guarantee | Version | What the kit relies on it for |
+| ------------------ | ------- | ----------------------------- |
+| Background subagents cannot bypass the worktree-isolation guard (write to the shared checkout) | 2.1.154 | `code-reviewer` (`isolation: worktree`) — clean-slate review without polluting the main checkout |
+| Background-agent completion no longer triggers premature "out of context" on 1M-context models | 2.1.154 | Opus 4.8 1M-context pipeline — review/research agents finishing mid-run must not abort the orchestrator |
+| `worktree.baseRef: "head"` resolves the current worktree's HEAD (not the main checkout's) | 2.1.154 | Correct base ref for worktree-spawned review agents |
+| Sandbox write-allowlist in worktrees narrowed to `.git` (was the whole repo root) | 2.1.150 | Worktree review isolation — writes scoped away from the main tree |
+| Worktree cleanup no longer `rm -rf` on `git worktree remove` failure | 2.1.143 | Safe teardown of review worktrees — no destructive fallback |
+| Read tool returns a PARTIAL view instead of a hard error past the token cap | 2.1.145 | `planner`/`coder` large-file reads degrade gracefully instead of failing the phase |
+| Compaction preserves sensitive user instructions | 2.1.139 | Checkpoint / `--resume` recovery keeps the workflow contract intact across compaction |
+| 1H prompt-cache TTL no longer silently downgrades to 5-min | 2.1.129 / 2.1.132 | XL "Prompt Cache Policy" relies on the 1H TTL surviving phase transitions |
+| A malformed hooks / managed-settings entry no longer voids the whole settings file | 2.1.122 / 2.1.154 | Hook wiring survives a single bad entry — pipeline hooks keep firing |
 
 ## Memory Mechanisms
 

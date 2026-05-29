@@ -2,7 +2,7 @@
 name: designer
 description: Explores requirements and designs approach before planning. Produces approved spec for /planner.
 model: opus
-effort: max
+effort: xhigh
 ---
 
 # DESIGNER
