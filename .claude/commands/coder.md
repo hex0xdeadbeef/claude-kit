@@ -213,10 +213,9 @@ startup:
         - ".claude/skills/coder-rules/review-response.md"
       purpose: "Load review feedback handling protocol. Triggers TRIAGE → VERIFY → EVALUATE → IMPLEMENT → DOCUMENT response pattern on re-entry."
 
-    - action: "Load Spec Check protocol"
-      files:
-        - ".claude/skills/coder-rules/spec-check.md"
-      purpose: "Load spec compliance checklist for Phase 3.5"
+    # The coder-rules spec-check protocol is loaded JUST-IN-TIME at WORKFLOW phase 3.5,
+    # not eagerly here — it is unused during EVALUATE/IMPLEMENT. Deferred per audit #7,
+    # mirroring the conditional Review Response load above.
 
     - action: "TodoWrite"
       purpose: "Create Parts list for tracking"
@@ -547,6 +546,7 @@ workflow:
       purpose: "Verify implementation matches plan before code-review handoff"
       reference: ".claude/skills/coder-rules/spec-check.md"
       steps:
+        - "Load .claude/skills/coder-rules/spec-check.md (just-in-time — deferred from STARTUP per audit #7; not needed during EVALUATE/IMPLEMENT)"
         - "Run spec compliance checklist against plan"
         - "S complexity: lightweight mode (Parts coverage only)"
         - "M/L/XL: full checklist (coverage + scope + deviations + AC + interfaces)"
