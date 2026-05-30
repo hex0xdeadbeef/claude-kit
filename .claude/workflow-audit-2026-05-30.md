@@ -214,3 +214,60 @@ recommendation:
     - "Swap #7→#6 if you want the stale-memory correctness fix (lowest token saving but removes an actively-contradictory effort:max fact + phantom dir fed to the explorer agent)."
     - "Swap #3→#9 to shift the win from orchestrator-startup to planner-startup (~1000 tok/iter-1 planner run)."
 ```
+
+---
+
+## Phase 6 — Implementation Results (top-5 approved at GATE 2)
+
+```yaml
+method: "Each unit ran a full kit /workflow XL cycle (planner -> plan-reviewer agent -> coder TDD -> code-reviewer agent), one at a time, TDD test-first, contracts re-checked, one merge commit each."
+test_baseline: "86/86 green before; 91/91 green after (5 new tests added, 0 regressions)."
+contracts: "All 4 handoff payloads + VERDICT/VERDICT_JSON envelope + canonical issue ID byte-stable across all 5 units. No new env vars. settings.json byte-unchanged."
+
+units:
+  - unit: 1
+    backlog: "#4 (+ #1 dropped with evidence)"
+    change: "Slim the PROJECT-KNOWLEDGE.md reviewer injection to consumed-slot extraction (inject-review-context.sh + new lib/pk_slots.py)."
+    saving: "~360 tokens per reviewer SubagentStart (4096 -> 2655 chars), 12/12 consumed slots preserved; up to ~6 injections per L/XL run."
+    bonus: "Fixed a latent ERROR_WRAP truncation in the old [:4096] prefix (caught by code-reviewer)."
+    dropped: "#1 (suppress PK on iter>=2) dropped — each reviewer is a fresh isolated context, so cross-iteration injection is not within-context redundancy; suppression would starve the iter>=2 delta-reviewer. plan-reviewer confirmed."
+    verdicts: "plan-review APPROVED; code-review APPROVED_WITH_COMMENTS (1 NIT folded)."
+    commit: "b085728"
+  - unit: 2
+    backlog: "#2"
+    change: "Split rules/workflow.md — move the two hook-author maintenance sections to a path-scoped rule kit-authoring-conventions.md (globs .claude/**/*.{sh,md,json}); keep the runtime map global."
+    saving: "~659 tokens every session (workflow.md rule 5060 -> 2421 bytes)."
+    integration: "check-references.sh PK-01 exemption extended for the moved bare-PROJECT-KNOWLEDGE.md example; byte-identical move (SHA256-verified)."
+    verdicts: "plan-review NEEDS_CHANGES -> fixed -> APPROVED; code-review APPROVED (2 NIT)."
+    commit: "98ead48"
+  - unit: 3
+    backlog: "#5"
+    change: "Externalize the CLAUDE.md ## Platform Guarantees table (9 rows) to .claude/docs/platform-guarantees.md; CLAUDE.md keeps heading + pointer; >= 2.1.141 floor stays inline."
+    saving: "~396 tokens every session (CLAUDE.md 22982 -> 21395 bytes)."
+    verdicts: "plan-review APPROVED (2 MINOR folded); code-review APPROVED (byte-identity verified 3 ways)."
+    commit: "a4d5028"
+  - unit: 4
+    backlog: "#3"
+    change: "Collapse the commands/workflow.md ## HOOKS section (63 -> 21 lines) to a settings.json pointer + the ~5 pipeline-load-bearing hooks' rationale; drop the also_active_during_workflow mirror + track-task-lifecycle entry."
+    saving: "~507 tokens per /workflow run (workflow.md command 22868 -> 20840 bytes)."
+    guard: "HK-4 asserts every referenced hook still wired in settings.json; settings.json byte-unchanged."
+    verdicts: "plan-review APPROVED (2 MINOR folded); code-review APPROVED."
+    commit: "e5cb4ea"
+  - unit: 5
+    backlog: "#7"
+    change: "Defer coder-rules/spec-check.md from /coder STARTUP to a just-in-time Phase-3.5 load, mirroring the conditional review-response load."
+    saving: "~600 tokens out of the eager /coder startup prefix per run (76-line skill no longer eager)."
+    verdicts: "plan-review APPROVED (1 MINOR folded — eager load confirmed NOT load-bearing); code-review APPROVED."
+    commit: "ceb... (Unit 5 merge)"
+
+aggregate_savings:
+  every_session: "~1055 tokens (Unit 2 ~659 + Unit 3 ~396)"
+  per_workflow_run: "+ ~507 tokens (Unit 4)"
+  per_coder_run: "+ ~600 tokens (Unit 5)"
+  per_reviewer_injection: "+ ~360 tokens x up to 6 per L/XL run (Unit 1) => up to ~2160 tokens/run"
+  note: "Estimates from byte deltas (~4 chars/token). A representative L/XL /workflow run that touches every surface saves on the order of ~4000-5000 tokens of eager/injected context at identical functionality."
+
+not_implemented:
+  - "Backlog #6-#12 (stale-memory refresh, planner IMP-04 digest defer, reviewer-prose dedup, verdict-alias telemetry, dual-language EXAMPLE collapse) — not in the approved top-5. Available for a follow-up pass."
+  - "Backlog #1 — superseded by Unit 1's evidence-based drop (fresh-context reviewers)."
+```
