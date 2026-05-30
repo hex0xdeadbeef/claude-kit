@@ -1,30 +1,32 @@
 #!/bin/bash
-# Test: CLAUDE.md documents the platform guarantees the kit relies on (IMP-4).
-#
-# Several Claude Code platform fixes are load-bearing for the pipeline (worktree isolation,
-# 1M-context completion behaviour, compaction, settings resilience). Documenting them as explicit
-# dependencies prevents a future maintainer from lowering the version floor or rolling back a
-# reliance blindly. Asserts the section exists and lists >=6 distinct platform versions.
-#
-# Part of changelog-2153-156-opus48-uplift (IMP-4).
-
+# Test: the platform guarantees the kit relies on are documented (IMP-4).
+# Externalized (audit #5) from CLAUDE.md to .claude/docs/platform-guarantees.md so the 9-row
+# table stops loading into every session; CLAUDE.md keeps the heading + an on-demand pointer.
+# This canonical consumer test now asserts the guarantee table lives in the DOC and that CLAUDE.md
+# points to it — the guarantee stays genuinely enforced after the move.
 set -uo pipefail
 FAIL=0
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 cd "$ROOT" || { echo "FAIL: cannot cd to repo root"; exit 1; }
 err() { echo "FAIL: $1"; FAIL=1; }
+DOC=".claude/docs/platform-guarantees.md"
 
-grep -q '^## Platform Guarantees Relied Upon$' CLAUDE.md \
-  || err "CLAUDE.md missing '## Platform Guarantees Relied Upon' section"
+# TG-1: externalized doc exists and carries the (caveman-verbatim) heading
+[ -f "$DOC" ] || err "missing $DOC (platform guarantees externalized doc)"
+grep -q '^## Platform Guarantees Relied Upon$' "$DOC" \
+  || err "$DOC missing '## Platform Guarantees Relied Upon' heading"
 
-# Extract the section body (heading → next H2) and count distinct 2.1.x version tokens in it.
-sec="$(awk '/^## Platform Guarantees Relied Upon$/{f=1;next} /^## /{f=0} f' CLAUDE.md)"
-vcount="$(printf '%s\n' "$sec" | grep -oE '2\.1\.[0-9]+' | sort -u | wc -l | tr -d ' ')"
+# TG-2: the doc body lists >=6 distinct platform versions (table moved intact)
+vcount="$(grep -oE '2\.1\.[0-9]+' "$DOC" 2>/dev/null | sort -u | wc -l | tr -d ' ')"
 if [[ "${vcount:-0}" -lt 6 ]]; then
-  err "Platform Guarantees section lists <6 distinct versions (found ${vcount:-0}; need >=6)"
+  err "doc lists <6 distinct versions (found ${vcount:-0}; need >=6)"
 fi
 
+# TG-3: CLAUDE.md points to the externalized doc (discoverability preserved)
+grep -q 'docs/platform-guarantees.md' CLAUDE.md \
+  || err "CLAUDE.md missing pointer to $DOC"
+
 if [[ "$FAIL" -eq 0 ]]; then
-  echo "PASS: Platform Guarantees section present with $vcount distinct versions"
+  echo "PASS: platform guarantees documented in $DOC with $vcount versions; CLAUDE.md points to it"
 fi
 exit "$FAIL"
