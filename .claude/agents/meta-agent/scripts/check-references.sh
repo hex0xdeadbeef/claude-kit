@@ -24,7 +24,7 @@ if [[ "$FILE_PATH" == *"agent-memory"* ]]; then
 fi
 
 # --- PK-01: PROJECT-KNOWLEDGE.md canonical path check ---
-# Canonical path is the canonical form (SEE .claude/rules/workflow.md → Path Conventions).
+# Canonical path is the canonical form (SEE .claude/rules/kit-authoring-conventions.md → Path Conventions).
 # Detects the bare form (no `.claude/` prefix) and logs to stdout.
 # Runs for ANY file type (this block is BEFORE the .md-only filter below).
 # Output: stdout (consistent with existing ❌/✅/⚠️ pattern in this script).
@@ -34,12 +34,13 @@ fi
 #
 # Exemption list (files that legitimately contain the bare-form literal):
 #   - this script (check-references.sh) — regex literal appears in comments + echo
-#   - .claude/rules/workflow.md — canonical rule doc describing the forbidden form
+#   - .claude/rules/kit-authoring-conventions.md — canonical rule doc describing the forbidden form
+#   - .claude/rules/workflow.md — retains the pointer to the above (kept exempt for safety)
 #   - .claude/prompts/* — plan/spec/review-response docs that document the rule
 # Without these exemptions the hook self-fires and blocks its own maintenance (strict mode).
 PK_SKIP=false
 case "$FILE_PATH" in
-  *check-references.sh|*.claude/rules/workflow.md|*/.claude/prompts/*|.claude/prompts/*)
+  *check-references.sh|*.claude/rules/workflow.md|*.claude/rules/kit-authoring-conventions.md|*/.claude/prompts/*|.claude/prompts/*)
     PK_SKIP=true
     ;;
 esac
