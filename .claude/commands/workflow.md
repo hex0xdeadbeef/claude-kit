@@ -371,65 +371,23 @@ skill_references:
     - "handoff (common path) → handoff-contracts.md (5 contracts, lightweight); IMP-02/03/04 details → handoff-protocol.md"
 
 ## HOOKS
+
 hooks:
-  note: |
-    Configured in .claude/settings.json (authoritative source — 12 event types, 18 scripts + 2 prompt hooks).
-    This section lists only workflow-specific hooks. For complete list see settings.json.
-    Deterministic — fires automatically, no need to remember.
-    Conditional `if` (v2.1.85): PreToolUse/PostToolUse hooks use `if` field with permission rule
-    syntax to reduce process spawning. Security hooks (protect-files, block-dangerous) remain unconditional.
-
-  workflow_specific:
-    - event: PreCompact
-      script: ".claude/scripts/save-progress-before-compact.sh"
-      behavior: "Saves checkpoint + review completions to additionalContext before compaction"
-      blocking: false
-
-    - event: PostCompact
-      script: ".claude/scripts/verify-state-after-compact.sh"
-      behavior: "Verifies checkpoint + review completions integrity, re-injects state summary"
-      blocking: false
-
-    - event: SubagentStart
-      script: ".claude/scripts/track-task-lifecycle.sh"
-      matcher: "code-researcher"
-      behavior: "Logs code-researcher invocation to .claude/workflow-state/task-events.jsonl for pipeline metrics"
-      blocking: false
-
-    - event: SubagentStart
-      script: ".claude/scripts/inject-review-context.sh <agent-type>"
-      matcher: "plan-reviewer (arg: plan-reviewer), code-reviewer (arg: code-reviewer)"
-      behavior: "Injects workflow context (feature, complexity, iteration, prior issues, plan/spec paths) as additionalContext for review agents"
-      blocking: false
-      note: "Split into two separate matcher entries in settings.json to pass agent type as $1"
-
-    - event: SubagentStop
-      script: ".claude/scripts/save-review-checkpoint.sh"
-      matcher: "plan-reviewer|code-reviewer"
-      behavior: "Appends review completion marker to .claude/workflow-state/review-completions.jsonl"
-      blocking: true
-
-    - event: PostToolUse
-      script: ".claude/scripts/validate-handoff.sh"
-      if: "Write(.claude/workflow-state/*-handoff.json) | Edit(.claude/workflow-state/*-handoff.json)"
-      behavior: "Validates handoff JSON against .claude/schemas/handoff.schema.json (IMP-01). Non-blocking by default; set CLAUDE_HANDOFF_VALIDATION_MODE=strict to block on failure."
-      blocking: false
-
-    # WorktreeCreate hook removed (F1, 2026-05-27): worktree creation is native (echoing a
-    # WorktreeCreate command hook's stdout as the worktree path broke creation). Review-context
-    # sidecar is now delivered into worktrees via repo-root .worktreeinclude (see code_review_delegation).
-
-    - event: Stop
-      script: ".claude/scripts/check-uncommitted.sh"
-      behavior: "Blocks stop if uncommitted changes exist"
-      blocking: true
-
-  also_active_during_workflow:
-    - "InstructionsLoaded → validate-instructions.sh (rules validation)"
-    - "UserPromptSubmit → enrich-context.sh (context enrichment + exploration budget visualization)"
-    - "PreToolUse → protect-files.sh, check-artifact-size.sh [if: Write(.claude/**)], import-matrix prompt hook [if: internal/**/*.go], block-dangerous-commands.sh, pre-commit-build.sh [if: Bash(git commit*)]"
-    - "PostToolUse → auto-fmt.sh [matcher: Write|Edit; slot-driven via FMT_CMD/LANG_EXT], yaml-lint.sh [if: Edit(.claude/**)], check-references.sh [if: Write(.claude/**)], check-plan-drift.sh [if: .claude/**]"
-    - "SessionEnd → session-analytics.sh"
-    - "StopFailure → log-stop-failure.sh (API error logging)"
-    - "Notification → notify-user.sh"
-    - "ConfigChange → audit-config-change.sh (audit log + blocks project_settings changes during active workflow)"
+  authoritative: |
+    .claude/settings.json is the authoritative wiring (12 event types, 18 scripts + 2 prompt
+    hooks). Hooks fire deterministically; the orchestrator does NOT read settings.json at
+    runtime. For the complete list, see settings.json.
+  pipeline_load_bearing: |
+    A few hooks shape pipeline flow (rationale not obvious from the wiring alone):
+    - PreCompact/PostCompact (save-progress-before-compact.sh / verify-state-after-compact.sh): persist + verify checkpoint + review-completions across compaction (recovery contract).
+    - SubagentStart inject-review-context.sh (plan-reviewer|code-reviewer): injects feature/complexity/iteration/prior-issues/plan-spec context for review agents.
+    - SubagentStop save-review-checkpoint.sh (BLOCKING): appends the review verdict marker to review-completions.jsonl.
+    - PostToolUse validate-handoff.sh: validates *-handoff.json against the schema (IMP-01).
+    - Stop check-uncommitted.sh (BLOCKING): blocks stop on uncommitted changes — commit before Phase 5 completion.
+  notes: |
+    Conditional `if` (v2.1.85) on PreToolUse/PostToolUse; security hooks (protect-files,
+    block-dangerous-commands) unconditional. WorktreeCreate hook removed (F1, 2026-05-27);
+    review-context sidecar delivered into worktrees via repo-root .worktreeinclude.
+    Intentionally dropped from this summary (deterministic, no orchestrator-flow rationale):
+    the non-workflow-specific hook mirror + the code-researcher metrics-only SubagentStart
+    track-task-lifecycle.sh — both fully specified in settings.json.
