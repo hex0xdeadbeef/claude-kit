@@ -587,12 +587,24 @@ if os.path.isfile(pk_path):
     try:
         with open(pk_path, "r", encoding="utf-8") as pf:
             pk_content = pf.read()
-        # Cap at 4KB of PK content to leave headroom under the 8KB additionalContext cap
-        if len(pk_content) > 4096:
-            pk_content = pk_content[:4096] + "\n\n... [truncated — full PK at .claude/PROJECT-KNOWLEDGE.md]"
+        # Inject ONLY the reviewer-consumed slot blocks (extract_pk_slots), not a
+        # blind byte prefix. Reviewers reference a fixed slot set; the raw file's
+        # frontmatter / H1 / HTML comment + non-slot prose are dead injection.
+        # Safety net: if extraction finds no slot (unexpected PK shape) keep the
+        # full content. Per-block cap below is a backstop; the whole additionalContext
+        # is bounded later by CAP=6000 (see size-cap block near end of this script).
+        try:
+            from pk_slots import extract_pk_slots
+            pk_block = extract_pk_slots(pk_content)
+        except Exception:
+            pk_block = ""
+        if not pk_block:
+            pk_block = pk_content
+        if len(pk_block) > 4096:
+            pk_block = pk_block[:4096] + "\n\n... [truncated — full PK at .claude/PROJECT-KNOWLEDGE.md]"
         lines.append("")
         lines.append("## Project Knowledge (resolved slots — from .claude/PROJECT-KNOWLEDGE.md)")
-        lines.append(pk_content.strip())
+        lines.append(pk_block.strip())
         pk_block_added = True
     except Exception as _pk_err:
         # Non-fatal — agent proceeds without PK; will SKIP slot-driven checks
