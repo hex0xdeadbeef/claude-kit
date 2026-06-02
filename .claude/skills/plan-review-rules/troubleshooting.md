@@ -7,7 +7,7 @@ purpose: "Common mistakes during plan review and their solutions"
 troubleshooting:
   - problem: "APPROVED plan with import violations"
     cause: "Manual check missed Handler → Repository import"
-    fix: "Use arch-checker agent for complex plans (4+ Parts)"
+    fix: "Run inline grep import-vs-LAYER_RULE checks for complex plans (4+ Parts) — SEE architecture-checks.md § Inline Architecture Checks"
     lesson: "Automation catches what humans miss"
 
   - problem: "MINOR issues escalated incorrectly"

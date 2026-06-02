@@ -513,13 +513,14 @@ workflow:
 
         full_testing:
           when: "Multi-session task, many tests"
-          tool: "Task (test-runner subagent)"
+          tool: "Bash (run_in_background) — SEE coder-rules/mcp-tools.md § Monitor workflow Pattern A"
           example: |
-            Task tool:
-              subagent_type: "test-runner"
-              model: "sonnet"
+            Bash:
+              command: "{TEST_CMD} 2>&1 | tee /tmp/verify-output.log"
               run_in_background: true
-              prompt: "Run project test suite and analyze results including coverage report"
+            # harness auto-notifies on process exit (no Monitor, no polling); then read once:
+            Bash:
+              command: "tail -20 /tmp/verify-output.log"
 
       verify_results:
         - result: PASS

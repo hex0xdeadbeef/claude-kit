@@ -368,8 +368,8 @@ phases:
       - step: "External libraries"
         tool: "context7"
         usage:
-          - "mcp__plugin_context7_context7__resolve-library-id → {library-id}"
-          - "mcp__plugin_context7_context7__query-docs → '{query}'"
+          - "mcp__context7__resolve-library-id → {library-id}"
+          - "mcp__context7__query-docs → '{query}'"
 
     research_budget:
       purpose: "Prevent exploration loops. When budget exceeded → STOP_AND_TRANSITION to DESIGN with findings so far."

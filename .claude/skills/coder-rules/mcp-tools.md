@@ -17,12 +17,12 @@
 **Context7 workflow:**
 ```yaml
 # Step 1: Find library
-mcp__plugin_context7_context7__resolve-library-id:
+mcp__context7__resolve-library-id:
   libraryName: "{library-name}"
   query: "how to setup {library}"
 
 # Step 2: Get documentation
-mcp__plugin_context7_context7__query-docs:
+mcp__context7__query-docs:
   libraryId: "/{org}/{library}"
   query: "{specific usage question}"
 ```

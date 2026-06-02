@@ -104,30 +104,25 @@ manual_checks:
     severity_if_fail: BLOCKER
 ```
 
-## Automated Checks (Complex Plans)
+## Inline Architecture Checks (Complex Plans)
 
 ```yaml
-automated_checks:
+inline_checks:
   when_to_use:
     - complex_plan: "4+ Parts"
     - multi_layer: "3+ layers modified"
     - high_risk: "Core domain changes"
 
-  task_tool_usage:
-    subagent_type: "arch-checker"
-    model: "haiku"
-    prompt_template: |
-      Validate architecture compliance for files mentioned in the plan:
-      - Check layer imports matrix compliance per LAYER_RULE
-      - Find DOMAIN_PROHIBIT pattern in domain entities
-      - Verify error handling patterns per ERROR_WRAP convention
-      - List any GENERATED_PATTERN / MOCK_PATTERN file modifications
+  note: |
+    plan-reviewer has Read/Grep/Glob only (no Task/Agent tool; Bash disallowed).
+    Run these checks INLINE with grep against the plan's code examples — do NOT
+    dispatch a subagent (no such agent exists and the reviewer cannot launch one).
 
-    output_format:
-      - violations: "List of import matrix violations"
-      - domain_issues: "DOMAIN_PROHIBIT matches found in entities"
-      - error_issues: "Missing error context or non-conformant ERROR_WRAP"
-      - protected_files: "Generated / mock files in change list"
+  procedure:
+    - layer_imports: "grep each Part's code-example import lines; verify against LAYER_RULE (SKIP with consolidated NIT if LAYER_RULE unset OR ARCHITECTURE_STYLE != layered)"
+    - domain_purity: "grep for DOMAIN_PROHIBIT pattern in domain-entity code examples"
+    - error_handling: "grep for ERROR_WRAP convention in error-return code examples"
+    - protected_files: "scan the plan's change list for GENERATED_PATTERN / MOCK_PATTERN file modifications"
 ```
 
 ## Security Checklist (API Endpoints)
