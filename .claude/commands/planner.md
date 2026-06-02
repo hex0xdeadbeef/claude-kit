@@ -473,9 +473,9 @@ phases:
       condition: "ONLY read this guide if complexity L/XL. SKIP for S/M — simple tasks don't need structured analysis."
       use_when:
         - "Alternatives >= 3"
-        - "Architecture layers >= 4"
+        - "Architecture layers >= 3"
         - "New pattern/integration"
-        - "Parts in plan >= 5"
+        - "Parts in plan >= 4"
         - "Trade-offs are non-obvious"
       warning: "If Sequential Thinking NOT used — justify why it was unnecessary"
 

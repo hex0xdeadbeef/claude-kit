@@ -365,10 +365,20 @@ def _render_checkpoint_ref(state: dict) -> "str | None":
     if not feature:
         return None
     phase = state.get("phase_completed", "?")
+    phase_name = state.get("phase_name", "")
+    # F2 (audit 2026-06-02): Phase 5 (completion) is terminal — the run is
+    # finished, nothing to resume, and both README.md and workflow.md mark
+    # Phase 5 as not independently resumable via --from-phase. Emit a completion
+    # marker instead of an out-of-range `--from-phase 5` hint. Behaviour for all
+    # resumable phases (0.7-4) is preserved verbatim.
+    if str(phase) == "5" or phase_name == "completion":
+        resume_line = "Status: complete (Phase 5) — nothing to resume"
+    else:
+        resume_line = f"Resume: /workflow --from-phase {phase}"
     return (
         f"## Workflow Checkpoint\n"
         f"File: {state_dir}/{feature}-checkpoint.yaml\n"
-        f"Resume: /workflow --from-phase {phase}"
+        f"{resume_line}"
     )
 
 

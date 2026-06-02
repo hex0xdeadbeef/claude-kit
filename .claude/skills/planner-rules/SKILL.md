@@ -74,8 +74,8 @@ For more examples, see [Examples](examples.md).
 **Fix:** RULE: Full Examples — all code in plan must have complete function bodies, error handling, and context propagation.
 
 ### Sequential Thinking skipped for complex plan
-**Cause:** Planner thinks plan is simple, but has 5+ parts.
-**Fix:** ALWAYS use Sequential Thinking if Parts >= 5 or alternatives >= 3.
+**Cause:** Planner thinks plan is simple, but has 4+ parts.
+**Fix:** ALWAYS use Sequential Thinking if Parts >= 4, layers >= 3, or alternatives >= 3.
 
 For all troubleshooting cases, see [Troubleshooting](troubleshooting.md).
 

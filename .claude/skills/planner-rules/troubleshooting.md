@@ -2,8 +2,8 @@
 
 troubleshooting:
   - problem: "Sequential Thinking skipped for complex plan"
-    cause: "Planner thinks plan is simple, but has 5+ parts"
-    fix: "ALWAYS use Sequential Thinking if Parts ≥ 5 or alternatives ≥ 3"
+    cause: "Planner thinks plan is simple, but has 4+ parts"
+    fix: "ALWAYS use Sequential Thinking if Parts ≥ 4, layers ≥ 3, or alternatives ≥ 3"
     lesson: "Complex plans need structured decision-making"
 
   - problem: "Plan has incomplete code examples (signatures only)"
