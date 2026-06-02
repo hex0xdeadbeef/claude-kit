@@ -86,6 +86,12 @@ Canonical references: <https://code.claude.com/docs/en/memory> (auto-memory), <h
 
 **Verification:** `bash .claude/scripts/tests/test-tdd-shapes-extracted.sh` asserts the cascade-block + skill skeleton remain intact (TD-1..TD-5).
 
+## Design Critique Sub-Phase
+
+**Phase 3.5 (CRITIQUE):** `/designer` (L/XL) stress-tests the selected approach through a fixed multi-lens set (`.claude/skills/design-rules/critique-lenses.md`) before writing the spec. Each lens yields a concrete task-bound finding or an explicit "no finding — reason" (anti-theater forcing function); each finding carries a disposition (`addressed | accepted-risk | out-of-scope`, rationale required when not `addressed`). Findings are recorded in the additive `spec.design_critique` block; HIGH unresolved findings are carried into `/planner`'s `areas_needing_attention` (existing array — no contract-shape change).
+
+**Contract-safe:** runs in `/designer` command context only — no SubagentStop hook, no schema change, canonical issue-ID hash and caveman boundaries untouched. `design_critique` is a YAML key (not an H2); DC-* finding ids are local-ref-only and never enter a verdict envelope. Verification: `.claude/scripts/tests/test-design-critique-*.sh`.
+
 ## Prompt Cache Policy
 
 Claude Code v2.1.108+ supports 1H prompt-cache TTL. Subscription tiers default to 1H automatically; API-key/Bedrock/Vertex/Foundry default to 5min and need `ENABLE_PROMPT_CACHING_1H=1` to extend. XL workflows span 5-10 phase transitions, so non-subscription tiers without 1H-TTL hit ~50% cache-miss rate.

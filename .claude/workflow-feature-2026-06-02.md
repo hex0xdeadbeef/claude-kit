@@ -2,12 +2,13 @@
 feature: adversarial-design-critique
 title: "Adversarial Design Critique (design-stage red-team / multi-perspective viewpoints)"
 date: 2026-06-02
-status: design_proposal        # design_proposal | parts_approved | implemented
+status: implemented            # design_proposal | parts_approved | implemented
 complexity: XL
 author: /workflow (orchestrator)
+implemented: [Part 1, Part 2, Part 4]   # GATE 2 selection; Part 3 (clean-context agent) not selected
 gates:
   gate_1_inventory: APPROVED    # user approved full-exploration inventory
-  gate_2_parts: PENDING         # awaiting user selection of top-N parts
+  gate_2_parts: APPROVED        # user selected Part 1 + 2 + 4
 scope_note: >
   Improve the /designer stage + spec-writing phase so the pipeline examines each task
   from critical and unexpected viewpoints, surfacing more cases BEFORE planning. Extends

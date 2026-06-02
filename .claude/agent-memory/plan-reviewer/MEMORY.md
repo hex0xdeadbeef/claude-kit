@@ -29,3 +29,7 @@ correspond to artifact roles:
 - Plan missing per-Part verification snippets (test command or grep predicate).
 - Spec missing OUT scope items with explicit reasons.
 - Plan missing diff-vs-prior-iteration block on iter 2+ (IMP-04 contract).
+
+## Design Critique (Phase 3.5)
+
+- L/XL specs may carry a `design_critique` block (findings + dispositions: addressed | accepted-risk | out-of-scope); unresolved HIGH findings appear in the planner's `areas_needing_attention`. These are design-stage observations, not plan defects — do not auto-escalate them.
