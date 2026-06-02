@@ -425,6 +425,22 @@ phases:
     name: "DESIGN"
     note: "If spec provided → use spec's selected approach and key decisions as starting point. Designer already explored alternatives — planner refines into Parts."
 
+    design_critique_carryforward:
+      when: "spec exists AND spec contains a design_critique block (L/XL designer path)"
+      skip_when: "no spec OR spec has no design_critique block (S/M path, or older specs predating Phase 3.5) — plan exactly as before (backward-compatible, SKIP-if-absent)"
+      action: |
+        Read spec.design_critique.findings. For each finding with severity HIGH whose disposition
+        is accepted-risk or out-of-scope, append a string to the plan's areas_needing_attention[]
+        in the planner_to_plan_review handoff, using the template:
+          "Design critique (DC-N, {disposition}): {finding}"
+        This surfaces unresolved design-stage findings to plan-review through the channel it
+        already consumes. Findings with disposition=addressed are NOT carried (the design already
+        handles them).
+      contract_note: |
+        areas_needing_attention[] is an EXISTING free-text string array in planner_to_plan_review —
+        appending strings does NOT change the contract shape and requires NO schema change. Keep each
+        appended item a complete sentence (caveman boundary #5: free-text array values stay whole).
+
     async_integration_point:
       when: "background_pending=true in Research Summary (code-researcher running in background)"
       timing: "Check ONCE at the start of DESIGN phase, BEFORE sequential_thinking"

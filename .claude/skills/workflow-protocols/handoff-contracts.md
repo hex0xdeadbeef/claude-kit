@@ -30,6 +30,13 @@ handoff_protocol:
         known_risks:
           - "Risk description + severity"
         acceptance_criteria_count: N
+        critique_summary:                # OPTIONAL (DE-4). Present when the spec has a design_critique block (Phase 3.5). Consumer SKIPs if absent. designer_to_planner stays non-schema-validated (carries no contract discriminator) — additive, no schema change.
+          total: N
+          addressed: N
+          accepted_risk: N
+          out_of_scope: N
+          unresolved_high:               # HIGH findings not addressed — /planner carries these into areas_needing_attention[]
+            - "Complete sentence describing the unresolved HIGH design finding."
 
     planner_to_plan_review:
       producer: "/planner"

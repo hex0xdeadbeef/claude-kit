@@ -74,6 +74,13 @@ output:
     known_risks:
       - "{risk + severity}"
     acceptance_criteria_count: N
+    critique_summary:                  # OPTIONAL (DE-4) — mirror of spec.design_critique.summary from Phase 3.5. Omit if no critique was produced. designer_to_planner stays non-schema-validated.
+      total: N
+      addressed: N
+      accepted_risk: N
+      out_of_scope: N
+      unresolved_high:                 # HIGH findings not addressed — /planner carries these into areas_needing_attention[]
+        - "{Complete sentence describing the unresolved HIGH design finding.}"
 
 ## STARTUP
 startup:
