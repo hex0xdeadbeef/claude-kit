@@ -88,7 +88,7 @@ startup:
 
 ## PIPELINE
 pipeline:
-  flow: "EXPLORE → CLARIFY → PROPOSE → SPEC → GATE"
+  flow: "EXPLORE → CLARIFY → PROPOSE → CRITIQUE → SPEC → GATE"
 
   phases:
     - phase: 1
@@ -126,12 +126,27 @@ pipeline:
         - "Recommend one approach with clear rationale"
       output: "Approaches table with recommendation"
 
+    - phase: 3.5
+      name: "CRITIQUE / RED-TEAM"
+      purpose: "Examine the SELECTED approach from critical and unexpected viewpoints before writing the spec"
+      load: ".claude/skills/design-rules/critique-lenses.md (just-in-time)"
+      actions:
+        - "Load critique-lenses.md"
+        - "Run the SELECTED approach through ALL lenses (failure-mode, assumptions, boundary, misuse, operability, contracts, cost)"
+        - "For each lens: produce a concrete task-bound finding OR an explicit 'no finding — reason' line"
+        - "Assign each finding a disposition: addressed | accepted-risk | out-of-scope (rationale required when disposition is not addressed)"
+        - "Findings with disposition=addressed feed back into the approach / key_decisions / acceptance_criteria written in Phase 4"
+      anti_theater: "Generic, non-task-specific findings are rejected — they count as skipped lenses (see spec-quality completeness gate)."
+      skip_when: "Never skipped — whenever /designer runs (L/XL always, M when recommended per TRIGGERS), the critique applies."
+      output: "design_critique findings list (written into the spec in Phase 4)"
+
     - phase: 4
       name: "WRITE SPEC"
       purpose: "Document the design decision as a spec artifact"
       actions:
         - "Write spec to .claude/prompts/{feature}-spec.md using spec-template"
         - "Include: context, requirements, selected approach, alternatives, key decisions, risks, acceptance criteria"
+        - "Write design_critique block (findings + dispositions + summary) from Phase 3.5"
         - "Set status: pending_approval"
       output: "Spec file created"
 
@@ -140,6 +155,7 @@ pipeline:
       purpose: "Get explicit user confirmation before proceeding to planning"
       actions:
         - "Present spec summary to user"
+        - "Surface design_critique unresolved_high findings (if any) in the summary so the user sees accepted-risk / out-of-scope HIGH items before approving"
         - "Ask: 'Approve this design to proceed to planning?'"
         - "If approved → set status: approved, form handoff"
         - "If rejected → iterate (back to Phase 2 or 3 based on feedback)"

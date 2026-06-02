@@ -16,6 +16,7 @@ Read this SKILL.md for overview. Supporting files loaded on-demand per phase.
 
 ### Step 2: Use phase-driven loading
 - Phase 3 (PROPOSE) → read [Spec Quality](spec-quality.md) for approach evaluation criteria
+- Phase 3.5 (CRITIQUE) → read [Critique Lenses](critique-lenses.md) for the adversarial lens set + disposition forcing-function
 - Phase 4 (WRITE SPEC) → read [Design Checklist](design-checklist.md) for self-verification
 - Phase 5 (USER GATE) → verify checklist before presenting to user
 
@@ -53,4 +54,5 @@ Read this SKILL.md for overview. Supporting files loaded on-demand per phase.
 
 ## References
 - [Spec Quality](spec-quality.md) — detailed quality criteria, approach evaluation matrix
+- [Critique Lenses](critique-lenses.md) — adversarial lens set, anti-theater forcing function (Phase 3.5)
 - [Design Checklist](design-checklist.md) — phase-by-phase self-verification

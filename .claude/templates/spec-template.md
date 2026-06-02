@@ -54,6 +54,23 @@ spec:
       severity: "HIGH|MEDIUM|LOW"
       mitigation: "{How to mitigate}"
 
+  design_critique:                  # NEW — output of /designer Phase 3.5 (CRITIQUE). Additive; consumers SKIP if absent.
+    lenses_applied: [failure_mode, assumptions, boundary, misuse, operability, contracts, cost]
+    findings:
+      - id: "DC-1"                  # local ref only — NOT the canonical issue ID (first 8 hex of sha256 over category|location|problem); never enters a verdict envelope
+        lens: "boundary"
+        finding: "{Complete sentence naming the specific missed case for THIS task.}"
+        severity: "HIGH|MEDIUM|LOW"
+        disposition: "addressed|accepted-risk|out-of-scope"
+        rationale: "{Required when disposition is not addressed.}"
+        influences: "{approach.selected | key_decisions[N] | acceptance_criteria[N] | out_of_scope}"
+    summary:
+      total: 0
+      addressed: 0
+      accepted_risk: 0
+      out_of_scope: 0
+      unresolved_high: 0           # HIGH findings not yet addressed — surfaced at the user gate
+
   acceptance_criteria:
     - "{Criterion 1 — verifiable}"
     - "{Criterion 2 — verifiable}"

@@ -20,6 +20,14 @@ Self-verification at each /designer phase.
 - [ ] Recommendation includes clear rationale
 - [ ] Recommendation references specific constraints
 
+## Phase 3.5: CRITIQUE / RED-TEAM
+- [ ] critique-lenses.md loaded
+- [ ] All lenses applied (each: concrete finding OR explicit "no finding — reason")
+- [ ] Each finding has a disposition (addressed / accepted-risk / out-of-scope)
+- [ ] accepted-risk / out-of-scope findings have a rationale
+- [ ] No generic/boilerplate findings (each is task-specific)
+- [ ] unresolved_high count surfaced for the user gate
+
 ## Phase 4: WRITE SPEC
 - [ ] All spec-template sections filled
 - [ ] Context describes current state, not just goal
