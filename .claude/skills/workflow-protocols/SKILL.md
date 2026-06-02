@@ -27,15 +27,15 @@ Read this SKILL.md for protocol overview. Then load Core Deps files:
 ### Step 2: Use event-driven protocol loading
 Do NOT load all protocols upfront. Load on-demand per Event Triggers below:
 - Completing a phase → read [Checkpoint Protocol](checkpoint-protocol.md)
-- Forming handoff (common path) → read [Handoff Contracts](handoff-contracts.md) (5 KB, core contracts only)
-  For IMP-02/03/04 protocol details → also read [Handoff Protocol](handoff-protocol.md)
+- Forming handoff OUTSIDE Phase-2/4 delegation (e.g. designer→planner) → read [Handoff Contracts](handoff-contracts.md) (5 KB, core contracts only)
+  On the Phase-2/4 delegation path the contract shapes are already inlined in [Delegation Templates](delegation-templates.md) — do NOT also load handoff-contracts.md or handoff-protocol.md there. Read [Handoff Protocol](handoff-protocol.md) ONLY when authoring a net-new IMP-02/03/04 envelope.
 - Mismatch signal → read [Re-routing](re-routing.md)
 - All phases done → read [Pipeline Metrics](pipeline-metrics.md)
 
 ### Step 3: Always form handoff payload
 CRITICAL: Every phase MUST produce a structured handoff payload (context + artifact + metadata) for the next phase.
-Read [Handoff Contracts](handoff-contracts.md) for the 5 pipeline contracts before forming any handoff.
-For IMP-02/03/04 implementation details (verdict envelopes, ID normalization, diff-based replan) → also read [Handoff Protocol](handoff-protocol.md).
+Read [Handoff Contracts](handoff-contracts.md) for the 5 pipeline contracts before forming a handoff OUTSIDE Phase-2/4 delegation. On the Phase-2/4 delegation path the shapes are already inlined in [Delegation Templates](delegation-templates.md) — do NOT also load handoff-contracts.md or handoff-protocol.md there.
+For IMP-02/03/04 implementation details (verdict envelopes, ID normalization, diff-based replan), read [Handoff Protocol](handoff-protocol.md) ONLY when authoring a net-new envelope.
 
 ## Example
 
@@ -81,8 +81,8 @@ For all troubleshooting cases, see [Examples & Troubleshooting](examples-trouble
 
 ## Event Triggers
 - Phase completed → write checkpoint (see [Checkpoint Protocol](checkpoint-protocol.md))
-- Forming handoff (common path) → read [Handoff Contracts](handoff-contracts.md) (5 KB, core contracts only)
-  For IMP-02/03/04 protocol details → also read [Handoff Protocol](handoff-protocol.md)
+- Forming handoff OUTSIDE Phase-2/4 delegation (e.g. designer→planner) → read [Handoff Contracts](handoff-contracts.md) (5 KB, core contracts only)
+  On the Phase-2/4 delegation path the contract shapes are already inlined in [Delegation Templates](delegation-templates.md) — do NOT also load handoff-contracts.md or handoff-protocol.md there. Read [Handoff Protocol](handoff-protocol.md) ONLY when authoring a net-new IMP-02/03/04 envelope.
 - plan-review or coder signals mismatch → re-route (see [Re-routing](re-routing.md))
 - All phases done → collect metrics (see [Pipeline Metrics](pipeline-metrics.md))
 - Phase 5 cleanup → read cleanup protocol (see [State Layer](state-layer.md))

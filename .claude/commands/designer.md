@@ -110,6 +110,10 @@ pipeline:
         reads: 10
         tool_calls: 15
       output: "Context summary (current state, affected areas, constraints)"
+      optional_background_research:
+        when: "L/XL AND Phase 2 CLARIFY will run (skip_when not triggered) — large research surface + a human-gated wait to overlap"
+        action: "MAY launch ONE code-researcher via Agent (run_in_background: true) over the affected-area focus set, then proceed into CLARIFY. Integrate the summary before Phase 3 PROPOSE. Read-only; mirrors planner background_mode (single researcher, NOT the parallel_fanout N-way path)."
+        skip_when: "S/M complexity, or CLARIFY skipped (unambiguous task) — no human-clarify wait to overlap"
 
     - phase: 2
       name: "CLARIFY REQUIREMENTS"

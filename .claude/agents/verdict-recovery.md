@@ -38,8 +38,8 @@ role:
    - Run: `git diff $BASE...HEAD` — read the diff
 
 2. **CHECK PRIOR CONTEXT** (1 turn)
-   - Read `.claude/workflow-state/review-completions.jsonl` if it exists — check for partial verdict or prior review notes
-   - If a prior review produced partial analysis, use it to inform your verdict
+   - Prior review context (partial verdicts, prior notes) is provided by the orchestrator in your launch prompt — it is filtered main-repo-side before you run. Do NOT read `.claude/workflow-state/review-completions.jsonl` directly: you run in a fresh worktree (baseRef:fresh) where that gitignored file is absent, so the read always misses.
+   - If the launch prompt includes prior analysis, use it to inform your verdict.
 
 3. **FORM VERDICT** (1 turn)
    - Assess the diff for:
