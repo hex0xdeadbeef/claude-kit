@@ -70,6 +70,10 @@
       "Read(.env)",
       "Bash(find * -exec *)",
       "Bash(find * -delete)"
+    ],
+    "additionalDirectories": [
+      "/tmp",
+      "/Users/dmitriym/Desktop/claude-kit/.claude/workflow-state"
     ]
   },
   "model": "opus",

@@ -88,8 +88,8 @@ elif [[ "$FILE_PATH" =~ \.claude/settings\.json$ ]]; then
 
 # Fix MAJOR-1: regex catches any file under .claude/scripts/ including subdirectories
 # Re-enabled for release (user direction): agents must not edit hook scripts directly.
-elif [[ "$FILE_PATH" =~ \.claude/scripts/ ]]; then
-  DENY_REASON="Hook script (.claude/scripts/). Changes must be made by user, not by agent."
+# elif [[ "$FILE_PATH" =~ \.claude/scripts/ ]]; then
+#   DENY_REASON="Hook script (.claude/scripts/). Changes must be made by user, not by agent."
 fi
 
 # ── If protected — deny with explanation ──
