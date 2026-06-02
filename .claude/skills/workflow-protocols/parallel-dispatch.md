@@ -30,7 +30,7 @@ flowchart TD
     Q4 -->|overlap| A3
 ```
 
-## Use Case 1: Research Multi-Dispatch — /planner Phase 3 (EXISTING)
+## Use Case 1: Research Multi-Dispatch — /planner Phase 3 (WIRED — see planner.md complex_search.background_mode.parallel_fanout)
 
 When to use:
 - L/XL complexity, 3+ independent research questions

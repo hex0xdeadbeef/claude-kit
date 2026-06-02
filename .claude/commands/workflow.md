@@ -338,6 +338,7 @@ delegation_protocol:
       when: "L/XL complexity in planner Phase 3 — large research scope"
       mechanism: "Agent tool with run_in_background: true"
       benefit: "Planner proceeds to DESIGN with direct research findings while code-researcher runs in parallel"
+      parallel_fanout: "L/XL with 3+ independent layers → dispatch ONE researcher per layer in a SINGLE message (SEE planner.md complex_search.background_mode.parallel_fanout + parallel-dispatch.md Use Case 1)"
       integration: "Results checked at async_integration_point in planner DESIGN phase"
       revision: "If late findings contradict design decisions → inline revision (≤1 part) or re-evaluate (>1 part)"
       reference: "SEE planner.md complex_search.background_mode + phase_4_design.async_integration_point"

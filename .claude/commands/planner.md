@@ -345,6 +345,10 @@ phases:
           background_mode:
             when: "Complexity L/XL — research scope is large and planner has enough initial data to begin DESIGN"
             mechanism: "Launch code-researcher with run_in_background: true via Agent tool"
+            parallel_fanout:
+              when: "L/XL with 3+ INDEPENDENT research questions (distinct layers/packages, no file overlap, read-only)"
+              action: "Load .claude/skills/workflow-protocols/parallel-dispatch.md (Use Case 1) and dispatch ONE run_in_background code-researcher PER independent layer in a SINGLE message (e.g. handler/service/repository concurrently), instead of one researcher with bundled focus areas. Integrate all summaries at async_integration_point."
+              fallback: "Questions coupled, single domain, or background unsupported → one bundled background researcher (delegation_example below)."
             skip_when: "S/M complexity, --minimal mode, or planner has no initial data to start DESIGN"
             rationale: "For L/XL tasks code-researcher may take 3-5 minutes. Planner can begin DESIGN with direct research findings while code-researcher runs in parallel."
             protocol:
