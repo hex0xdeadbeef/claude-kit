@@ -627,29 +627,31 @@ print('merged')
 PYEOF
 }
 
-# ── Bootstrap settings.local.json from .example (merge; user wins) ──────────────
-# Absent  → create from the full .example (fresh users get the documented template).
-# Present → merge new defaults in via _merge_json_into (USER VALUES ALWAYS WIN). On
-# --update the live file is restored by saved_local_settings before this runs, so the
-# merge operates on the user's real file. python3 absent / invalid JSON → leave the
-# existing file as-is + WARN (non-destructive). settings.local.json is git-ignored.
-# Output: "result=created|merged|unchanged|skipped|no-example"
+# ── Bootstrap settings.local.json from the active DEFAULT (merge; user wins) ────
+# Absent  → create from .claude/settings.local.json.default (the kit's opinionated
+#           active config). Present → merge new defaults in via _merge_json_into
+#           (USER VALUES ALWAYS WIN). On --update the live file is restored by
+#           saved_local_settings before this runs, so the merge operates on the user's
+#           real file. .example remains the documented toggle reference, NOT the
+#           install source. python3 absent / invalid JSON → leave the existing file
+#           as-is + WARN (non-destructive). settings.local.json is git-ignored.
+# Output: "result=created|merged|unchanged|skipped|no-default"
 bootstrap_settings_local() {
     local target_dir="$1"
     local sl_target="${target_dir}/.claude/settings.local.json"
-    local sl_example="${target_dir}/.claude/settings.local.json.example"
+    local sl_source="${target_dir}/.claude/settings.local.json.default"
 
-    [ -f "$sl_example" ] || { echo "result=no-example"; return 0; }
+    [ -f "$sl_source" ] || { echo "result=no-default"; return 0; }
 
     if [ ! -f "$sl_target" ]; then
-        cp "$sl_example" "$sl_target"
-        info "Created .claude/settings.local.json from .example (personal overrides; git-ignored)"
+        cp "$sl_source" "$sl_target"
+        info "Created .claude/settings.local.json from kit defaults (personal overrides; git-ignored)"
         echo "result=created"
         return 0
     fi
 
     local status
-    if status="$(_merge_json_into "$sl_example" "$sl_target" 2>/dev/null)"; then
+    if status="$(_merge_json_into "$sl_source" "$sl_target" 2>/dev/null)"; then
         if [ "$status" = "merged" ]; then
             info "Merged new defaults into .claude/settings.local.json (your existing values preserved)"
             echo "result=merged"
@@ -725,12 +727,17 @@ provision_mcp_config() {
 warn_missing_mcp_runtimes() {
     local missing=0
     if ! command -v npx >/dev/null 2>&1; then
-        warn "MCP runtime 'npx' not found — sequential-thinking + context7 servers need Node.js (e.g. brew install node)"
+        warn "MCP runtime 'npx' not found (needed by sequential-thinking + context7). Install Node.js:"
+        warn "    macOS: brew install node  |  Debian/Ubuntu: sudo apt install nodejs npm  |  Fedora: sudo dnf install nodejs  |  Windows: winget install OpenJS.NodeJS  |  or https://nodejs.org"
         missing=$((missing + 1))
     fi
     if ! command -v uvx >/dev/null 2>&1; then
-        warn "MCP runtime 'uvx' not found — tree_sitter server needs uv (curl -LsSf https://astral.sh/uv/install.sh | sh)"
+        warn "MCP runtime 'uvx' not found (needed by tree_sitter). Install uv:"
+        warn "    macOS/Linux: curl -LsSf https://astral.sh/uv/install.sh | sh  |  Windows: powershell -c \"irm https://astral.sh/uv/install.ps1 | iex\""
         missing=$((missing + 1))
+    fi
+    if [ "$missing" -gt 0 ]; then
+        warn "After installing, restart Claude Code — the MCP servers auto-load and download on next start. Verify with: claude mcp list"
     fi
     echo "missing=${missing}"
 }
@@ -824,7 +831,7 @@ main() {
         cp "${src_dir}/CLAUDE.md" "${target_dir}/CLAUDE.md"
         info "Installed CLAUDE.md from kit template"
     else
-        info "Preserved CLAUDE.md (existing copy)"
+        info "Preserved your existing CLAUDE.md — kit template not copied (edit Language Profile to match your stack)"
     fi
 
     # Merge .gitignore
@@ -840,7 +847,11 @@ main() {
     # >/dev/null discards the machine-readable result line; info()/warn() still
     # reach the terminal (they write to stderr).
     provision_mcp_config "$src_dir" "$target_dir" >/dev/null
-    warn_missing_mcp_runtimes >/dev/null
+    # Capture the missing-runtime count so the epilogue can point the user back to it.
+    # warn() lines go to stderr (still shown); only the "missing=N" stdout line is captured.
+    local mcp_runtimes_missing
+    mcp_runtimes_missing="$(warn_missing_mcp_runtimes)"
+    mcp_runtimes_missing="${mcp_runtimes_missing#missing=}"
 
     # Write version
     write_version "$version" "$target_dir"
@@ -936,6 +947,9 @@ main() {
     echo "  1. Edit CLAUDE.md — update Language Profile to match your project stack"
     echo "  2. Run /project-researcher — analyze codebase, generate .claude/PROJECT-KNOWLEDGE.md"
     echo "  3. Run /meta-agent onboard — validate configuration"
+    if [ "${mcp_runtimes_missing:-0}" -gt 0 ] 2>/dev/null; then
+        echo "  4. Install the missing MCP runtime(s) noted above, then restart Claude Code (verify: claude mcp list)"
+    fi
     echo ""
     echo -e "${BLUE}Auto-provisioned (created on install, merged on --update — your edits win):${NC}"
     echo "  .claude/settings.local.json   # personal overrides (git-ignored). Template: .example"

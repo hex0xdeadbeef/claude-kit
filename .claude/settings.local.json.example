@@ -2,6 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/main/config-schema.json",
   "_comment": [
     "Personal overrides — copy to settings.local.json (gitignored).",
+    "NOTE: install.sh provisions live defaults from settings.local.json.default; this .example is the full documented toggle reference (not the install source).",
     "Scalars override settings.json values; arrays merge; deny wins over allow.",
     "Common use cases:",
     "  - Add project-specific permissions (docker, kubectl, etc.)",

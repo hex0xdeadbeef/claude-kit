@@ -35,11 +35,13 @@ Structured multi-agent development workflow with built-in planning, implementati
 
 Once installed, `/workflow` orchestrates planning → implementation → review → commit for any task. Three steps to a working kit:
 
-1. **Install** the kit into your project root:
+1. **Install** the kit into your project root. This one command provisions everything — the `.claude/` workflow pipeline, the 3 MCP servers (`.mcp.json`, auto-approved via `enableAllProjectMcpServers`), and the default personal settings (`.claude/settings.local.json`, strict-mode kit defaults):
 
    ```bash
    curl -sL https://raw.githubusercontent.com/hex0xdeadbeef/claude-kit/main/install.sh | bash
    ```
+
+   No manual `cp` needed — `settings.local.json` and `.mcp.json` are created automatically (and on `--update`, new defaults merge in while your edits are preserved). The MCP servers need `npx` (Node.js) and/or `uvx` (uv); if either is missing the installer prints the install command for your OS. After installing a runtime, **restart Claude Code** — the servers auto-load and download on next start (verify with `claude mcp list`).
 
 2. **Generate project knowledge** so agents have context for your codebase:
 
@@ -205,6 +207,8 @@ Per-machine config (gitignored after `install.sh`). `install.sh` auto-creates `.
 cp .mcp.json.example .mcp.json   # fresh setup
 # — or merge the relevant blocks into an existing .mcp.json
 ```
+
+The kit ships `sequential-thinking` preloaded (`alwaysLoad: true` in `.mcp.json.example`) to match the `CLAUDE_KIT_MCP_PRELOAD=on` default — it loads at session start instead of via deferred ToolSearch. Remove that server's `alwaysLoad` (or set `CLAUDE_KIT_MCP_PRELOAD=off`) to defer and save cold-start + context tokens.
 
 Ships with three servers:
 
@@ -522,8 +526,8 @@ flowchart LR
         CDR["coder-rules · 7 files"]
         PRR["plan-review-rules · 5 files"]
         CRR["code-review-rules · 5 files"]
-        TDD["tdd-rules · 2 files"]
-        DR["design-rules · 3 files"]
+        TDD["tdd-rules · 10 files"]
+        DR["design-rules · 4 files"]
         SDB["systematic-debugging · 4 files"]
     end
 
@@ -623,11 +627,11 @@ flowchart TB
 
 | Model | Effort | Components | MaxTurns | Purpose |
 |-------|--------|------------|----------|---------|
-| **opus** | max | `/workflow`, `/planner`, `/designer`, `/coder`, `/meta-agent`, `/project-researcher`, `plan-reviewer`, `code-reviewer` | 50–60 (agents) | Deep reasoning, orchestration, planning, implementation, review |
+| **opus** | xhigh | `/workflow`, `/planner`, `/designer`, `/coder`, `/meta-agent`, `/project-researcher`, `plan-reviewer`, `code-reviewer` | 50–60 (agents) | Deep reasoning, orchestration, planning, implementation, review |
 | **haiku** | medium | `code-researcher`, PR subagents (discovery, report) | 20 | Fast read-only codebase exploration |
 | **haiku** | low | `verdict-recovery` | 10 | Lightweight verdict fallback when reviewers omit `VERDICT:` |
 
-> **Note:** All workflow pipeline agents set `effort: max` for maximum extended thinking budget (Opus 4.6+). Pair with `CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING=1` (set globally) to prevent mid-task adaptive throttling.
+> **Note:** All workflow pipeline agents set `effort: xhigh` for maximum extended thinking budget (Opus 4.8). Pair with `CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING=1` (set globally) to prevent mid-task adaptive throttling.
 
 ### 📊 Complexity Routing
 

@@ -20,6 +20,9 @@ install.sh                          export-ignore
 .claude/agent-memory/               export-ignore
 .claude/archive/                    export-ignore
 
+# Install-time artifact (write_version regenerates it; never ship a stale stamp)
+.claude/.kit-version                export-ignore
+
 # OS and VCS noise
 **/.DS_Store                        export-ignore
 **/.gitkeep                         export-ignore

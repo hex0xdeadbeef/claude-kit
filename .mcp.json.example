@@ -6,8 +6,8 @@
         "-y",
         "@modelcontextprotocol/server-sequential-thinking"
       ],
-      "_note_alwaysLoad": "Proposal F opt-in (Claude Code v2.1.121+): uncomment the next line to skip ToolSearch deferral. Trade-off: up to 5s cold-start cost + perpetual context tokens. Set CLAUDE_KIT_MCP_PRELOAD=on so mcp-preload-warn.sh verifies the opt-in is wired.",
-      "_alwaysLoad_optin": "alwaysLoad: true"
+      "alwaysLoad": true,
+      "_note_alwaysLoad": "Preloaded to match CLAUDE_KIT_MCP_PRELOAD=on (kit default). Remove this server's alwaysLoad (or set the env off) to defer to ToolSearch and save ~5s cold-start + perpetual context tokens."
     },
     "context7": {
       "command": "npx",
