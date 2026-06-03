@@ -101,8 +101,12 @@ cp -r .claude/ /path/to/your/project/
 cp CLAUDE.md /path/to/your/project/
 # Merge .gitignore manually
 
-# Optional: personal settings overrides (gitignored, never overwritten by updates)
+# Personal settings + MCP config (gitignored, never overwritten by updates).
+# `bash install.sh` auto-creates both on first install and merges new defaults in on
+# `--update` (your existing values always win); copy manually only on the
+# copy-manually path above, or to reset:
 cp .claude/settings.local.json.example /path/to/your/project/.claude/settings.local.json
+cp .mcp.json.example /path/to/your/project/.mcp.json
 ```
 
 </details>
@@ -131,7 +135,7 @@ Master index of every config knob exposed by the kit. The `Reference` column lin
 | `GIT_STRIP_CO_AUTHOR` | `settings.local.json` env | strip `Co-Authored-By` from auto-generated commits | personal preference | `true` | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
 | `worktree.sparsePaths` | `settings.json` or `settings.local.json` | which subtrees `code-reviewer` worktree checks out | monorepos / large repos | edit JSON array | [Monorepo sparse paths](#claudesettingslocaljsonexample--personal-overrides) |
 | `permissions.allow` / `permissions.deny` | `settings.local.json` | extra allow/deny rules merged with shared `settings.json` | per-machine overrides | edit JSON arrays | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
-| `.mcp.json` (3 servers) | gitignored after install | `sequential-thinking`, `context7`, `tree_sitter` MCP servers | personal/per-machine setup | `cp .mcp.json.example` | [`.mcp.json.example`](#mcpjsonexample--mcp-server-endpoints) |
+| `.mcp.json` (3 servers) | gitignored after install | `sequential-thinking`, `context7`, `tree_sitter` MCP servers | personal/per-machine setup | auto-created by `install.sh`, new servers merged on `--update` (your config wins) | [`.mcp.json.example`](#mcpjsonexample--mcp-server-endpoints) |
 | `.claude/PROJECT-KNOWLEDGE.md` | committed per-project | codebase analysis injected as agent context | once per project, refresh on architecture change | run `/project-researcher` | [Project Knowledge Base](#claudeproject-knowledgemd--project-knowledge-base) |
 | `CLAUDE.md` > Language Profile | committed | language slots (`LANG_EXT`, `VERIFY_CMD`, etc.) cascade source | first-time install for non-Go stacks | edit `CLAUDE.md` directly | [Quick Start](#-quick-start) Step 2 |
 | `.claude/.kit-version` | auto-managed | tracks installed kit version for `install.sh --update` | never (managed by `install.sh`) | n/a | auto-managed by `install.sh` |
@@ -143,14 +147,14 @@ Each file has a different lifecycle and git status — copy the `.example` templ
 | File | Git status (in your project) | Lifecycle | Purpose |
 |------|------------------------------|-----------|---------|
 | `.claude/settings.json` | committed | per-kit | Hooks, permissions, default model, MCP server registrations |
-| `.claude/settings.local.json` | gitignored after `install.sh` (`.example` shipped) | personal / per-machine | Env overrides, extra permissions, monorepo sparse paths |
-| `.mcp.json` | gitignored after `install.sh` (`.example` shipped) | personal / per-machine | MCP server endpoints (`sequential-thinking`, `context7`, `tree_sitter`) |
+| `.claude/settings.local.json` | gitignored after `install.sh` (`.example` shipped) | auto-created by `install.sh`; new defaults merged on `--update` (your values win); personal / per-machine | Env overrides, extra permissions, monorepo sparse paths |
+| `.mcp.json` | gitignored after `install.sh` (`.example` shipped) | auto-created by `install.sh`; new servers merged on `--update` (your config wins); personal / per-machine | MCP server endpoints (`sequential-thinking`, `context7`, `tree_sitter`) |
 | `.claude/PROJECT-KNOWLEDGE.md` | committed (preserved on `--update`) | per-project | Auto-generated codebase analysis used as context by all agents |
 | `.claude/.kit-version` | committed | per-installation | Tracks installed kit version for `install.sh --update` |
 
 ### `.claude/settings.local.json.example` — Personal Overrides
 
-Copy once, then edit:
+`install.sh` auto-creates `.claude/settings.local.json` from this template on first install, so a fresh install already has the defaults. On `--update` it key-level **merges** any new defaults from the `.example` into your file — your existing values always win, and example-only documentation keys (the leading-`_` toggles) are not injected into your curated file. Edit it to customize. To reset or set up manually:
 
 ```bash
 cp .claude/settings.local.json.example .claude/settings.local.json
@@ -195,7 +199,7 @@ The shipped `.example` defaults to a Go layout (`internal/`, `cmd/`, `go.mod`, `
 
 ### `.mcp.json.example` — MCP Server Endpoints
 
-Per-machine config (gitignored after `install.sh`). Copy once if you don't have an existing `.mcp.json`:
+Per-machine config (gitignored after `install.sh`). `install.sh` auto-creates `.mcp.json` from this template on first install and refreshes the `.example` on every run, so the MCP servers are provisioned with no manual step (auto-approved via `enableAllProjectMcpServers` in `settings.json`). On `--update` it **merges** any new kit servers into your `.mcp.json` while preserving your existing/customized servers (your config wins). To reset, set up manually, or merge into an existing `.mcp.json`:
 
 ```bash
 cp .mcp.json.example .mcp.json   # fresh setup

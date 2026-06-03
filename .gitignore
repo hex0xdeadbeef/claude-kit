@@ -29,6 +29,9 @@ Thumbs.db
 .claude/settings.local.json
 .claude/*.local.*
 
+# MCP server config (per-machine; bootstrapped from .mcp.json.example by install.sh)
+.mcp.json
+
 # Runtime state (generated during workflow)
 .claude/workflow-state/
 .claude/prompts/

@@ -555,6 +555,186 @@ PYEOF
     echo "merged=${merged} skills_added=${skills_added}"
 }
 
+# ── JSON deep-merge: example defaults + user overrides (USER WINS) ──────────────
+# Merge a kit .example template (base/defaults) into an existing user JSON file. User
+# values always win on conflict; example keys absent in the user file are ADDED, EXCEPT
+# example-only keys whose leaf name starts with '_' (documentation scaffolding —
+# _comment / inactive _CLAUDE_* / _note_alwaysLoad). The user's own '_' keys are
+# preserved. Recurses into nested objects (so a new env var or server sub-key is added)
+# and treats arrays/scalars as user-wins-wholesale (never splits/reorders user arrays).
+# A wholesale-new example-only subtree (a key the user lacks) is added verbatim,
+# including any nested '_' doc keys it contains (created content, not curated-content
+# injection). Writes the target ATOMICALLY (temp + os.replace) and ONLY when the merge
+# changes the file (semantic compare) — no gratuitous reformat. On missing python3,
+# unreadable or MALFORMED JSON, or write failure, returns non-zero and leaves the
+# target UNTOUCHED.
+# Args: example_file target_file
+# stdout: "merged" | "unchanged"   exit: 0 ok | 3 no python3 | 1 read/parse err | 2 write err
+#
+# NOTE: the PYEOF body MUST start at column 0 (single-quoted heredoc preserves leading
+# whitespace verbatim — matches the merge_frontmatter_skills convention above).
+_merge_json_into() {
+    local example_file="$1" target_file="$2"
+    command -v python3 >/dev/null 2>&1 || return 3
+    EXAMPLE_FILE="$example_file" TARGET_FILE="$target_file" python3 - <<'PYEOF'
+import json, os, sys, tempfile
+
+def deep_merge(example, user):
+    # USER WINS. Recurse into dicts; add example-only keys except '_'-leaf docs.
+    if isinstance(example, dict) and isinstance(user, dict):
+        result = dict(user)                       # preserve everything the user has
+        for k, ev in example.items():
+            if k in user:
+                result[k] = deep_merge(ev, user[k])
+            elif not (isinstance(k, str) and k.startswith('_')):
+                result[k] = ev                    # add example-only non-'_' key verbatim
+        return result
+    return user                                   # scalar/array/type-mismatch: user wins
+
+try:
+    with open(os.environ['EXAMPLE_FILE'], encoding='utf-8') as f:
+        example = json.load(f)
+    with open(os.environ['TARGET_FILE'], encoding='utf-8') as f:
+        user = json.load(f)
+except (OSError, json.JSONDecodeError) as e:
+    print(f'merge read/parse error: {e}', file=sys.stderr)
+    sys.exit(1)
+
+merged = deep_merge(example, user)
+if merged == user:
+    print('unchanged')
+    sys.exit(0)
+
+tmp = None
+try:
+    # mkstemp inside try so a read-only / unwritable dir also yields a clean exit 2
+    # (not an uncaught traceback); the target is left untouched either way.
+    d = os.path.dirname(os.environ['TARGET_FILE']) or '.'
+    fd, tmp = tempfile.mkstemp(dir=d, prefix='.merge-', suffix='.json')
+    with os.fdopen(fd, 'w', encoding='utf-8') as f:
+        json.dump(merged, f, indent=2, ensure_ascii=False)
+        f.write('\n')
+    os.replace(tmp, os.environ['TARGET_FILE'])
+except OSError as e:
+    if tmp is not None:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+    print(f'merge write error: {e}', file=sys.stderr)
+    sys.exit(2)
+print('merged')
+PYEOF
+}
+
+# ── Bootstrap settings.local.json from .example (merge; user wins) ──────────────
+# Absent  → create from the full .example (fresh users get the documented template).
+# Present → merge new defaults in via _merge_json_into (USER VALUES ALWAYS WIN). On
+# --update the live file is restored by saved_local_settings before this runs, so the
+# merge operates on the user's real file. python3 absent / invalid JSON → leave the
+# existing file as-is + WARN (non-destructive). settings.local.json is git-ignored.
+# Output: "result=created|merged|unchanged|skipped|no-example"
+bootstrap_settings_local() {
+    local target_dir="$1"
+    local sl_target="${target_dir}/.claude/settings.local.json"
+    local sl_example="${target_dir}/.claude/settings.local.json.example"
+
+    [ -f "$sl_example" ] || { echo "result=no-example"; return 0; }
+
+    if [ ! -f "$sl_target" ]; then
+        cp "$sl_example" "$sl_target"
+        info "Created .claude/settings.local.json from .example (personal overrides; git-ignored)"
+        echo "result=created"
+        return 0
+    fi
+
+    local status
+    if status="$(_merge_json_into "$sl_example" "$sl_target" 2>/dev/null)"; then
+        if [ "$status" = "merged" ]; then
+            info "Merged new defaults into .claude/settings.local.json (your existing values preserved)"
+            echo "result=merged"
+        else
+            echo "result=unchanged"
+        fi
+    else
+        warn "Skipped merging .claude/settings.local.json (python3 missing or invalid JSON) — left unchanged"
+        echo "result=skipped"
+    fi
+    return 0
+}
+
+# ── Provision MCP config (.mcp.json) to project root (merge; user wins) ─────────
+# .mcp.json + .mcp.json.example are repo-ROOT files (NOT under .claude/), so the .claude
+# payload copy never delivers them. This provisions both:
+#   1. Refresh .mcp.json.example from the kit on every run (kit-owned template).
+#   2. .mcp.json: absent → create from .example; present → merge via _merge_json_into
+#      (adds MISSING kit servers, PRESERVES the user's existing/customized servers —
+#      user wins). A root file, it survives the .claude payload wipe on --update.
+# Servers auto-approve via enableAllProjectMcpServers:true (shipped settings.json);
+# npx/uvx auto-download packages on first tool call (no pre-warm — docs are silent on it).
+# Shipping/merging .mcp.json is the docs-recommended path for curl|bash installers
+# (code.claude.com/docs/en/mcp § Project scope). python3 absent / invalid JSON → leave
+# the existing .mcp.json as-is + WARN (non-destructive).
+# Args: src_dir target_dir
+# Output: "example_copied=N result=created|merged|unchanged|skipped|none"
+provision_mcp_config() {
+    local src_dir="$1"
+    local target_dir="$2"
+    local mcp_example_src="${src_dir}/.mcp.json.example"
+    local mcp_example_target="${target_dir}/.mcp.json.example"
+    local mcp_target="${target_dir}/.mcp.json"
+    local example_copied=0 result="none"
+
+    # 1. Deliver/refresh the .example template from the kit archive.
+    if [ -f "$mcp_example_src" ]; then
+        cp "$mcp_example_src" "$mcp_example_target"
+        example_copied=1
+    fi
+
+    # 2. .mcp.json: create-if-absent, else merge (user wins).
+    if [ -f "$mcp_example_target" ]; then
+        if [ ! -f "$mcp_target" ]; then
+            cp "$mcp_example_target" "$mcp_target"
+            info "Created .mcp.json from .mcp.json.example (MCP: sequential-thinking, context7, tree_sitter; auto-approved via enableAllProjectMcpServers)"
+            result="created"
+        else
+            local status
+            if status="$(_merge_json_into "$mcp_example_target" "$mcp_target" 2>/dev/null)"; then
+                if [ "$status" = "merged" ]; then
+                    info "Merged new MCP servers into .mcp.json (your existing server config preserved)"
+                    result="merged"
+                else
+                    result="unchanged"
+                fi
+            else
+                warn "Skipped merging .mcp.json (python3 missing or invalid JSON) — left unchanged"
+                result="skipped"
+            fi
+        fi
+    fi
+
+    echo "example_copied=${example_copied} result=${result}"
+}
+
+# ── Warn if MCP runtimes are missing (non-blocking onboarding aid) ──────────────
+# npx (Node.js) and uvx (uv) are the transports for the 3 bundled MCP servers. They
+# auto-download the server packages on first use, but only if present. This is a
+# non-blocking heads-up (Soft-Prerequisites graceful-degradation style) — it never
+# fails the install.
+# Output: "missing=N" (count of absent runtimes, 0..2).
+warn_missing_mcp_runtimes() {
+    local missing=0
+    if ! command -v npx >/dev/null 2>&1; then
+        warn "MCP runtime 'npx' not found — sequential-thinking + context7 servers need Node.js (e.g. brew install node)"
+        missing=$((missing + 1))
+    fi
+    if ! command -v uvx >/dev/null 2>&1; then
+        warn "MCP runtime 'uvx' not found — tree_sitter server needs uv (curl -LsSf https://astral.sh/uv/install.sh | sh)"
+        missing=$((missing + 1))
+    fi
+    echo "missing=${missing}"
+}
+
 # ── Main ───────────────────────────────────────────────────────────────────────
 main() {
     local update_mode=false
@@ -653,6 +833,15 @@ main() {
     # Merge .worktreeinclude (worktree review-context sidecar delivery)
     merge_worktreeinclude "${src_dir}/.worktreeinclude" "$target_dir"
 
+    # ── Provision MCP config (onboarding) ─────────────────────────────────
+    # Deliver .mcp.json.example to the target root + create-or-merge .mcp.json
+    # (user values win on --update). These are repo-ROOT files (not part of the
+    # .claude payload), so they are provisioned here alongside the other root files.
+    # >/dev/null discards the machine-readable result line; info()/warn() still
+    # reach the terminal (they write to stderr).
+    provision_mcp_config "$src_dir" "$target_dir" >/dev/null
+    warn_missing_mcp_runtimes >/dev/null
+
     # Write version
     write_version "$version" "$target_dir"
 
@@ -674,6 +863,12 @@ main() {
         warn "  Fill in <your-language>, <your-verify-cmd>, etc. before running /workflow on M+ tasks"
         warn "  OR run /project-researcher to auto-derive values from your codebase"
     fi
+
+    # ── Bootstrap settings.local.json (onboarding) ────────────────────────
+    # Copy-if-absent from .example so a fresh install has personal-override
+    # defaults without a manual cp. Idempotent; preserves an existing file.
+    # On --update settings.local.json is already preserved above, so no-op.
+    bootstrap_settings_local "$target_dir" >/dev/null
 
     # Restore user data from backup (--update only).
     #
@@ -742,9 +937,11 @@ main() {
     echo "  2. Run /project-researcher — analyze codebase, generate .claude/PROJECT-KNOWLEDGE.md"
     echo "  3. Run /meta-agent onboard — validate configuration"
     echo ""
-    echo -e "${BLUE}Optional:${NC}"
-    echo "  cp .claude/settings.local.json.example .claude/settings.local.json"
-    echo "  # Personal overrides (git-ignored, never overwritten by updates)"
+    echo -e "${BLUE}Auto-provisioned (created on install, merged on --update — your edits win):${NC}"
+    echo "  .claude/settings.local.json   # personal overrides (git-ignored). Template: .example"
+    echo "  .mcp.json                     # MCP servers, auto-approved. Template: .mcp.json.example"
+    echo "  # New defaults merge in on --update; your existing values are preserved."
+    echo "  # MCP server packages auto-download on first use (needs npx and/or uvx)."
     echo ""
 }
 
