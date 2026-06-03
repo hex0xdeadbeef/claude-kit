@@ -7,7 +7,7 @@
         "@modelcontextprotocol/server-sequential-thinking"
       ],
       "alwaysLoad": true,
-      "_note_alwaysLoad": "Preloaded to match CLAUDE_KIT_MCP_PRELOAD=on (kit default). Remove this server's alwaysLoad (or set the env off) to defer to ToolSearch and save ~5s cold-start + perpetual context tokens."
+      "_note_alwaysLoad": "Preloads this server at session start. This is static config: alwaysLoad is independent of any env var. CLAUDE_KIT_MCP_PRELOAD itself defaults to off and only governs whether mcp-preload-warn.sh flags drift if this alwaysLoad is ever dropped. Remove this server's alwaysLoad to defer to ToolSearch and save ~5s cold-start + perpetual context tokens."
     },
     "context7": {
       "command": "npx",
