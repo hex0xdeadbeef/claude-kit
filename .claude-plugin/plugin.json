@@ -11,5 +11,13 @@
   "agents": ["./.claude/agents/"],
   "skills": "./.claude/skills/",
   "hooks": "./.claude/hooks/hooks.json",
-  "mcpServers": "./.mcp.json"
+  "mcpServers": "./.mcp.json",
+  "userConfig": {
+    "provision_settings_local": {
+      "type": "boolean",
+      "title": "Provision project settings.local.json",
+      "description": "On first session in this project, merge the kit's opinionated env defaults (prompt-cache TTL, git co-author strip, auto-memory, strict-mode toggles) into .claude/settings.local.json — your existing values always win. Equivalent to what install.sh does for a project-scoped install. Off by default; effective the next session.",
+      "default": false
+    }
+  }
 }

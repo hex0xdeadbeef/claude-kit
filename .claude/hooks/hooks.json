@@ -420,6 +420,11 @@
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/inject-kit-context.sh",
             "args": []
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/bootstrap-project-config.sh",
+            "args": []
           }
         ]
       }

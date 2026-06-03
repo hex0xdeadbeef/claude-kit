@@ -504,6 +504,11 @@
             "type": "command",
             "command": ".claude/scripts/inject-kit-context.sh",
             "args": []
+          },
+          {
+            "type": "command",
+            "command": ".claude/scripts/bootstrap-project-config.sh",
+            "args": []
           }
         ]
       }
