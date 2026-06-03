@@ -547,7 +547,9 @@ if comp_lines:
 # IMP-04 delta-review-mode
 _delta_mode = (
     _extract_top_level(content, "delta_review_mode")
-    or os.environ.get("CLAUDE_DELTA_REVIEW_MODE", "off").lower()
+    # Part 3 / P1: default to 'strict' when running as a plugin (CLAUDE_PLUGIN_ROOT set), else 'off'.
+    or (os.environ.get("CLAUDE_DELTA_REVIEW_MODE")
+        or ("strict" if os.environ.get("CLAUDE_PLUGIN_ROOT") else "off")).lower()
 )
 if _delta_mode in ("warn", "strict"):
     emit_delta_focus_block(

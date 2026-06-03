@@ -29,9 +29,14 @@ SCHEMA_FILE="${REPO_ROOT}/.claude/schemas/handoff.schema.json"
 WORKFLOW_STATE_DIR_RESOLVED="${CLAUDE_WORKFLOW_STATE_DIR:-${CLAUDE_PROJECT_DIR:-${REPO_ROOT}}/.claude/workflow-state}"
 mkdir -p "${WORKFLOW_STATE_DIR_RESOLVED}" 2>/dev/null || true
 VALIDATION_LOG="${WORKFLOW_STATE_DIR_RESOLVED}/handoff-validation.jsonl"
-MODE_HANDOFF="${CLAUDE_HANDOFF_VALIDATION_MODE:-warn}"
-MODE_VERDICT="${CLAUDE_VERDICT_VALIDATION_MODE:-warn}"
-MODE_ISSUE_ID="${CLAUDE_ISSUE_ID_VALIDATION_MODE:-warn}"
+# Part 3 / P1: default validation modes to 'strict' when running as a plugin (CLAUDE_PLUGIN_ROOT set),
+# else 'warn'. An explicit env var always wins (outer :-); a missing helper degrades to 'warn'
+# (inner :-), keeping project-scoped behavior byte-identical.
+# shellcheck source=lib/kit-env-defaults.sh
+_KED="${REPO_ROOT}/.claude/scripts/lib/kit-env-defaults.sh"; [ -f "$_KED" ] && . "$_KED"
+MODE_HANDOFF="${CLAUDE_HANDOFF_VALIDATION_MODE:-${KIT_DEFAULT_VALIDATION_MODE:-warn}}"
+MODE_VERDICT="${CLAUDE_VERDICT_VALIDATION_MODE:-${KIT_DEFAULT_VALIDATION_MODE:-warn}}"
+MODE_ISSUE_ID="${CLAUDE_ISSUE_ID_VALIDATION_MODE:-${KIT_DEFAULT_VALIDATION_MODE:-warn}}"
 
 # ─── Get file path (dual-mode) ──────────────────────────────────────────────────
 DIRECT_MODE=0

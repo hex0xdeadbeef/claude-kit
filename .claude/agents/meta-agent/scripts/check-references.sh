@@ -47,7 +47,9 @@ esac
 if [[ "$PK_SKIP" == "false" ]] && [[ -f "$FILE_PATH" ]]; then
   PK_BARE_LINES=$(perl -ne 'print "$.:$_" if /(?<![\/.])PROJECT-KNOWLEDGE\.md/' "$FILE_PATH" 2>/dev/null || true)
   if [[ -n "$PK_BARE_LINES" ]]; then
-    if [[ "${CLAUDE_PK_PATH_MODE:-warn}" == "strict" ]]; then
+    # Part 3 / P1: default PK_PATH mode to 'strict' in plugin mode (CLAUDE_PLUGIN_ROOT set), else 'warn'.
+    _pk_default="warn"; [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && _pk_default="strict"
+    if [[ "${CLAUDE_PK_PATH_MODE:-$_pk_default}" == "strict" ]]; then
       echo "❌ PK path validation FAILED for ${FILE_PATH}:"
     else
       echo "⚠️  PK path validation WARN for ${FILE_PATH}:"
@@ -55,7 +57,7 @@ if [[ "$PK_SKIP" == "false" ]] && [[ -f "$FILE_PATH" ]]; then
     while IFS= read -r occurrence; do
       echo "  - PK_PATH: bare form detected — use the canonical '.claude/' prefix (${occurrence})"
     done <<< "$PK_BARE_LINES"
-    if [[ "${CLAUDE_PK_PATH_MODE:-warn}" == "strict" ]]; then
+    if [[ "${CLAUDE_PK_PATH_MODE:-$_pk_default}" == "strict" ]]; then
       exit 2
     fi
   fi
