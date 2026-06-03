@@ -1,0 +1,828 @@
+<p align="center">
+  <strong>Claude Kit</strong><br/>
+  Переиспользуемый конфигурационный набор для <a href="https://docs.anthropic.com/en/docs/claude-code">Claude Code</a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Claude_Code-config_kit-5A45FF?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDJMMiAxOWgyMEwxMiAyeiIgZmlsbD0id2hpdGUiLz48L3N2Zz4=" alt="Claude Code Config Kit"/>
+</p>
+
+---
+
+Структурированный мультиагентный процесс разработки со встроенными фазами планирования, реализации и код-ревью. Поддерживает любой язык и фреймворк — Go, Python, TypeScript, Rust, Java и ещё 26 языков через анализ tree-sitter.
+
+> **Примечание:** значения по умолчанию настроены под Go (разреженные пути, `pre-commit-build.sh` запускает `go build`, Language Profile в `CLAUDE.md` фиксирует Go ≥ 1.24). Для других стеков: отредактируйте Language Profile в `CLAUDE.md`, настройте `worktree.sparsePaths` в `.claude/settings.local.json` и замените или отключите специфичный для Go хук сборки. См. [⚙️ Файлы конфигурации](#️-файлы-конфигурации).
+
+---
+
+<p align="center"><a href="README.md">English</a> | <strong>Русский</strong></p>
+
+---
+
+## 📑 Содержание
+
+- [⚡ Быстрый старт](#-быстрый-старт)
+- [⚙️ Файлы конфигурации](#️-файлы-конфигурации)
+  - [Конфигурация с первого взгляда](#конфигурация-с-первого-взгляда)
+  - [Файлы и их жизненные циклы](#файлы-и-их-жизненные-циклы)
+- [🔧 Команды](#-команды)
+- [🏗 Архитектура](#-архитектура)
+- [🪨 Оптимизация токенов (Caveman)](#-оптимизация-токенов-caveman)
+- [🔌 MCP-серверы](#-mcp-серверы)
+- [📂 Структура проекта](#-структура-проекта)
+- [🪝 Хуки](#-хуки)
+- [📐 Соглашения](#-соглашения)
+
+## ⚡ Быстрый старт
+
+После установки `/workflow` оркеструет планирование → реализацию → ревью → коммит для любой задачи. Три шага до рабочего кита:
+
+1. **Установите** кит в корень вашего проекта. Эта одна команда разворачивает всё — Workflow-пайплайн `.claude/`, 3 MCP-сервера (`.mcp.json`, авто-одобряемые через `enableAllProjectMcpServers`) и персональные настройки по умолчанию (`.claude/settings.local.json`, дефолты кита в strict-режиме):
+
+   ```bash
+   curl -sL https://raw.githubusercontent.com/hex0xdeadbeef/claude-kit/main/install.sh | bash
+   ```
+
+   Ручной `cp` не нужен — `settings.local.json` и `.mcp.json` создаются автоматически (а при `--update` новые дефолты подмёрживаются, при этом ваши правки сохраняются). MCP-серверам нужны `npx` (Node.js) и/или `uvx` (uv); если чего-то не хватает, установщик выведет команду установки для вашей ОС. После установки рантайма **перезапустите Claude Code** — серверы автоматически загрузятся и скачаются при следующем запуске (проверьте через `claude mcp list`).
+
+2. **Сгенерируйте знание о проекте**, чтобы у агентов был контекст вашей кодовой базы:
+
+   ```bash
+   /project-researcher
+   ```
+
+   Это запишет `.claude/PROJECT-KNOWLEDGE.md` (архитектура, модули, зависимости, языковой профиль). Сначала отредактируйте Language Profile в `CLAUDE.md`, если ваш стек — не Go (дефолт кита). Затем запустите `/meta-agent onboard` для разовой проверки корректности конфигурации.
+
+3. **Начните работать** — позвольте `/workflow` вести полный цикл разработки:
+
+   ```bash
+   /workflow Add new REST endpoint for profiles
+   ```
+
+Уже используете кит? См. **Обновление существующей установки** ниже про путь `--update`.
+
+<details>
+<summary>Обновление существующей установки</summary>
+
+```bash
+curl -sL https://raw.githubusercontent.com/hex0xdeadbeef/claude-kit/main/install.sh | bash -s -- --update
+```
+
+**Сохраняется при обновлениях** (ручное восстановление не требуется):
+- `.claude/settings.local.json` — персональные переопределения (существующее поведение)
+- `.claude/prompts/` — пользовательские планы фич (при коллизиях становятся `<name>-old.md`)
+- `.claude/skills/<custom>/` — кастомные скиллы, не поставляемые в ките
+- `.claude/commands/<custom>.md`, `.claude/agents/<custom>.md` — файлы, добавленные пользователем
+- Кастомные скиллы в списках `skills:` во frontmatter `agents`/`commands` (дедуплицируются, идемпотентно)
+- `.claude/PROJECT-KNOWLEDGE.md` — генерируется для каждого проекта через `/project-researcher`
+
+**Бэкап:** перед обновлением создаётся копия с меткой времени в `.claude.backup.YYYYMMDD_HHMMSS/`.
+**Мягкая зависимость:** `python3` используется для слияния скиллов из frontmatter. Если его нет, обновление предупреждает и продолжается без этого шага.
+
+</details>
+
+<details>
+<summary>Опции установки (KIT_VERSION, INSTALL_DIR)</summary>
+
+```bash
+KIT_VERSION=v1.0.0 bash install.sh    # install specific version
+INSTALL_DIR=/path/to/project bash install.sh --update   # install to specific directory
+```
+
+</details>
+
+<details>
+<summary>Ручная установка (для продвинутых)</summary>
+
+```bash
+git clone https://github.com/hex0xdeadbeef/claude-kit.git
+cd claude-kit
+bash install.sh                        # install to current directory
+bash install.sh --update               # update existing installation
+
+# Or copy manually:
+cp -r .claude/ /path/to/your/project/
+cp CLAUDE.md /path/to/your/project/
+# Merge .gitignore manually
+
+# Personal settings + MCP config (gitignored, never overwritten by updates).
+# `bash install.sh` auto-creates both on first install and merges new defaults in on
+# `--update` (your existing values always win); copy manually only on the
+# copy-manually path above, or to reset:
+cp .claude/settings.local.json.example /path/to/your/project/.claude/settings.local.json
+cp .mcp.json.example /path/to/your/project/.mcp.json
+```
+
+</details>
+
+---
+
+## ⚙️ Файлы конфигурации
+
+Поведением кита управляют пять поверхностей: два файла настроек, один MCP-файл, один артефакт project-knowledge и языковой профиль внутри `CLAUDE.md`. Матрица **Конфигурация с первого взгляда** ниже — это главный индекс: каждый параметр, где он находится, что делает, когда его редактировать и где найти подробный разбор. **Файлы и их жизненные циклы** документирует git-статус и владение для каждого файла. Четыре подраздела `### .claude/...` ниже — это подробные разборы по каждому файлу.
+
+### Конфигурация с первого взгляда
+
+Главный индекс всех параметров конфигурации, предоставляемых китом. Столбец `Reference` ссылается на подраздел с подробным разбором в этом разделе (или на `🪨 Token Optimization (Caveman)` для `CLAUDE_CAVEMAN_MODE`). Три install/global переменные окружения (`KIT_VERSION`, `INSTALL_DIR`, `CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING`) здесь не перечислены — они активируются во время установки или через глобальное shell-окружение Claude Code, а не через `.claude/settings.local.json`. Они документированы в **Quick Start** > Install options и в [⚙️ Маршрутизация моделей](#️-маршрутизация-моделей).
+
+| Параметр | Где находится | Что контролирует | Когда редактировать | Активация | Reference |
+|------|----------|----------|--------------|------------|-----------|
+| `CLAUDE_HANDOFF_VALIDATION_MODE` | `settings.local.json` env | strict-режим для IMP-01 schema-валидации handoff JSON | ужесточение раскатки | раскомментировать в блоке env | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `CLAUDE_VERDICT_VALIDATION_MODE` | `settings.local.json` env | strict-режим для IMP-02 схемы конверта вердикта | ужесточение раскатки | раскомментировать в блоке env | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `CLAUDE_ISSUE_ID_VALIDATION_MODE` | `settings.local.json` env | strict-режим для IMP-03 канонических issue ID | ужесточение раскатки | раскомментировать в блоке env | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `CLAUDE_PROJECT_KNOWLEDGE_MODE` | `settings.local.json` env | блокировать запуск `/workflow`, если `PROJECT-KNOWLEDGE.md` отсутствует/является заглушкой для задач M+ | принудительное наличие PK | раскомментировать в блоке env | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `CLAUDE_PK_PATH_MODE` | `settings.local.json` env | блокировать «голые» ссылки `PROJECT-KNOWLEDGE.md` (без префикса `.claude/`) | строгая проверка ссылок | раскомментировать в блоке env | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `CLAUDE_DELTA_REVIEW_MODE` | `settings.local.json` env | внедрять только дельта-контекст в ревьюеров на итерации ≥ 2 | ускорение ревью на итерации ≥ 2 | `warn` или `strict` | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `CLAUDE_CAVEMAN_MODE` | `settings.local.json` env | режим краткого вывода для запусков `/workflow` | снижение стоимости Messages-токенов | `lite` (единственный режим в v1) | [🪨 Оптимизация токенов (Caveman)](#-оптимизация-токенов-caveman) |
+| `ENABLE_PROMPT_CACHING_1H` | `settings.local.json` env | продлить TTL кэша 5 мин → 1H для тарифов без подписки | пользователи API-key/Bedrock/Vertex/Foundry | `1` (по умолчанию ON в `.example`) | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `FORCE_PROMPT_CACHING_5M` | `settings.local.json` env | принудительный 5-минутный TTL независимо от тарифа | контроль стоимости для коротких задач S/M | `1` (раскомментировать) | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `GIT_STRIP_CO_AUTHOR` | `settings.local.json` env | убирать `Co-Authored-By` из автоматически генерируемых коммитов | личное предпочтение | `true` | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `worktree.sparsePaths` | `settings.json` или `settings.local.json` | какие поддеревья выгружает worktree агента `code-reviewer` | монорепозитории / большие репозитории | редактировать JSON-массив | [Monorepo sparse paths](#claudesettingslocaljsonexample--personal-overrides) |
+| `permissions.allow` / `permissions.deny` | `settings.local.json` | дополнительные allow/deny правила, объединяемые с общим `settings.json` | оверрайды для конкретной машины | редактировать JSON-массивы | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `.mcp.json` (3 сервера) | в gitignore после установки | MCP-серверы `sequential-thinking`, `context7`, `tree_sitter` | личная/помашинная настройка | автоматически создаётся `install.sh`, новые серверы объединяются при `--update` (ваша конфигурация в приоритете) | [`.mcp.json.example`](#mcpjsonexample--mcp-server-endpoints) |
+| `.claude/PROJECT-KNOWLEDGE.md` | коммитится для каждого проекта | анализ кодовой базы, внедряемый как контекст агента | один раз на проект, обновлять при изменении архитектуры | запустить `/project-researcher` | [Project Knowledge Base](#claudeproject-knowledgemd--project-knowledge-base) |
+| `CLAUDE.md` > Language Profile | коммитится | языковые слоты (`LANG_EXT`, `VERIFY_CMD` и т. д.), источник каскада | при первой установке для не-Go стеков | редактировать `CLAUDE.md` напрямую | [Быстрый старт](#-быстрый-старт) Step 2 |
+| `.claude/.kit-version` | управляется автоматически | отслеживает установленную версию кита для `install.sh --update` | никогда (управляется `install.sh`) | n/a | управляется автоматически `install.sh` |
+
+### Файлы и их жизненные циклы
+
+У каждого файла свой жизненный цикл и git-статус — скопируйте шаблоны `.example` один раз после установки, затем настраивайте под каждую машину или каждый проект.
+
+| Файл | Git-статус (в вашем проекте) | Жизненный цикл | Назначение |
+|------|------------------------------|-----------|---------|
+| `.claude/settings.json` | коммитится | на кит | Хуки, разрешения, модель по умолчанию, регистрации MCP-серверов |
+| `.claude/settings.local.json` | в gitignore после `install.sh` (поставляется `.example`) | автоматически создаётся `install.sh`; новые значения по умолчанию объединяются при `--update` (ваши значения в приоритете); личная / помашинная | Оверрайды env, дополнительные разрешения, sparse paths для монорепозитория |
+| `.mcp.json` | в gitignore после `install.sh` (поставляется `.example`) | автоматически создаётся `install.sh`; новые серверы объединяются при `--update` (ваша конфигурация в приоритете); личная / помашинная | Эндпоинты MCP-серверов (`sequential-thinking`, `context7`, `tree_sitter`) |
+| `.claude/PROJECT-KNOWLEDGE.md` | коммитится (сохраняется при `--update`) | на проект | Автоматически генерируемый анализ кодовой базы, используемый как контекст всеми агентами |
+| `.claude/.kit-version` | коммитится | на установку | Отслеживает установленную версию кита для `install.sh --update` |
+
+### `.claude/settings.local.json.example` — Personal Overrides
+
+`install.sh` автоматически создаёт `.claude/settings.local.json` из этого шаблона при первой установке, так что свежая установка уже имеет значения по умолчанию. При `--update` он на уровне ключей **объединяет** любые новые значения по умолчанию из `.example` в ваш файл — ваши существующие значения всегда в приоритете, а документационные ключи только из примера (переключатели с ведущим `_`) не внедряются в ваш выверенный файл. Редактируйте его для кастомизации. Чтобы сбросить или настроить вручную:
+
+```bash
+cp .claude/settings.local.json.example .claude/settings.local.json
+```
+
+Семантика слияния в сравнении с `settings.json`: скаляры переопределяют, массивы объединяются, `deny` побеждает `allow`. Файл в gitignore и **сохраняется при `install.sh --update`**.
+
+<details>
+<summary>📋 Env-переменные (активируются удалением ведущего <code>_</code>)</summary>
+
+| Переменная | По умолчанию в `.example` | Эффект |
+|----------|----------------------|--------|
+| `GIT_STRIP_CO_AUTHOR` | `false` | Убирает строки `Co-Authored-By` из автоматически генерируемых сообщений коммитов |
+| `CLAUDE_HANDOFF_VALIDATION_MODE` | `_strict` *(неактивно)* | `strict` блокирует запись невалидного handoff JSON; `warn` логирует и продолжает (IMP-01) |
+| `CLAUDE_VERDICT_VALIDATION_MODE` | `_strict` *(неактивно)* | `strict` принудительно применяет схему VERDICT_JSON; иначе откатывается к regex-извлечению (IMP-02) |
+| `CLAUDE_ISSUE_ID_VALIDATION_MODE` | `_strict` *(неактивно)* | `strict` блокирует записи вердиктов, у которых `issues[].id` не соответствует каноническому паттерну `^[PC]R-[0-9a-f]{8}$` (IMP-03); regex-фолбэк всё ещё спасает вердикт в `warn` |
+| `CLAUDE_PROJECT_KNOWLEDGE_MODE` | `_strict` *(неактивно)* | `strict` БЛОКИРУЕТ запуск `/workflow`, когда `PROJECT-KNOWLEDGE.md` отсутствует или имеет значения-заглушки для задач M+ |
+| `CLAUDE_PK_PATH_MODE` | `_strict` *(неактивно)* | `strict` блокирует записи, содержащие «голые» ссылки `PROJECT-KNOWLEDGE.md` (без префикса `.claude/`) — отлавливается `meta-agent/check-references` |
+| `ENABLE_PROMPT_CACHING_1H` | `1` | Продлевает TTL кэша промптов 5 мин → 1H для пользователей API-key/Bedrock/Vertex/Foundry; noop на тарифе с подпиской (v2.1.108) |
+| `FORCE_PROMPT_CACHING_5M` | `_1` *(неактивно)* | Принудительный 5-минутный TTL независимо от тарифа платформы — контроль стоимости для коротких задач S/M |
+| `CLAUDE_DELTA_REVIEW_MODE` | `_warn` *(неактивно)* | `warn` (HINT) / `strict` (FOCUS) внедряет только дельта-контекст в ревьюеров на итерации ≥2; `off` сохраняет полный контекст |
+| `CLAUDE_CAVEMAN_MODE` | `_lite` *(неактивно)* | `lite` активирует проектно-локальный caveman-режим краткого вывода для родительской сессии `/workflow` (orchestrator/designer/planner/coder); агенты reviewer/researcher исключаются в любом случае через SubagentStart suspend-хук. `off` полностью отключает. См. [🪨 Оптимизация токенов (Caveman)](#-оптимизация-токенов-caveman) |
+
+Ключи верхнего уровня с ведущим `_` (например, `_comment`, `_env_comment`, `_worktree_comment`) — это документация, а не env-переменные.
+
+</details>
+
+<details>
+<summary>🌳 Monorepo sparse paths</summary>
+
+Ускорьте создание worktree агента `code-reviewer` в репозиториях с 100k+ файлов, выгружая только релевантные поддеревья:
+
+```json
+"worktree": {
+  "sparsePaths": [".claude/", "src/", "tests/", "package.json"]
+}
+```
+
+Поставляемый `.example` по умолчанию рассчитан на Go-раскладку (`internal/`, `cmd/`, `go.mod`, `go.sum`, `Makefile`). Переопределите под ваш стек — JS, Python, Rust, пакеты монорепозитория и т. д. Добавьте `.claude/`, если ревьюеру нужно читать правила проекта изнутри worktree.
+
+</details>
+
+### `.mcp.json.example` — MCP Server Endpoints
+
+Помашинная конфигурация (в gitignore после `install.sh`). `install.sh` автоматически создаёт `.mcp.json` из этого шаблона при первой установке и обновляет `.example` при каждом запуске, так что MCP-серверы провижионятся без ручных шагов (авто-одобрение через `enableAllProjectMcpServers` в `settings.json`). При `--update` он **объединяет** любые новые серверы кита в ваш `.mcp.json`, сохраняя ваши существующие/кастомизированные серверы (ваша конфигурация в приоритете). Чтобы сбросить, настроить вручную или влить в существующий `.mcp.json`:
+
+```bash
+cp .mcp.json.example .mcp.json   # fresh setup
+# — or merge the relevant blocks into an existing .mcp.json
+```
+
+Кит поставляет `sequential-thinking` предзагруженным (`alwaysLoad: true` в `.mcp.json.example`), чтобы соответствовать значению по умолчанию `CLAUDE_KIT_MCP_PRELOAD=on` — он загружается при старте сессии, а не через отложенный ToolSearch. Удалите `alwaysLoad` у этого сервера (или установите `CLAUDE_KIT_MCP_PRELOAD=off`), чтобы отложить загрузку и сэкономить на холодном старте и контекстных токенах.
+
+Поставляется с тремя серверами:
+
+| Сервер | Транспорт | Используется |
+|--------|-----------|---------|
+| `sequential-thinking` | `npx @modelcontextprotocol/server-sequential-thinking` | `/planner`, `/designer` на задачах L/XL (обязательно) |
+| `context7` | `npx @upstash/context7-mcp` (proxy-bypass env preset) | Поиск документации по библиотекам в фазах coder/planner (обязательно) |
+| `tree_sitter` | `uvx --python ">=3.10" --python-preference only-system mcp-server-tree-sitter` | Структурный анализ `/project-researcher` (опционально — агенты откатываются к grep) |
+
+Установите `uv` один раз для `uvx`: `curl -LsSf https://astral.sh/uv/install.sh | sh`. `npx` поставляется с Node.js. См. [🔌 MCP-серверы](#-mcp-серверы) для матрицы обязательное-vs-опциональное.
+
+### `.claude/PROJECT-KNOWLEDGE.md` — Project Knowledge Base
+
+Автоматически генерируемый анализ кодовой базы (архитектура, модули, зависимости, языковой профиль), потребляемый как контекст `/planner`, `/coder`, `plan-reviewer` и `code-reviewer`. Сгенерируйте один раз после установки:
+
+```bash
+/project-researcher
+```
+
+Коммитится для каждого проекта — не является частью кита. **Сохраняется при `install.sh --update`**, поэтому обновления кита никогда не затирают ваши знания о проекте. Перезапускайте `/project-researcher`, когда архитектура существенно меняется (новый модуль, смена фреймворка, миграция схемы). Отсутствующий файл не фатален — агенты откатываются к блоку `Language Profile` в `CLAUDE.md`.
+
+---
+
+## 🔧 Команды
+
+### `/workflow` — полный цикл разработки
+
+Основная команда, которая оркестрирует весь процесс разработки. Выполняет все фазы последовательно с подтверждением пользователя между шагами.
+
+**Пайплайн:** `task-analysis` → `designer*` → `planner` → `plan-review` → `coder` → `code-review`
+
+\* designer запускается только для задач L/XL. S/M переходят сразу к planner.
+
+```bash
+/workflow Add new REST endpoint for profiles
+/workflow --auto Implement resource update         # autonomous mode, no confirmations
+/workflow --from-phase 3                            # resume from specified phase
+/workflow --from-phase 0.7                           # resume from design phase
+```
+
+<details>
+<summary>⚙️ Режимы и фазы</summary>
+
+**Режимы:**
+
+| Режим | Флаг | Описание |
+|------|------|-------------|
+| Интерактивный | *(по умолчанию)* | Подтверждение перед каждой фазой |
+| Автономный | `--auto` | Все фазы автоматически, без подтверждений |
+| Возобновление | `--from-phase N` | Возобновление с указанной фазы |
+
+**Фазы:**
+
+| Польз. № | Внутр. № | Фаза | `--from-phase` | Описание |
+|--------|------------|-------|----------------|-------------|
+| — | 0.5 | Анализ задачи | — | Классификация сложности (S/M/L/XL) и выбор маршрута |
+| — | 0.7 | Проектирование | `0.7` | Исследование требований + выбор подхода *(только L/XL; опционально для M new_feature/integration)* |
+| 1 | 1 | Планирование | `1` | Исследование кодовой базы, создание плана реализации |
+| 2 | 2 | Ревью плана | `2` | Валидация плана на соответствие архитектуре *(пропускается для сложности S)* |
+| 3 | 3 | Реализация | `3` | Написание кода строго по утверждённому плану, запуск тестов |
+| — | 3.5 | Проверка спецификации | — | Встроенный гейт соответствия внутри фазы реализации *(не возобновляется через --from-phase)* |
+| 4 | 4 | Код-ревью | `4` | Ревью изменений: архитектура, безопасность, качество |
+| 5 | 5 | Завершение | — | Git-коммит + извлечённые уроки *(если нетривиально)* |
+
+> Используйте значения `Внутр. №` с `--from-phase`. Фазы с `—` выполняются автоматически или не могут быть возобновлены независимо.
+
+</details>
+
+**Результат:** реализованный, протестированный и прошедший ревью код с git-коммитом.
+
+---
+
+### `/designer` — архитектура решения *(L/XL, opt-in)*
+
+Фаза 0.7 между анализом задачи и планированием. Исследует требования, выявляет 2-3 альтернативных подхода и создаёт утверждённую спецификацию, которую использует `/planner`. По умолчанию пропускается для сложности S/M; задачи сложности M типа `new_feature` или `integration` могут подключить её опционально.
+
+```bash
+/designer Add multi-region failover         # explicit invocation
+/workflow --design Add multi-region failover # via orchestrator
+```
+
+**Результат:** утверждённая спецификация в `.claude/prompts/{feature}-spec.md` (используется при запуске `/planner`)
+
+---
+
+### `/planner` — планирование реализации
+
+Исследует кодовую базу и создаёт детальный план реализации с примерами кода и критериями приёмки. Не изменяет файлы проекта.
+
+```bash
+/planner Add pagination to list endpoint
+/planner --minimal Add field to model               # minimal plan without deep research
+```
+
+**Результат:** файл плана в `.claude/prompts/{feature}.md`
+
+---
+
+### `/coder` — реализация кода
+
+Реализует код строго по утверждённому плану. После реализации запускает форматирование, линтинг и тесты.
+
+```bash
+/coder                          # auto-find plan in prompts/
+/coder my-feature               # implement specific plan
+```
+
+**Результат:** работающий код с проходящими тестами + оценка результата с документированием отклонений.
+
+---
+
+### `/meta-agent` — менеджер жизненного цикла артефактов
+
+Создаёт, улучшает, аудирует и управляет артефактами Claude Code (команды, навыки, правила, агенты). Workflow из 9 фаз с гейтами качества.
+
+<details>
+<summary>📋 Примеры использования</summary>
+
+```bash
+/meta-agent onboard                    # initialize .claude/ for a new project
+/meta-agent create command my-cmd      # create a new slash command
+/meta-agent create skill my-skill      # create a new reusable skill
+/meta-agent create agent my-agent      # create a new agent
+/meta-agent enhance command my-cmd     # improve an existing artifact
+/meta-agent audit                      # quality report for all artifacts
+/meta-agent delete rule my-rule        # delete an artifact
+/meta-agent rollback                   # rollback last change
+/meta-agent list                       # list all artifacts
+```
+
+**Управление сессиями:** `--resume {run_id}`, `abort {run_id}`, `cleanup` (удаление запусков старше 7 дней)
+
+**Флаги:** `--dry-run` (предпросмотр) · `--explore` (Tree of Thought)
+
+**Типы артефактов:** `command` · `skill` · `rule` · `agent`
+
+</details>
+
+---
+
+### `/project-researcher` — анализ проекта
+
+Автономный агент для глубокого анализа кодовой базы: архитектура, зависимости и схема БД. Генерирует `.claude/PROJECT-KNOWLEDGE.md`, который другие команды используют как контекст.
+
+Архитектура: оркестратор + 7 специализированных субагентов (detection, discovery, graph, analysis, generation, verification, report).
+
+```bash
+/project-researcher
+```
+
+---
+
+### `/review-checklist` — справочник чек-листа ревью
+
+Отображает чек-лист код-ревью: архитектура, безопасность (OWASP), качество кода, производительность.
+
+```bash
+/review-checklist
+```
+
+---
+
+### 🗺 Руководство по выбору команды
+
+| Сценарий | Команда |
+|----------|---------|
+| Полная реализация фичи с нуля | `/workflow` |
+| Автономная реализация без подтверждений | `/workflow --auto` |
+| Нужен план до написания кода | `/planner` |
+| План утверждён, нужна реализация | `/coder` |
+| Настройка kit в новом проекте | `/meta-agent onboard` |
+| Создание новых команд/навыков/агентов | `/meta-agent create` |
+| Предпросмотр изменений артефактов | `/meta-agent enhance --dry-run` |
+| Понять структуру проекта | `/project-researcher` |
+
+---
+
+## 🏗 Архитектура
+
+Система представляет собой **многофазный пайплайн разработки**, управляемый оркестратором (`/workflow`), который последовательно делегирует работу специализированным агентам. Активные фазы зависят от сложности: **S=4** (пропускает Design и Plan Review) · **M=6** · **L/XL=8** (все фазы, включая Design и Spec Check). У каждого агента строго определены зона ответственности, назначенная модель и набор навыков.
+
+<details>
+<summary>🔄 Пайплайн разработки</summary>
+
+```mermaid
+flowchart TB
+    subgraph STARTUP ["Startup"]
+        TA["Task Analysis<br/>(S/M/L/XL)"] --> S1["Memory search"]
+        S1 --> S3["Session recovery check"]
+    end
+
+    S3 -->|S| ROUTE_S["Minimal route:<br/>skip Plan Review"]
+    S3 -->|M| ROUTE_M["Standard route"]
+    S3 -->|L| ROUTE_L["Full route +<br/>Sequential Thinking"]
+    S3 -->|XL| ROUTE_XL["Full route +<br/>ST required"]
+
+    ROUTE_S --> PLANNER
+    ROUTE_M --> PLANNER
+    ROUTE_M -.->|"new/integ optional"| DES
+    ROUTE_L --> DES
+    ROUTE_XL --> DES
+
+    DES["/designer<br/>Phase 0.7"] --> PLANNER
+
+    subgraph PHASE1 ["Phase 1: Planning — /planner (opus)"]
+        PLANNER["Understand scope"] --> RESEARCH["Research codebase"]
+        RESEARCH --> DESIGN["Design solution"]
+        DESIGN --> DOCUMENT["Write plan to<br/>prompts/feature.md"]
+    end
+
+    RESEARCH -.->|"L/XL: Task tool"| CRES["code-researcher<br/>(haiku)"]
+
+    DOCUMENT --> CHECK_S{"S-complexity?"}
+    CHECK_S -->|Yes| EVALUATE
+    CHECK_S -->|No| PLAN_REVIEW
+
+    subgraph PHASE2 ["Phase 2: Plan Review — plan-reviewer (opus)"]
+        PLAN_REVIEW["Read plan +<br/>check architecture"]
+        PLAN_REVIEW --> VERDICT1{"Verdict?"}
+    end
+
+    VERDICT1 -->|APPROVED| EVALUATE
+    VERDICT1 -->|NEEDS_CHANGES| LOOP1{"Iteration < 3?"}
+    VERDICT1 -->|REJECTED| STOP1["STOP pipeline"]
+
+    LOOP1 -->|Yes| PLANNER
+    LOOP1 -->|"No: limit reached"| STOP2["STOP: show summary,<br/>request user help"]
+
+    subgraph PHASE3 ["Phase 3: Implementation — /coder (opus)"]
+        EVALUATE{"Evaluate plan:<br/>PROCEED / REVISE / RETURN"}
+        EVALUATE -->|PROCEED| IMPLEMENT["Implement Parts<br/>in dependency order"]
+        EVALUATE -->|REVISE| ADJUST["Note adjustments"] --> IMPLEMENT
+        IMPLEMENT --> SIMPLIFY{"SIMPLIFY<br/>(L/XL, ≥5 parts)"}
+        SIMPLIFY -->|"applied / skipped"| VERIFY{"fmt + lint + test"}
+        VERIFY -->|PASS| SPECCHECK["Spec Check<br/>Phase 3.5"]
+        SPECCHECK -->|"PASS / PARTIAL"| HANDOFF3["Form handoff"]
+        SPECCHECK -->|"FAIL (max 1x)"| VERIFY
+        VERIFY -->|"FAIL (max 3x)"| STOP3["STOP: test failures,<br/>request manual fix"]
+    end
+
+    EVALUATE -->|RETURN| PLAN_REVIEW
+
+    IMPLEMENT -.->|"L/XL: Task tool"| CRES
+
+    HANDOFF3 --> CODE_REVIEW
+
+    subgraph PHASE4 ["Phase 4: Code Review — code-reviewer (opus, worktree)"]
+        CODE_REVIEW["Read diff +<br/>check architecture, security,<br/>tests, style"]
+        CODE_REVIEW --> VERDICT2{"Verdict?"}
+    end
+
+    VERDICT2 -->|APPROVED| COMPLETION
+    VERDICT2 -->|APPROVED_WITH_COMMENTS| COMPLETION
+    VERDICT2 -->|CHANGES_REQUESTED| LOOP2{"Iteration < 3?"}
+
+    LOOP2 -->|Yes| EVALUATE
+    LOOP2 -->|"No: limit reached"| STOP4["STOP: show summary,<br/>request user help"]
+
+    subgraph PHASE5 ["Phase 5: Completion"]
+        COMPLETION["Git commit"] --> LESSONS{"Non-trivial?"}
+        LESSONS -->|Yes| SAVE["Save lessons<br/>to Memory"]
+        LESSONS -->|No| FINAL["Done"]
+        SAVE --> FINAL
+    end
+
+    style STARTUP fill:#e0e0e0,color:#333,stroke:#999
+    style DES fill:#1a73e8,color:#fff,stroke:#1557b0
+    style PHASE1 fill:#1a73e8,color:#fff,stroke:#1557b0
+    style PHASE2 fill:#9334e6,color:#fff,stroke:#7627bb
+    style PHASE3 fill:#9334e6,color:#fff,stroke:#7627bb
+    style PHASE4 fill:#9334e6,color:#fff,stroke:#7627bb
+    style PHASE5 fill:#0d904f,color:#fff,stroke:#0a7040
+    style STOP1 fill:#d93025,color:#fff,stroke:#b3261e
+    style STOP2 fill:#d93025,color:#fff,stroke:#b3261e
+    style STOP3 fill:#d93025,color:#fff,stroke:#b3261e
+    style STOP4 fill:#d93025,color:#fff,stroke:#b3261e
+    style SPECCHECK fill:#9334e6,color:#fff,stroke:#7627bb
+    style CRES fill:#00897b,color:#fff,stroke:#00695c
+```
+
+</details>
+
+<details>
+<summary>📨 Поток данных передач (handoff)</summary>
+
+```mermaid
+flowchart LR
+    PL2["/planner"] -->|"artifact path<br/>key_decisions<br/>known_risks<br/>complexity"| PR2["plan-reviewer"]
+
+    PR2 -->|"APPROVED:<br/>verdict, approved_notes,<br/>iteration N/3"| CO2["/coder"]
+    PR2 -.->|"NEEDS_CHANGES:<br/>issues list"| PL2
+
+    CO2 -->|"branch<br/>parts_implemented<br/>evaluate_adjustments<br/>deviations_from_plan<br/>risks_mitigated"| CR2["code-reviewer"]
+
+    CR2 -->|"APPROVED:<br/>verdict, iteration N/3"| DONE2["completion"]
+    CR2 -.->|"CHANGES_REQUESTED:<br/>issues[]"| CO2
+
+    style PL2 fill:#1a73e8,color:#fff,stroke:#1557b0
+    style PR2 fill:#9334e6,color:#fff,stroke:#7627bb
+    style CO2 fill:#9334e6,color:#fff,stroke:#7627bb
+    style CR2 fill:#9334e6,color:#fff,stroke:#7627bb
+    style DONE2 fill:#0d904f,color:#fff,stroke:#0a7040
+```
+
+</details>
+
+<details>
+<summary>📦 Загрузка навыков</summary>
+
+```mermaid
+flowchart LR
+    subgraph SKILLS ["Skills (on-demand loading)"]
+        WP["workflow-protocols · 17 files"]
+        PLR["planner-rules · 8 files"]
+        CDR["coder-rules · 7 files"]
+        PRR["plan-review-rules · 5 files"]
+        CRR["code-review-rules · 5 files"]
+        TDD["tdd-rules · 10 files"]
+        DR["design-rules · 4 files"]
+        SDB["systematic-debugging · 4 files"]
+    end
+
+    WF2["/workflow"] --> WP
+    PL2["/planner"] --> PLR
+    CO2["/coder"] --> CDR
+    CO2 -->|"if TDD in plan"| TDD
+    CO2 -.->|"3x VERIFY fail"| SDB
+    DES2["/designer (opus)"] --> DR
+    PREV["plan-reviewer"] --> PRR
+    CREV["code-reviewer"] --> CRR
+
+    WP -->|startup| A1["autonomy.md,<br/>orchestration-core.md"]
+    WP -->|on-demand| A2["handoff-protocol.md,<br/>checkpoint-protocol.md,<br/>re-routing.md,<br/>pipeline-metrics.md"]
+
+    PLR -->|startup| B1["mcp-tools.md"]
+    PLR -->|"L/XL only"| B2["sequential-thinking-guide.md"]
+    PLR -->|"M+ only"| B3["data-flow.md"]
+
+    style SKILLS fill:#f9ab00,color:#333,stroke:#e69500
+    style WF2 fill:#1a73e8,color:#fff,stroke:#1557b0
+    style PL2 fill:#1a73e8,color:#fff,stroke:#1557b0
+    style DES2 fill:#1a73e8,color:#fff,stroke:#1557b0
+    style CO2 fill:#9334e6,color:#fff,stroke:#7627bb
+    style PREV fill:#9334e6,color:#fff,stroke:#7627bb
+    style CREV fill:#9334e6,color:#fff,stroke:#7627bb
+```
+
+</details>
+
+<details>
+<summary>🪝 Жизненный цикл хуков</summary>
+
+```mermaid
+flowchart TB
+    IL["InstructionsLoaded:<br/>validate-instructions.sh"] --> UP["User Prompt"]
+    UP -->|UserPromptSubmit| ENR["enrich-context.sh<br/>+ exploration budget"]
+    ENR --> CMD["Command Execution"]
+
+    CMD --> TOOL{"Tool Call?"}
+    TOOL -->|"Write / Edit"| PRE1["protect-files.sh (blocking)"]
+    TOOL -->|Write| PRE2["check-artifact-size.sh (blocking)"]
+    TOOL -->|Bash| PRE3["block-dangerous-commands.sh (blocking)"]
+    TOOL -->|Bash| PRE4["pre-commit-build.sh (blocking)"]
+
+    PRE1 --> EXEC["Tool Executes"]
+    PRE2 --> EXEC
+    PRE3 --> EXEC
+    PRE4 --> EXEC
+
+    EXEC -->|"Write / Edit"| POST1["auto-fmt.sh<br/>(slot-driven, non-blocking)"]
+    EXEC -->|Edit| POST2["yaml-lint.sh<br/>(non-blocking)"]
+    EXEC -->|Write| POST3["check-references.sh<br/>(non-blocking)"]
+    EXEC -->|"Write / Edit"| POST4["check-plan-drift.sh<br/>(non-blocking)"]
+
+    POST1 --> CONT["Continue"]
+    POST2 --> CONT
+    POST3 --> CONT
+    POST4 --> CONT
+
+    CONT -->|"context limit"| COMPACT["PreCompact (non-blocking):<br/>save-progress-before-compact.sh"]
+    COMPACT --> PCOMPACT["PostCompact (non-blocking):<br/>verify-state-after-compact.sh"]
+    CONT -->|"subagent exits"| SUBSTOP["SubagentStop (blocking):<br/>save-review-checkpoint.sh"]
+    CONT -->|"worktree created"| WT["worktree created (native git):<br/>.worktreeinclude → review-context sidecar"]
+    CONT --> STOP["Stop (blocking):<br/>1. verify-phase-completion.sh<br/>2. check-uncommitted.sh"]
+    CONT -.->|"API error"| SFAIL["StopFailure:<br/>log-stop-failure.sh"]
+
+    STOP --> SESS["SessionEnd:<br/>session-analytics.sh"]
+    SESS --> NOTIFY["Notification:<br/>notify-user.sh"]
+
+    style IL fill:#f9ab00,color:#333,stroke:#e69500
+    style UP fill:#1a73e8,color:#fff,stroke:#1557b0
+    style ENR fill:#f9ab00,color:#333,stroke:#e69500
+    style CMD fill:#e0e0e0,color:#333,stroke:#999
+    style PRE1 fill:#d93025,color:#fff,stroke:#b3261e
+    style PRE2 fill:#d93025,color:#fff,stroke:#b3261e
+    style PRE3 fill:#d93025,color:#fff,stroke:#b3261e
+    style PRE4 fill:#d93025,color:#fff,stroke:#b3261e
+    style EXEC fill:#e0e0e0,color:#333,stroke:#999
+    style POST1 fill:#0d904f,color:#fff,stroke:#0a7040
+    style POST2 fill:#0d904f,color:#fff,stroke:#0a7040
+    style POST3 fill:#0d904f,color:#fff,stroke:#0a7040
+    style POST4 fill:#0d904f,color:#fff,stroke:#0a7040
+    style COMPACT fill:#9334e6,color:#fff,stroke:#7627bb
+    style PCOMPACT fill:#9334e6,color:#fff,stroke:#7627bb
+    style SUBSTOP fill:#9334e6,color:#fff,stroke:#7627bb
+    style WT fill:#9334e6,color:#fff,stroke:#7627bb
+    style STOP fill:#d93025,color:#fff,stroke:#b3261e
+    style SFAIL fill:#00897b,color:#fff,stroke:#00695c
+    style SESS fill:#00897b,color:#fff,stroke:#00695c
+    style NOTIFY fill:#00897b,color:#fff,stroke:#00695c
+```
+
+</details>
+
+### ⚙️ Маршрутизация моделей
+
+| Модель | Effort | Компоненты | MaxTurns | Назначение |
+|-------|--------|------------|----------|---------|
+| **opus** | xhigh | `/workflow`, `/planner`, `/designer`, `/coder`, `/meta-agent`, `/project-researcher`, `plan-reviewer`, `code-reviewer` | 50–60 (агенты) | Глубокое рассуждение, оркестрация, планирование, реализация, ревью |
+| **haiku** | medium | `code-researcher`, PR-субагенты (discovery, report) | 20 | Быстрое исследование кодовой базы в режиме только для чтения |
+| **haiku** | low | `verdict-recovery` | 10 | Лёгкий запасной механизм для вердикта, когда ревьюеры пропускают `VERDICT:` |
+
+> **Примечание:** Все агенты Workflow-пайплайна устанавливают `effort: xhigh` для максимального бюджета расширенного рассуждения (Opus 4.8). Используйте вместе с `CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING=1` (задаётся глобально), чтобы предотвратить адаптивное ограничение в середине задачи.
+
+### 📊 Маршрутизация по сложности
+
+| Сложность | Parts | Слои | Plan Review | Sequential Thinking | code-researcher |
+|------------|-------|--------|-------------|--------------------|-----------------|
+| **S** | 1 | 1 | пропуск | не требуется | пропуск |
+| **M** | 2–3 | 2 | стандартно | по необходимости | пропуск |
+| **L** | 4–6 | 3+ | стандартно | рекомендуется | да |
+| **XL** | 7+ | 4+ | стандартно | обязательно | да |
+
+### 🔑 Ключевые принципы
+
+- **Последовательное выполнение** — фазы не выполняются параллельно
+- **Протокол передач (Handoff Protocol)** — 4 типизированных контракта полезной нагрузки между фазами с нарративным оформлением
+- **Изоляция контекста** — фазы ревью выполняются как изолированные субагенты (чистый контекст, отсутствие предвзятости авторства)
+- **Лимиты циклов** — максимум 3 итерации на цикл ревью, затем STOP и запрос к пользователю
+- **Протокол контрольных точек (Checkpoint Protocol)** — состояние сохраняется после каждой фазы для восстановления сессии (12 полей YAML)
+- **Протокол Evaluate** — coder критически оценивает план перед реализацией (гейт PROCEED/REVISE/RETURN)
+- **Условная загрузка зависимостей** — при сложности S тяжёлая загрузка навыков пропускается, экономя ~6300 токенов
+- **Перемаршрутизация (Re-Routing)** — пайплайн корректирует маршрут при несоответствии сложности (понижение/повышение)
+- **Автосохранение по Cron** — периодическое автосохранение контрольной точки для задач L/XL через CronCreate (каждые 10 минут)
+- **Протокол Simplify** — опциональное упрощение кода перед ревью (L/XL, ≥5 parts, 30%-ная защита)
+- **Оптимизация worktree** — разреженный checkout через `worktree.sparsePaths` уменьшает размер worktree в монорепозиториях. Пути по умолчанию специфичны для Go: `.claude/`, `internal/`, `cmd/`, `go.mod`, `go.sum`, `Makefile`, `CLAUDE.md`. См. [Конфигурация с первого взгляда](#конфигурация-с-первого-взгляда) для настройки sparse-paths и подробный разбор [Sparse-пути в монорепозитории](#claudesettingslocaljsonexample--personal-overrides).
+
+<details>
+<summary>⚙️ Инфраструктурные улучшения (серия IMP)</summary>
+
+Архитектурные улучшения, встроенные в пайплайн. Они работают прозрачно — никаких действий от пользователя не требуется.
+
+| ID | Улучшение | Что делает | Ключевой артефакт |
+|----|-------------|--------------|--------------|
+| **IMP-01** | Валидация передач | JSON Schema-валидация типизированных полезных нагрузок передач при записи через хук PostToolUse | `.claude/schemas/handoff.schema.json` |
+| **IMP-02** | Структурированный вердикт | Огороженный блок VERDICT_JSON обеспечивает структурированное извлечение; запасной regex при сбое разбора | `workflow-state/review-completions.jsonl` |
+| **IMP-03** | Нормализация ID задач | Канонические ID `^[PC]R-[0-9a-f]{8}$` обеспечивают межитерационный set-diff (решённые vs регрессировавшие) | `review-completions.jsonl` |
+| **IMP-04** | Перепланирование на основе diff | На итерации 2+ planner получает diff-манифест — переписываются только части со статусом NEEDS_UPDATE | `workflow-state/{feature}-diff-manifest.json` |
+| **IMP-05** | Эффективный тип агента | Восстановление после реестра определяет идентичность агента из транскрипта, когда SubagentStop срабатывает без регистрации | поле `effective_agent_type` в `review-completions.jsonl` |
+| **IMP-06** | Разрешение вердикта UNKNOWN | Многоуровневое восстановление: контрольная точка → прямое чтение транскрипта → агент verdict-recovery → ручной вердикт пользователя | фазы 2/4 в `orchestration-core.md` |
+
+</details>
+
+---
+
+## 🪨 Оптимизация токенов (Caveman)
+
+Локальный для проекта форк [скилла caveman](https://github.com/juliusbrussee/caveman) — постоянно включённый режим лаконичного вывода для запусков `/workflow`. Убирает из прозы агентов слова-наполнители / хеджирование / любезности, чтобы снизить стоимость токенов Messages, сохраняя при этом всю техническую суть и несущий контракт структурированный вывод (JSON-конверты, заголовки плана, пути к файлам, блоки кода).
+
+**Активация:** по умолчанию поставляется отключённым. См. строку `CLAUDE_CAVEMAN_MODE` в разделе [Конфигурация с первого взгляда](#конфигурация-с-первого-взгляда); включение на конкретной машине через `.claude/settings.local.json`:
+
+```json
+"env": {
+  "CLAUDE_CAVEMAN_MODE": "lite"
+}
+```
+
+Вступает в силу при **следующем** запуске сессии Claude Code.
+
+**Режимы:**
+
+| Значение | Поведение |
+|-------|----------|
+| `lite` *(единственная интенсивность, поддерживаемая в v1)* | Убирает слова-наполнители ("just", "really", "basically"), любезности ("sure", "happy to"), хеджирование ("it might be worth"). Сохраняет полные предложения, артикли, технические термины, блоки кода. Ожидается снижение токенов Messages на ~30-40%. |
+| `off` | Хук SessionStart завершается без вывода — нулевая инъекция, побайтово идентично поведению до v1.21.0. |
+
+> **Почему только `lite`:** в исходном caveman поставляется 6 режимов (`full`, `ultra`, `wenyan-*`); они допускают фрагменты предложений, которые повреждают канонический хеш идентификатора issue (`sha256(category|location|problem)[:8]` согласно IMP-03). Отключены в этом форке, чтобы сохранить конверт VERDICT_JSON и стабильность ID между итерациями.
+
+**Исключение для ревьюера/исследователя (защита в глубину):**
+
+| Слой | Механизм |
+|-------|-----------|
+| **1. Хук** | `SubagentStart` → `caveman-suspend-for-reviewer.sh` внедряет фразу `[caveman OFF for this delegation]` для `plan-reviewer`, `code-reviewer`, `verdict-recovery`, `code-researcher`. |
+| **2. Скилл** | `.claude/skills/caveman/SKILL.md` содержит 7 ДОСЛОВНЫХ фраз, защищающих несущий контракт вывод: строка enum `VERDICT:`, огороженные блоки `VERDICT_JSON:`, значения дискриминаторов `$handoff_contract` / `$verdict_contract`, H2-заголовки плана/спецификации (`## Scope`, `## Architecture Decision`, `## Tests`, `## Acceptance Criteria`, `## Parts`), текст `issue.problem` / `issue.suggestion`, пути к файлам и ссылки `file:line`, идентификаторы Part (`Part N:`). |
+
+Любой слой по отдельности защищает контракт; оба вместе = устойчивость к отказу в одной точке (опечатка в matcher ИЛИ дрейф промпта).
+
+**Локальный для проекта инвариант:** все файлы caveman находятся внутри `.claude/`. Кит никогда не изменяет `~/.claude/`. Отключение caveman в claude-kit НЕ влияет ни на один другой проект Claude Code.
+
+**Выключатель (откат):** установите `CLAUDE_CAVEMAN_MODE=off` (либо удалите переменную полностью и удалите файл-флаг `.claude/workflow-state/.caveman-mode`). Хук завершается без вывода → побайтово идентично отключённому состоянию.
+
+---
+
+## 🔌 MCP-серверы
+
+См. [`.mcp.json.example` — MCP Server Endpoints](#mcpjsonexample--mcp-server-endpoints) для настройки. Серверы также можно настроить глобально в `~/.claude/mcp.json`. По умолчанию поставляются 3 сервера:
+
+### Обязательные
+
+| Сервер | Пакет | Назначение |
+|--------|---------|---------|
+| `context7` | `@upstash/context7-mcp` | Поиск документации по библиотекам |
+| `sequential-thinking` | — | Структурированные рассуждения для сложных задач |
+
+### Опциональные
+
+| Сервер | Пакет | Назначение |
+|--------|---------|---------|
+| `tree_sitter` | `mcp-server-tree-sitter` | Анализ кода (символы, зависимости, карта репозитория) — используется `/project-researcher` |
+
+<details>
+<summary>🔧 Установка MCP-сервера tree_sitter</summary>
+
+Установите `uv` один раз — затем сервер автоматически устанавливается при первом вызове инструмента через транспорт `uvx`, настроенный в `.mcp.json`:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Для настройки `.mcp.json` (скопируйте из `.mcp.json.example`, добавлен в gitignore) см. [⚙️ Configuration Files → `.mcp.json.example`](#mcpjsonexample--mcp-server-endpoints).
+
+</details>
+
+---
+
+## 📂 Структура проекта
+
+```
+.
+├── .mcp.json.example                 # MCP server endpoints template (copy → .mcp.json)
+└── .claude/
+    ├── agents/                       # Autonomous agents
+    │   ├── meta-agent/               # Artifact lifecycle management (deps, scripts, templates)
+    │   ├── project-researcher/       # Codebase analysis (7 subagents, AST analysis, scoring)
+    │   ├── plan-reviewer.md          # Plan validation (invoked by /workflow)
+    │   ├── code-reviewer.md          # Code review (invoked by /workflow, isolated worktree)
+    │   ├── code-researcher.md        # Codebase exploration (haiku)
+    │   └── verdict-recovery.md       # Lightweight verdict fallback (haiku, on reviewer failure)
+    ├── commands/                     # Slash commands (/workflow, /planner, /coder, etc.)
+    ├── skills/                       # Reusable domain knowledge (8 packages)
+    │   ├── workflow-protocols/       # Orchestration, handoff, checkpoints, re-routing
+    │   ├── planner-rules/            # Planning methodology, task analysis, data flow
+    │   ├── coder-rules/              # Implementation rules, MCP tools, review-response
+    │   ├── plan-review-rules/        # Architecture checks, required sections
+    │   ├── code-review-rules/        # Security checklist (OWASP), review checklists
+    │   ├── design-rules/             # Design phase 0.7 checklist (L/XL only)
+    │   ├── systematic-debugging/     # Root-cause investigation on 3x VERIFY fail
+    │   └── tdd-rules/                # TDD workflow (per-language tdd-shapes/<LANGUAGE>.md)
+    ├── templates/                    # Templates for creating new artifacts
+    ├── prompts/                      # Generated implementation plans (preserved on --update)
+    ├── scripts/                      # Lifecycle hook scripts
+    │   ├── lib/                      # Shared helpers (state_render.py)
+    │   └── tests/                    # Hook test suite + fixtures
+    ├── schemas/                      # JSON Schemas (handoff.schema.json — IMP-01)
+    ├── rules/                        # Cross-cutting constraints (architecture rules)
+    ├── workflow-state/               # Runtime state (gitignored, generated during workflow)
+    ├── settings.json                 # Claude Code project settings + hooks (git-committed)
+    ├── settings.local.json.example   # Personal overrides template (copy → settings.local.json)
+    ├── PROJECT-KNOWLEDGE.md          # Auto-generated project knowledge (per-project)
+    └── .kit-version                  # Installed kit version metadata (managed by install.sh)
+```
+
+---
+
+## 🪝 Хуки
+
+Настраиваются в `.claude/settings.json`. Автоматически обеспечивают соблюдение качества:
+
+| Хук | Триггер | Назначение |
+|------|---------|---------|
+| `validate-instructions.sh` | InstructionsLoaded | Проверяет, что критические правила загружены в контекст |
+| `enrich-context.sh` | UserPromptSubmit | Обогащает промпт контекстом проекта + бюджетом исследования |
+| `protect-files.sh` | PreToolUse (Write/Edit) | Защищает критические конфигурационные файлы от изменения агентом |
+| `check-artifact-size.sh` | PreToolUse (Write) | Блокирует запись, превышающую пороги размера |
+| `block-dangerous-commands.sh` | PreToolUse (Bash) | Блокирует деструктивные shell-команды |
+| `pre-commit-build.sh` | PreToolUse (Bash) | Проверяет `go build` перед git-коммитом |
+| `auto-fmt.sh` | PostToolUse (Write/Edit) | Автоформатирует исходные файлы (управляется слотом через FMT_CMD; поддерживает плейсхолдер `{}` для каждого файла) |
+| `yaml-lint.sh` | PostToolUse (Edit) | Проверяет структуру YAML |
+| `check-references.sh` | PostToolUse (Write) | Проверяет все ссылки на файлы |
+| `check-plan-drift.sh` | PostToolUse (Write/Edit) | Обнаруживает отклонение от плана во время реализации |
+| `save-progress-before-compact.sh` | PreCompact | Сохраняет контрольную точку (checkpoint) перед сжатием контекста |
+| `verify-state-after-compact.sh` | PostCompact | Проверяет целостность состояния workflow после сжатия |
+| `save-review-checkpoint.sh` | SubagentStop | Сохраняет состояние завершения ревью |
+| `verify-phase-completion.sh` | Stop | Гарантирует завершение всех фаз meta-agent |
+| `check-uncommitted.sh` | Stop | Предупреждает о незакоммиченных изменениях |
+| `session-analytics.sh` | SessionEnd | Записывает аналитику сессии |
+| `log-stop-failure.sh` | StopFailure | Логирует ошибки API в аналитику сессии |
+| `notify-user.sh` | Notification | Уведомления на рабочий стол о событиях агентов |
+| `inject-review-context.sh` | SubagentStart (plan-reviewer / code-reviewer) | Внедряет накопленный контекст ревью в агента-ревьюера при запуске |
+| `validate-handoff.sh` | PostToolUse (Write / Edit) | Проверяет JSON передачи (handoff) по схеме при записи в `workflow-state/*-handoff.json` |
+| `track-task-lifecycle.sh` | SubagentStart (code-researcher / plan-reviewer / code-reviewer) | Отслеживает события жизненного цикла задач субагентов для метрик пайплайна |
+| `audit-config-change.sh` | ConfigChange | Аудитирует изменения конфигурации; блокирует запись во время активного workflow |
+| `log-permission-denied.sh` | PermissionDenied | Логирует отказы в вызовах инструментов классификатором авто-режима (не явными правилами deny) |
+| применятель матрицы импортов (type: prompt) | PreToolUse (Write / Edit `if: internal/**/*.go`) | Обеспечивает соблюдение матрицы импортов архитектуры Go через LLM-оценку — срабатывает только на внутренних Go-файлах |
+| `caveman-activate.sh` | SessionStart | Внедряет проектно-локальный набор правил терсе-вывода caveman lite-mode как `additionalContext` (оптимизация токенов, начиная с v1.21.0) |
+| `caveman-suspend-for-reviewer.sh` | SubagentStart (`plan-reviewer` / `code-reviewer` / `verdict-recovery` / `code-researcher`) | Выдаёт маркер исключения `[caveman OFF for this delegation]`, чтобы конверты VERDICT_JSON ревьюера/исследователя оставались байт-стабильными между итерациями (защита в глубину для стабильности canonical_id по IMP-03) |
+
+---
+
+## 📐 Соглашения
+
+- Артефакты используют формат YAML-first (>80% YAML, минимум прозы)
+- Язык: английский для кода, ключей YAML и спецификаций артефактов
+- Ограничения на размер обеспечиваются хуками (`check-artifact-size.sh`)
+- Примеры используют шаблоны grep/glob для поиска актуального кода, а не жёстко зашитые фрагменты
