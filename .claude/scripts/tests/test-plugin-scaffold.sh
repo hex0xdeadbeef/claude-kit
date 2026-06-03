@@ -8,6 +8,8 @@
 #                                    (parsed-equal to settings.json) = 46 entries
 #   - git-tracked                  : the 3 plugin files MUST be tracked (global gitignore ignores .claude/)
 #   - claude plugin validate --strict exits 0 (skipped gracefully if the claude CLI is absent)
+#   - component-path SHAPES match the schemastore manifest schema (agents=./*.md files,
+#     not a ./dir/) — the install-time constraint that `claude plugin validate` does NOT enforce
 # Run: bash .claude/scripts/tests/test-plugin-scaffold.sh
 set -uo pipefail
 
@@ -46,10 +48,76 @@ m = json.load(open(sys.argv[1]))
 chk = []
 chk.append(("manifest name==claude-kit", m.get("name") == "claude-kit"))
 chk.append(("manifest commands→./.claude/commands/", m.get("commands") == ["./.claude/commands/"]))
-chk.append(("manifest agents→./.claude/agents/", m.get("agents") == ["./.claude/agents/"]))
+chk.append(("manifest agents→4 explicit .md files", m.get("agents") == [
+    "./.claude/agents/code-researcher.md",
+    "./.claude/agents/code-reviewer.md",
+    "./.claude/agents/plan-reviewer.md",
+    "./.claude/agents/verdict-recovery.md",
+]))
 chk.append(("manifest skills→./.claude/skills/", m.get("skills") == "./.claude/skills/"))
 chk.append(("manifest hooks→./.claude/hooks/hooks.json", m.get("hooks") == "./.claude/hooks/hooks.json"))
 chk.append(("manifest mcpServers→./.mcp.json", m.get("mcpServers") == "./.mcp.json"))
+for name, passed in chk:
+    print(f"{'PASS' if passed else 'FAIL'}|{name}")
+PYEOF
+)
+
+# ── Manifest component-path SHAPES match the plugin-manifest JSON Schema ──────
+# Regression guard for the v1.35.0 install failure ("agents: Invalid input").
+# The schemastore manifest schema requires every `agents` entry to match BOTH
+# ^\./.*  AND  .*\.md$ — a directory path like "./.claude/agents/" is REJECTED at
+# install time (unlike `commands`, whose schema also accepts a bare ./dir/).
+# `claude plugin validate --strict` does NOT enforce these path patterns, so the
+# kit's suite encodes them here. Each referenced path must also exist on disk.
+while IFS='|' read -r st nm; do
+    [ "$st" = "PASS" ] && ok "$nm" || bad "$nm"
+done < <(python3 - "$MANIFEST" "$REPO_ROOT" <<'PYEOF'
+import json, os, re, sys
+m = json.load(open(sys.argv[1]))
+root = sys.argv[2]
+chk = []
+
+def aslist(v):
+    if v is None: return []
+    return v if isinstance(v, list) else [v]
+def strs(v):
+    return [x for x in aslist(v) if isinstance(x, str)]
+def exists(rel):
+    return os.path.exists(os.path.join(root, rel[2:] if rel.startswith("./") else rel))
+
+REL = re.compile(r"^\./.*")     # schema: ^\.\/.*
+MD  = re.compile(r".*\.md$")    # schema: .*\.md$  (agents only)
+JSN = re.compile(r".*\.json$")  # schema: .*\.json$ (hooks, mcpServers file form)
+
+# agents: every entry MUST be ./*.md AND exist (the constraint that broke install)
+agents = strs(m.get("agents"))
+chk.append(("agents is a non-empty list of strings", len(agents) > 0))
+for a in agents:
+    chk.append((f"agents entry shape ^./*.md: {a}", bool(REL.match(a) and MD.match(a))))
+    chk.append((f"agents file exists: {a}", exists(a)))
+
+# commands: ^\./.* (dir OR .md both allowed by schema) AND exist
+for c in strs(m.get("commands")):
+    chk.append((f"commands entry shape ^./*: {c}", bool(REL.match(c))))
+    chk.append((f"commands path exists: {c}", exists(c)))
+
+# skills: ^\./.* AND exist
+for s in strs(m.get("skills")):
+    chk.append((f"skills entry shape ^./*: {s}", bool(REL.match(s))))
+    chk.append((f"skills path exists: {s}", exists(s)))
+
+# hooks (file form): ^\./.* AND .json$ AND exist  (object form is valid too — skip)
+for h in strs(m.get("hooks")):
+    chk.append((f"hooks entry shape ^./*.json: {h}", bool(REL.match(h) and JSN.match(h))))
+    chk.append((f"hooks file exists: {h}", exists(h)))
+
+# mcpServers (local file form): ^\./.* AND .json$ AND exist  (object/URL form valid — skip)
+for mc in strs(m.get("mcpServers")):
+    if mc.startswith("http"):
+        continue
+    chk.append((f"mcpServers entry shape ^./*.json: {mc}", bool(REL.match(mc) and JSN.match(mc))))
+    chk.append((f"mcpServers file exists: {mc}", exists(mc)))
+
 for name, passed in chk:
     print(f"{'PASS' if passed else 'FAIL'}|{name}")
 PYEOF
