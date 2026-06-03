@@ -63,6 +63,8 @@
 
 Уже используете кит? См. **Обновление существующей установки** ниже про путь `--update`.
 
+**Предпочитаете плагин?** claude-kit также устанавливается как нативный плагин Claude Code (кросс-проектно, версионируется, без копирования файлов в ваш репозиторий) — см. **Установка как плагин** ниже. Обе дистрибуции сосуществуют.
+
 <details>
 <summary>Обновление существующей установки</summary>
 
@@ -116,6 +118,28 @@ cp CLAUDE.md /path/to/your/project/
 cp .claude/settings.local.json.default /path/to/your/project/.claude/settings.local.json
 cp .mcp.json.example /path/to/your/project/.mcp.json
 ```
+
+</details>
+
+<details>
+<summary>Установка как плагин (кросс-проектно, версионируется)</summary>
+
+Вместо копирования `.claude/` в один проект установите claude-kit как нативный **плагин** Claude Code — общий для всех ваших проектов, версионируемый и обновляемый через marketplace. Этот репозиторий одновременно является собственным marketplace (`.claude-plugin/marketplace.json` + `.claude-plugin/plugin.json`).
+
+```bash
+# Добавьте этот репозиторий как marketplace, затем установите плагин:
+/plugin marketplace add hex0xdeadbeef/claude-kit
+/plugin install claude-kit@claude-kit
+```
+
+**Namespace команд:** команды плагина имеют префикс — вы запускаете `/claude-kit:workflow`, `/claude-kit:planner`, `/claude-kit:coder`, `/claude-kit:designer`. Внутренняя делегация пайплайна (planner → plan-reviewer → coder → code-reviewer) резолвится автоматически по описанию, поэтому работает независимо от префикса. (В project-scoped установке `.claude/` команды остаются без префикса: `/workflow`.)
+
+**Плагин vs `install.sh` — сосуществуют:**
+
+- **Плагин** — переиспользование пайплайна во многих проектах, версионируемые обновления, ничего не копируется в ваш репозиторий. Конфиг конкретного проекта (Language Profile в `CLAUDE.md`, архитектурные правила, `.claude/PROJECT-KNOWLEDGE.md`) вы по-прежнему задаёте сами.
+- **`install.sh`** — project-scoped: копирует `.claude/` + `CLAUDE.md` в репозиторий, чтобы вы могли настроить правила / Language Profile под проект и закоммитить их с командой.
+
+В режиме плагина кит по умолчанию ставит валидацию контрактов в **strict**, запускает security- и review-хуки и автоматически инъектит контекст Language Profile при старте сессии. Чтобы также засеять `.claude/settings.local.json` вашего проекта env-дефолтами кита, включите plugin-настройку `provision_settings_local` (по умолчанию выключена). Изоляция worktree у `code-reviewer` работает как обычно; задайте `worktree.sparsePaths` в своём `settings.local.json`, если вашему монорепо нужен меньший review-worktree.
 
 </details>
 

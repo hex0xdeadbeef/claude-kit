@@ -63,6 +63,8 @@ Once installed, `/workflow` orchestrates planning → implementation → review 
 
 Already using the kit? See **Updating an existing installation** below for the `--update` path.
 
+**Prefer a plugin?** claude-kit also installs as a native Claude Code **plugin** (cross-project, versioned, no files copied into your repo) — see **Install as a plugin** below. Both distributions coexist.
+
 <details>
 <summary>Updating an existing installation</summary>
 
@@ -116,6 +118,28 @@ cp CLAUDE.md /path/to/your/project/
 cp .claude/settings.local.json.default /path/to/your/project/.claude/settings.local.json
 cp .mcp.json.example /path/to/your/project/.mcp.json
 ```
+
+</details>
+
+<details>
+<summary>Install as a plugin (cross-project, versioned)</summary>
+
+Instead of copying `.claude/` into one project, install claude-kit as a native Claude Code **plugin** — shared across all your projects, versioned, and updated through the marketplace. This repo doubles as its own marketplace (`.claude-plugin/marketplace.json` + `.claude-plugin/plugin.json`).
+
+```bash
+# Add this repo as a marketplace, then install the plugin:
+/plugin marketplace add hex0xdeadbeef/claude-kit
+/plugin install claude-kit@claude-kit
+```
+
+**Command namespace:** plugin commands are prefixed — you run `/claude-kit:workflow`, `/claude-kit:planner`, `/claude-kit:coder`, `/claude-kit:designer`. The internal pipeline delegation (planner → plan-reviewer → coder → code-reviewer) resolves automatically by description, so it works regardless of the prefix. (In a project-scoped `.claude/` install the commands stay bare: `/workflow`.)
+
+**Plugin vs `install.sh` — both coexist:**
+
+- **Plugin** — reuse the pipeline across many projects, versioned updates, nothing copied into your repo. You still supply your project's own config (Language Profile in `CLAUDE.md`, architecture rules, `.claude/PROJECT-KNOWLEDGE.md`).
+- **`install.sh`** — project-scoped: copies `.claude/` + `CLAUDE.md` into the repo so you can customize rules / Language Profile per project and commit them with your team.
+
+In plugin mode the kit defaults contract-validation to **strict**, runs the security + review hooks, and injects the Language-Profile context at session start automatically. To also seed your project's `.claude/settings.local.json` with the kit's env defaults, enable the `provision_settings_local` plugin setting (off by default). The `code-reviewer` worktree isolation works as usual; set `worktree.sparsePaths` in your own `settings.local.json` if your monorepo needs a smaller review worktree.
 
 </details>
 
