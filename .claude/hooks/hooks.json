@@ -1,0 +1,435 @@
+{
+  "hooks": {
+    "InstructionsLoaded": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/validate-instructions.sh",
+            "args": []
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/protect-files.sh",
+            "args": []
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "You are a Go architecture import matrix enforcer.\n\nRULES (strict, zero exceptions):\n1. handler layer (internal/handler/) may import: service, controller, models. NEVER: repository\n2. service layer (internal/service/) may import: repository, models. NEVER: handler\n3. repository layer (internal/repository/) may import: models. NEVER: handler, service\n4. models layer (internal/models/) stdlib only. NEVER: any internal/ package\n\nAnalyze this tool call for import violations:\n\n$ARGUMENTS\n\nSTEPS:\n1. Extract file_path from tool_input to determine the layer (handler/service/repository/models)\n2. If file is not in one of the 4 layers, respond {\"permissionDecision\": \"allow\"}\n3. If file is a test file (*_test.go), respond {\"permissionDecision\": \"allow\"}\n4. Find import statements in tool_input.content (Write) or tool_input.new_string (Edit)\n5. If no import statements found, respond {\"permissionDecision\": \"allow\"}\n6. Check each internal/ import against the rules for that layer\n7. If violation found, respond {\"permissionDecision\": \"deny\", \"permissionDecisionReason\": \"Import violation: [layer] must not import [forbidden package]\"}\n8. If no violations, respond {\"permissionDecision\": \"allow\"}\n\nRespond with ONLY the JSON object, nothing else.",
+            "if": "Write(internal/**/*.go)",
+            "timeout": 30
+          },
+          {
+            "type": "prompt",
+            "prompt": "You are a Go architecture import matrix enforcer.\n\nRULES (strict, zero exceptions):\n1. handler layer (internal/handler/) may import: service, controller, models. NEVER: repository\n2. service layer (internal/service/) may import: repository, models. NEVER: handler\n3. repository layer (internal/repository/) may import: models. NEVER: handler, service\n4. models layer (internal/models/) stdlib only. NEVER: any internal/ package\n\nAnalyze this tool call for import violations:\n\n$ARGUMENTS\n\nSTEPS:\n1. Extract file_path from tool_input to determine the layer (handler/service/repository/models)\n2. If file is not in one of the 4 layers, respond {\"permissionDecision\": \"allow\"}\n3. If file is a test file (*_test.go), respond {\"permissionDecision\": \"allow\"}\n4. Find import statements in tool_input.content (Write) or tool_input.new_string (Edit)\n5. If no import statements found, respond {\"permissionDecision\": \"allow\"}\n6. Check each internal/ import against the rules for that layer\n7. If violation found, respond {\"permissionDecision\": \"deny\", \"permissionDecisionReason\": \"Import violation: [layer] must not import [forbidden package]\"}\n8. If no violations, respond {\"permissionDecision\": \"allow\"}\n\nRespond with ONLY the JSON object, nothing else.",
+            "if": "Edit(internal/**/*.go)",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/agents/meta-agent/scripts/check-artifact-size.sh",
+            "args": [],
+            "if": "Write(.claude/**)"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/block-dangerous-commands.sh",
+            "args": []
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/pre-commit-build.sh",
+            "args": [],
+            "if": "Bash(git commit*)"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/auto-fmt.sh",
+            "args": []
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/agents/meta-agent/scripts/yaml-lint.sh",
+            "args": [],
+            "if": "Edit(.claude/**)"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/agents/meta-agent/scripts/check-references.sh",
+            "args": [],
+            "if": "Write(.claude/**)"
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/agents/meta-agent/scripts/check-references.sh",
+            "args": [],
+            "if": "Edit(.claude/**)"
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/agents/meta-agent/scripts/check-references.sh",
+            "args": [],
+            "if": "Write(README.md)"
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/agents/meta-agent/scripts/check-references.sh",
+            "args": [],
+            "if": "Edit(README.md)"
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/agents/meta-agent/scripts/check-references.sh",
+            "args": [],
+            "if": "Write(CLAUDE.md)"
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/agents/meta-agent/scripts/check-references.sh",
+            "args": [],
+            "if": "Edit(CLAUDE.md)"
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/agents/meta-agent/scripts/check-references.sh",
+            "args": [],
+            "if": "Write(install.sh)"
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/agents/meta-agent/scripts/check-references.sh",
+            "args": [],
+            "if": "Edit(install.sh)"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/agents/meta-agent/scripts/check-plan-drift.sh",
+            "args": [],
+            "if": "Write(.claude/**)"
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/agents/meta-agent/scripts/check-plan-drift.sh",
+            "args": [],
+            "if": "Edit(.claude/**)"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/validate-handoff.sh",
+            "args": [],
+            "if": "Write(.claude/workflow-state/*-handoff.json)"
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/validate-handoff.sh",
+            "args": [],
+            "if": "Edit(.claude/workflow-state/*-handoff.json)"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "manual",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/save-progress-before-compact.sh",
+            "args": []
+          }
+        ]
+      },
+      {
+        "matcher": "auto",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/save-progress-before-compact.sh",
+            "args": []
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/verify-state-after-compact.sh",
+            "args": []
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "matcher": "code-researcher",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/track-task-lifecycle.sh",
+            "args": []
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/caveman-suspend-for-reviewer.sh",
+            "args": [
+              "code-researcher"
+            ]
+          }
+        ]
+      },
+      {
+        "matcher": "plan-reviewer",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/track-task-lifecycle.sh",
+            "args": []
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/inject-review-context.sh",
+            "args": [
+              "plan-reviewer"
+            ]
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/caveman-suspend-for-reviewer.sh",
+            "args": [
+              "plan-reviewer"
+            ]
+          }
+        ]
+      },
+      {
+        "matcher": "code-reviewer",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/track-task-lifecycle.sh",
+            "args": []
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/inject-review-context.sh",
+            "args": [
+              "code-reviewer"
+            ]
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/caveman-suspend-for-reviewer.sh",
+            "args": [
+              "code-reviewer"
+            ]
+          }
+        ]
+      },
+      {
+        "matcher": "verdict-recovery",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/caveman-suspend-for-reviewer.sh",
+            "args": [
+              "verdict-recovery"
+            ]
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "plan-reviewer|code-reviewer|verdict-recovery",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/save-review-checkpoint.sh",
+            "args": []
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/enrich-context.sh",
+            "args": []
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/agents/meta-agent/scripts/verify-phase-completion.sh",
+            "args": []
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/check-uncommitted.sh",
+            "args": []
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/notify-workflow-complete.sh",
+            "args": []
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/session-analytics.sh",
+            "args": []
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/log-stop-failure.sh",
+            "args": []
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/notify-user.sh",
+            "args": []
+          }
+        ]
+      }
+    ],
+    "ConfigChange": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/audit-config-change.sh",
+            "args": []
+          }
+        ]
+      }
+    ],
+    "PermissionDenied": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/log-permission-denied.sh",
+            "args": []
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/caveman-activate.sh",
+            "args": []
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/mcp-preload-warn.sh",
+            "args": []
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/log-tool-failure.sh",
+            "args": []
+          }
+        ]
+      }
+    ]
+  }
+}

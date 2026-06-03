@@ -1,0 +1,14 @@
+{
+  "name": "claude-kit",
+  "owner": {
+    "name": "Dmitriy Mamykin"
+  },
+  "description": "Reusable multi-agent /workflow development pipeline kit for Claude Code (planning → review → implementation → review).",
+  "plugins": [
+    {
+      "name": "claude-kit",
+      "source": "./",
+      "description": "Multi-agent /workflow development pipeline (planner → plan-review → coder → code-review)."
+    }
+  ]
+}
