@@ -36,10 +36,22 @@ jobs:
 
       - name: Verify tarball contents
         run: |
-          set -o pipefail
-          ENTRIES=$(tar tzf "${ARCHIVE}")
+          set -eo pipefail
+          ENTRIES="$(tar tzf "${ARCHIVE}")"
+          GITV="$(git --version)"
+          COUNT="$(grep -c '' <<< "$ENTRIES" || true)"
+          # Surface env facts as a run annotation + job summary (readable without log access).
+          echo "::notice::release verify — ${GITV}; ${COUNT} tarball entries"
+          {
+            echo "### Release tarball verify"
+            echo ""
+            echo "- git: \`${GITV}\`"
+            echo "- entries: \`${COUNT}\`"
+            echo ""
+          } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+
           echo "=== Tarball contents (first 60) ==="
-          printf '%s\n' "$ENTRIES" | head -60
+          head -n 60 <<< "$ENTRIES"
           echo ""
           echo "=== Checking excluded paths are absent ==="
           # These paths must NOT appear in the tarball.
@@ -58,7 +70,7 @@ jobs:
           )
           FAILED=0
           for path in "${EXCLUDED[@]}"; do
-            esc=$(printf '%s' "$path" | sed 's/[][\.*^$()+?{}|/]/\\&/g')
+            esc="$(printf '%s' "$path" | sed 's/[][\.*^$()+?{}|/]/\\&/g')"
             if [[ "$path" == */ ]]; then
               # Directory: match path-prefix (dir entry itself or any contained file)
               pattern="/${esc}"
@@ -66,14 +78,18 @@ jobs:
               # File: match end-of-entry exactly
               pattern="/${esc}\$"
             fi
-            if printf '%s\n' "$ENTRIES" | grep -qE "$pattern"; then
-              echo "ERROR: excluded path found in tarball: $path"
-              printf '%s\n' "$ENTRIES" | grep -E "$pattern" | sed 's/^/  /'
+            # here-string (no pipe) → deterministic; avoids the SIGPIPE/pipefail
+            # interaction that an early-exiting `grep -q` in a pipeline can trigger.
+            matches="$(grep -E "$pattern" <<< "$ENTRIES" || true)"
+            if [ -n "$matches" ]; then
+              # ::error:: surfaces the offending path as a run annotation.
+              echo "::error::excluded path found in tarball: ${path}"
+              printf '%s\n' "$matches" | sed 's/^/  /'
               FAILED=1
             fi
           done
           if [ "$FAILED" -eq 1 ]; then
-            echo "Tarball contains excluded paths — aborting release"
+            echo "::error::tarball contains excluded paths — aborting release"
             exit 1
           fi
           echo "All exclusion checks passed."
