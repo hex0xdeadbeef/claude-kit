@@ -35,6 +35,8 @@
 
 ## ⚡ Быстрый старт
 
+> **Требования:** Claude Code `>= 2.1.141` (хуки кита опираются на инвариант exec-form `args:` из v2.1.139 и вывод JSON `terminalSequence` из v2.1.141). На более ранних версиях хуки молча превращаются в no-op / деградируют.
+
 После установки `/workflow` оркеструет планирование → реализацию → ревью → коммит для любой задачи. Три шага до рабочего кита:
 
 1. **Установите** кит в корень вашего проекта. Эта одна команда разворачивает всё — Workflow-пайплайн `.claude/`, 3 MCP-сервера (`.mcp.json`, авто-одобряемые через `enableAllProjectMcpServers`) и персональные настройки по умолчанию (`.claude/settings.local.json`, дефолты кита в strict-режиме):
@@ -69,15 +71,16 @@ curl -sL https://raw.githubusercontent.com/hex0xdeadbeef/claude-kit/main/install
 ```
 
 **Сохраняется при обновлениях** (ручное восстановление не требуется):
-- `.claude/settings.local.json` — персональные переопределения (существующее поведение)
+- `.claude/settings.local.json` — персональные переопределения (сохраняются; новые дефолты кита подмёрживаются на уровне ключей при `--update`, ваши значения в приоритете)
 - `.claude/prompts/` — пользовательские планы фич (при коллизиях становятся `<name>-old.md`)
 - `.claude/skills/<custom>/` — кастомные скиллы, не поставляемые в ките
 - `.claude/commands/<custom>.md`, `.claude/agents/<custom>.md` — файлы, добавленные пользователем
 - Кастомные скиллы в списках `skills:` во frontmatter `agents`/`commands` (дедуплицируются, идемпотентно)
 - `.claude/PROJECT-KNOWLEDGE.md` — генерируется для каждого проекта через `/project-researcher`
+- `CLAUDE.md` — Language Profile вашего проекта (шаблон кита пропускается, если `CLAUDE.md` уже существует)
 
 **Бэкап:** перед обновлением создаётся копия с меткой времени в `.claude.backup.YYYYMMDD_HHMMSS/`.
-**Мягкая зависимость:** `python3` используется для слияния скиллов из frontmatter. Если его нет, обновление предупреждает и продолжается без этого шага.
+**Мягкая зависимость:** `python3` используется для всех слияний на уровне ключей при `--update` — списков `skills:` во frontmatter, `.claude/settings.local.json` и `.mcp.json`. Если его нет, эти слияния пропускаются с предупреждением, а существующие файлы остаются без изменений (новые дефолты кита не подмёрживаются).
 
 </details>
 
@@ -105,11 +108,12 @@ cp -r .claude/ /path/to/your/project/
 cp CLAUDE.md /path/to/your/project/
 # Merge .gitignore manually
 
-# Personal settings + MCP config (gitignored, never overwritten by updates).
-# `bash install.sh` auto-creates both on first install and merges new defaults in on
-# `--update` (your existing values always win); copy manually only on the
-# copy-manually path above, or to reset:
-cp .claude/settings.local.json.example /path/to/your/project/.claude/settings.local.json
+# Personal settings (.claude/settings.local.json) + MCP config (.mcp.json) — both
+# gitignored in your project (the kit's managed .gitignore block ignores them).
+# `bash install.sh` auto-creates both on first install and key-level MERGES new kit
+# defaults in on `--update` (new keys added; your existing values always win) — not
+# replaced wholesale. Copy manually only on the copy-manually path above, or to reset:
+cp .claude/settings.local.json.default /path/to/your/project/.claude/settings.local.json
 cp .mcp.json.example /path/to/your/project/.mcp.json
 ```
 
@@ -119,11 +123,11 @@ cp .mcp.json.example /path/to/your/project/.mcp.json
 
 ## ⚙️ Файлы конфигурации
 
-Поведением кита управляют пять поверхностей: два файла настроек, один MCP-файл, один артефакт project-knowledge и языковой профиль внутри `CLAUDE.md`. Матрица **Конфигурация с первого взгляда** ниже — это главный индекс: каждый параметр, где он находится, что делает, когда его редактировать и где найти подробный разбор. **Файлы и их жизненные циклы** документирует git-статус и владение для каждого файла. Четыре подраздела `### .claude/...` ниже — это подробные разборы по каждому файлу.
+Поведением кита управляют пять поверхностей: два файла настроек, один MCP-файл, один артефакт project-knowledge и языковой профиль внутри `CLAUDE.md`. Матрица **Конфигурация с первого взгляда** ниже — это главный индекс часто редактируемых параметров: где каждый находится, что делает, когда его редактировать и где найти подробный разбор; продвинутые параметры тонкой настройки документированы в `CLAUDE.md` и в комментариях env файла `.example`. **Файлы и их жизненные циклы** документирует git-статус и владение для каждого файла. Три подраздела `###` ниже — это подробные разборы по каждому файлу (один из них, `.mcp.json.example`, — это файл в корне репозитория, а не внутри `.claude/`).
 
 ### Конфигурация с первого взгляда
 
-Главный индекс всех параметров конфигурации, предоставляемых китом. Столбец `Reference` ссылается на подраздел с подробным разбором в этом разделе (или на `🪨 Token Optimization (Caveman)` для `CLAUDE_CAVEMAN_MODE`). Три install/global переменные окружения (`KIT_VERSION`, `INSTALL_DIR`, `CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING`) здесь не перечислены — они активируются во время установки или через глобальное shell-окружение Claude Code, а не через `.claude/settings.local.json`. Они документированы в **Quick Start** > Install options и в [⚙️ Маршрутизация моделей](#️-маршрутизация-моделей).
+Главный индекс часто редактируемых параметров конфигурации, предоставляемых китом. Столбец `Reference` ссылается на подраздел с подробным разбором в этом разделе (или на `🪨 Token Optimization (Caveman)` для `CLAUDE_CAVEMAN_MODE`). Три install/global переменные окружения (`KIT_VERSION`, `INSTALL_DIR`, `CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING`) здесь не перечислены — они активируются во время установки или через глобальное shell-окружение Claude Code, а не через `.claude/settings.local.json`. Продвинутые параметры тонкой настройки (например, `CLAUDE_ISSUE_ID_NORMALIZE_VERSION`, `CLAUDE_VERDICT_BLOCK_TTL_HOURS`, `CLAUDE_PRECOMPACT_COOLDOWN_S`, `CLAUDE_KIT_PHASE_COMPLETION_NOTIFY`, `CLAUDE_KIT_MCP_PRELOAD`, `CLAUDE_TOOL_FAILURES_MAX_LINES`) документированы в `CLAUDE.md` и в комментариях env файла `.example`. Они документированы в **Quick Start** > Install options и в [⚙️ Маршрутизация моделей](#️-маршрутизация-моделей).
 
 | Параметр | Где находится | Что контролирует | Когда редактировать | Активация | Reference |
 |------|----------|----------|--------------|------------|-----------|
@@ -146,22 +150,26 @@ cp .mcp.json.example /path/to/your/project/.mcp.json
 
 ### Файлы и их жизненные циклы
 
-У каждого файла свой жизненный цикл и git-статус — скопируйте шаблоны `.example` один раз после установки, затем настраивайте под каждую машину или каждый проект.
+У каждого файла свой жизненный цикл и git-статус. `install.sh` автоматически провижионит помашинные/попроектные файлы (`settings.local.json`, `.mcp.json`) при установке и поддерживает их в актуальном состоянии при `--update` (ваши значения в приоритете); редактируйте их для кастомизации или используйте ручные команды `cp` ниже для сброса.
 
 | Файл | Git-статус (в вашем проекте) | Жизненный цикл | Назначение |
 |------|------------------------------|-----------|---------|
 | `.claude/settings.json` | коммитится | на кит | Хуки, разрешения, модель по умолчанию, регистрации MCP-серверов |
-| `.claude/settings.local.json` | в gitignore после `install.sh` (поставляется `.example`) | автоматически создаётся `install.sh`; новые значения по умолчанию объединяются при `--update` (ваши значения в приоритете); личная / помашинная | Оверрайды env, дополнительные разрешения, sparse paths для монорепозитория |
-| `.mcp.json` | в gitignore после `install.sh` (поставляется `.example`) | автоматически создаётся `install.sh`; новые серверы объединяются при `--update` (ваша конфигурация в приоритете); личная / помашинная | Эндпоинты MCP-серверов (`sequential-thinking`, `context7`, `tree_sitter`) |
+| `.claude/settings.local.json` | в gitignore после `install.sh` (провижионится из `.default`) | автоматически создаётся `install.sh` из `.claude/settings.local.json.default`; новые значения по умолчанию объединяются при `--update` (ваши значения в приоритете); личная / помашинная | Оверрайды env, дополнительные разрешения, sparse paths для монорепозитория |
+| `.claude/settings.local.json.default` | коммитится | на кит | Принадлежащий киту источник установки с активными дефолтами по умолчанию — `install.sh` создаёт/объединяет `settings.local.json` из него (`.example` — это полный документированный справочник по переключателям, а не источник установки) |
+| `.mcp.json` | в gitignore после `install.sh` (авто-провижионинг + слияние; ваша конфигурация в приоритете) | автоматически создаётся `install.sh` из `.mcp.json.example`, когда отсутствует, иначе слияние на уровне ключей при `--update` (ваша конфигурация в приоритете); личная / помашинная | Эндпоинты MCP-серверов (`sequential-thinking`, `context7`, `tree_sitter`) |
 | `.claude/PROJECT-KNOWLEDGE.md` | коммитится (сохраняется при `--update`) | на проект | Автоматически генерируемый анализ кодовой базы, используемый как контекст всеми агентами |
-| `.claude/.kit-version` | коммитится | на установку | Отслеживает установленную версию кита для `install.sh --update` |
+| `.claude/.kit-version` | в gitignore (регенерируется `install.sh` при каждой установке/обновлении; export-ignore из релизных тарболлов) | на установку | Отслеживает установленную версию кита для `install.sh --update` |
 
 ### `.claude/settings.local.json.example` — Personal Overrides
 
-`install.sh` автоматически создаёт `.claude/settings.local.json` из этого шаблона при первой установке, так что свежая установка уже имеет значения по умолчанию. При `--update` он на уровне ключей **объединяет** любые новые значения по умолчанию из `.example` в ваш файл — ваши существующие значения всегда в приоритете, а документационные ключи только из примера (переключатели с ведущим `_`) не внедряются в ваш выверенный файл. Редактируйте его для кастомизации. Чтобы сбросить или настроить вручную:
+`install.sh` автоматически создаёт `.claude/settings.local.json` из `.claude/settings.local.json.default` (опинионированная активная конфигурация кита) при первой установке, так что свежая установка уже имеет значения по умолчанию. При `--update` он на уровне ключей **объединяет** любые новые значения по умолчанию из `.default` в ваш файл — ваши существующие значения всегда в приоритете, а документационные ключи (переключатели с ведущим `_`) не внедряются в ваш выверенный файл. Этот `.example` — полный документированный справочник по переключателям, а не источник установки. Редактируйте свой `settings.local.json` для кастомизации. Чтобы сбросить или настроить вручную:
 
 ```bash
+# Documented reference (all toggles visible) — recommended for manual setup:
 cp .claude/settings.local.json.example .claude/settings.local.json
+# — or reset to the exact active defaults install.sh ships:
+cp .claude/settings.local.json.default .claude/settings.local.json
 ```
 
 Семантика слияния в сравнении с `settings.json`: скаляры переопределяют, массивы объединяются, `deny` побеждает `allow`. Файл в gitignore и **сохраняется при `install.sh --update`**.
@@ -210,7 +218,7 @@ cp .mcp.json.example .mcp.json   # fresh setup
 # — or merge the relevant blocks into an existing .mcp.json
 ```
 
-Кит поставляет `sequential-thinking` предзагруженным (`alwaysLoad: true` в `.mcp.json.example`), чтобы соответствовать значению по умолчанию `CLAUDE_KIT_MCP_PRELOAD=on` — он загружается при старте сессии, а не через отложенный ToolSearch. Удалите `alwaysLoad` у этого сервера (или установите `CLAUDE_KIT_MCP_PRELOAD=off`), чтобы отложить загрузку и сэкономить на холодном старте и контекстных токенах.
+Кит поставляет `sequential-thinking` предзагруженным (`alwaysLoad: true` жёстко зашит в `.mcp.json.example`) — он загружается при старте сессии, а не через отложенный ToolSearch. Это статический факт конфигурации, не зависящий ни от какой переменной окружения: сама переменная `CLAUDE_KIT_MCP_PRELOAD` по умолчанию равна `off` и управляет только тем, флагирует ли `mcp-preload-warn.sh` дрейф, если конфигурация когда-либо потеряет предзагрузку. Удалите `alwaysLoad` у этого сервера, чтобы отложить загрузку до ToolSearch и сэкономить на холодном старте и контекстных токенах.
 
 Поставляется с тремя серверами:
 
@@ -288,8 +296,10 @@ cp .mcp.json.example .mcp.json   # fresh setup
 Фаза 0.7 между анализом задачи и планированием. Исследует требования, выявляет 2-3 альтернативных подхода и создаёт утверждённую спецификацию, которую использует `/planner`. По умолчанию пропускается для сложности S/M; задачи сложности M типа `new_feature` или `integration` могут подключить её опционально.
 
 ```bash
-/designer Add multi-region failover         # explicit invocation
-/workflow --design Add multi-region failover # via orchestrator
+/designer Add multi-region failover                   # explicit invocation
+/designer --from-spec .claude/prompts/caching-spec.md  # resume from an existing spec
+/workflow Add multi-region failover                    # orchestrator routes L/XL to designer (Phase 0.7)
+/workflow --from-phase 0.7                             # resume at the design phase
 ```
 
 **Результат:** утверждённая спецификация в `.claude/prompts/{feature}-spec.md` (используется при запуске `/planner`)
@@ -524,7 +534,7 @@ flowchart LR
 flowchart LR
     subgraph SKILLS ["Skills (on-demand loading)"]
         WP["workflow-protocols · 17 files"]
-        PLR["planner-rules · 8 files"]
+        PLR["planner-rules · 15 files"]
         CDR["coder-rules · 7 files"]
         PRR["plan-review-rules · 5 files"]
         CRR["code-review-rules · 5 files"]
@@ -536,7 +546,7 @@ flowchart LR
     WF2["/workflow"] --> WP
     PL2["/planner"] --> PLR
     CO2["/coder"] --> CDR
-    CO2 -->|"if TDD in plan"| TDD
+    CO2 -->|startup (always-on)| TDD
     CO2 -.->|"3x VERIFY fail"| SDB
     DES2["/designer (opus)"] --> DR
     PREV["plan-reviewer"] --> PRR
@@ -647,15 +657,16 @@ flowchart TB
 ### 🔑 Ключевые принципы
 
 - **Последовательное выполнение** — фазы не выполняются параллельно
-- **Протокол передач (Handoff Protocol)** — 4 типизированных контракта полезной нагрузки между фазами с нарративным оформлением
+- **Протокол передач (Handoff Protocol)** — 5 типизированных контрактов полезной нагрузки между фазами с нарративным оформлением
 - **Изоляция контекста** — фазы ревью выполняются как изолированные субагенты (чистый контекст, отсутствие предвзятости авторства)
 - **Лимиты циклов** — максимум 3 итерации на цикл ревью, затем STOP и запрос к пользователю
-- **Протокол контрольных точек (Checkpoint Protocol)** — состояние сохраняется после каждой фазы для восстановления сессии (12 полей YAML)
+- **Протокол контрольных точек (Checkpoint Protocol)** — состояние сохраняется после каждой фазы для восстановления сессии (16 полей YAML)
 - **Протокол Evaluate** — coder критически оценивает план перед реализацией (гейт PROCEED/REVISE/RETURN)
-- **Условная загрузка зависимостей** — при сложности S тяжёлая загрузка навыков пропускается, экономя ~6300 токенов
+- **Условная загрузка зависимостей** — при сложности S тяжёлая загрузка навыков пропускается, экономя несколько тысяч токенов на жадной загрузке навыков
 - **Перемаршрутизация (Re-Routing)** — пайплайн корректирует маршрут при несоответствии сложности (понижение/повышение)
 - **Автосохранение по Cron** — периодическое автосохранение контрольной точки для задач L/XL через CronCreate (каждые 10 минут)
 - **Протокол Simplify** — опциональное упрощение кода перед ревью (L/XL, ≥5 parts, 30%-ная защита)
+- **Критика дизайна (Design Critique)** — `/designer` (L/XL) стресс-тестирует выбранный подход через фиксированный мультилинзовый red-team-набор в подфазе Phase 3.5 CRITIQUE перед написанием спецификации (поток designer: EXPLORE → CLARIFY → PROPOSE → CRITIQUE → SPEC → GATE); неразрешённые находки уровня HIGH переносятся в `/planner`
 - **Оптимизация worktree** — разреженный checkout через `worktree.sparsePaths` уменьшает размер worktree в монорепозиториях. Пути по умолчанию специфичны для Go: `.claude/`, `internal/`, `cmd/`, `go.mod`, `go.sum`, `Makefile`, `CLAUDE.md`. См. [Конфигурация с первого взгляда](#конфигурация-с-первого-взгляда) для настройки sparse-paths и подробный разбор [Sparse-пути в монорепозитории](#claudesettingslocaljsonexample--personal-overrides).
 
 <details>
@@ -680,11 +691,11 @@ flowchart TB
 
 Локальный для проекта форк [скилла caveman](https://github.com/juliusbrussee/caveman) — постоянно включённый режим лаконичного вывода для запусков `/workflow`. Убирает из прозы агентов слова-наполнители / хеджирование / любезности, чтобы снизить стоимость токенов Messages, сохраняя при этом всю техническую суть и несущий контракт структурированный вывод (JSON-конверты, заголовки плана, пути к файлам, блоки кода).
 
-**Активация:** по умолчанию поставляется отключённым. См. строку `CLAUDE_CAVEMAN_MODE` в разделе [Конфигурация с первого взгляда](#конфигурация-с-первого-взгляда); включение на конкретной машине через `.claude/settings.local.json`:
+**Активация:** активен (`lite`) по умолчанию после установки — шаг онбординга засеивает `CLAUDE_CAVEMAN_MODE: lite` в `.claude/settings.local.json` (из `.claude/settings.local.json.default`), а хук SessionStart также разрешается в `lite`, когда переменная не задана. См. строку `CLAUDE_CAVEMAN_MODE` в разделе [Конфигурация с первого взгляда](#конфигурация-с-первого-взгляда). Чтобы **отключить** на конкретной машине, установите `off` в `.claude/settings.local.json`:
 
 ```json
 "env": {
-  "CLAUDE_CAVEMAN_MODE": "lite"
+  "CLAUDE_CAVEMAN_MODE": "off"
 }
 ```
 
@@ -694,10 +705,10 @@ flowchart TB
 
 | Значение | Поведение |
 |-------|----------|
-| `lite` *(единственная интенсивность, поддерживаемая в v1)* | Убирает слова-наполнители ("just", "really", "basically"), любезности ("sure", "happy to"), хеджирование ("it might be worth"). Сохраняет полные предложения, артикли, технические термины, блоки кода. Ожидается снижение токенов Messages на ~30-40%. |
-| `off` | Хук SessionStart завершается без вывода — нулевая инъекция, побайтово идентично поведению до v1.21.0. |
+| `lite` *(единственная интенсивность, поддерживаемая в v1; поставляется по умолчанию)* | Убирает слова-наполнители ("just", "really", "basically"), любезности ("sure", "happy to"), хеджирование ("it might be worth"). Сохраняет полные предложения, артикли, технические термины, блоки кода. Ожидается снижение токенов Messages на ~30-40%. |
+| `off` *(opt-out)* | Хук SessionStart завершается без вывода — нулевая инъекция, побайтово идентично поведению до v1.21.0. |
 
-> **Почему только `lite`:** в исходном caveman поставляется 6 режимов (`full`, `ultra`, `wenyan-*`); они допускают фрагменты предложений, которые повреждают канонический хеш идентификатора issue (`sha256(category|location|problem)[:8]` согласно IMP-03). Отключены в этом форке, чтобы сохранить конверт VERDICT_JSON и стабильность ID между итерациями.
+> **Почему только `lite`:** в исходном caveman поставляется 6 режимов (`lite`, `full`, `ultra`, `wenyan-*`); только `lite` сохраняет полные предложения — остальные допускают фрагменты предложений, которые повреждают канонический хеш идентификатора issue (`sha256(category|location|problem)[:8]` согласно IMP-03). Остальные режимы отключены в этом форке, чтобы сохранить конверт VERDICT_JSON и стабильность ID между итерациями.
 
 **Исключение для ревьюера/исследователя (защита в глубину):**
 
@@ -716,14 +727,16 @@ flowchart TB
 
 ## 🔌 MCP-серверы
 
-См. [`.mcp.json.example` — MCP Server Endpoints](#mcpjsonexample--mcp-server-endpoints) для настройки. Серверы также можно настроить глобально в `~/.claude/mcp.json`. По умолчанию поставляются 3 сервера:
+См. [`.mcp.json.example` — MCP Server Endpoints](#mcpjsonexample--mcp-server-endpoints) для настройки. Серверы также можно настроить на пользовательском уровне (для всех ваших проектов) через `claude mcp add --scope user`, который Claude Code сохраняет в `~/.claude.json`. По умолчанию поставляются 3 сервера:
 
 ### Обязательные
 
 | Сервер | Пакет | Назначение |
 |--------|---------|---------|
 | `context7` | `@upstash/context7-mcp` | Поиск документации по библиотекам |
-| `sequential-thinking` | — | Структурированные рассуждения для сложных задач |
+| `sequential-thinking` | `@modelcontextprotocol/server-sequential-thinking` | Структурированные рассуждения для сложных задач (предзагружен по умолчанию — см. примечание ниже) |
+
+> **Примечание:** `sequential-thinking` поставляется предзагруженным (`alwaysLoad: true` жёстко зашит в `.mcp.json` и `.mcp.json.example`) — он загружается при старте сессии, а не через отложенный ToolSearch. Это статический факт конфигурации; сама переменная `CLAUDE_KIT_MCP_PRELOAD` по умолчанию равна `off` и управляет только тем, флагирует ли `mcp-preload-warn.sh` дрейф, если конфигурация когда-либо потеряет предзагрузку. Удалите `alwaysLoad` у этого сервера, чтобы отложить загрузку до ToolSearch и сэкономить на холодном старте и контекстных токенах.
 
 ### Опциональные
 
@@ -740,7 +753,7 @@ flowchart TB
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-Для настройки `.mcp.json` (скопируйте из `.mcp.json.example`, добавлен в gitignore) см. [⚙️ Configuration Files → `.mcp.json.example`](#mcpjsonexample--mcp-server-endpoints).
+Для настройки `.mcp.json` (отслеживается; авто-провижионится/объединяется `install.sh`, ваша конфигурация в приоритете — скопируйте из `.mcp.json.example` для сброса) см. [⚙️ Configuration Files → `.mcp.json.example`](#mcpjsonexample--mcp-server-endpoints).
 
 </details>
 
@@ -750,7 +763,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ```
 .
-├── .mcp.json.example                 # MCP server endpoints template (copy → .mcp.json)
+├── .mcp.json                         # MCP servers; tracked + auto-provisioned/merged by install.sh (your config wins)
+├── .mcp.json.example                 # MCP server endpoints reference (install.sh creates/merges .mcp.json from it)
 └── .claude/
     ├── agents/                       # Autonomous agents
     │   ├── meta-agent/               # Artifact lifecycle management (deps, scripts, templates)
@@ -759,8 +773,11 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
     │   ├── code-reviewer.md          # Code review (invoked by /workflow, isolated worktree)
     │   ├── code-researcher.md        # Codebase exploration (haiku)
     │   └── verdict-recovery.md       # Lightweight verdict fallback (haiku, on reviewer failure)
+    ├── agent-memory/                 # Subagent project-scoped memory (code-reviewer / plan-reviewer / code-researcher MEMORY.md; VCS-shared)
     ├── commands/                     # Slash commands (/workflow, /planner, /coder, etc.)
-    ├── skills/                       # Reusable domain knowledge (8 packages)
+    ├── docs/                         # Kit reference docs (platform-guarantees.md)
+    ├── skills/                       # Reusable domain knowledge (9 packages)
+    │   ├── caveman/                  # Token-compression (lite) for /workflow prose; reviewer-exempt
     │   ├── workflow-protocols/       # Orchestration, handoff, checkpoints, re-routing
     │   ├── planner-rules/            # Planning methodology, task analysis, data flow
     │   ├── coder-rules/              # Implementation rules, MCP tools, review-response
@@ -772,15 +789,16 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
     ├── templates/                    # Templates for creating new artifacts
     ├── prompts/                      # Generated implementation plans (preserved on --update)
     ├── scripts/                      # Lifecycle hook scripts
-    │   ├── lib/                      # Shared helpers (state_render.py)
+    │   ├── lib/                      # Shared helpers (log.sh, otel-parse.sh, pk_slots.py, state_render.py)
     │   └── tests/                    # Hook test suite + fixtures
     ├── schemas/                      # JSON Schemas (handoff.schema.json — IMP-01)
     ├── rules/                        # Cross-cutting constraints (architecture rules)
     ├── workflow-state/               # Runtime state (gitignored, generated during workflow)
     ├── settings.json                 # Claude Code project settings + hooks (git-committed)
-    ├── settings.local.json.example   # Personal overrides template (copy → settings.local.json)
+    ├── settings.local.json.default   # Opinionated local-settings seed (install.sh creates settings.local.json from this when absent)
+    ├── settings.local.json.example   # Personal overrides reference (full toggle docs; auto-provisioning is from .default)
     ├── PROJECT-KNOWLEDGE.md          # Auto-generated project knowledge (per-project)
-    └── .kit-version                  # Installed kit version metadata (managed by install.sh)
+    └── .kit-version                  # (created in YOUR project by install.sh — not shipped in the kit tarball)
 ```
 
 ---
@@ -799,15 +817,17 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 | `pre-commit-build.sh` | PreToolUse (Bash) | Проверяет `go build` перед git-коммитом |
 | `auto-fmt.sh` | PostToolUse (Write/Edit) | Автоформатирует исходные файлы (управляется слотом через FMT_CMD; поддерживает плейсхолдер `{}` для каждого файла) |
 | `yaml-lint.sh` | PostToolUse (Edit) | Проверяет структуру YAML |
-| `check-references.sh` | PostToolUse (Write) | Проверяет все ссылки на файлы |
+| `check-references.sh` | PostToolUse (Write/Edit) | Проверяет все ссылки на файлы (область: `.claude/**` + корневые `README.md` / `CLAUDE.md` / `install.sh`) |
 | `check-plan-drift.sh` | PostToolUse (Write/Edit) | Обнаруживает отклонение от плана во время реализации |
 | `save-progress-before-compact.sh` | PreCompact | Сохраняет контрольную точку (checkpoint) перед сжатием контекста |
 | `verify-state-after-compact.sh` | PostCompact | Проверяет целостность состояния workflow после сжатия |
 | `save-review-checkpoint.sh` | SubagentStop | Сохраняет состояние завершения ревью |
 | `verify-phase-completion.sh` | Stop | Гарантирует завершение всех фаз meta-agent |
 | `check-uncommitted.sh` | Stop | Предупреждает о незакоммиченных изменениях |
+| `notify-workflow-complete.sh` | Stop | Выдаёт OSC 9 уведомление на рабочий стол (`terminalSequence`) при завершении фазы 5, когда `CLAUDE_KIT_PHASE_COMPLETION_NOTIFY=on` и вердикт — APPROVED / APPROVED_WITH_COMMENTS |
 | `session-analytics.sh` | SessionEnd | Записывает аналитику сессии |
 | `log-stop-failure.sh` | StopFailure | Логирует ошибки API в аналитику сессии |
+| `log-tool-failure.sh` | PostToolUseFailure (Bash) | Логирует неудачные вызовы инструмента Bash в `.claude/workflow-state/tool-failures.jsonl` (обрезается с головы через `CLAUDE_TOOL_FAILURES_MAX_LINES`) |
 | `notify-user.sh` | Notification | Уведомления на рабочий стол о событиях агентов |
 | `inject-review-context.sh` | SubagentStart (plan-reviewer / code-reviewer) | Внедряет накопленный контекст ревью в агента-ревьюера при запуске |
 | `validate-handoff.sh` | PostToolUse (Write / Edit) | Проверяет JSON передачи (handoff) по схеме при записи в `workflow-state/*-handoff.json` |
@@ -816,6 +836,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 | `log-permission-denied.sh` | PermissionDenied | Логирует отказы в вызовах инструментов классификатором авто-режима (не явными правилами deny) |
 | применятель матрицы импортов (type: prompt) | PreToolUse (Write / Edit `if: internal/**/*.go`) | Обеспечивает соблюдение матрицы импортов архитектуры Go через LLM-оценку — срабатывает только на внутренних Go-файлах |
 | `caveman-activate.sh` | SessionStart | Внедряет проектно-локальный набор правил терсе-вывода caveman lite-mode как `additionalContext` (оптимизация токенов, начиная с v1.21.0) |
+| `mcp-preload-warn.sh` | SessionStart | Предупреждает (не блокирующе) при старте сессии, когда `CLAUDE_KIT_MCP_PRELOAD=on`, но в `.mcp.json` отсутствует `alwaysLoad` у `sequential-thinking`, с областью действия по активным контрольным точкам workflow |
 | `caveman-suspend-for-reviewer.sh` | SubagentStart (`plan-reviewer` / `code-reviewer` / `verdict-recovery` / `code-researcher`) | Выдаёт маркер исключения `[caveman OFF for this delegation]`, чтобы конверты VERDICT_JSON ревьюера/исследователя оставались байт-стабильными между итерациями (защита в глубину для стабильности canonical_id по IMP-03) |
 
 ---
