@@ -25,8 +25,19 @@ this profile → SKIP. For a non-Go project, supply your own `CLAUDE.md` Languag
 `/workflow` orchestrates: task-analysis → `/designer` (L/XL) → `/planner` → plan-reviewer (agent)
 → `/coder` → code-reviewer (agent) → commit. Complexity routing: S (skip plan-review) / M / L (+
 Sequential Thinking) / XL (ST required). Typed handoff contracts + VERDICT/VERDICT_JSON envelopes
-flow between phases; the canonical issue ID is `sha256(category|location|problem)[:8]`. In the
-plugin namespace these commands are `/claude-kit:workflow`, `/claude-kit:planner`, etc.
+flow between phases; the canonical issue ID is `sha256(category|location|problem)[:8]`. See
+**Command namespace** below for how these commands are invoked in plugin mode.
+
+## Command namespace (plugin mode)
+
+You invoke the kit's commands with the plugin prefix: **`/claude-kit:workflow`**,
+`/claude-kit:planner`, `/claude-kit:coder`, `/claude-kit:designer` (in a project-scoped `.claude/`
+install they are bare: `/workflow`, etc.). You only need the prefix for the command **you type** —
+the internal pipeline delegation (orchestrator → planner → plan-reviewer → coder → code-reviewer)
+happens **automatically by agent/skill description**, so it resolves correctly regardless of the
+namespace. The kit's own docs and prompt bodies use the bare `/workflow` form on purpose: those
+references are namespace-agnostic and correct for BOTH distributions (project-scoped and plugin) —
+mentally prefix `claude-kit:` for the command you invoke when running as a plugin.
 
 ## TDD policy
 
