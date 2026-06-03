@@ -11,6 +11,13 @@
 #   - Disk operations (dd if=, mkfs.)
 #   - Unsafe permissions (chmod 777/0777, a+w)
 #   - Privilege escalation (sudo)
+#   - Dangerous find (-exec arbitrary commands, -delete bulk removal) [Part 4/2a deny-fold]
+#
+# Plugin-mode note: in a native-plugin install, settings.json permission `deny` rules do NOT
+# transfer (plugin settings.json supports only agent/subagentStatusLine). This hook is the
+# defense-in-depth that survives. Deny-rule accounting: 16 BASH deny rules (Categories 1-11) are
+# hook-enforced; the 1 non-Bash deny, Read(.env) (a Read-tool permission), is out of scope here
+# and needs a separate Read-matcher guard for full plugin-mode parity = 17 settings.json denies total.
 
 set -euo pipefail
 
@@ -110,6 +117,19 @@ elif echo "$COMMAND" | grep -qE '\bchmod\s+.*\ba\+w\b'; then
 # Fix BLOCKER-6: Remove ^ anchor — catch sudo in chained commands
 elif echo "$COMMAND" | grep -qE '\bsudo\s+'; then
   DENY_REASON="Privilege escalation (sudo). Not needed in this workflow — all operations run as current user."
+
+# Category 11: dangerous find (-exec runs arbitrary commands; -delete bulk-removes files)
+# Part 4 / 2a: folds the settings.json 'find * -exec *' and 'find * -delete' deny rules into the
+# hook so they survive in PLUGIN mode (where settings.json permission denies do not transfer).
+# The '.*' is intentionally greedy (same design as the sudo / git-push categories above): it blocks
+# ALL find -exec/-delete with NO false-negatives — the correct bias for a security backstop (a
+# tighter '[^&|;]*' would let 'find -name "a;b" -exec ...' escape). It can over-match an echo/comment
+# string containing the token; that accepted backstop behavior matches the existing categories, and
+# the settings.json structured deny is the precise layer.
+elif echo "$COMMAND" | grep -qE '\bfind\b.*-exec\b'; then
+  DENY_REASON="Dangerous find -exec (runs arbitrary commands over matches). Review matches with 'find ... -print' first, then act on specific files."
+elif echo "$COMMAND" | grep -qE '\bfind\b.*-delete\b'; then
+  DENY_REASON="Dangerous find -delete (bulk file removal). Review matches with 'find ... -print' first, then remove specific files."
 fi
 
 # ── If dangerous — deny with explanation ──
