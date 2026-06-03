@@ -499,6 +499,11 @@
             "type": "command",
             "command": ".claude/scripts/mcp-preload-warn.sh",
             "args": []
+          },
+          {
+            "type": "command",
+            "command": ".claude/scripts/inject-kit-context.sh",
+            "args": []
           }
         ]
       }

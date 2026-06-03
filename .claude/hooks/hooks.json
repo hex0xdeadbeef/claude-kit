@@ -415,6 +415,11 @@
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/mcp-preload-warn.sh",
             "args": []
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/scripts/inject-kit-context.sh",
+            "args": []
           }
         ]
       }

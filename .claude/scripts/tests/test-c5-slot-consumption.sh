@@ -119,9 +119,11 @@ if [[ -d .git ]]; then
       # caveman-skill-integration extension). Also allows the WorktreeCreate-hook
       # removal (fix/worktree-create-contract): the prepare-worktree.sh "command" line,
       # the "WorktreeCreate": [ event-key line, and the empty "args": [] array line.
+      # Also allows the plugin-equivalence Part 5 (P2) SessionStart context-injection hook:
+      # the inject-kit-context.sh "command" line (plugin-mode-only, no-op in project mode).
       bad_lines=$(grep -E '^[+-]' /tmp/c5-settings-diff.txt \
         | grep -vE '^(\+\+\+|---) ' \
-        | grep -vE '^[+-][[:space:]]+"command":[[:space:]]+"\.claude/scripts/auto-fmt(-go)?\.sh",?$|^[+-][[:space:]]+"if":[[:space:]]+"(Write|Edit)\(\*\*/\*\.go\)"$|^[+-][[:space:]]+"type":[[:space:]]+"command",?$|^[+-][[:space:]]*[][}{,]+[[:space:]]*$|^[+-][[:space:]]+"command":[[:space:]]+"\.claude/scripts/caveman-(activate\.sh|suspend-for-reviewer\.sh (code-researcher|plan-reviewer|code-reviewer|verdict-recovery))",?$|^[+-][[:space:]]+"matcher":[[:space:]]+"",?$|^[+-][[:space:]]+"matcher":[[:space:]]+"verdict-recovery",?$|^[+-][[:space:]]+"hooks":[[:space:]]+\[$|^[+-][[:space:]]+"SessionStart":[[:space:]]+\[$|^[+-][[:space:]]+"WorktreeCreate":[[:space:]]+\[$|^[+-][[:space:]]+"command":[[:space:]]+"\.claude/scripts/prepare-worktree\.sh",?$|^[+-][[:space:]]+"args":[[:space:]]+\[\],?$' \
+        | grep -vE '^[+-][[:space:]]+"command":[[:space:]]+"\.claude/scripts/auto-fmt(-go)?\.sh",?$|^[+-][[:space:]]+"if":[[:space:]]+"(Write|Edit)\(\*\*/\*\.go\)"$|^[+-][[:space:]]+"type":[[:space:]]+"command",?$|^[+-][[:space:]]*[][}{,]+[[:space:]]*$|^[+-][[:space:]]+"command":[[:space:]]+"\.claude/scripts/caveman-(activate\.sh|suspend-for-reviewer\.sh (code-researcher|plan-reviewer|code-reviewer|verdict-recovery))",?$|^[+-][[:space:]]+"matcher":[[:space:]]+"",?$|^[+-][[:space:]]+"matcher":[[:space:]]+"verdict-recovery",?$|^[+-][[:space:]]+"hooks":[[:space:]]+\[$|^[+-][[:space:]]+"SessionStart":[[:space:]]+\[$|^[+-][[:space:]]+"WorktreeCreate":[[:space:]]+\[$|^[+-][[:space:]]+"command":[[:space:]]+"\.claude/scripts/prepare-worktree\.sh",?$|^[+-][[:space:]]+"command":[[:space:]]+"\.claude/scripts/inject-kit-context\.sh",?$|^[+-][[:space:]]+"args":[[:space:]]+\[\],?$' \
         || true)
       if [[ -n "$bad_lines" ]]; then
         fail "AC-C5.13 — .claude/settings.json has changes outside the allowlist (auto-fmt-generic consolidation OR caveman-skill-integration hook entries OR WorktreeCreate-hook removal)"

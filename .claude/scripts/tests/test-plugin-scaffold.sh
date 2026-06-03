@@ -97,14 +97,15 @@ def collect(path):
     return h, cmd, prompt, unprefixed, prompts
 
 hk, h_cmd, h_prompt, h_unpref, h_prompts = collect(sys.argv[1])
-sk, _, _, _, s_prompts = collect(sys.argv[2])
+sk, s_cmd, s_prompt, _, s_prompts = collect(sys.argv[2])
 
+# Counts DERIVE from settings.json (no hardcoded numbers) — robust to future hook additions.
+# The deep-equal assertion below (after prefix-strip) is the strong structural guarantee.
 chk = []
-chk.append((f"hooks.json events==16 (got {len(hk)})", len(hk) == 16))
-chk.append((f"hooks.json total entries==46 (got {h_cmd + h_prompt})", h_cmd + h_prompt == 46))
-chk.append((f"hooks.json command hooks==44 (got {h_cmd})", h_cmd == 44))
-chk.append((f"hooks.json prompt hooks==2 (got {h_prompt})", h_prompt == 2))
-chk.append((f"all 44 command paths are ${{CLAUDE_PLUGIN_ROOT}}-prefixed (unprefixed: {h_unpref})", len(h_unpref) == 0))
+chk.append((f"hooks.json events == settings.json ({len(hk)} vs {len(sk)})", len(hk) == len(sk)))
+chk.append((f"hooks.json command count == settings.json ({h_cmd} vs {s_cmd})", h_cmd == s_cmd))
+chk.append((f"hooks.json prompt count == settings.json ({h_prompt} vs {s_prompt})", h_prompt == s_prompt))
+chk.append((f"all command paths are ${{CLAUDE_PLUGIN_ROOT}}-prefixed (unprefixed: {h_unpref})", len(h_unpref) == 0))
 # both script prefixes represented (.claude/scripts/ AND .claude/agents/meta-agent/scripts/)
 allcmds = []
 for ev, groups in hk.items():
