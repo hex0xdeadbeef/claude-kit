@@ -16,7 +16,7 @@ source "${SCRIPT_DIR}/lib/log.sh"
 if [[ "${CLAUDE_KIT_MCP_PRELOAD:-off}" != "on" ]]; then exit 0; fi
 
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-STATE_DIR="${CLAUDE_WORKFLOW_STATE_DIR:-${REPO_ROOT}/.claude/workflow-state}"
+STATE_DIR="${CLAUDE_WORKFLOW_STATE_DIR:-${CLAUDE_PROJECT_DIR:-${REPO_ROOT}}/.claude/workflow-state}"
 
 # PR-008 gate: only warn in active workflow contexts (presence of any *-checkpoint.yaml)
 has_active_workflow="$(ls "${STATE_DIR}"/*-checkpoint.yaml 2>/dev/null | head -n1 || true)"

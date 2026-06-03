@@ -18,7 +18,7 @@ if [[ "${CLAUDE_KIT_PHASE_COMPLETION_NOTIFY:-off}" != "on" ]]; then
 fi
 
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-STATE_DIR="${CLAUDE_WORKFLOW_STATE_DIR:-${REPO_ROOT}/.claude/workflow-state}"
+STATE_DIR="${CLAUDE_WORKFLOW_STATE_DIR:-${CLAUDE_PROJECT_DIR:-${REPO_ROOT}}/.claude/workflow-state}"
 
 # Find latest checkpoint
 latest_cp="$(ls -t "${STATE_DIR}"/*-checkpoint.yaml 2>/dev/null | head -n1 || true)"

@@ -18,7 +18,7 @@ set -uo pipefail
 # Resolve repo paths (CWD-independent)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-STATE_DIR="${CLAUDE_WORKFLOW_STATE_DIR:-${REPO_ROOT}/.claude/workflow-state}"
+STATE_DIR="${CLAUDE_WORKFLOW_STATE_DIR:-${CLAUDE_PROJECT_DIR:-${REPO_ROOT}}/.claude/workflow-state}"
 SKILL_FILE="${REPO_ROOT}/.claude/skills/caveman/SKILL.md"
 FLAG_FILE="${STATE_DIR}/.caveman-mode"
 

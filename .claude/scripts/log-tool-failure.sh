@@ -10,7 +10,7 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-WORKFLOW_STATE_DIR="${CLAUDE_WORKFLOW_STATE_DIR:-${REPO_ROOT}/.claude/workflow-state}"
+WORKFLOW_STATE_DIR="${CLAUDE_WORKFLOW_STATE_DIR:-${CLAUDE_PROJECT_DIR:-${REPO_ROOT}}/.claude/workflow-state}"
 mkdir -p "${WORKFLOW_STATE_DIR}" 2>/dev/null || true
 JSONL="${WORKFLOW_STATE_DIR}/tool-failures.jsonl"
 MAX_LINES="${CLAUDE_TOOL_FAILURES_MAX_LINES:-1000}"

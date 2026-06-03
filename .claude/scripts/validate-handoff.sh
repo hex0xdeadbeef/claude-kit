@@ -26,7 +26,7 @@ SCHEMA_FILE="${REPO_ROOT}/.claude/schemas/handoff.schema.json"
 # Part 1 / P1: honor CLAUDE_WORKFLOW_STATE_DIR for log paths so test sandboxes
 # don't pollute the production log. Fallback preserves legacy hook-mode behavior
 # (env unset → identical to pre-P1 path).
-WORKFLOW_STATE_DIR_RESOLVED="${CLAUDE_WORKFLOW_STATE_DIR:-${REPO_ROOT}/.claude/workflow-state}"
+WORKFLOW_STATE_DIR_RESOLVED="${CLAUDE_WORKFLOW_STATE_DIR:-${CLAUDE_PROJECT_DIR:-${REPO_ROOT}}/.claude/workflow-state}"
 mkdir -p "${WORKFLOW_STATE_DIR_RESOLVED}" 2>/dev/null || true
 VALIDATION_LOG="${WORKFLOW_STATE_DIR_RESOLVED}/handoff-validation.jsonl"
 MODE_HANDOFF="${CLAUDE_HANDOFF_VALIDATION_MODE:-warn}"
