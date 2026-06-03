@@ -49,5 +49,11 @@ same cascade (PROJECT-KNOWLEDGE.md → LANGUAGE > kit-default Go > `_default`).
 
 - Strict-mode contract validation (handoff / verdict / issue-id) defaults to **strict** in plugin
   mode (no env seeding needed). Dangerous-command blocking + file protection run as plugin hooks.
+- **Worktree isolation:** the `code-reviewer` agent runs in an isolated git worktree (clean
+  review context) in plugin mode too — the isolation works regardless. The *sparse-checkout
+  optimization* (`worktree.sparsePaths`) is a per-project setting and is NOT imposed by the
+  plugin (the kit's defaults are Go-specific: `internal/`, `cmd/`, …). If your monorepo would
+  benefit from a smaller review worktree, set `worktree.sparsePaths` for YOUR project's layout
+  in your own `.claude/settings.local.json` — Claude Code's native worktree creation honors it.
 - This context is intentionally concise; the full policies live in the plugin's skills
   (workflow-protocols, planner-rules, coder-rules, etc.) which load on demand.
