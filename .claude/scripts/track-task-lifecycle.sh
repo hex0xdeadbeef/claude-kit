@@ -26,10 +26,21 @@ try:
 except Exception:
     data = {}
 
+def _norm_agent_type(s):
+    # R2 (F-P3): canonicalize case/separator AND strip a leading plugin namespace
+    # ('claude-kit:code-reviewer' -> 'code-reviewer') so REVIEW_AGENTS membership + the
+    # agent-id registry fire. Identity on already-bare names; not a canonical-ID input.
+    if not s:
+        return s
+    s = str(s).strip().lower().replace(" ", "-").replace("_", "-")
+    if ":" in s:
+        s = s.rsplit(":", 1)[-1]
+    return s
+
 entry = {
     "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     "event": data.get("hook_event_name", "SubagentStart"),
-    "agent_type": data.get("agent_type", data.get("agent_name", "unknown")),
+    "agent_type": _norm_agent_type(data.get("agent_type", data.get("agent_name", "unknown"))),
     "agent_id": data.get("agent_id", ""),
     "session_id": data.get("session_id", ""),
 }

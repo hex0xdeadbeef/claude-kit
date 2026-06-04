@@ -109,7 +109,13 @@ except Exception:
 def _normalize_agent_type(s):
     if not s:
         return s
-    return s.strip().lower().replace(" ", "-").replace("_", "-")
+    s = s.strip().lower().replace(" ", "-").replace("_", "-")
+    # R2 (F-P3): strip a leading plugin namespace ('claude-kit:code-reviewer' -> 'code-reviewer').
+    # agent_type is NOT a canonical-ID hash input, so this cannot affect issue-ID stability;
+    # identity on already-bare names (no ':' present).
+    if ":" in s:
+        s = s.rsplit(":", 1)[-1]
+    return s
 
 # IMP-07: agent_type fallback includes "name" (WorktreeCreate uses "name" field)
 agent_type = (
