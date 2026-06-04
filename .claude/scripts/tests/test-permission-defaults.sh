@@ -125,6 +125,14 @@ emit("Edit(.env.*)" not in dd and "Write(.env.*)" not in dd,
 pc = " ".join(e.get("_permissions_comment", []))
 emit("git branch -D" in pc and "curl" in pc,
      ".example _permissions_comment documents the new deny rules (git branch -D, curl)")
+
+# AC-14 — permission default mode: acceptEdits shipped (value-parity in both files)
+emit(dperm.get("defaultMode") == "acceptEdits", ".default permissions.defaultMode == acceptEdits")
+emit(eperm.get("defaultMode") == "acceptEdits", ".example permissions.defaultMode == acceptEdits")
+
+# AC-15 — doc-content guard: _permissions_comment documents the acceptEdits default mode
+emit("acceptEdits" in pc,
+     ".example _permissions_comment documents the acceptEdits default mode")
 PYEOF
 )
 
@@ -138,6 +146,15 @@ if [ -f "$README" ]; then
   fi
 else
   bad "README.md not found for doc-content guard"
+fi
+
+# AC-15 (README mirror) — README documents the acceptEdits default mode
+if [ -f "$README" ]; then
+  if grep -q 'acceptEdits' "$README"; then
+    ok "README documents the acceptEdits default mode"
+  else
+    bad "README missing acceptEdits default-mode documentation"
+  fi
 fi
 
 echo
