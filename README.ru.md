@@ -37,31 +37,89 @@
 
 > **Требования:** Claude Code `>= 2.1.141` (хуки кита опираются на инвариант exec-form `args:` из v2.1.139 и вывод JSON `terminalSequence` из v2.1.141). На более ранних версиях хуки молча превращаются в no-op / деградируют.
 
-После установки `/workflow` оркеструет планирование → реализацию → ревью → коммит для любой задачи. Три шага до рабочего кита:
+`/workflow` оркеструет планирование → реализацию → ревью → коммит для любой задачи. Онбординг в четыре шага.
 
-1. **Установите** кит в корень вашего проекта. Одна команда разворачивает всё — Workflow-пайплайн `.claude/`, 3 MCP-сервера (`.mcp.json`) и персональные настройки (`.claude/settings.local.json`):
+### 1. Установка — плагин (рекомендуется)
 
-   ```bash
-   curl -sL https://raw.githubusercontent.com/hex0xdeadbeef/claude-kit/main/install.sh | bash
-   ```
+Установите claude-kit как нативный **плагин** Claude Code: общий для всех ваших проектов, версионируемый, обновляемый через marketplace, без копирования файлов в ваш репозиторий. Этот репозиторий одновременно является собственным marketplace (`.claude-plugin/marketplace.json` + `.claude-plugin/plugin.json`).
 
-   Ручной `cp` не нужен — `settings.local.json` и `.mcp.json` создаются автоматически (а при `--update` новые дефолты подмёрживаются, при этом ваши правки сохраняются). MCP-серверам нужны `npx` (Node.js) и/или `uvx` (uv); если чего-то не хватает, установщик выведет команду установки. После установки рантайма **перезапустите Claude Code** — серверы автоматически загрузятся при следующем запуске (проверьте через `claude mcp list`).
+```bash
+/plugin marketplace add hex0xdeadbeef/claude-kit
+/plugin install claude-kit@claude-kit
+```
 
-2. **Сгенерируйте знание о проекте**, чтобы у агентов был контекст вашей кодовой базы:
+Команды плагина имеют namespace — вы запускаете `/claude-kit:workflow`, `/claude-kit:planner`, `/claude-kit:coder`, `/claude-kit:designer`. Внутренняя делегация пайплайна (planner → plan-reviewer → coder → code-reviewer) резолвится автоматически по описанию, поэтому работает независимо от префикса.
 
-   ```bash
-   /project-researcher
-   ```
+<details>
+<summary>Альтернатива: <code>install.sh</code> (project-scoped — копирует кит в один репозиторий)</summary>
 
-   Это запишет `.claude/PROJECT-KNOWLEDGE.md` (архитектура, модули, зависимости, языковой профиль). Сначала отредактируйте Language Profile в `CLAUDE.md`, если ваш стек — не Go (дефолт кита). Затем запустите `/meta-agent onboard` для разовой проверки корректности конфигурации.
+Project-scoped установка копирует `.claude/` + `CLAUDE.md` в репозиторий, чтобы вы могли настроить правила / Language Profile под проект и закоммитить их с командой. Одна команда разворачивает всё — пайплайн `.claude/`, 3 MCP-сервера (`.mcp.json`) и персональные настройки (`.claude/settings.local.json`):
 
-3. **Начните работать** — позвольте `/workflow` вести полный цикл разработки:
+```bash
+curl -sL https://raw.githubusercontent.com/hex0xdeadbeef/claude-kit/main/install.sh | bash
+```
 
-   ```bash
-   /workflow Add new REST endpoint for profiles
-   ```
+Ручной `cp` не нужен — `settings.local.json` и `.mcp.json` создаются автоматически (а при `--update` новые дефолты подмёрживаются, ваши правки сохраняются). MCP-серверам нужны `npx` (Node.js) и/или `uvx` (uv); если чего-то не хватает, установщик выведет команду установки. После установки рантайма **перезапустите Claude Code** — серверы автоматически загрузятся при следующем запуске (проверьте через `claude mcp list`).
 
-**Уже используете кит?** См. **Обновление существующей установки** ниже про путь `--update`. **Предпочитаете плагин?** claude-kit также устанавливается как нативный плагин Claude Code (кросс-проектно, версионируется, без копирования файлов в ваш репозиторий) — см. **Установка как плагин** ниже. Обе дистрибуции сосуществуют.
+</details>
+
+**Плагин vs `install.sh` — сосуществуют:**
+
+- **Плагин** — переиспользование пайплайна во многих проектах, версионируемые обновления, ничего не копируется в репозиторий. Конфиг конкретного проекта (Language Profile в `CLAUDE.md`, архитектурные правила, `.claude/PROJECT-KNOWLEDGE.md`) вы по-прежнему задаёте сами.
+- **`install.sh`** — project-scoped: кит живёт в вашем репозитории, настраивается под проект и коммитится с командой.
+
+### 2. Первый запуск
+
+```bash
+/project-researcher                          # пишет .claude/PROJECT-KNOWLEDGE.md
+/workflow Add new REST endpoint for profiles
+```
+
+`/project-researcher` даёт агентам контекст вашей кодовой базы (архитектура, модули, зависимости, языковой профиль). Сначала отредактируйте Language Profile в `CLAUDE.md`, если ваш стек — не Go (дефолт кита). Затем `/workflow` ведёт полный цикл: анализ задачи → [дизайн — только L/XL] → планирование → ревью плана → реализация → код-ревью → коммит. (В режиме плагина добавляйте префикс к командам: `/claude-kit:project-researcher`, `/claude-kit:workflow`.)
+
+### 3. Настройка кита — переопределение переменных
+
+Поведение кита настраивается переменными окружения (строгость валидации, TTL кэша промптов, режим краткого вывода и т.д.). **Где вы задаёте переменную — то и определяет её область действия**, а механизм одинаков для плагина и для установки через `install.sh`: Claude Code инъектит блок `env` в сессию, и каждый хук-скрипт (включая хуки плагина) наследует его как подпроцесс.
+
+| Где | Файл / команда | Область |
+| --- | -------------- | ------- |
+| Для проекта | `<project>/.claude/settings.local.json` → `env` | этот репозиторий (gitignored) |
+| Для всех ваших проектов | `~/.claude/settings.json` → `env` | каждый проект |
+| Для одной сессии | `export VAR=value` перед запуском `claude` | этот shell |
+
+В `<project>/.claude/settings.local.json`:
+
+```json
+{ "env": { "CLAUDE_CAVEMAN_MODE": "off", "CLAUDE_HANDOFF_VALIDATION_MODE": "strict" } }
+```
+
+> **Гоча:** в поставляемом `.example` ключ с ведущим `_` (например, `_CLAUDE_DELTA_REVIEW_MODE`) **неактивен** — мёрж настроек кита пропускает ключи с ведущим `_`, и они остаются инертной документацией (а буквальное имя `_CLAUDE_…` в env всё равно не читается ни одним скриптом). Уберите `_`, чтобы активировать. Файлы настроек — строгий JSON, комментарии `//` запрещены.
+
+**Режим плагина — что нужно и не нужно задавать.** `settings.json` плагина может нести только `agent` + `subagentStatusLine`, поэтому плагин не может поставить env-дефолты. Кит закрывает этот разрыв, так что обычно вы не задаёте **ничего**:
+
+- **Авто-strict (без действий):** пять контрактных режимов валидации — `CLAUDE_HANDOFF_VALIDATION_MODE`, `CLAUDE_VERDICT_VALIDATION_MODE`, `CLAUDE_ISSUE_ID_VALIDATION_MODE`, `CLAUDE_PK_PATH_MODE`, `CLAUDE_DELTA_REVIEW_MODE` — по умолчанию `strict`, когда кит работает как плагин (`.claude/scripts/lib/kit-env-defaults.sh` детектит `CLAUDE_PLUGIN_ROOT`). Задавайте их только чтобы *ослабить*.
+- **Безопасные дефолты (без действий):** `CLAUDE_CAVEMAN_MODE` (lite) плюс knobs TTL / cooldown / log-cap — встроенные дефолты скриптов, одинаковы в обоих режимах.
+- **Opt-in (в плагине выключены, пока не зададите):** `CLAUDE_PROJECT_KNOWLEDGE_MODE`, `CLAUDE_KIT_PHASE_COMPLETION_NOTIFY`, `CLAUDE_KIT_MCP_PRELOAD` — в режиме плагина падают в дефолты скриптов (warn / off) и **не** включаются автоматически; задайте их в своих настройках, чтобы включить. (Путь `install.sh` — и `provision_settings_local` ниже — засеивают их **активными** (`strict` / `on` / `on`) через `.default`.)
+- **Нативные переменные Claude Code:** `ENABLE_PROMPT_CACHING_1H`, `FORCE_PROMPT_CACHING_5M`, `GIT_STRIP_CO_AUTHOR`, `CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING` — задаются в ваших настройках в любом режиме (плагин их поставить не может).
+
+**Один переключатель для полного паритета:** включите plugin-настройку `provision_settings_local` (по умолчанию выключена) — кит подмёржит свои полные env-дефолты в `.claude/settings.local.json` вашего проекта на следующей сессии (ваши значения всегда в приоритете). Путь `install.sh` засеивает те же дефолты автоматически.
+
+Полный справочник по каждой переменной — в разделе [⚙️ Файлы конфигурации](#️-файлы-конфигурации).
+
+### 4. Монорепо — ускорить код-ревью (`sparsePaths`)
+
+`code-reviewer` работает в изолированном git worktree. На большом монорепо можно сузить этот worktree до путей, которые нужны ревьюеру, через `worktree.sparsePaths`.
+
+В `<project>/.claude/settings.local.json`:
+
+```json
+{ "worktree": { "sparsePaths": ["src/", "tests/", "package.json", "tsconfig.json"] } }
+```
+
+- **Режим плагина:** плагин не может поставить worktree-конфиг, поэтому sparse-checkout **выключен**, пока вы сами не зададите `worktree.sparsePaths` (выше). Сама изоляция worktree работает независимо.
+- **`install.sh` (project-scoped):** коммитимый `.claude/settings.json` поставляет Go-дефолты (`.claude/`, `internal/`, `cmd/`, `go.mod`, `go.sum`, `Makefile`, `CLAUDE.md`); переопределяйте их под проект в `settings.local.json`.
+
+Шаблоны под конкретные языки (Python / TypeScript / Rust / Java) лежат в `.claude/settings.local.json.example` (ключи `_worktree_templates_*`).
 
 <details>
 <summary>Обновление существующей установки</summary>
@@ -116,28 +174,6 @@ cp CLAUDE.md /path/to/your/project/
 cp .claude/settings.local.json.default /path/to/your/project/.claude/settings.local.json
 cp .mcp.json.example /path/to/your/project/.mcp.json
 ```
-
-</details>
-
-<details>
-<summary>Установка как плагин (кросс-проектно, версионируется)</summary>
-
-Вместо копирования `.claude/` в один проект установите claude-kit как нативный **плагин** Claude Code — общий для всех ваших проектов, версионируемый и обновляемый через marketplace. Этот репозиторий одновременно является собственным marketplace (`.claude-plugin/marketplace.json` + `.claude-plugin/plugin.json`).
-
-```bash
-# Добавьте этот репозиторий как marketplace, затем установите плагин:
-/plugin marketplace add hex0xdeadbeef/claude-kit
-/plugin install claude-kit@claude-kit
-```
-
-**Namespace команд:** команды плагина имеют префикс — вы запускаете `/claude-kit:workflow`, `/claude-kit:planner`, `/claude-kit:coder`, `/claude-kit:designer`. Внутренняя делегация пайплайна (planner → plan-reviewer → coder → code-reviewer) резолвится автоматически по описанию, поэтому работает независимо от префикса. (В project-scoped установке `.claude/` команды остаются без префикса: `/workflow`.)
-
-**Плагин vs `install.sh` — сосуществуют:**
-
-- **Плагин** — переиспользование пайплайна во многих проектах, версионируемые обновления, ничего не копируется в ваш репозиторий. Конфиг конкретного проекта (Language Profile в `CLAUDE.md`, архитектурные правила, `.claude/PROJECT-KNOWLEDGE.md`) вы по-прежнему задаёте сами.
-- **`install.sh`** — project-scoped: копирует `.claude/` + `CLAUDE.md` в репозиторий, чтобы вы могли настроить правила / Language Profile под проект и закоммитить их с командой.
-
-В режиме плагина кит по умолчанию ставит валидацию контрактов в **strict**, запускает security- и review-хуки и автоматически инъектит контекст Language Profile при старте сессии. Чтобы также засеять `.claude/settings.local.json` вашего проекта env-дефолтами кита, включите plugin-настройку `provision_settings_local` (по умолчанию выключена). Изоляция worktree у `code-reviewer` работает как обычно; задайте `worktree.sparsePaths` в своём `settings.local.json`, если вашему монорепо нужен меньший review-worktree.
 
 </details>
 
@@ -449,7 +485,7 @@ flowchart LR
     WF2["/workflow"] --> WP
     PL2["/planner"] --> PLR
     CO2["/coder"] --> CDR
-    CO2 -->|startup (always-on)| TDD
+    CO2 -->|"startup (always-on)"| TDD
     CO2 -.->|"3x VERIFY fail"| SDB
     DES2["/designer (opus)"] --> DR
     PREV["plan-reviewer"] --> PRR

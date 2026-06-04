@@ -35,31 +35,89 @@ Structured multi-agent development workflow with built-in planning, implementati
 
 > **Requirements:** Claude Code `>= 2.1.141` (the kit's hooks rely on the exec-form `args:` invariant from v2.1.139 and `terminalSequence` JSON output from v2.1.141). On earlier versions hooks silently no-op / degrade.
 
-Once installed, `/workflow` orchestrates planning → implementation → review → commit for any task. Three steps to a working kit:
+`/workflow` orchestrates planning → implementation → review → commit for any task. Onboarding in four steps.
 
-1. **Install** the kit into your project root. One command provisions everything — the `.claude/` workflow pipeline, the 3 MCP servers (`.mcp.json`), and personal settings (`.claude/settings.local.json`):
+### 1. Install — plugin (recommended)
 
-   ```bash
-   curl -sL https://raw.githubusercontent.com/hex0xdeadbeef/claude-kit/main/install.sh | bash
-   ```
+Install claude-kit as a native Claude Code **plugin**: shared across all your projects, versioned, updated through the marketplace, with nothing copied into your repo. This repo doubles as its own marketplace (`.claude-plugin/marketplace.json` + `.claude-plugin/plugin.json`).
 
-   No manual `cp` needed — `settings.local.json` and `.mcp.json` are created automatically (and on `--update`, new defaults merge in while your edits are preserved). The MCP servers need `npx` (Node.js) and/or `uvx` (uv); if either is missing the installer prints the install command. After installing a runtime, **restart Claude Code** — the servers auto-load on next start (verify with `claude mcp list`).
+```bash
+/plugin marketplace add hex0xdeadbeef/claude-kit
+/plugin install claude-kit@claude-kit
+```
 
-2. **Generate project knowledge** so agents have context for your codebase:
+Plugin commands are namespaced — you run `/claude-kit:workflow`, `/claude-kit:planner`, `/claude-kit:coder`, `/claude-kit:designer`. The internal pipeline delegation (planner → plan-reviewer → coder → code-reviewer) resolves automatically by description, so it works regardless of the prefix.
 
-   ```bash
-   /project-researcher
-   ```
+<details>
+<summary>Alternative: <code>install.sh</code> (project-scoped — copies the kit into one repo)</summary>
 
-   This writes `.claude/PROJECT-KNOWLEDGE.md` (architecture, modules, dependencies, language profile). Edit `CLAUDE.md` Language Profile first if your stack is not Go (the kit's default). Then run `/meta-agent onboard` for a one-time configuration sanity check.
+A project-scoped install copies `.claude/` + `CLAUDE.md` into the repo, so you can customize rules / Language Profile per project and commit them with your team. One command provisions everything — the `.claude/` pipeline, the 3 MCP servers (`.mcp.json`), and personal settings (`.claude/settings.local.json`):
 
-3. **Start working** — let `/workflow` drive the full development cycle:
+```bash
+curl -sL https://raw.githubusercontent.com/hex0xdeadbeef/claude-kit/main/install.sh | bash
+```
 
-   ```bash
-   /workflow Add new REST endpoint for profiles
-   ```
+No manual `cp` needed — `settings.local.json` and `.mcp.json` are created automatically (on `--update`, new defaults merge in while your edits are preserved). The MCP servers need `npx` (Node.js) and/or `uvx` (uv); if either is missing the installer prints the install command. After installing a runtime, **restart Claude Code** — the servers auto-load on next start (verify with `claude mcp list`).
 
-**Already using the kit?** See **Updating an existing installation** below for the `--update` path. **Prefer a plugin?** claude-kit also installs as a native Claude Code **plugin** (cross-project, versioned, no files copied into your repo) — see **Install as a plugin** below. Both distributions coexist.
+</details>
+
+**Plugin vs `install.sh` — both coexist:**
+
+- **Plugin** — reuse the pipeline across many projects, versioned updates, nothing copied into your repo. You still supply your project's own config (Language Profile in `CLAUDE.md`, architecture rules, `.claude/PROJECT-KNOWLEDGE.md`).
+- **`install.sh`** — project-scoped: the kit lives in your repo, customizable and committed with your team.
+
+### 2. First run
+
+```bash
+/project-researcher                          # writes .claude/PROJECT-KNOWLEDGE.md
+/workflow Add new REST endpoint for profiles
+```
+
+`/project-researcher` gives the agents context for your codebase (architecture, modules, dependencies, language profile). Edit the `CLAUDE.md` Language Profile first if your stack is not Go (the kit's default). Then `/workflow` drives the full cycle: task analysis → [design — L/XL only] → planning → plan review → implementation → code review → commit. (In plugin mode, prefix the commands: `/claude-kit:project-researcher`, `/claude-kit:workflow`.)
+
+### 3. Configure the kit — overriding variables
+
+The kit is tuned with environment variables (validation strictness, prompt-cache TTL, terse-output mode, and more). **Where you set a variable decides its scope** — and the mechanism is identical for the plugin and the `install.sh` install: Claude Code injects the `env` block into the session, and every hook script (plugin hooks included) inherits it as a subprocess.
+
+| Where | File / command | Scope |
+| ----- | -------------- | ----- |
+| Per project | `<project>/.claude/settings.local.json` → `env` | this repo (gitignored) |
+| All your projects | `~/.claude/settings.json` → `env` | every project |
+| One shell | `export VAR=value` before launching `claude` | that shell |
+
+In `<project>/.claude/settings.local.json`:
+
+```json
+{ "env": { "CLAUDE_CAVEMAN_MODE": "off", "CLAUDE_HANDOFF_VALIDATION_MODE": "strict" } }
+```
+
+> **Gotcha:** in the shipped `.example`, a key with a leading `_` (e.g. `_CLAUDE_DELTA_REVIEW_MODE`) is **inactive** — the kit's settings merge skips `_`-prefixed keys, so they stay as inert documentation (and a literal `_CLAUDE_…` env name is read by no script either way). Remove the `_` to activate. Settings files are strict JSON — no `//` comments.
+
+**Plugin mode — what you do and don't need to set.** A plugin's `settings.json` may only carry `agent` + `subagentStatusLine`, so the plugin cannot ship env defaults. The kit closes that gap, so you usually set **nothing**:
+
+- **Auto-strict (no action):** the five contract-validation knobs — `CLAUDE_HANDOFF_VALIDATION_MODE`, `CLAUDE_VERDICT_VALIDATION_MODE`, `CLAUDE_ISSUE_ID_VALIDATION_MODE`, `CLAUDE_PK_PATH_MODE`, `CLAUDE_DELTA_REVIEW_MODE` — default to `strict` when the kit runs as a plugin (`.claude/scripts/lib/kit-env-defaults.sh` detects `CLAUDE_PLUGIN_ROOT`). Set them only to *relax*.
+- **Safe defaults (no action):** `CLAUDE_CAVEMAN_MODE` (lite) plus the TTL / cooldown / log-cap knobs — built-in script defaults, identical in both modes.
+- **Opt-in (plugin: off unless you set them):** `CLAUDE_PROJECT_KNOWLEDGE_MODE`, `CLAUDE_KIT_PHASE_COMPLETION_NOTIFY`, `CLAUDE_KIT_MCP_PRELOAD` — in plugin mode these fall to their script defaults (warn / off) and are **not** auto-enabled; set them in your own settings to turn them on. (The `install.sh` path — and `provision_settings_local`, below — seed them **active** (`strict` / `on` / `on`) via `.default`.)
+- **Native Claude Code vars:** `ENABLE_PROMPT_CACHING_1H`, `FORCE_PROMPT_CACHING_5M`, `GIT_STRIP_CO_AUTHOR`, `CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING` — set in your own settings either way (the plugin can't ship them).
+
+**One switch for full parity:** turn on the plugin's `provision_settings_local` setting (off by default) — the kit then merges its full env defaults into your project's `.claude/settings.local.json` on the next session (your values always win). The `install.sh` path seeds those same defaults automatically.
+
+Full per-variable reference lives in [⚙️ Configuration Files](#️-configuration-files).
+
+### 4. Monorepo — speed up code review (`sparsePaths`)
+
+The `code-reviewer` runs in an isolated git worktree. On a large monorepo you can shrink that worktree to only the paths the reviewer needs, via `worktree.sparsePaths`.
+
+In `<project>/.claude/settings.local.json`:
+
+```json
+{ "worktree": { "sparsePaths": ["src/", "tests/", "package.json", "tsconfig.json"] } }
+```
+
+- **Plugin mode:** a plugin cannot ship worktree config, so sparse-checkout is **off** until you set `worktree.sparsePaths` yourself (above). The worktree isolation itself works regardless.
+- **`install.sh` (project-scoped):** the committed `.claude/settings.json` ships Go-shaped defaults (`.claude/`, `internal/`, `cmd/`, `go.mod`, `go.sum`, `Makefile`, `CLAUDE.md`); override them per project in `settings.local.json`.
+
+Language-specific templates (Python / TypeScript / Rust / Java) ship in `.claude/settings.local.json.example` (the `_worktree_templates_*` keys).
 
 <details>
 <summary>Updating an existing installation</summary>
@@ -114,28 +172,6 @@ cp CLAUDE.md /path/to/your/project/
 cp .claude/settings.local.json.default /path/to/your/project/.claude/settings.local.json
 cp .mcp.json.example /path/to/your/project/.mcp.json
 ```
-
-</details>
-
-<details>
-<summary>Install as a plugin (cross-project, versioned)</summary>
-
-Instead of copying `.claude/` into one project, install claude-kit as a native Claude Code **plugin** — shared across all your projects, versioned, and updated through the marketplace. This repo doubles as its own marketplace (`.claude-plugin/marketplace.json` + `.claude-plugin/plugin.json`).
-
-```bash
-# Add this repo as a marketplace, then install the plugin:
-/plugin marketplace add hex0xdeadbeef/claude-kit
-/plugin install claude-kit@claude-kit
-```
-
-**Command namespace:** plugin commands are prefixed — you run `/claude-kit:workflow`, `/claude-kit:planner`, `/claude-kit:coder`, `/claude-kit:designer`. The internal pipeline delegation (planner → plan-reviewer → coder → code-reviewer) resolves automatically by description, so it works regardless of the prefix. (In a project-scoped `.claude/` install the commands stay bare: `/workflow`.)
-
-**Plugin vs `install.sh` — both coexist:**
-
-- **Plugin** — reuse the pipeline across many projects, versioned updates, nothing copied into your repo. You still supply your project's own config (Language Profile in `CLAUDE.md`, architecture rules, `.claude/PROJECT-KNOWLEDGE.md`).
-- **`install.sh`** — project-scoped: copies `.claude/` + `CLAUDE.md` into the repo so you can customize rules / Language Profile per project and commit them with your team.
-
-In plugin mode the kit defaults contract-validation to **strict**, runs the security + review hooks, and injects the Language-Profile context at session start automatically. To also seed your project's `.claude/settings.local.json` with the kit's env defaults, enable the `provision_settings_local` plugin setting (off by default). The `code-reviewer` worktree isolation works as usual; set `worktree.sparsePaths` in your own `settings.local.json` if your monorepo needs a smaller review worktree.
 
 </details>
 
@@ -447,7 +483,7 @@ flowchart LR
     WF2["/workflow"] --> WP
     PL2["/planner"] --> PLR
     CO2["/coder"] --> CDR
-    CO2 -->|startup (always-on)| TDD
+    CO2 -->|"startup (always-on)"| TDD
     CO2 -.->|"3x VERIFY fail"| SDB
     DES2["/designer (opus)"] --> DR
     PREV["plan-reviewer"] --> PRR
