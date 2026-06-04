@@ -519,12 +519,10 @@ flowchart TB
     CMD --> TOOL{"Tool Call?"}
     TOOL -->|"Write / Edit"| PRE1["protect-files.sh (blocking)"]
     TOOL -->|Write| PRE2["check-artifact-size.sh (blocking)"]
-    TOOL -->|Bash| PRE3["block-dangerous-commands.sh (blocking)"]
     TOOL -->|Bash| PRE4["pre-commit-build.sh (blocking)"]
 
     PRE1 --> EXEC["Tool Executes"]
     PRE2 --> EXEC
-    PRE3 --> EXEC
     PRE4 --> EXEC
 
     EXEC -->|"Write / Edit"| POST1["auto-fmt.sh<br/>(slot-driven, non-blocking)"]
@@ -553,7 +551,6 @@ flowchart TB
     style CMD fill:#e0e0e0,color:#333,stroke:#999
     style PRE1 fill:#d93025,color:#fff,stroke:#b3261e
     style PRE2 fill:#d93025,color:#fff,stroke:#b3261e
-    style PRE3 fill:#d93025,color:#fff,stroke:#b3261e
     style PRE4 fill:#d93025,color:#fff,stroke:#b3261e
     style EXEC fill:#e0e0e0,color:#333,stroke:#999
     style POST1 fill:#0d904f,color:#fff,stroke:#0a7040
@@ -870,7 +867,7 @@ Auto-generated codebase analysis (architecture, modules, dependencies, language 
 
 ## 🪝 Hooks
 
-Configured in `.claude/settings.json` — they enforce quality automatically. Security and build hooks block (`protect-files.sh`, `block-dangerous-commands.sh`, `check-artifact-size.sh`, `pre-commit-build.sh`); most others are non-blocking.
+Configured in `.claude/settings.json` — they enforce quality automatically. Security and build hooks block (`protect-files.sh`, `check-artifact-size.sh`, `pre-commit-build.sh`); most others are non-blocking. Dangerous-command blocking is NOT imposed by the kit — operation safety is governed entirely by your own `settings.json` / `settings.local.json` permissions (deny-first, manageable via `/permissions`).
 
 <details>
 <summary>🪝 All hooks (by trigger)</summary>
@@ -881,7 +878,6 @@ Configured in `.claude/settings.json` — they enforce quality automatically. Se
 | `enrich-context.sh` | UserPromptSubmit | Enrich prompt with project context + exploration budget |
 | `protect-files.sh` | PreToolUse (Write/Edit) | Protect critical config files from agent modification |
 | `check-artifact-size.sh` | PreToolUse (Write) | Block writes exceeding size thresholds |
-| `block-dangerous-commands.sh` | PreToolUse (Bash) | Block destructive shell commands |
 | `pre-commit-build.sh` | PreToolUse (Bash) | Validate `go build` before git commit |
 | `auto-fmt.sh` | PostToolUse (Write/Edit) | Auto-format source files (slot-driven via FMT_CMD; supports `{}` per-file placeholder) |
 | `yaml-lint.sh` | PostToolUse (Edit) | Validate YAML structure |

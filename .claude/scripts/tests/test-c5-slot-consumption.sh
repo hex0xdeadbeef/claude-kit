@@ -121,16 +121,19 @@ if [[ -d .git ]]; then
       # the "WorktreeCreate": [ event-key line, and the empty "args": [] array line.
       # Also allows the plugin-equivalence Part 5 (P2) SessionStart context-injection hook:
       # the inject-kit-context.sh "command" line (plugin-mode-only, no-op in project mode).
+      # Also allows the Option-B removal of block-dangerous-commands.sh (audit
+      # operation-blocking-native-permissions): its PreToolUse Bash group's "command" line
+      # and the "matcher": "Bash" line (the kit no longer ships a deny-emitting operation hook).
       bad_lines=$(grep -E '^[+-]' /tmp/c5-settings-diff.txt \
         | grep -vE '^(\+\+\+|---) ' \
-        | grep -vE '^[+-][[:space:]]+"command":[[:space:]]+"\.claude/scripts/auto-fmt(-go)?\.sh",?$|^[+-][[:space:]]+"if":[[:space:]]+"(Write|Edit)\(\*\*/\*\.go\)"$|^[+-][[:space:]]+"type":[[:space:]]+"command",?$|^[+-][[:space:]]*[][}{,]+[[:space:]]*$|^[+-][[:space:]]+"command":[[:space:]]+"\.claude/scripts/caveman-(activate\.sh|suspend-for-reviewer\.sh (code-researcher|plan-reviewer|code-reviewer|verdict-recovery))",?$|^[+-][[:space:]]+"matcher":[[:space:]]+"",?$|^[+-][[:space:]]+"matcher":[[:space:]]+"verdict-recovery",?$|^[+-][[:space:]]+"hooks":[[:space:]]+\[$|^[+-][[:space:]]+"SessionStart":[[:space:]]+\[$|^[+-][[:space:]]+"WorktreeCreate":[[:space:]]+\[$|^[+-][[:space:]]+"command":[[:space:]]+"\.claude/scripts/prepare-worktree\.sh",?$|^[+-][[:space:]]+"command":[[:space:]]+"\.claude/scripts/inject-kit-context\.sh",?$|^[+-][[:space:]]+"command":[[:space:]]+"\.claude/scripts/bootstrap-project-config\.sh",?$|^[+-][[:space:]]+"args":[[:space:]]+\[\],?$' \
+        | grep -vE '^[+-][[:space:]]+"command":[[:space:]]+"\.claude/scripts/auto-fmt(-go)?\.sh",?$|^[+-][[:space:]]+"if":[[:space:]]+"(Write|Edit)\(\*\*/\*\.go\)"$|^[+-][[:space:]]+"type":[[:space:]]+"command",?$|^[+-][[:space:]]*[][}{,]+[[:space:]]*$|^[+-][[:space:]]+"command":[[:space:]]+"\.claude/scripts/caveman-(activate\.sh|suspend-for-reviewer\.sh (code-researcher|plan-reviewer|code-reviewer|verdict-recovery))",?$|^[+-][[:space:]]+"matcher":[[:space:]]+"",?$|^[+-][[:space:]]+"matcher":[[:space:]]+"verdict-recovery",?$|^[+-][[:space:]]+"hooks":[[:space:]]+\[$|^[+-][[:space:]]+"SessionStart":[[:space:]]+\[$|^[+-][[:space:]]+"WorktreeCreate":[[:space:]]+\[$|^[+-][[:space:]]+"command":[[:space:]]+"\.claude/scripts/prepare-worktree\.sh",?$|^[+-][[:space:]]+"command":[[:space:]]+"\.claude/scripts/inject-kit-context\.sh",?$|^[+-][[:space:]]+"command":[[:space:]]+"\.claude/scripts/bootstrap-project-config\.sh",?$|^[+-][[:space:]]+"args":[[:space:]]+\[\],?$|^[+-][[:space:]]+"command":[[:space:]]+"\.claude/scripts/block-dangerous-commands\.sh",?$|^[+-][[:space:]]+"matcher":[[:space:]]+"Bash",?$' \
         || true)
       if [[ -n "$bad_lines" ]]; then
-        fail "AC-C5.13 — .claude/settings.json has changes outside the allowlist (auto-fmt-generic consolidation OR caveman-skill-integration hook entries OR WorktreeCreate-hook removal)"
+        fail "AC-C5.13 — .claude/settings.json has changes outside the allowlist (auto-fmt-generic consolidation OR caveman-skill-integration hook entries OR WorktreeCreate-hook removal OR block-dangerous-commands.sh removal)"
       fi
     fi
     rm -f /tmp/c5-settings-diff.txt
-    pass "AC-C5.13 — settings.json diff (if any) limited to allowlist (auto-fmt-generic + caveman-skill-integration + WorktreeCreate-removal entries)"
+    pass "AC-C5.13 — settings.json diff (if any) limited to allowlist (auto-fmt-generic + caveman-skill-integration + WorktreeCreate-removal + block-dangerous-removal entries)"
 
     # handoff.schema.json: post-P1 refactor allows additive changes; discriminator-frozen invariant.
     git diff "$BASE"..HEAD -- .claude/schemas/handoff.schema.json > /tmp/c5-schema-diff.txt 2>&1 || true

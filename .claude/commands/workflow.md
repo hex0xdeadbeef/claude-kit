@@ -376,7 +376,7 @@ skill_references:
 
 hooks:
   authoritative: |
-    .claude/settings.json is the authoritative wiring (16 event types, 30 scripts + 2 prompt
+    .claude/settings.json is the authoritative wiring (16 event types, 29 scripts + 2 prompt
     hooks). Hooks fire deterministically; the orchestrator does NOT read settings.json at
     runtime. For the complete list, see settings.json.
   pipeline_load_bearing: |
@@ -387,8 +387,8 @@ hooks:
     - PostToolUse validate-handoff.sh: validates *-handoff.json against the schema (IMP-01).
     - Stop check-uncommitted.sh (BLOCKING): blocks stop on uncommitted changes — commit before Phase 5 completion.
   notes: |
-    Conditional `if` (v2.1.85) on PreToolUse/PostToolUse; security hooks (protect-files,
-    block-dangerous-commands) unconditional. WorktreeCreate hook removed (F1, 2026-05-27);
+    Conditional `if` (v2.1.85) on PreToolUse/PostToolUse; security hook (protect-files)
+    unconditional. WorktreeCreate hook removed (F1, 2026-05-27);
     review-context sidecar delivered into worktrees via repo-root .worktreeinclude.
     Intentionally dropped from this summary (deterministic, no orchestrator-flow rationale):
     the non-workflow-specific hook mirror + the code-researcher metrics-only SubagentStart

@@ -87,6 +87,33 @@ same cascade (PROJECT-KNOWLEDGE.md → LANGUAGE > kit-default Go > `_default`).
 | Test/lint failure loop (3x) | STOP_AND_WAIT | Load systematic-debugging skill → root cause |
 | Import/architecture violation | STOP_AND_FIX | Fix before proceeding |
 
+## Operation safety is YOUR settings (the kit does not override)
+
+The kit ships **no** dangerous-command hook. Operation-blocking is governed entirely by **your own**
+permissions — the kit never overrides what you configured. Manage them via `/permissions`
+(precedence: deny → ask → allow; deny always wins).
+
+In a **project-scoped** install the kit's `.claude/settings.json` already ships a sensible
+`permissions.deny` baseline you can edit or remove. In **plugin** mode, plugin `settings.json` cannot
+ship permission rules — so to opt into the same baseline, add this to YOUR `.claude/settings.json`
+(or `.claude/settings.local.json`):
+
+```json
+{
+  "permissions": {
+    "deny": [
+      "Bash(rm -rf *)", "Bash(rm -fr *)", "Bash(git reset --hard *)", "Bash(git clean *)",
+      "Bash(git push --force *)", "Bash(git push -f *)", "Bash(git checkout .)", "Bash(git restore .)",
+      "Bash(sudo *)", "Bash(chmod 777 *)", "Bash(chmod 0777 *)", "Bash(dd if=*)", "Bash(mkfs.*)",
+      "Bash(truncate *)", "Bash(find * -exec *)", "Bash(find * -delete)", "Read(.env)"
+    ]
+  }
+}
+```
+
+This is a **recommendation, not an imposition**: keep, trim, or extend it as you see fit. The kit
+enforces none of it.
+
 ## Notes
 
 - **Accepted validation warning:** `claude plugin validate` reports one EXPECTED warning —
@@ -95,7 +122,7 @@ same cascade (PROJECT-KNOWLEDGE.md → LANGUAGE > kit-default Go > `_default`).
   (`inject-kit-context.sh`) instead of a plugin-root CLAUDE.md. Validation passes-with-warnings;
   no action needed.
 - Strict-mode contract validation (handoff / verdict / issue-id) defaults to **strict** in plugin
-  mode (no env seeding needed). Dangerous-command blocking + file protection run as plugin hooks.
+  mode (no env seeding needed). File protection runs as a plugin hook.
 - **Worktree isolation:** the `code-reviewer` agent runs in an isolated git worktree (clean
   review context) in plugin mode too — the isolation works regardless. The *sparse-checkout
   optimization* (`worktree.sparsePaths`) is a per-project setting and is NOT imposed by the
