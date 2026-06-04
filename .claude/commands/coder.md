@@ -172,6 +172,7 @@ startup:
       files:
         - ".claude/skills/coder-rules/mcp-tools.md"
         - ".claude/skills/coder-rules/SKILL.md"
+      plugin_path_note: "Plugin mode: if a BUNDLED KIT ROOT directive is present in context, resolve these paths AND any on-demand supporting files from this skill (loaded later per event triggers) under that root (bundled skills ship in the plugin, not the project). Project-scoped install: paths are already project-local — ignore."
       purpose: "Load MCP patterns (language profile + error handling → auto-loaded via CLAUDE.md). Load coder-rules skill for 5 CRITICAL rules and evaluate protocol."
 
     - action: "Read .claude/prompts/{feature-name}.md"
@@ -181,6 +182,7 @@ startup:
       files:
         - ".claude/skills/tdd-rules/SKILL.md"
         - ".claude/skills/tdd-rules/tdd-shapes/<LANGUAGE>.md  # resolved via cascade below"
+      plugin_path_note: "Plugin mode: if a BUNDLED KIT ROOT directive is present in context, resolve these paths under that root (bundled skills ship in the plugin, not the project). Project-scoped install: paths are already project-local — ignore."
       cascade: |
         Per-language reference shape resolved from PROJECT-KNOWLEDGE.md → LANGUAGE
         (see .claude/skills/tdd-rules/SKILL.md § 'Cascade resolution' for the

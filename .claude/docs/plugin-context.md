@@ -7,6 +7,22 @@
 > not. If your project has its own `CLAUDE.md` / `.claude/PROJECT-KNOWLEDGE.md`, those win and this
 > is skipped.
 
+## Bundled-artifact path resolution
+
+The kit's commands tell you to `Read .claude/skills/...`, `.claude/templates/...`, and supporting
+protocol files with **project-relative** paths. In plugin mode those bundled files do NOT live in
+your project — they ship inside the plugin. At session start this hook injects a live directive:
+
+```text
+BUNDLED KIT ROOT: <absolute plugin install path>
+```
+
+**Resolve every kit `.claude/skills`, `.claude/templates`, and supporting protocol-file Read under
+that BUNDLED KIT ROOT.** Project STATE — `.claude/prompts`, `.claude/workflow-state`,
+`.claude/agent-memory` — stays under YOUR project root (it must persist across plugin updates; the
+plugin cache is ephemeral). In a project-scoped install this distinction is moot: bundled files and
+state are both under the project's own `.claude/`, so the project-relative paths already resolve.
+
 ## Language Profile (kit default — override per project)
 
 - Language: Go >= 1.24
@@ -32,12 +48,22 @@ flow between phases; the canonical issue ID is `sha256(category|location|problem
 
 You invoke the kit's commands with the plugin prefix: **`/claude-kit:workflow`**,
 `/claude-kit:planner`, `/claude-kit:coder`, `/claude-kit:designer` (in a project-scoped `.claude/`
-install they are bare: `/workflow`, etc.). You only need the prefix for the command **you type** —
-the internal pipeline delegation (orchestrator → planner → plan-reviewer → coder → code-reviewer)
-happens **automatically by agent/skill description**, so it resolves correctly regardless of the
-namespace. The kit's own docs and prompt bodies use the bare `/workflow` form on purpose: those
-references are namespace-agnostic and correct for BOTH distributions (project-scoped and plugin) —
-mentally prefix `claude-kit:` for the command you invoke when running as a plugin.
+install they are bare: `/workflow`, etc.). You only need the prefix for the command **you type**.
+Two different resolution mechanisms then carry the pipeline, and they are **not** the same:
+
+- **Agent delegation** (orchestrator → planner → plan-reviewer → coder → code-reviewer) and the
+  reviewer agents' own `-rules` skills (preloaded via agent frontmatter `skills:`) resolve **by
+  description / name** — namespace-agnostic, so they flow correctly in plugin mode with no path
+  rewrite.
+- **The pipeline's reference skills** (`workflow-protocols`, `planner-rules`, `coder-rules`,
+  `design-rules`, `tdd-rules`, …) are `disable-model-invocation: true`, so Claude does **not**
+  load them by description. The commands load them by explicit **file Read**, and in plugin mode
+  those files live under the bundled root — so they resolve via the **BUNDLED KIT ROOT** directive
+  injected at session start (see *Bundled-artifact path resolution* above), **not** by namespace.
+
+The kit's own docs and prompt bodies use the bare `/workflow` form on purpose: those references are
+namespace-agnostic and correct for BOTH distributions (project-scoped and plugin) — mentally prefix
+`claude-kit:` for the command you invoke when running as a plugin.
 
 ## TDD policy
 
