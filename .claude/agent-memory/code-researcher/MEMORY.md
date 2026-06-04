@@ -26,4 +26,4 @@ Native loader injects the first 200 lines / 25 KB at SubagentStart.
 - Top-level: `CLAUDE.md`, `README.md`, `install.sh`, `.claude/`, `.mcp.json`, `caveman/` (vendored upstream skill).
 - Native memory: `~/.claude/projects/<slug>/memory/` (auto-memory) vs `.claude/agent-memory/<name>/` (subagent memory).
 - Agent isolation: `code-reviewer` runs with `isolation: worktree`; others run in-tree.
-- Hook layers: 12 event types in `settings.json`; security hooks unconditional, others use `if:` predicates from v2.1.85.
+- Hook layers: 16 event types in `settings.json`; security hooks unconditional, others use `if:` predicates from v2.1.85.

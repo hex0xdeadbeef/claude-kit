@@ -12,7 +12,7 @@
 # Sibling parser: .claude/scripts/tests/test-plugin-scaffold.sh also recomputes prompt-hook parity
 # from settings.json — keep the prompt-hook definition identical between the two.
 set -uo pipefail
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"; cd "$ROOT"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"; cd "$ROOT" || { echo "FAIL: cannot cd to repo root"; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo "SKIP: python3 required"; exit 0; }
 
 python3 - <<'PY'
