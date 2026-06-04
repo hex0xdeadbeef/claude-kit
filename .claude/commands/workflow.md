@@ -234,7 +234,7 @@ pipeline:
     - Workflow: workflow-protocols skill (step 0.1) — includes autonomy, orchestration-core
     - Planner: planner-rules skill (step 0) — includes mcp-tools, sequential-thinking-guide
     - Coder: coder-rules skill (step 0) — includes mcp-tools
-    NOTE: Plan Review and Code Review → agents/ with skills preloading (plan-review-rules, code-review-rules)
+    NOTE: Plan Review and Code Review → agents/ load their -rules (plan-review-rules, code-review-rules) by explicit Read in STARTUP — NOT preloaded (disable-model-invocation blocks subagent preload)
     NOTE: Language profile + error handling → auto-loaded via CLAUDE.md
 
   flow: "task-analysis → /designer* → /planner [→ code-researcher*] → plan-reviewer (agent) → /coder [→ code-researcher*] → code-reviewer (agent)"
@@ -376,7 +376,7 @@ skill_references:
 
 hooks:
   authoritative: |
-    .claude/settings.json is the authoritative wiring (12 event types, 18 scripts + 2 prompt
+    .claude/settings.json is the authoritative wiring (16 event types, 30 scripts + 2 prompt
     hooks). Hooks fire deterministically; the orchestrator does NOT read settings.json at
     runtime. For the complete list, see settings.json.
   pipeline_load_bearing: |

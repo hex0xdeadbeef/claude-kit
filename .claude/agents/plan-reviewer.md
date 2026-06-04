@@ -51,6 +51,7 @@ role:
 1. **STARTUP**
    - **Context already injected:** Workflow context (feature, complexity, iteration, prior iterations, prior verdicts) is pre-injected via `additionalContext` by SubagentStart hook (`inject-review-context.sh`). Do NOT manually read `{feature}-checkpoint.yaml`, `review-completions.jsonl`, or any `.claude/workflow-state/` files — use the injected context directly.
    - TodoWrite: create review checklist (Architecture, Completeness, Security, Error handling, Verdict)
+   - Load your review rules: Read `.claude/skills/plan-review-rules/SKILL.md` in full — it is your severity/decision/auto-escalation rubric + on-demand supporting-file index. It is NOT preloaded (the skill is `disable-model-invocation: true`, which blocks subagent preload), so you MUST Read it here. Plugin mode: if a BUNDLED KIT ROOT directive is present in your injected context, resolve this path under that root (the skill ships in the plugin, not the project).
    - Read plan file from `.claude/prompts/{feature}.md` or provided path
    - Read narrative context from planner handoff (if provided):
      ```
@@ -360,7 +361,7 @@ Follows [Agent Memory Protocol](../skills/workflow-protocols/agent-memory-protoc
 - Memory unavailable → proceed without (NON_CRITICAL)
 
 ## References
-Available through **plan-review-rules** skill (auto-loaded via frontmatter):
+Available through the **plan-review-rules** skill (loaded by explicit Read in STARTUP — disable-model-invocation blocks subagent preload):
 - **Architecture Checks** — import matrix, domain purity, layer violations, security, design patterns, concurrency
 - **Required Sections** — plan structure validation, section-by-section checks
 - **Checklist** — self-verification at each review phase

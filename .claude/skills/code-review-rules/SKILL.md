@@ -1,6 +1,6 @@
 ---
 name: code-review-rules
-description: Review standards for code-reviewer agent. Auto-loaded via agent frontmatter when code-reviewer runs (Phase 4). Covers: severity classification (BLOCKER/MAJOR/MINOR/NIT), decision matrix (APPROVED/APPROVED_WITH_COMMENTS/CHANGES_REQUESTED), auto-escalation rules, grep search patterns for automated checks.
+description: Review standards for code-reviewer agent. Loaded by explicit Read in the code-reviewer STARTUP step (disable-model-invocation blocks subagent preload). Covers: severity classification (BLOCKER/MAJOR/MINOR/NIT), decision matrix (APPROVED/APPROVED_WITH_COMMENTS/CHANGES_REQUESTED), auto-escalation rules, grep search patterns for automated checks.
 disable-model-invocation: true
 ---
 
