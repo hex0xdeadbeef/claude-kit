@@ -51,15 +51,20 @@ You invoke the kit's commands with the plugin prefix: **`/claude-kit:workflow`**
 install they are bare: `/workflow`, etc.). You only need the prefix for the command **you type**.
 Two different resolution mechanisms then carry the pipeline, and they are **not** the same:
 
-- **Agent delegation** (orchestrator → planner → plan-reviewer → coder → code-reviewer) and the
-  reviewer agents' own `-rules` skills (preloaded via agent frontmatter `skills:`) resolve **by
-  description / name** — namespace-agnostic, so they flow correctly in plugin mode with no path
-  rewrite.
-- **The pipeline's reference skills** (`workflow-protocols`, `planner-rules`, `coder-rules`,
-  `design-rules`, `tdd-rules`, …) are `disable-model-invocation: true`, so Claude does **not**
-  load them by description. The commands load them by explicit **file Read**, and in plugin mode
-  those files live under the bundled root — so they resolve via the **BUNDLED KIT ROOT** directive
-  injected at session start (see *Bundled-artifact path resolution* above), **not** by namespace.
+- **Agent delegation** (orchestrator → planner → plan-reviewer → coder → code-reviewer) resolves
+  **by description / name** — namespace-agnostic, so delegation flows correctly in plugin mode with
+  no path rewrite.
+- **Reference skills are loaded by explicit Read, not preload.** The pipeline's reference skills
+  (`workflow-protocols`, `planner-rules`, `coder-rules`, `design-rules`, `tdd-rules`, …) AND the
+  reviewer agents' own `-rules` skills (`plan-review-rules`, `code-review-rules`) are all
+  `disable-model-invocation: true`. That flag blocks both auto-load by description AND preload into
+  subagents (so the reviewer `skills:` frontmatter does **not** inject them). Instead, commands and
+  reviewer agents load them by explicit **file Read** — reviewers Read their `-rules` skill in their
+  STARTUP step. In plugin mode those files live under the bundled root, so they resolve via the
+  **BUNDLED KIT ROOT** directive (see *Bundled-artifact path resolution* above) — injected at
+  session start for the main session (commands) and at SubagentStart by `inject-review-context.sh`
+  for the reviewer agents (plan-reviewer via additionalContext; code-reviewer via the worktree
+  sidecar) — **not** by namespace.
 
 The kit's own docs and prompt bodies use the bare `/workflow` form on purpose: those references are
 namespace-agnostic and correct for BOTH distributions (project-scoped and plugin) — mentally prefix

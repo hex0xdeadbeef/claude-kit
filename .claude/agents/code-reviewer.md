@@ -58,6 +58,7 @@ role:
    - **Context already injected (preferred path):** Workflow context (feature, complexity, iteration, verify_status, prior iterations, prior verdicts) is pre-injected via `additionalContext` by SubagentStart hook (`inject-review-context.sh`). Do NOT manually read `{feature}-checkpoint.yaml`, `review-completions.jsonl`, or any `.claude/workflow-state/` files when present in additionalContext.
    - **Sidecar fallback (worktree isolation):** If `.claude/workflow-state/code-reviewer-INJECTED-CONTEXT.md` exists in your worktree (delivered by native `.worktreeinclude` from the main repo), read it BEFORE QUICK CHECK. This is the orchestrator-written equivalent of the SubagentStart context: a worktree runs origin/main's hooks (worktree.baseRef:"fresh") and cannot see the main-repo checkpoint, so `inject-review-context.sh` additionalContext is unreliable inside a worktree — the sidecar file is the reliable channel. Treat its content as additionalContext-equivalent. If the file is absent, proceed without it — sidecar is best-effort.
    - TodoWrite: create review checklist (Quick Check, Architecture, Error Handling, Security, Test Coverage, Verdict)
+   - Load your review rules: Read `.claude/skills/code-review-rules/SKILL.md` in full — it is your severity/decision/auto-escalation rubric + grep search_patterns + on-demand supporting-file index. It is NOT preloaded (the skill is `disable-model-invocation: true`, which blocks subagent preload), so you MUST Read it here. Plugin mode: if a BUNDLED KIT ROOT directive is present in your injected context (additionalContext, or the worktree sidecar above), resolve this path under that root (the skill ships in the plugin, not the project).
 
 2. **QUICK CHECK (blocking)**
    - **Pre-flight (step 0.5):** run Worktree sparsePaths sanity check (see ## Worktree Optimization → QUICK CHECK Pre-flight). If pre-flight emits BLOCKER (`CR-worktree-misconfigured`), exit with REJECTED verdict before continuing.
@@ -409,7 +410,7 @@ worktree_sparsepaths_check:
 ```
 
 ## References
-Available through **code-review-rules** skill (auto-loaded via frontmatter):
+Available through the **code-review-rules** skill (loaded by explicit Read in STARTUP — disable-model-invocation blocks subagent preload):
 - **Examples** — bad/good code patterns, grep search patterns
 - **Security Checklist** — OWASP checks (complexity M+, SKIP for S)
 - **Checklist** — self-verification at each review phase

@@ -1,6 +1,6 @@
 ---
 name: plan-review-rules
-description: Review standards for plan-reviewer agent. Auto-loaded via agent frontmatter when plan-reviewer runs (Phase 2). Covers: architecture compliance (import matrix, domain purity), required plan sections validation, severity classification (BLOCKER/MAJOR/MINOR/NIT), decision matrix (APPROVED/NEEDS_CHANGES/REJECTED).
+description: Review standards for plan-reviewer agent. Loaded by explicit Read in the plan-reviewer STARTUP step (disable-model-invocation blocks subagent preload). Covers: architecture compliance (import matrix, domain purity), required plan sections validation, severity classification (BLOCKER/MAJOR/MINOR/NIT), decision matrix (APPROVED/NEEDS_CHANGES/REJECTED).
 disable-model-invocation: true
 ---
 

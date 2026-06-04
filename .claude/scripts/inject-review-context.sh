@@ -96,6 +96,25 @@ def _emit(ctx):
     print(json.dumps({"hookSpecificOutput": {"hookEventName": "SubagentStart", "additionalContext": ctx}}))
 
 
+def _bundled_root_directive():
+    # R1 (reviewer-rule-delivery): in plugin mode the reviewer's bundled -rules skill lives
+    # under CLAUDE_PLUGIN_ROOT, not the project. The reviewer runs in isolated context and
+    # never sees the SessionStart inject-kit-context.sh directive, so carry it here (the only
+    # reviewer-side runtime context holding CLAUDE_PLUGIN_ROOT). Byte-identical marker to
+    # inject-kit-context.sh so one resolution rule covers commands AND reviewers. Empty in
+    # project mode (var unset) -> inert.
+    pr = os.environ.get("CLAUDE_PLUGIN_ROOT", "")
+    if not pr:
+        return ""
+    return (
+        f"BUNDLED KIT ROOT: {pr}\n"
+        "Resolve every kit .claude/skills, .claude/templates, and supporting protocol file "
+        "under this BUNDLED KIT ROOT — they ship inside the plugin, not your project. "
+        "Project STATE (.claude/prompts, .claude/workflow-state, .claude/agent-memory) "
+        "stays under your project root.\n\n"
+    )
+
+
 # Uniform import fallback (AC-3, KD-6)
 try:
     sys.path.insert(0, os.environ['LIB_DIR'])
@@ -103,7 +122,7 @@ try:
 except Exception as _import_err:
     print(f'[inject-review-context] WARN: shared state-render unavailable — {_import_err}',
           file=sys.stderr)
-    _emit("")
+    _emit(_bundled_root_directive())
     sys.exit(0)
 
 
@@ -340,14 +359,14 @@ _evict_stale_verdict_blocks_inject(state_dir)
 # Find latest checkpoint (P2: mtime-newest via shared helper; was alphabetical sorted()[-1])
 _latest_cp_path = latest_checkpoint(state_dir)
 if not _latest_cp_path:
-    _emit("[Workflow Context] No checkpoint found — running outside workflow or first phase.")
+    _emit(_bundled_root_directive() + "[Workflow Context] No checkpoint found — running outside workflow or first phase.")
     raise SystemExit(0)
 
 try:
     with open(_latest_cp_path) as f:
         content = f.read()
 except Exception:
-    _emit("[Workflow Context] Checkpoint unreadable — context injection skipped.")
+    _emit(_bundled_root_directive() + "[Workflow Context] Checkpoint unreadable — context injection skipped.")
     raise SystemExit(0)
 
 # Extract scalars (using imported helpers — AC-2, rename: no underscore → underscore)
@@ -659,6 +678,7 @@ if _eff_level:
     lines.append(f"Effort: {_eff_level}")
 
 text = "\n".join(lines)
+text = _bundled_root_directive() + text
 # P3: sidecar mode — write to file, emit empty additionalContext.
 _sidecar_only = os.environ.get("_SIDECAR_ONLY", "0") == "1"
 _sidecar_name = os.environ.get("_SIDECAR_NAME", "code-reviewer")
