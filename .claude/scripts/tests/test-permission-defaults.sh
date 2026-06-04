@@ -101,8 +101,44 @@ emit(not has_broken_colon(da) and not has_broken_colon(dd),
 # AC-7 — .default is a lean install source (no top-level '_'-prefixed doc keys)
 emit(not any(isinstance(k, str) and k.startswith("_") for k in d.keys()),
      ".default has no top-level '_' doc keys (lean install source)")
+
+# AC-8 — allow additions (language-agnostic, fewer prompts in long /workflow runs)
+for r in ["Bash(jq *)", "Bash(git fetch *)", "Bash(chmod +x *)"]:
+    emit(r in da, "allow contains %s" % r)
+
+# AC-9 — deny network-fetch tools (defense-in-depth; also blocks curl|bash / wget|sh)
+for r in ["Bash(curl *)", "Bash(wget *)"]:
+    emit(r in dd, "deny contains %s" % r)
+
+# AC-10 — deny git force-delete branch (prevents silent loss of unmerged commits)
+emit("Bash(git branch -D *)" in dd, "deny contains Bash(git branch -D *)")
+
+# AC-11 — deny .env writes (granular; user-governable successor to the protect-files hard-deny)
+for r in ["Edit(.env)", "Write(.env)", "Edit(.env.local)", "Write(.env.local)"]:
+    emit(r in dd, "deny contains %s" % r)
+
+# AC-12 — write-granularity invariant: NO broad Edit/Write(.env.*) so .env.example/.sample stay editable
+emit("Edit(.env.*)" not in dd and "Write(.env.*)" not in dd,
+     "deny avoids broad Edit/Write(.env.*) (keeps .env.example/.sample editable)")
+
+# AC-13 — doc-content guard (PR-003): .example _permissions_comment documents the new deny rules
+pc = " ".join(e.get("_permissions_comment", []))
+emit("git branch -D" in pc and "curl" in pc,
+     ".example _permissions_comment documents the new deny rules (git branch -D, curl)")
 PYEOF
 )
+
+# AC-13 (README mirror) — README permissions baseline mentions the new deny rules
+README="README.md"
+if [ -f "$README" ]; then
+  if grep -q 'git branch -D' "$README" && grep -q 'curl' "$README"; then
+    ok "README permissions baseline documents the new deny rules (git branch -D, curl)"
+  else
+    bad "README permissions baseline missing new deny rule names (git branch -D, curl)"
+  fi
+else
+  bad "README.md not found for doc-content guard"
+fi
 
 echo
 echo "[test-permission-defaults] ${PASS} passed, ${FAIL} failed"

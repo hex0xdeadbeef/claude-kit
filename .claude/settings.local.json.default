@@ -31,7 +31,10 @@
       "Bash(rg *)",
       "Bash(sed *)",
       "Bash(awk *)",
-      "Bash(sort *)"
+      "Bash(sort *)",
+      "Bash(jq *)",
+      "Bash(git fetch *)",
+      "Bash(chmod +x *)"
     ],
     "deny": [
       "Bash(rm -rf *)",
@@ -45,6 +48,7 @@
       "Bash(git restore .)",
       "Bash(git push --force *)",
       "Bash(git push -f *)",
+      "Bash(git branch -D *)",
       "Bash(sudo *)",
       "Bash(chmod 777 *)",
       "Bash(chmod -R 777 *)",
@@ -55,9 +59,15 @@
       "Bash(shred *)",
       "Bash(find * -exec *)",
       "Bash(find * -delete)",
+      "Bash(curl *)",
+      "Bash(wget *)",
       "Read(.env)",
       "Read(.env.local)",
       "Read(.env.*.local)",
+      "Edit(.env)",
+      "Write(.env)",
+      "Edit(.env.local)",
+      "Write(.env.local)",
       "Read(secrets/**)",
       "Read(**/.ssh/id_*)"
     ]
