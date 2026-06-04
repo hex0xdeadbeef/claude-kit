@@ -793,6 +793,20 @@ The shipped `.example` defaults to a Go layout (`internal/`, `cmd/`, `go.mod`, `
 
 </details>
 
+<details>
+<summary>🔒 Permissions baseline (allow / deny)</summary>
+
+`settings.local.json` ships a recommended `permissions.allow` / `permissions.deny` baseline so `/workflow` runs uninterrupted **without** `--dangerously-skip-permissions`, while dangerous commands stay blocked. Rules follow Claude Code semantics ([docs](https://code.claude.com/docs/en/permissions)): evaluated `deny → ask → allow` (deny wins), written in **space-form** (`Bash(rm -rf *)` — the form Claude Code itself persists on "Yes, don't ask again").
+
+- **allow** — language-agnostic core only: `Edit`, `Write`, `TodoWrite`, git write ops (`git add`/`commit`/`checkout -b`/`switch`/`stash`/`worktree`), safe filesystem writes (`mkdir`/`touch`/`cp`/`mv`), and `rg`/`sed`/`awk`/`sort`. Read-only commands (`ls`, `cat`, `grep`, `find`, read-only `git`, …) are already free in every mode and are deliberately **not** listed. Build/test runners are language-specific — the `.example` ships commented `_permissions_allow_templates_*` lines (Node, Python, Go, Rust, Java) to copy into your `allow` array.
+- **deny** — best-effort safety: `rm -rf` (plus `/` and `~` variants), `git reset --hard`, `git clean`, `git checkout .`/`restore .`, `git push --force`/`-f`, `sudo`, `chmod 777`, `dd`, `mkfs`, `truncate`, `shred`, `find -exec`/`-delete`, plus secret reads (`.env`, `.env.local`, `.env.*.local`, `secrets/**`, ssh private keys). `.env.example`/`.env.sample` stay readable by design.
+
+**Limits** (per docs): argument-scoped Bash deny rules are *best-effort* and bypassable (shell variables, subshells, compound commands); they do **not** fire under `bypassPermissions` / `--dangerously-skip-permissions` (only Claude Code's built-in `rm -rf /` & `~` circuit breaker remains). `curl`/`wget` are already deny-by-default in Claude Code's command blocklist. For a hard boundary add [sandboxing](https://code.claude.com/docs/en/sandboxing) + a PreToolUse hook, not deny rules alone. **Plugin mode:** plugins cannot ship `settings.json` permissions — the opt-in `bootstrap-project-config.sh` seeds this baseline into your own `settings.local.json` (user-wins merge).
+
+**Merge:** on `install.sh --update`, permission **arrays are not unioned** (your values win). A fresh install gets the full block; if you already have a `permissions.allow`/`deny` array, new defaults are skipped for that array — add them manually or re-copy from `.default`. Everything here is user-governable via `/permissions`; the kit never overrides it.
+
+</details>
+
 ### `.mcp.json.example` — MCP Server Endpoints
 
 Per-machine config (gitignored after `install.sh`). `install.sh` auto-creates `.mcp.json` from this template on first install (auto-approved via `enableAllProjectMcpServers` in `settings.json`); on `--update` it **merges** new kit servers in while preserving your existing/customized servers (your config wins). `sequential-thinking` ships preloaded (`alwaysLoad: true` hardcoded here) — it loads at session start instead of via deferred ToolSearch; remove its `alwaysLoad` to defer and save cold-start + context tokens. To reset, set up manually, or merge into an existing `.mcp.json`:
