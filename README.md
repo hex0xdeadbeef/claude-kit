@@ -519,12 +519,10 @@ flowchart TB
     CMD --> TOOL{"Tool Call?"}
     TOOL -->|"Write / Edit"| PRE1["protect-files.sh (blocking)"]
     TOOL -->|Write| PRE2["check-artifact-size.sh (blocking)"]
-    TOOL -->|Bash| PRE3["block-dangerous-commands.sh (blocking)"]
     TOOL -->|Bash| PRE4["pre-commit-build.sh (blocking)"]
 
     PRE1 --> EXEC["Tool Executes"]
     PRE2 --> EXEC
-    PRE3 --> EXEC
     PRE4 --> EXEC
 
     EXEC -->|"Write / Edit"| POST1["auto-fmt.sh<br/>(slot-driven, non-blocking)"]
@@ -553,7 +551,6 @@ flowchart TB
     style CMD fill:#e0e0e0,color:#333,stroke:#999
     style PRE1 fill:#d93025,color:#fff,stroke:#b3261e
     style PRE2 fill:#d93025,color:#fff,stroke:#b3261e
-    style PRE3 fill:#d93025,color:#fff,stroke:#b3261e
     style PRE4 fill:#d93025,color:#fff,stroke:#b3261e
     style EXEC fill:#e0e0e0,color:#333,stroke:#999
     style POST1 fill:#0d904f,color:#fff,stroke:#0a7040
@@ -796,6 +793,20 @@ The shipped `.example` defaults to a Go layout (`internal/`, `cmd/`, `go.mod`, `
 
 </details>
 
+<details>
+<summary>🔒 Permissions baseline (allow / deny)</summary>
+
+`settings.local.json` ships a recommended `permissions.allow` / `permissions.deny` baseline so `/workflow` runs uninterrupted **without** `--dangerously-skip-permissions`, while dangerous commands stay blocked. Rules follow Claude Code semantics ([docs](https://code.claude.com/docs/en/permissions)): evaluated `deny → ask → allow` (deny wins), written in **space-form** (`Bash(rm -rf *)` — the form Claude Code itself persists on "Yes, don't ask again").
+
+- **allow** — language-agnostic core only: `Edit`, `Write`, `TodoWrite`, git write ops (`git add`/`commit`/`checkout -b`/`switch`/`stash`/`worktree`/`fetch`), safe filesystem writes (`mkdir`/`touch`/`cp`/`mv`/`chmod +x`), and `rg`/`sed`/`awk`/`sort`/`jq`. Read-only commands (`ls`, `cat`, `grep`, `find`, read-only `git`, …) are already free in every mode and are deliberately **not** listed. (`jq` is auto-approved including `jq '…' > file` redirects, which can write — low residual.) Build/test runners are language-specific — the `.example` ships commented `_permissions_allow_templates_*` lines (Node, Python, Go, Rust, Java) to copy into your `allow` array.
+- **deny** — best-effort safety: `rm -rf` (plus `/` and `~` variants), `git reset --hard`, `git clean`, `git checkout .`/`restore .`, `git push --force`/`-f`, `git branch -D`, `sudo`, `chmod 777`, `dd`, `mkfs`, `truncate`, `shred`, `find -exec`/`-delete`, `curl`/`wget`, plus secret reads (`.env`, `.env.local`, `.env.*.local`, `secrets/**`, ssh private keys) and secret writes (`Edit`/`Write` of `.env`/`.env.local`). The explicit `curl`/`wget` deny reinforces the default command blocklist under a future broad `Bash` allow and blocks a literal `curl … | bash` pipeline (the deny matches the leading `curl` token; obfuscated/compound forms remain bypassable per **Limits**). `.env.example`/`.env.sample` stay readable **and** editable by design (no broad `Read`/`Edit`/`Write(.env.*)` rule).
+
+**Limits** (per docs): argument-scoped Bash deny rules are *best-effort* and bypassable (shell variables, subshells, compound commands); they do **not** fire under `bypassPermissions` / `--dangerously-skip-permissions` (only Claude Code's built-in `rm -rf /` & `~` circuit breaker remains). `curl`/`wget` are already deny-by-default in Claude Code's command blocklist. For a hard boundary add [sandboxing](https://code.claude.com/docs/en/sandboxing) + a PreToolUse hook, not deny rules alone. **Plugin mode:** plugins cannot ship `settings.json` permissions — the opt-in `bootstrap-project-config.sh` seeds this baseline into your own `settings.local.json` (user-wins merge).
+
+**Merge:** on `install.sh --update`, permission **arrays are not unioned** (your values win). A fresh install gets the full block; if you already have a `permissions.allow`/`deny` array, new defaults are skipped for that array — add them manually or re-copy from `.default`. Everything here is user-governable via `/permissions`; the kit never overrides it.
+
+</details>
+
 ### `.mcp.json.example` — MCP Server Endpoints
 
 Per-machine config (gitignored after `install.sh`). `install.sh` auto-creates `.mcp.json` from this template on first install (auto-approved via `enableAllProjectMcpServers` in `settings.json`); on `--update` it **merges** new kit servers in while preserving your existing/customized servers (your config wins). `sequential-thinking` ships preloaded (`alwaysLoad: true` hardcoded here) — it loads at session start instead of via deferred ToolSearch; remove its `alwaysLoad` to defer and save cold-start + context tokens. To reset, set up manually, or merge into an existing `.mcp.json`:
@@ -870,7 +881,7 @@ Auto-generated codebase analysis (architecture, modules, dependencies, language 
 
 ## 🪝 Hooks
 
-Configured in `.claude/settings.json` — they enforce quality automatically. Security and build hooks block (`protect-files.sh`, `block-dangerous-commands.sh`, `check-artifact-size.sh`, `pre-commit-build.sh`); most others are non-blocking.
+Configured in `.claude/settings.json` — they enforce quality automatically. Security and build hooks block (`protect-files.sh`, `check-artifact-size.sh`, `pre-commit-build.sh`); most others are non-blocking. Dangerous-command blocking is NOT imposed by the kit — operation safety is governed entirely by your own `settings.json` / `settings.local.json` permissions (deny-first, manageable via `/permissions`).
 
 <details>
 <summary>🪝 All hooks (by trigger)</summary>
@@ -881,7 +892,6 @@ Configured in `.claude/settings.json` — they enforce quality automatically. Se
 | `enrich-context.sh` | UserPromptSubmit | Enrich prompt with project context + exploration budget |
 | `protect-files.sh` | PreToolUse (Write/Edit) | Protect critical config files from agent modification |
 | `check-artifact-size.sh` | PreToolUse (Write) | Block writes exceeding size thresholds |
-| `block-dangerous-commands.sh` | PreToolUse (Bash) | Block destructive shell commands |
 | `pre-commit-build.sh` | PreToolUse (Bash) | Validate `go build` before git commit |
 | `auto-fmt.sh` | PostToolUse (Write/Edit) | Auto-format source files (slot-driven via FMT_CMD; supports `{}` per-file placeholder) |
 | `yaml-lint.sh` | PostToolUse (Edit) | Validate YAML structure |

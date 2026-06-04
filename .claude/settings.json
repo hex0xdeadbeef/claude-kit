@@ -140,16 +140,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/scripts/block-dangerous-commands.sh",
-            "args": []
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
             "command": ".claude/scripts/pre-commit-build.sh",
             "args": [],
             "if": "Bash(git commit*)"

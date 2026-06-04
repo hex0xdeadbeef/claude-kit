@@ -521,12 +521,10 @@ flowchart TB
     CMD --> TOOL{"Tool Call?"}
     TOOL -->|"Write / Edit"| PRE1["protect-files.sh (blocking)"]
     TOOL -->|Write| PRE2["check-artifact-size.sh (blocking)"]
-    TOOL -->|Bash| PRE3["block-dangerous-commands.sh (blocking)"]
     TOOL -->|Bash| PRE4["pre-commit-build.sh (blocking)"]
 
     PRE1 --> EXEC["Tool Executes"]
     PRE2 --> EXEC
-    PRE3 --> EXEC
     PRE4 --> EXEC
 
     EXEC -->|"Write / Edit"| POST1["auto-fmt.sh<br/>(slot-driven, non-blocking)"]
@@ -555,7 +553,6 @@ flowchart TB
     style CMD fill:#e0e0e0,color:#333,stroke:#999
     style PRE1 fill:#d93025,color:#fff,stroke:#b3261e
     style PRE2 fill:#d93025,color:#fff,stroke:#b3261e
-    style PRE3 fill:#d93025,color:#fff,stroke:#b3261e
     style PRE4 fill:#d93025,color:#fff,stroke:#b3261e
     style EXEC fill:#e0e0e0,color:#333,stroke:#999
     style POST1 fill:#0d904f,color:#fff,stroke:#0a7040
@@ -872,7 +869,7 @@ cp .mcp.json.example .mcp.json   # fresh setup
 
 ## 🪝 Хуки
 
-Настраиваются в `.claude/settings.json` — они автоматически обеспечивают соблюдение качества. Security- и build-хуки блокируют (`protect-files.sh`, `block-dangerous-commands.sh`, `check-artifact-size.sh`, `pre-commit-build.sh`); большинство остальных не блокируют.
+Настраиваются в `.claude/settings.json` — они автоматически обеспечивают соблюдение качества. Security- и build-хуки блокируют (`protect-files.sh`, `check-artifact-size.sh`, `pre-commit-build.sh`); большинство остальных не блокируют. Блокировка опасных команд НЕ навязывается китом — безопасность операций полностью управляется вашими собственными permissions в `settings.json` / `settings.local.json` (deny-first, через `/permissions`).
 
 <details>
 <summary>🪝 Все хуки (по триггеру)</summary>
@@ -883,7 +880,6 @@ cp .mcp.json.example .mcp.json   # fresh setup
 | `enrich-context.sh` | UserPromptSubmit | Обогащает промпт контекстом проекта + бюджетом исследования |
 | `protect-files.sh` | PreToolUse (Write/Edit) | Защищает критические конфигурационные файлы от изменения агентом |
 | `check-artifact-size.sh` | PreToolUse (Write) | Блокирует запись, превышающую пороги размера |
-| `block-dangerous-commands.sh` | PreToolUse (Bash) | Блокирует деструктивные shell-команды |
 | `pre-commit-build.sh` | PreToolUse (Bash) | Проверяет `go build` перед git-коммитом |
 | `auto-fmt.sh` | PostToolUse (Write/Edit) | Автоформатирует исходные файлы (управляется слотом через FMT_CMD; поддерживает плейсхолдер `{}` для каждого файла) |
 | `yaml-lint.sh` | PostToolUse (Edit) | Проверяет структуру YAML |

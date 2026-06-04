@@ -30,7 +30,7 @@ All hook scripts MUST use this format for stderr messages:
 | `FAIL` | Validation failed | non-zero |
 | `BLOCKING` | Hard-block mode active | non-zero |
 
-**FATAL vs ERROR rule:** Use `FATAL` for PreToolUse hooks whose primary role is to block Claude actions (security-critical path — `block-dangerous-commands.sh`, `protect-files.sh`). Use `ERROR` for all other hooks when they themselves fail.
+**FATAL vs ERROR rule:** Use `FATAL` for PreToolUse hooks whose primary role is to block Claude actions (security-critical path — `protect-files.sh`). Use `ERROR` for all other hooks when they themselves fail.
 
 **Rationale:** Claude Code v2.1.98 surfaces the first line of stderr in the agent
 transcript — structured format makes label machine-parseable at a glance.
