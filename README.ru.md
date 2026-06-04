@@ -22,16 +22,16 @@
 ## 📑 Содержание
 
 - [⚡ Быстрый старт](#-быстрый-старт)
-- [⚙️ Файлы конфигурации](#️-файлы-конфигурации)
-  - [Конфигурация с первого взгляда](#конфигурация-с-первого-взгляда)
-  - [Файлы и их жизненные циклы](#файлы-и-их-жизненные-циклы)
 - [🔧 Команды](#-команды)
 - [🏗 Архитектура](#-архитектура)
-- [🪨 Оптимизация токенов (Caveman)](#-оптимизация-токенов-caveman)
 - [🔌 MCP-серверы](#-mcp-серверы)
+- [🪨 Оптимизация токенов (Caveman)](#-оптимизация-токенов-caveman)
+- [⚙️ Файлы конфигурации](#️-файлы-конфигурации)
 - [📂 Структура проекта](#-структура-проекта)
 - [🪝 Хуки](#-хуки)
 - [📐 Соглашения](#-соглашения)
+
+---
 
 ## ⚡ Быстрый старт
 
@@ -39,13 +39,13 @@
 
 После установки `/workflow` оркеструет планирование → реализацию → ревью → коммит для любой задачи. Три шага до рабочего кита:
 
-1. **Установите** кит в корень вашего проекта. Эта одна команда разворачивает всё — Workflow-пайплайн `.claude/`, 3 MCP-сервера (`.mcp.json`, авто-одобряемые через `enableAllProjectMcpServers`) и персональные настройки по умолчанию (`.claude/settings.local.json`, дефолты кита в strict-режиме):
+1. **Установите** кит в корень вашего проекта. Одна команда разворачивает всё — Workflow-пайплайн `.claude/`, 3 MCP-сервера (`.mcp.json`) и персональные настройки (`.claude/settings.local.json`):
 
    ```bash
    curl -sL https://raw.githubusercontent.com/hex0xdeadbeef/claude-kit/main/install.sh | bash
    ```
 
-   Ручной `cp` не нужен — `settings.local.json` и `.mcp.json` создаются автоматически (а при `--update` новые дефолты подмёрживаются, при этом ваши правки сохраняются). MCP-серверам нужны `npx` (Node.js) и/или `uvx` (uv); если чего-то не хватает, установщик выведет команду установки для вашей ОС. После установки рантайма **перезапустите Claude Code** — серверы автоматически загрузятся и скачаются при следующем запуске (проверьте через `claude mcp list`).
+   Ручной `cp` не нужен — `settings.local.json` и `.mcp.json` создаются автоматически (а при `--update` новые дефолты подмёрживаются, при этом ваши правки сохраняются). MCP-серверам нужны `npx` (Node.js) и/или `uvx` (uv); если чего-то не хватает, установщик выведет команду установки. После установки рантайма **перезапустите Claude Code** — серверы автоматически загрузятся при следующем запуске (проверьте через `claude mcp list`).
 
 2. **Сгенерируйте знание о проекте**, чтобы у агентов был контекст вашей кодовой базы:
 
@@ -61,9 +61,7 @@
    /workflow Add new REST endpoint for profiles
    ```
 
-Уже используете кит? См. **Обновление существующей установки** ниже про путь `--update`.
-
-**Предпочитаете плагин?** claude-kit также устанавливается как нативный плагин Claude Code (кросс-проектно, версионируется, без копирования файлов в ваш репозиторий) — см. **Установка как плагин** ниже. Обе дистрибуции сосуществуют.
+**Уже используете кит?** См. **Обновление существующей установки** ниже про путь `--update`. **Предпочитаете плагин?** claude-kit также устанавливается как нативный плагин Claude Code (кросс-проектно, версионируется, без копирования файлов в ваш репозиторий) — см. **Установка как плагин** ниже. Обе дистрибуции сосуществуют.
 
 <details>
 <summary>Обновление существующей установки</summary>
@@ -142,127 +140,6 @@ cp .mcp.json.example /path/to/your/project/.mcp.json
 В режиме плагина кит по умолчанию ставит валидацию контрактов в **strict**, запускает security- и review-хуки и автоматически инъектит контекст Language Profile при старте сессии. Чтобы также засеять `.claude/settings.local.json` вашего проекта env-дефолтами кита, включите plugin-настройку `provision_settings_local` (по умолчанию выключена). Изоляция worktree у `code-reviewer` работает как обычно; задайте `worktree.sparsePaths` в своём `settings.local.json`, если вашему монорепо нужен меньший review-worktree.
 
 </details>
-
----
-
-## ⚙️ Файлы конфигурации
-
-Поведением кита управляют пять поверхностей: два файла настроек, один MCP-файл, один артефакт project-knowledge и языковой профиль внутри `CLAUDE.md`. Матрица **Конфигурация с первого взгляда** ниже — это главный индекс часто редактируемых параметров: где каждый находится, что делает, когда его редактировать и где найти подробный разбор; продвинутые параметры тонкой настройки документированы в `CLAUDE.md` и в комментариях env файла `.example`. **Файлы и их жизненные циклы** документирует git-статус и владение для каждого файла. Три подраздела `###` ниже — это подробные разборы по каждому файлу (один из них, `.mcp.json.example`, — это файл в корне репозитория, а не внутри `.claude/`).
-
-### Конфигурация с первого взгляда
-
-Главный индекс часто редактируемых параметров конфигурации, предоставляемых китом. Столбец `Reference` ссылается на подраздел с подробным разбором в этом разделе (или на `🪨 Token Optimization (Caveman)` для `CLAUDE_CAVEMAN_MODE`). Три install/global переменные окружения (`KIT_VERSION`, `INSTALL_DIR`, `CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING`) здесь не перечислены — они активируются во время установки или через глобальное shell-окружение Claude Code, а не через `.claude/settings.local.json`. Продвинутые параметры тонкой настройки (например, `CLAUDE_ISSUE_ID_NORMALIZE_VERSION`, `CLAUDE_VERDICT_BLOCK_TTL_HOURS`, `CLAUDE_PRECOMPACT_COOLDOWN_S`, `CLAUDE_KIT_PHASE_COMPLETION_NOTIFY`, `CLAUDE_KIT_MCP_PRELOAD`, `CLAUDE_TOOL_FAILURES_MAX_LINES`) документированы в `CLAUDE.md` и в комментариях env файла `.example`. Они документированы в **Quick Start** > Install options и в [⚙️ Маршрутизация моделей](#️-маршрутизация-моделей).
-
-| Параметр | Где находится | Что контролирует | Когда редактировать | Активация | Reference |
-|------|----------|----------|--------------|------------|-----------|
-| `CLAUDE_HANDOFF_VALIDATION_MODE` | `settings.local.json` env | strict-режим для IMP-01 schema-валидации handoff JSON | ужесточение раскатки | раскомментировать в блоке env | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
-| `CLAUDE_VERDICT_VALIDATION_MODE` | `settings.local.json` env | strict-режим для IMP-02 схемы конверта вердикта | ужесточение раскатки | раскомментировать в блоке env | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
-| `CLAUDE_ISSUE_ID_VALIDATION_MODE` | `settings.local.json` env | strict-режим для IMP-03 канонических issue ID | ужесточение раскатки | раскомментировать в блоке env | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
-| `CLAUDE_PROJECT_KNOWLEDGE_MODE` | `settings.local.json` env | блокировать запуск `/workflow`, если `PROJECT-KNOWLEDGE.md` отсутствует/является заглушкой для задач M+ | принудительное наличие PK | раскомментировать в блоке env | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
-| `CLAUDE_PK_PATH_MODE` | `settings.local.json` env | блокировать «голые» ссылки `PROJECT-KNOWLEDGE.md` (без префикса `.claude/`) | строгая проверка ссылок | раскомментировать в блоке env | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
-| `CLAUDE_DELTA_REVIEW_MODE` | `settings.local.json` env | внедрять только дельта-контекст в ревьюеров на итерации ≥ 2 | ускорение ревью на итерации ≥ 2 | `warn` или `strict` | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
-| `CLAUDE_CAVEMAN_MODE` | `settings.local.json` env | режим краткого вывода для запусков `/workflow` | снижение стоимости Messages-токенов | `lite` (единственный режим в v1) | [🪨 Оптимизация токенов (Caveman)](#-оптимизация-токенов-caveman) |
-| `ENABLE_PROMPT_CACHING_1H` | `settings.local.json` env | продлить TTL кэша 5 мин → 1H для тарифов без подписки | пользователи API-key/Bedrock/Vertex/Foundry | `1` (по умолчанию ON в `.example`) | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
-| `FORCE_PROMPT_CACHING_5M` | `settings.local.json` env | принудительный 5-минутный TTL независимо от тарифа | контроль стоимости для коротких задач S/M | `1` (раскомментировать) | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
-| `GIT_STRIP_CO_AUTHOR` | `settings.local.json` env | убирать `Co-Authored-By` из автоматически генерируемых коммитов | личное предпочтение | `true` | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
-| `worktree.sparsePaths` | `settings.json` или `settings.local.json` | какие поддеревья выгружает worktree агента `code-reviewer` | монорепозитории / большие репозитории | редактировать JSON-массив | [Monorepo sparse paths](#claudesettingslocaljsonexample--personal-overrides) |
-| `permissions.allow` / `permissions.deny` | `settings.local.json` | дополнительные allow/deny правила, объединяемые с общим `settings.json` | оверрайды для конкретной машины | редактировать JSON-массивы | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
-| `.mcp.json` (3 сервера) | в gitignore после установки | MCP-серверы `sequential-thinking`, `context7`, `tree_sitter` | личная/помашинная настройка | автоматически создаётся `install.sh`, новые серверы объединяются при `--update` (ваша конфигурация в приоритете) | [`.mcp.json.example`](#mcpjsonexample--mcp-server-endpoints) |
-| `.claude/PROJECT-KNOWLEDGE.md` | коммитится для каждого проекта | анализ кодовой базы, внедряемый как контекст агента | один раз на проект, обновлять при изменении архитектуры | запустить `/project-researcher` | [Project Knowledge Base](#claudeproject-knowledgemd--project-knowledge-base) |
-| `CLAUDE.md` > Language Profile | коммитится | языковые слоты (`LANG_EXT`, `VERIFY_CMD` и т. д.), источник каскада | при первой установке для не-Go стеков | редактировать `CLAUDE.md` напрямую | [Быстрый старт](#-быстрый-старт) Step 2 |
-| `.claude/.kit-version` | управляется автоматически | отслеживает установленную версию кита для `install.sh --update` | никогда (управляется `install.sh`) | n/a | управляется автоматически `install.sh` |
-
-### Файлы и их жизненные циклы
-
-У каждого файла свой жизненный цикл и git-статус. `install.sh` автоматически провижионит помашинные/попроектные файлы (`settings.local.json`, `.mcp.json`) при установке и поддерживает их в актуальном состоянии при `--update` (ваши значения в приоритете); редактируйте их для кастомизации или используйте ручные команды `cp` ниже для сброса.
-
-| Файл | Git-статус (в вашем проекте) | Жизненный цикл | Назначение |
-|------|------------------------------|-----------|---------|
-| `.claude/settings.json` | коммитится | на кит | Хуки, разрешения, модель по умолчанию, регистрации MCP-серверов |
-| `.claude/settings.local.json` | в gitignore после `install.sh` (провижионится из `.default`) | автоматически создаётся `install.sh` из `.claude/settings.local.json.default`; новые значения по умолчанию объединяются при `--update` (ваши значения в приоритете); личная / помашинная | Оверрайды env, дополнительные разрешения, sparse paths для монорепозитория |
-| `.claude/settings.local.json.default` | коммитится | на кит | Принадлежащий киту источник установки с активными дефолтами по умолчанию — `install.sh` создаёт/объединяет `settings.local.json` из него (`.example` — это полный документированный справочник по переключателям, а не источник установки) |
-| `.mcp.json` | в gitignore после `install.sh` (авто-провижионинг + слияние; ваша конфигурация в приоритете) | автоматически создаётся `install.sh` из `.mcp.json.example`, когда отсутствует, иначе слияние на уровне ключей при `--update` (ваша конфигурация в приоритете); личная / помашинная | Эндпоинты MCP-серверов (`sequential-thinking`, `context7`, `tree_sitter`) |
-| `.claude/PROJECT-KNOWLEDGE.md` | коммитится (сохраняется при `--update`) | на проект | Автоматически генерируемый анализ кодовой базы, используемый как контекст всеми агентами |
-| `.claude/.kit-version` | в gitignore (регенерируется `install.sh` при каждой установке/обновлении; export-ignore из релизных тарболлов) | на установку | Отслеживает установленную версию кита для `install.sh --update` |
-
-### `.claude/settings.local.json.example` — Personal Overrides
-
-`install.sh` автоматически создаёт `.claude/settings.local.json` из `.claude/settings.local.json.default` (опинионированная активная конфигурация кита) при первой установке, так что свежая установка уже имеет значения по умолчанию. При `--update` он на уровне ключей **объединяет** любые новые значения по умолчанию из `.default` в ваш файл — ваши существующие значения всегда в приоритете, а документационные ключи (переключатели с ведущим `_`) не внедряются в ваш выверенный файл. Этот `.example` — полный документированный справочник по переключателям, а не источник установки. Редактируйте свой `settings.local.json` для кастомизации. Чтобы сбросить или настроить вручную:
-
-```bash
-# Documented reference (all toggles visible) — recommended for manual setup:
-cp .claude/settings.local.json.example .claude/settings.local.json
-# — or reset to the exact active defaults install.sh ships:
-cp .claude/settings.local.json.default .claude/settings.local.json
-```
-
-Семантика слияния в сравнении с `settings.json`: скаляры переопределяют, массивы объединяются, `deny` побеждает `allow`. Файл в gitignore и **сохраняется при `install.sh --update`**.
-
-<details>
-<summary>📋 Env-переменные (активируются удалением ведущего <code>_</code>)</summary>
-
-| Переменная | По умолчанию в `.example` | Эффект |
-|----------|----------------------|--------|
-| `GIT_STRIP_CO_AUTHOR` | `false` | Убирает строки `Co-Authored-By` из автоматически генерируемых сообщений коммитов |
-| `CLAUDE_HANDOFF_VALIDATION_MODE` | `_strict` *(неактивно)* | `strict` блокирует запись невалидного handoff JSON; `warn` логирует и продолжает (IMP-01) |
-| `CLAUDE_VERDICT_VALIDATION_MODE` | `_strict` *(неактивно)* | `strict` принудительно применяет схему VERDICT_JSON; иначе откатывается к regex-извлечению (IMP-02) |
-| `CLAUDE_ISSUE_ID_VALIDATION_MODE` | `_strict` *(неактивно)* | `strict` блокирует записи вердиктов, у которых `issues[].id` не соответствует каноническому паттерну `^[PC]R-[0-9a-f]{8}$` (IMP-03); regex-фолбэк всё ещё спасает вердикт в `warn` |
-| `CLAUDE_PROJECT_KNOWLEDGE_MODE` | `_strict` *(неактивно)* | `strict` БЛОКИРУЕТ запуск `/workflow`, когда `PROJECT-KNOWLEDGE.md` отсутствует или имеет значения-заглушки для задач M+ |
-| `CLAUDE_PK_PATH_MODE` | `_strict` *(неактивно)* | `strict` блокирует записи, содержащие «голые» ссылки `PROJECT-KNOWLEDGE.md` (без префикса `.claude/`) — отлавливается `meta-agent/check-references` |
-| `ENABLE_PROMPT_CACHING_1H` | `1` | Продлевает TTL кэша промптов 5 мин → 1H для пользователей API-key/Bedrock/Vertex/Foundry; noop на тарифе с подпиской (v2.1.108) |
-| `FORCE_PROMPT_CACHING_5M` | `_1` *(неактивно)* | Принудительный 5-минутный TTL независимо от тарифа платформы — контроль стоимости для коротких задач S/M |
-| `CLAUDE_DELTA_REVIEW_MODE` | `_warn` *(неактивно)* | `warn` (HINT) / `strict` (FOCUS) внедряет только дельта-контекст в ревьюеров на итерации ≥2; `off` сохраняет полный контекст |
-| `CLAUDE_CAVEMAN_MODE` | `_lite` *(неактивно)* | `lite` активирует проектно-локальный caveman-режим краткого вывода для родительской сессии `/workflow` (orchestrator/designer/planner/coder); агенты reviewer/researcher исключаются в любом случае через SubagentStart suspend-хук. `off` полностью отключает. См. [🪨 Оптимизация токенов (Caveman)](#-оптимизация-токенов-caveman) |
-
-Ключи верхнего уровня с ведущим `_` (например, `_comment`, `_env_comment`, `_worktree_comment`) — это документация, а не env-переменные.
-
-</details>
-
-<details>
-<summary>🌳 Monorepo sparse paths</summary>
-
-Ускорьте создание worktree агента `code-reviewer` в репозиториях с 100k+ файлов, выгружая только релевантные поддеревья:
-
-```json
-"worktree": {
-  "sparsePaths": [".claude/", "src/", "tests/", "package.json"]
-}
-```
-
-Поставляемый `.example` по умолчанию рассчитан на Go-раскладку (`internal/`, `cmd/`, `go.mod`, `go.sum`, `Makefile`). Переопределите под ваш стек — JS, Python, Rust, пакеты монорепозитория и т. д. Добавьте `.claude/`, если ревьюеру нужно читать правила проекта изнутри worktree.
-
-</details>
-
-### `.mcp.json.example` — MCP Server Endpoints
-
-Помашинная конфигурация (в gitignore после `install.sh`). `install.sh` автоматически создаёт `.mcp.json` из этого шаблона при первой установке и обновляет `.example` при каждом запуске, так что MCP-серверы провижионятся без ручных шагов (авто-одобрение через `enableAllProjectMcpServers` в `settings.json`). При `--update` он **объединяет** любые новые серверы кита в ваш `.mcp.json`, сохраняя ваши существующие/кастомизированные серверы (ваша конфигурация в приоритете). Чтобы сбросить, настроить вручную или влить в существующий `.mcp.json`:
-
-```bash
-cp .mcp.json.example .mcp.json   # fresh setup
-# — or merge the relevant blocks into an existing .mcp.json
-```
-
-Кит поставляет `sequential-thinking` предзагруженным (`alwaysLoad: true` жёстко зашит в `.mcp.json.example`) — он загружается при старте сессии, а не через отложенный ToolSearch. Это статический факт конфигурации, не зависящий ни от какой переменной окружения: сама переменная `CLAUDE_KIT_MCP_PRELOAD` по умолчанию равна `off` и управляет только тем, флагирует ли `mcp-preload-warn.sh` дрейф, если конфигурация когда-либо потеряет предзагрузку. Удалите `alwaysLoad` у этого сервера, чтобы отложить загрузку до ToolSearch и сэкономить на холодном старте и контекстных токенах.
-
-Поставляется с тремя серверами:
-
-| Сервер | Транспорт | Используется |
-|--------|-----------|---------|
-| `sequential-thinking` | `npx @modelcontextprotocol/server-sequential-thinking` | `/planner`, `/designer` на задачах L/XL (обязательно) |
-| `context7` | `npx @upstash/context7-mcp` (proxy-bypass env preset) | Поиск документации по библиотекам в фазах coder/planner (обязательно) |
-| `tree_sitter` | `uvx --python ">=3.10" --python-preference only-system mcp-server-tree-sitter` | Структурный анализ `/project-researcher` (опционально — агенты откатываются к grep) |
-
-Установите `uv` один раз для `uvx`: `curl -LsSf https://astral.sh/uv/install.sh | sh`. `npx` поставляется с Node.js. См. [🔌 MCP-серверы](#-mcp-серверы) для матрицы обязательное-vs-опциональное.
-
-### `.claude/PROJECT-KNOWLEDGE.md` — Project Knowledge Base
-
-Автоматически генерируемый анализ кодовой базы (архитектура, модули, зависимости, языковой профиль), потребляемый как контекст `/planner`, `/coder`, `plan-reviewer` и `code-reviewer`. Сгенерируйте один раз после установки:
-
-```bash
-/project-researcher
-```
-
-Коммитится для каждого проекта — не является частью кита. **Сохраняется при `install.sh --update`**, поэтому обновления кита никогда не затирают ваши знания о проекте. Перезапускайте `/project-researcher`, когда архитектура существенно меняется (новый модуль, смена фреймворка, миграция схемы). Отсутствующий файл не фатален — агенты откатываются к блоку `Language Profile` в `CLAUDE.md`.
 
 ---
 
@@ -425,6 +302,8 @@ cp .mcp.json.example .mcp.json   # fresh setup
 ## 🏗 Архитектура
 
 Система представляет собой **многофазный пайплайн разработки**, управляемый оркестратором (`/workflow`), который последовательно делегирует работу специализированным агентам. Активные фазы зависят от сложности: **S=4** (пропускает Design и Plan Review) · **M=6** · **L/XL=8** (все фазы, включая Design и Spec Check). У каждого агента строго определены зона ответственности, назначенная модель и набор навыков.
+
+Четыре диаграммы ниже (пайплайн, поток передач, загрузка навыков, жизненный цикл хуков) свёрнуты — разверните нужную.
 
 <details>
 <summary>🔄 Пайплайн разработки</summary>
@@ -678,7 +557,8 @@ flowchart TB
 | **L** | 4–6 | 3+ | стандартно | рекомендуется | да |
 | **XL** | 7+ | 4+ | стандартно | обязательно | да |
 
-### 🔑 Ключевые принципы
+<details>
+<summary>🔑 Ключевые принципы</summary>
 
 - **Последовательное выполнение** — фазы не выполняются параллельно
 - **Протокол передач (Handoff Protocol)** — 5 типизированных контрактов полезной нагрузки между фазами с нарративным оформлением
@@ -692,6 +572,8 @@ flowchart TB
 - **Протокол Simplify** — опциональное упрощение кода перед ревью (L/XL, ≥5 parts, 30%-ная защита)
 - **Критика дизайна (Design Critique)** — `/designer` (L/XL) стресс-тестирует выбранный подход через фиксированный мультилинзовый red-team-набор в подфазе Phase 3.5 CRITIQUE перед написанием спецификации (поток designer: EXPLORE → CLARIFY → PROPOSE → CRITIQUE → SPEC → GATE); неразрешённые находки уровня HIGH переносятся в `/planner`
 - **Оптимизация worktree** — разреженный checkout через `worktree.sparsePaths` уменьшает размер worktree в монорепозиториях. Пути по умолчанию специфичны для Go: `.claude/`, `internal/`, `cmd/`, `go.mod`, `go.sum`, `Makefile`, `CLAUDE.md`. См. [Конфигурация с первого взгляда](#конфигурация-с-первого-взгляда) для настройки sparse-paths и подробный разбор [Sparse-пути в монорепозитории](#claudesettingslocaljsonexample--personal-overrides).
+
+</details>
 
 <details>
 <summary>⚙️ Инфраструктурные улучшения (серия IMP)</summary>
@@ -708,44 +590,6 @@ flowchart TB
 | **IMP-06** | Разрешение вердикта UNKNOWN | Многоуровневое восстановление: контрольная точка → прямое чтение транскрипта → агент verdict-recovery → ручной вердикт пользователя | фазы 2/4 в `orchestration-core.md` |
 
 </details>
-
----
-
-## 🪨 Оптимизация токенов (Caveman)
-
-Локальный для проекта форк [скилла caveman](https://github.com/juliusbrussee/caveman) — постоянно включённый режим лаконичного вывода для запусков `/workflow`. Убирает из прозы агентов слова-наполнители / хеджирование / любезности, чтобы снизить стоимость токенов Messages, сохраняя при этом всю техническую суть и несущий контракт структурированный вывод (JSON-конверты, заголовки плана, пути к файлам, блоки кода).
-
-**Активация:** активен (`lite`) по умолчанию после установки — шаг онбординга засеивает `CLAUDE_CAVEMAN_MODE: lite` в `.claude/settings.local.json` (из `.claude/settings.local.json.default`), а хук SessionStart также разрешается в `lite`, когда переменная не задана. См. строку `CLAUDE_CAVEMAN_MODE` в разделе [Конфигурация с первого взгляда](#конфигурация-с-первого-взгляда). Чтобы **отключить** на конкретной машине, установите `off` в `.claude/settings.local.json`:
-
-```json
-"env": {
-  "CLAUDE_CAVEMAN_MODE": "off"
-}
-```
-
-Вступает в силу при **следующем** запуске сессии Claude Code.
-
-**Режимы:**
-
-| Значение | Поведение |
-|-------|----------|
-| `lite` *(единственная интенсивность, поддерживаемая в v1; поставляется по умолчанию)* | Убирает слова-наполнители ("just", "really", "basically"), любезности ("sure", "happy to"), хеджирование ("it might be worth"). Сохраняет полные предложения, артикли, технические термины, блоки кода. Ожидается снижение токенов Messages на ~30-40%. |
-| `off` *(opt-out)* | Хук SessionStart завершается без вывода — нулевая инъекция, побайтово идентично поведению до v1.21.0. |
-
-> **Почему только `lite`:** в исходном caveman поставляется 6 режимов (`lite`, `full`, `ultra`, `wenyan-*`); только `lite` сохраняет полные предложения — остальные допускают фрагменты предложений, которые повреждают канонический хеш идентификатора issue (`sha256(category|location|problem)[:8]` согласно IMP-03). Остальные режимы отключены в этом форке, чтобы сохранить конверт VERDICT_JSON и стабильность ID между итерациями.
-
-**Исключение для ревьюера/исследователя (защита в глубину):**
-
-| Слой | Механизм |
-|-------|-----------|
-| **1. Хук** | `SubagentStart` → `caveman-suspend-for-reviewer.sh` внедряет фразу `[caveman OFF for this delegation]` для `plan-reviewer`, `code-reviewer`, `verdict-recovery`, `code-researcher`. |
-| **2. Скилл** | `.claude/skills/caveman/SKILL.md` содержит 7 ДОСЛОВНЫХ фраз, защищающих несущий контракт вывод: строка enum `VERDICT:`, огороженные блоки `VERDICT_JSON:`, значения дискриминаторов `$handoff_contract` / `$verdict_contract`, H2-заголовки плана/спецификации (`## Scope`, `## Architecture Decision`, `## Tests`, `## Acceptance Criteria`, `## Parts`), текст `issue.problem` / `issue.suggestion`, пути к файлам и ссылки `file:line`, идентификаторы Part (`Part N:`). |
-
-Любой слой по отдельности защищает контракт; оба вместе = устойчивость к отказу в одной точке (опечатка в matcher ИЛИ дрейф промпта).
-
-**Локальный для проекта инвариант:** все файлы caveman находятся внутри `.claude/`. Кит никогда не изменяет `~/.claude/`. Отключение caveman в claude-kit НЕ влияет ни на один другой проект Claude Code.
-
-**Выключатель (откат):** установите `CLAUDE_CAVEMAN_MODE=off` (либо удалите переменную полностью и удалите файл-флаг `.claude/workflow-state/.caveman-mode`). Хук завершается без вывода → побайтово идентично отключённому состоянию.
 
 ---
 
@@ -783,7 +627,168 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ---
 
+## 🪨 Оптимизация токенов (Caveman)
+
+Локальный для проекта форк [скилла caveman](https://github.com/juliusbrussee/caveman) — постоянно включённый режим лаконичного вывода для запусков `/workflow`. Убирает из прозы агентов слова-наполнители / хеджирование / любезности, чтобы снизить стоимость токенов Messages, сохраняя при этом всю техническую суть и несущий контракт структурированный вывод (JSON-конверты, заголовки плана, пути к файлам, блоки кода).
+
+**Активен (`lite`) по умолчанию** после установки — шаг онбординга засеивает `CLAUDE_CAVEMAN_MODE: lite` в `.claude/settings.local.json` (из `.claude/settings.local.json.default`), а хук SessionStart также разрешается в `lite`, когда переменная не задана. Чтобы **отключить** на конкретной машине, установите `off` в `.claude/settings.local.json` (вступает в силу при **следующем** запуске сессии):
+
+```json
+"env": {
+  "CLAUDE_CAVEMAN_MODE": "off"
+}
+```
+
+**Режимы:**
+
+| Значение | Поведение |
+|-------|----------|
+| `lite` *(единственная интенсивность, поддерживаемая в v1; поставляется по умолчанию)* | Убирает слова-наполнители ("just", "really", "basically"), любезности ("sure", "happy to"), хеджирование ("it might be worth"). Сохраняет полные предложения, артикли, технические термины, блоки кода. Ожидается снижение токенов Messages на ~30-40%. |
+| `off` *(opt-out)* | Хук SessionStart завершается без вывода — нулевая инъекция, побайтово идентично поведению до v1.21.0. (Для полного сброса также удалите переменную и удалите файл-флаг `.claude/workflow-state/.caveman-mode`.) |
+
+<details>
+<summary>Почему только lite + исключение для ревьюера/исследователя (безопасность контрактов)</summary>
+
+**Почему только `lite`:** в исходном caveman поставляется 6 режимов (`lite`, `full`, `ultra`, `wenyan-*`); только `lite` сохраняет полные предложения — остальные допускают фрагменты предложений, которые повреждают канонический хеш идентификатора issue (`sha256(category|location|problem)[:8]` согласно IMP-03). Остальные режимы отключены в этом форке, чтобы сохранить конверт VERDICT_JSON и стабильность ID между итерациями.
+
+**Исключение для ревьюера/исследователя (защита в глубину):**
+
+| Слой | Механизм |
+|-------|-----------|
+| **1. Хук** | `SubagentStart` → `caveman-suspend-for-reviewer.sh` внедряет фразу `[caveman OFF for this delegation]` для `plan-reviewer`, `code-reviewer`, `verdict-recovery`, `code-researcher`. |
+| **2. Скилл** | `.claude/skills/caveman/SKILL.md` содержит 7 ДОСЛОВНЫХ фраз, защищающих несущий контракт вывод: строка enum `VERDICT:`, огороженные блоки `VERDICT_JSON:`, значения дискриминаторов `$handoff_contract` / `$verdict_contract`, H2-заголовки плана/спецификации (`## Scope`, `## Architecture Decision`, `## Tests`, `## Acceptance Criteria`, `## Parts`), текст `issue.problem` / `issue.suggestion`, пути к файлам и ссылки `file:line`, идентификаторы Part (`Part N:`). |
+
+Любой слой по отдельности защищает контракт; оба вместе = устойчивость к отказу в одной точке (опечатка в matcher ИЛИ дрейф промпта).
+
+**Локальный для проекта инвариант:** все файлы caveman находятся внутри `.claude/`. Кит никогда не изменяет `~/.claude/`. Отключение caveman в claude-kit НЕ влияет ни на один другой проект Claude Code.
+
+</details>
+
+---
+
+## ⚙️ Файлы конфигурации
+
+Поведением кита управляют пять поверхностей: два файла настроек (`.claude/settings.json` коммитится, `.claude/settings.local.json` помашинный), один MCP-файл (`.mcp.json`), один артефакт project-knowledge (`.claude/PROJECT-KNOWLEDGE.md`) и Language Profile внутри `CLAUDE.md`. `install.sh` автоматически провижионит помашинные/попроектные файлы и на уровне ключей **подмёрживает** новые дефолты при `--update` — **ваши значения всегда в приоритете**. Матрицы ниже индексируют каждый параметр; подразделы `###` — это подробные разборы по каждому файлу.
+
+### Конфигурация с первого взгляда
+
+Главный индекс часто редактируемых параметров конфигурации. Здесь не перечислены: install/global env-переменные (`KIT_VERSION`, `INSTALL_DIR`, `CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING` — задаются при установке или в глобальном shell-окружении) и продвинутые параметры тонкой настройки (`CLAUDE_ISSUE_ID_NORMALIZE_VERSION`, `CLAUDE_VERDICT_BLOCK_TTL_HOURS`, `CLAUDE_PRECOMPACT_COOLDOWN_S`, `CLAUDE_KIT_PHASE_COMPLETION_NOTIFY`, `CLAUDE_KIT_MCP_PRELOAD`, `CLAUDE_TOOL_FAILURES_MAX_LINES`) — и те, и другие документированы в `CLAUDE.md` и в комментариях env файла `.example`.
+
+<details>
+<summary>📋 Все параметры конфигурации</summary>
+
+| Параметр | Где находится | Что контролирует | Когда редактировать | Активация | Reference |
+|------|----------|----------|--------------|------------|-----------|
+| `CLAUDE_HANDOFF_VALIDATION_MODE` | `settings.local.json` env | strict-режим для IMP-01 schema-валидации handoff JSON | ужесточение раскатки | раскомментировать в блоке env | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `CLAUDE_VERDICT_VALIDATION_MODE` | `settings.local.json` env | strict-режим для IMP-02 схемы конверта вердикта | ужесточение раскатки | раскомментировать в блоке env | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `CLAUDE_ISSUE_ID_VALIDATION_MODE` | `settings.local.json` env | strict-режим для IMP-03 канонических issue ID | ужесточение раскатки | раскомментировать в блоке env | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `CLAUDE_PROJECT_KNOWLEDGE_MODE` | `settings.local.json` env | блокировать запуск `/workflow`, если `PROJECT-KNOWLEDGE.md` отсутствует/является заглушкой для задач M+ | принудительное наличие PK | раскомментировать в блоке env | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `CLAUDE_PK_PATH_MODE` | `settings.local.json` env | блокировать «голые» ссылки `PROJECT-KNOWLEDGE.md` (без префикса `.claude/`) | строгая проверка ссылок | раскомментировать в блоке env | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `CLAUDE_DELTA_REVIEW_MODE` | `settings.local.json` env | внедрять только дельта-контекст в ревьюеров на итерации ≥ 2 | ускорение ревью на итерации ≥ 2 | `warn` или `strict` | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `CLAUDE_CAVEMAN_MODE` | `settings.local.json` env | режим краткого вывода для запусков `/workflow` | снижение стоимости Messages-токенов | `lite` (единственный режим в v1) | [🪨 Оптимизация токенов (Caveman)](#-оптимизация-токенов-caveman) |
+| `ENABLE_PROMPT_CACHING_1H` | `settings.local.json` env | продлить TTL кэша 5 мин → 1H для тарифов без подписки | пользователи API-key/Bedrock/Vertex/Foundry | `1` (по умолчанию ON в `.example`) | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `FORCE_PROMPT_CACHING_5M` | `settings.local.json` env | принудительный 5-минутный TTL независимо от тарифа | контроль стоимости для коротких задач S/M | `1` (раскомментировать) | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `GIT_STRIP_CO_AUTHOR` | `settings.local.json` env | убирать `Co-Authored-By` из автоматически генерируемых коммитов | личное предпочтение | `true` | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `worktree.sparsePaths` | `settings.json` или `settings.local.json` | какие поддеревья выгружает worktree агента `code-reviewer` | монорепозитории / большие репозитории | редактировать JSON-массив | [Monorepo sparse paths](#claudesettingslocaljsonexample--personal-overrides) |
+| `permissions.allow` / `permissions.deny` | `settings.local.json` | дополнительные allow/deny правила, объединяемые с общим `settings.json` | оверрайды для конкретной машины | редактировать JSON-массивы | [Personal Overrides](#claudesettingslocaljsonexample--personal-overrides) |
+| `.mcp.json` (3 сервера) | в gitignore после установки | MCP-серверы `sequential-thinking`, `context7`, `tree_sitter` | личная/помашинная настройка | автоматически создаётся `install.sh`, новые серверы объединяются при `--update` (ваша конфигурация в приоритете) | [`.mcp.json.example`](#mcpjsonexample--mcp-server-endpoints) |
+| `.claude/PROJECT-KNOWLEDGE.md` | коммитится для каждого проекта | анализ кодовой базы, внедряемый как контекст агента | один раз на проект, обновлять при изменении архитектуры | запустить `/project-researcher` | [Project Knowledge Base](#claudeproject-knowledgemd--project-knowledge-base) |
+| `CLAUDE.md` > Language Profile | коммитится | языковые слоты (`LANG_EXT`, `VERIFY_CMD` и т. д.), источник каскада | при первой установке для не-Go стеков | редактировать `CLAUDE.md` напрямую | [Быстрый старт](#-быстрый-старт) Step 2 |
+| `.claude/.kit-version` | управляется автоматически | отслеживает установленную версию кита для `install.sh --update` | никогда (управляется `install.sh`) | n/a | управляется автоматически `install.sh` |
+
+</details>
+
+### Файлы и их жизненные циклы
+
+<details>
+<summary>📋 Git-статус и жизненный цикл по файлам</summary>
+
+У каждого файла свой жизненный цикл и git-статус. `install.sh` автоматически провижионит помашинные/попроектные файлы (`settings.local.json`, `.mcp.json`) при установке и поддерживает их в актуальном состоянии при `--update` (ваши значения в приоритете); редактируйте их для кастомизации или используйте ручные команды `cp` из подразделов ниже для сброса.
+
+| Файл | Git-статус (в вашем проекте) | Жизненный цикл | Назначение |
+|------|------------------------------|-----------|---------|
+| `.claude/settings.json` | коммитится | на кит | Хуки, разрешения, модель по умолчанию, регистрации MCP-серверов |
+| `.claude/settings.local.json` | в gitignore после `install.sh` (провижионится из `.default`) | автоматически создаётся `install.sh` из `.claude/settings.local.json.default`; новые значения по умолчанию объединяются при `--update` (ваши значения в приоритете); личная / помашинная | Оверрайды env, дополнительные разрешения, sparse paths для монорепозитория |
+| `.claude/settings.local.json.default` | коммитится | на кит | Принадлежащий киту источник установки с активными дефолтами по умолчанию — `install.sh` создаёт/объединяет `settings.local.json` из него (`.example` — это полный документированный справочник по переключателям, а не источник установки) |
+| `.mcp.json` | в gitignore после `install.sh` (авто-провижионинг + слияние; ваша конфигурация в приоритете) | автоматически создаётся `install.sh` из `.mcp.json.example`, когда отсутствует, иначе слияние на уровне ключей при `--update` (ваша конфигурация в приоритете); личная / помашинная | Эндпоинты MCP-серверов (`sequential-thinking`, `context7`, `tree_sitter`) |
+| `.claude/PROJECT-KNOWLEDGE.md` | коммитится (сохраняется при `--update`) | на проект | Автоматически генерируемый анализ кодовой базы, используемый как контекст всеми агентами |
+| `.claude/.kit-version` | в gitignore (регенерируется `install.sh` при каждой установке/обновлении; export-ignore из релизных тарболлов) | на установку | Отслеживает установленную версию кита для `install.sh --update` |
+
+</details>
+
+### `.claude/settings.local.json.example` — Personal Overrides
+
+`install.sh` создаёт `.claude/settings.local.json` из `.claude/settings.local.json.default` (опинионированная активная конфигурация кита) при первой установке, а при `--update` на уровне ключей **объединяет** новые дефолты в ваш файл — ваши существующие значения всегда в приоритете, а документационные ключи (переключатели с ведущим `_`) никогда не внедряются. Этот `.example` — полный документированный справочник по переключателям, а не источник установки. Семантика слияния в сравнении с `settings.json`: скаляры переопределяют, массивы объединяются, `deny` побеждает `allow`. Файл в gitignore и **сохраняется при `install.sh --update`**. Чтобы сбросить или настроить вручную:
+
+```bash
+# Documented reference (all toggles visible) — recommended for manual setup:
+cp .claude/settings.local.json.example .claude/settings.local.json
+# — or reset to the exact active defaults install.sh ships:
+cp .claude/settings.local.json.default .claude/settings.local.json
+```
+
+<details>
+<summary>📋 Env-переменные (активируются удалением ведущего <code>_</code>)</summary>
+
+| Переменная | По умолчанию в `.example` | Эффект |
+|----------|----------------------|--------|
+| `GIT_STRIP_CO_AUTHOR` | `false` | Убирает строки `Co-Authored-By` из автоматически генерируемых сообщений коммитов |
+| `CLAUDE_HANDOFF_VALIDATION_MODE` | `_strict` *(неактивно)* | `strict` блокирует запись невалидного handoff JSON; `warn` логирует и продолжает (IMP-01) |
+| `CLAUDE_VERDICT_VALIDATION_MODE` | `_strict` *(неактивно)* | `strict` принудительно применяет схему VERDICT_JSON; иначе откатывается к regex-извлечению (IMP-02) |
+| `CLAUDE_ISSUE_ID_VALIDATION_MODE` | `_strict` *(неактивно)* | `strict` блокирует записи вердиктов, у которых `issues[].id` не соответствует каноническому паттерну `^[PC]R-[0-9a-f]{8}$` (IMP-03); regex-фолбэк всё ещё спасает вердикт в `warn` |
+| `CLAUDE_PROJECT_KNOWLEDGE_MODE` | `_strict` *(неактивно)* | `strict` БЛОКИРУЕТ запуск `/workflow`, когда `PROJECT-KNOWLEDGE.md` отсутствует или имеет значения-заглушки для задач M+ |
+| `CLAUDE_PK_PATH_MODE` | `_strict` *(неактивно)* | `strict` блокирует записи, содержащие «голые» ссылки `PROJECT-KNOWLEDGE.md` (без префикса `.claude/`) — отлавливается `meta-agent/check-references` |
+| `ENABLE_PROMPT_CACHING_1H` | `1` | Продлевает TTL кэша промптов 5 мин → 1H для пользователей API-key/Bedrock/Vertex/Foundry; noop на тарифе с подпиской (v2.1.108) |
+| `FORCE_PROMPT_CACHING_5M` | `_1` *(неактивно)* | Принудительный 5-минутный TTL независимо от тарифа платформы — контроль стоимости для коротких задач S/M |
+| `CLAUDE_DELTA_REVIEW_MODE` | `_warn` *(неактивно)* | `warn` (HINT) / `strict` (FOCUS) внедряет только дельта-контекст в ревьюеров на итерации ≥2; `off` сохраняет полный контекст |
+| `CLAUDE_CAVEMAN_MODE` | `_lite` *(неактивно)* | `lite` активирует проектно-локальный caveman-режим краткого вывода для родительской сессии `/workflow` (orchestrator/designer/planner/coder); агенты reviewer/researcher исключаются в любом случае через SubagentStart suspend-хук. `off` полностью отключает. См. [🪨 Оптимизация токенов (Caveman)](#-оптимизация-токенов-caveman) |
+
+Ключи верхнего уровня с ведущим `_` (например, `_comment`, `_env_comment`, `_worktree_comment`) — это документация, а не env-переменные.
+
+</details>
+
+<details>
+<summary>🌳 Monorepo sparse paths</summary>
+
+Ускорьте создание worktree агента `code-reviewer` в репозиториях с 100k+ файлов, выгружая только релевантные поддеревья:
+
+```json
+"worktree": {
+  "sparsePaths": [".claude/", "src/", "tests/", "package.json"]
+}
+```
+
+Поставляемый `.example` по умолчанию рассчитан на Go-раскладку (`internal/`, `cmd/`, `go.mod`, `go.sum`, `Makefile`). Переопределите под ваш стек — JS, Python, Rust, пакеты монорепозитория и т. д. Добавьте `.claude/`, если ревьюеру нужно читать правила проекта изнутри worktree.
+
+</details>
+
+### `.mcp.json.example` — MCP Server Endpoints
+
+Помашинная конфигурация (в gitignore после `install.sh`). `install.sh` автоматически создаёт `.mcp.json` из этого шаблона при первой установке (авто-одобрение через `enableAllProjectMcpServers` в `settings.json`); при `--update` он **объединяет** новые серверы кита, сохраняя ваши существующие/кастомизированные серверы (ваша конфигурация в приоритете). `sequential-thinking` поставляется предзагруженным (`alwaysLoad: true` жёстко зашит здесь) — он загружается при старте сессии, а не через отложенный ToolSearch; удалите `alwaysLoad` у него, чтобы отложить загрузку и сэкономить на холодном старте и контекстных токенах. Чтобы сбросить, настроить вручную или влить в существующий `.mcp.json`:
+
+```bash
+cp .mcp.json.example .mcp.json   # fresh setup
+# — or merge the relevant blocks into an existing .mcp.json
+```
+
+| Сервер | Транспорт | Используется |
+|--------|-----------|---------|
+| `sequential-thinking` | `npx @modelcontextprotocol/server-sequential-thinking` | `/planner`, `/designer` на задачах L/XL (обязательно) |
+| `context7` | `npx @upstash/context7-mcp` (proxy-bypass env preset) | Поиск документации по библиотекам в фазах coder/planner (обязательно) |
+| `tree_sitter` | `uvx --python ">=3.10" --python-preference only-system mcp-server-tree-sitter` | Структурный анализ `/project-researcher` (опционально — агенты откатываются к grep) |
+
+Установите `uv` один раз для `uvx`: `curl -LsSf https://astral.sh/uv/install.sh | sh`. `npx` поставляется с Node.js. См. [🔌 MCP-серверы](#-mcp-серверы) для матрицы обязательное-vs-опциональное.
+
+### `.claude/PROJECT-KNOWLEDGE.md` — Project Knowledge Base
+
+Автоматически генерируемый анализ кодовой базы (архитектура, модули, зависимости, языковой профиль), потребляемый как контекст `/planner`, `/coder`, `plan-reviewer` и `code-reviewer`. Сгенерируйте один раз после установки командой `/project-researcher`. Коммитится для каждого проекта (не является частью кита) и **сохраняется при `install.sh --update`**, поэтому обновления кита никогда не затирают ваши знания о проекте. Перезапускайте `/project-researcher`, когда архитектура существенно меняется (новый модуль, смена фреймворка, миграция схемы). Отсутствующий файл не фатален — агенты откатываются к блоку `Language Profile` в `CLAUDE.md`.
+
+---
+
 ## 📂 Структура проекта
+
+<details>
+<summary>📂 Полная раскладка <code>.claude/</code></summary>
 
 ```
 .
@@ -825,11 +830,16 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
     └── .kit-version                  # (created in YOUR project by install.sh — not shipped in the kit tarball)
 ```
 
+</details>
+
 ---
 
 ## 🪝 Хуки
 
-Настраиваются в `.claude/settings.json`. Автоматически обеспечивают соблюдение качества:
+Настраиваются в `.claude/settings.json` — они автоматически обеспечивают соблюдение качества. Security- и build-хуки блокируют (`protect-files.sh`, `block-dangerous-commands.sh`, `check-artifact-size.sh`, `pre-commit-build.sh`); большинство остальных не блокируют.
+
+<details>
+<summary>🪝 Все хуки (по триггеру)</summary>
 
 | Хук | Триггер | Назначение |
 |------|---------|---------|
@@ -862,6 +872,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 | `caveman-activate.sh` | SessionStart | Внедряет проектно-локальный набор правил терсе-вывода caveman lite-mode как `additionalContext` (оптимизация токенов, начиная с v1.21.0) |
 | `mcp-preload-warn.sh` | SessionStart | Предупреждает (не блокирующе) при старте сессии, когда `CLAUDE_KIT_MCP_PRELOAD=on`, но в `.mcp.json` отсутствует `alwaysLoad` у `sequential-thinking`, с областью действия по активным контрольным точкам workflow |
 | `caveman-suspend-for-reviewer.sh` | SubagentStart (`plan-reviewer` / `code-reviewer` / `verdict-recovery` / `code-researcher`) | Выдаёт маркер исключения `[caveman OFF for this delegation]`, чтобы конверты VERDICT_JSON ревьюера/исследователя оставались байт-стабильными между итерациями (защита в глубину для стабильности canonical_id по IMP-03) |
+
+</details>
 
 ---
 
