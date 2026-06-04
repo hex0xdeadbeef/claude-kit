@@ -89,6 +89,11 @@ same cascade (PROJECT-KNOWLEDGE.md → LANGUAGE > kit-default Go > `_default`).
 
 ## Notes
 
+- **Accepted validation warning:** `claude plugin validate` reports one EXPECTED warning —
+  "CLAUDE.md at the plugin root is not loaded as project context". This is by design: the kit
+  delivers that CLAUDE.md "project context" tier via this SessionStart injection
+  (`inject-kit-context.sh`) instead of a plugin-root CLAUDE.md. Validation passes-with-warnings;
+  no action needed.
 - Strict-mode contract validation (handoff / verdict / issue-id) defaults to **strict** in plugin
   mode (no env seeding needed). Dangerous-command blocking + file protection run as plugin hooks.
 - **Worktree isolation:** the `code-reviewer` agent runs in an isolated git worktree (clean
