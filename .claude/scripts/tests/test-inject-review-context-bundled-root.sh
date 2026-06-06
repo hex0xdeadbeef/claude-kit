@@ -20,15 +20,17 @@ else
   fail "A: plugin mode missing BUNDLED KIT ROOT directive / abs path"
 fi
 
-# Case B — project mode (CLAUDE_PLUGIN_ROOT unset) → directive ABSENT (inert)
+# Case B — project-scoped install (env unset, bundled root == project root) → directive ABSENT (inert).
+# CLAUDE_PROJECT_DIR == $ROOT (the script's own bundled root); env -u guarantees no ambient
+# CLAUDE_PLUGIN_ROOT masks the inert assertion (PR-001).
 SB=$(mktemp -d -t injbundleB.XXXXXX)
 printf 'feature: feat-b\ncomplexity: L\nphase_completed: 4\niteration:\n  plan_review: 1/3\n  code_review: 1/3\n' > "$SB/feat-b-checkpoint.yaml"
-OUTB=$(echo '{"session_id":"x"}' | env -u CLAUDE_PLUGIN_ROOT CLAUDE_WORKFLOW_STATE_DIR="$SB" bash .claude/scripts/inject-review-context.sh plan-reviewer 2>/dev/null || true)
+OUTB=$(echo '{"session_id":"x"}' | env -u CLAUDE_PLUGIN_ROOT CLAUDE_PROJECT_DIR="$ROOT" CLAUDE_WORKFLOW_STATE_DIR="$SB" bash .claude/scripts/inject-review-context.sh plan-reviewer 2>/dev/null || true)
 rm -rf "$SB"
 if echo "$OUTB" | grep -q "BUNDLED KIT ROOT"; then
-  fail "B: project mode leaked BUNDLED KIT ROOT directive"
+  fail "B: project-scoped (bundled==project) leaked directive"
 else
-  pass "B: project mode inert (no directive)"
+  pass "B: project-scoped (bundled==project) inert (no directive)"
 fi
 
 # Case C — both reviewer bodies carry the pinned STARTUP marker 'Load your review rules:' co-located
@@ -53,6 +55,19 @@ if echo "$OUTD" | grep -q "BUNDLED KIT ROOT"; then
   pass "D: plugin mode + no checkpoint (early-exit) still emits directive"
 else
   fail "D: early-exit path dropped BUNDLED KIT ROOT directive"
+fi
+
+# Case E — env-unset plugin mode: Claude Code does NOT export CLAUDE_PLUGIN_ROOT to SubagentStart
+# hook processes (anthropics/claude-code#27145), but bundled root != project root → directive present,
+# anchored at the bundled root (== $ROOT, the script's own location). FAILS against pre-fix code.
+SB=$(mktemp -d -t injbundleE.XXXXXX)
+printf 'feature: feat-e\ncomplexity: L\nphase_completed: 4\niteration:\n  plan_review: 1/3\n  code_review: 1/3\n' > "$SB/feat-e-checkpoint.yaml"
+OUTE=$(echo '{"session_id":"x"}' | env -u CLAUDE_PLUGIN_ROOT CLAUDE_PROJECT_DIR="$SB" CLAUDE_WORKFLOW_STATE_DIR="$SB" bash .claude/scripts/inject-review-context.sh plan-reviewer 2>/dev/null || true)
+rm -rf "$SB"
+if echo "$OUTE" | grep -q "BUNDLED KIT ROOT" && echo "$OUTE" | grep -qF "$ROOT"; then
+  pass "E: env-unset plugin mode (bundled != project) emits directive + bundled root"
+else
+  fail "E: env-unset plugin mode dropped BUNDLED KIT ROOT directive"
 fi
 
 echo "rc=$rc"

@@ -51,9 +51,24 @@ else
     bad "plugin no-CLAUDE.md injection missing markers: $(printf '%s' "$outA" | head -c 160)"
 fi
 
-# Case B: project mode (no CLAUDE_PLUGIN_ROOT) → no-op
-outB="$(env -u CLAUDE_PLUGIN_ROOT CLAUDE_PROJECT_DIR="$TMP" bash "$HOOK" </dev/null 2>/dev/null || true)"
-assert_empty "$outB" "project mode (no CLAUDE_PLUGIN_ROOT)"
+# Case B: project-scoped install (env unset, bundled root == project root) → no-op.
+# CLAUDE_PROJECT_DIR == $REPO_ROOT (the script's own bundled root) is the faithful project-scoped
+# scenario; env -u guarantees no ambient CLAUDE_PLUGIN_ROOT masks the no-op assertion (PR-001).
+outB="$(env -u CLAUDE_PLUGIN_ROOT CLAUDE_PROJECT_DIR="$REPO_ROOT" bash "$HOOK" </dev/null 2>/dev/null || true)"
+assert_empty "$outB" "project-scoped (bundled root == project root, env unset)"
+
+# Case D: env-unset plugin mode — Claude Code does NOT export CLAUDE_PLUGIN_ROOT to SessionStart hook
+# processes (anthropics/claude-code#27145), but the bundled root != project root → directive MUST
+# still be emitted. $TMP has no CLAUDE.md yet (Case C writes one below), so the Language Profile is
+# appended too. This case FAILS against pre-fix code (old GATE 1 bails on unset env var).
+outD="$(env -u CLAUDE_PLUGIN_ROOT CLAUDE_PROJECT_DIR="$TMP" bash "$HOOK" </dev/null 2>/dev/null || true)"
+if printf '%s' "$outD" | grep -q "$MARKER" \
+   && printf '%s' "$outD" | grep -qF "$REPO_ROOT" \
+   && printf '%s' "$outD" | grep -q 'Language Profile'; then
+    ok "env-unset plugin mode (bundled != project) → directive present + Language Profile"
+else
+    bad "env-unset plugin mode dropped directive: $(printf '%s' "$outD" | head -c 160)"
+fi
 
 # Case C: plugin mode + project HAS its own CLAUDE.md → directive STILL injected, Language Profile DROPPED.
 # (The path directive is orthogonal to the Language-Profile tier; only the latter yields to the project's CLAUDE.md.)

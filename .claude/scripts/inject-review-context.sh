@@ -97,17 +97,35 @@ def _emit(ctx):
 
 
 def _bundled_root_directive():
-    # R1 (reviewer-rule-delivery): in plugin mode the reviewer's bundled -rules skill lives
-    # under CLAUDE_PLUGIN_ROOT, not the project. The reviewer runs in isolated context and
-    # never sees the SessionStart inject-kit-context.sh directive, so carry it here (the only
-    # reviewer-side runtime context holding CLAUDE_PLUGIN_ROOT). Byte-identical marker to
-    # inject-kit-context.sh so one resolution rule covers commands AND reviewers. Empty in
-    # project mode (var unset) -> inert.
-    pr = os.environ.get("CLAUDE_PLUGIN_ROOT", "")
-    if not pr:
+    # R1 (reviewer-rule-delivery): in plugin mode the reviewer's bundled -rules skill lives under
+    # the plugin root, not the project. The reviewer runs in isolated context and never sees the
+    # SessionStart inject-kit-context.sh directive, so carry it here. Detect plugin mode WITHOUT the
+    # CLAUDE_PLUGIN_ROOT env var — Claude Code does not export it to SubagentStart hook processes
+    # (anthropics/claude-code#27145, #24529). LIB_DIR (= <bundled_root>/.claude/scripts/lib) is the
+    # authoritative anchor. Plugin mode <=> CLAUDE_PLUGIN_ROOT set OR bundled root != project root.
+    # Byte-identical marker to inject-kit-context.sh. Empty in project mode (roots coincide) -> inert.
+    lib_dir = os.environ.get("LIB_DIR", "")
+    if not lib_dir:
         return ""
+    bundled_root = os.path.dirname(os.path.dirname(os.path.dirname(lib_dir)))  # lib -> scripts -> .claude -> root
+    project_root = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    plugin_env = os.environ.get("CLAUDE_PLUGIN_ROOT", "")
+
+    def _canon(p):
+        # os.path.realpath resolves the macOS /var -> /private/var symlink and strips trailing
+        # slashes; on a missing path it resolves lexically (falls toward emitting, safe) — matches
+        # the bash _canon subshell `pwd -P` fallback in inject-kit-context.sh (PR-002).
+        try:
+            return os.path.realpath(p)
+        except Exception:
+            return p
+
+    plugin_mode = bool(plugin_env) or (_canon(bundled_root) != _canon(project_root))
+    if not plugin_mode:
+        return ""
+    anchor = plugin_env or bundled_root
     return (
-        f"BUNDLED KIT ROOT: {pr}\n"
+        f"BUNDLED KIT ROOT: {anchor}\n"
         "Resolve every kit .claude/skills, .claude/templates, and supporting protocol file "
         "under this BUNDLED KIT ROOT — they ship inside the plugin, not your project. "
         "Project STATE (.claude/prompts, .claude/workflow-state, .claude/agent-memory) "
@@ -567,6 +585,10 @@ if comp_lines:
 _delta_mode = (
     _extract_top_level(content, "delta_review_mode")
     # Part 3 / P1: default to 'strict' when running as a plugin (CLAUDE_PLUGIN_ROOT set), else 'off'.
+    # NOTE (Fix A): this default still gates on the CLAUDE_PLUGIN_ROOT env var, which Claude Code does
+    # NOT export to SubagentStart hook processes (anthropics/claude-code#27145), so in env-unset plugin
+    # mode it stays 'off' even though _bundled_root_directive() now detects plugin mode via the bundled
+    # root. Unifying this onto the bundled-root signal is Fix B / audit F3 (out of Fix A scope).
     or (os.environ.get("CLAUDE_DELTA_REVIEW_MODE")
         or ("strict" if os.environ.get("CLAUDE_PLUGIN_ROOT") else "off")).lower()
 )
