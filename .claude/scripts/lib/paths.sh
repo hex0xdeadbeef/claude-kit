@@ -36,3 +36,21 @@
 # shellcheck disable=SC2034  # these are consumed by sourcing scripts
 KIT_PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-${REPO_ROOT:-$PWD}}"
 KIT_ROOT="${REPO_ROOT:-$PWD}"
+
+# Plugin-mode detection that does NOT depend on CLAUDE_PLUGIN_ROOT being exported to the hook
+# process env — Claude Code does NOT export it to SessionStart/SubagentStart hook processes
+# (anthropics/claude-code#27145, #24529); it only substitutes the ${CLAUDE_PLUGIN_ROOT} token into
+# the command-string at config level. The bundled root (KIT_ROOT, BASH_SOURCE-derived) is the
+# authoritative anchor. KIT_PLUGIN_MODE=1 when CLAUDE_PLUGIN_ROOT is set (it IS exported for
+# PreToolUse/PostToolUse) OR the canonicalized bundled root differs from the project root. In a
+# project-scoped install (or the kit's own repo) the two roots coincide -> KIT_PLUGIN_MODE=0.
+# Canonicalize in command-substitution subshells (cd && pwd -P) so cwd is not mutated; missing path
+# falls back to the raw literal (falls toward plugin-mode=1, safe — mirrors Fix A _canon).
+_kit_br="$( cd "${KIT_ROOT:-}" 2>/dev/null && pwd -P || printf '%s' "${KIT_ROOT:-}" )"
+_kit_pr="$( cd "${KIT_PROJECT_ROOT:-}" 2>/dev/null && pwd -P || printf '%s' "${KIT_PROJECT_ROOT:-}" )"
+if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] || [ "${_kit_br}" != "${_kit_pr}" ]; then
+  KIT_PLUGIN_MODE=1
+else
+  KIT_PLUGIN_MODE=0
+fi
+unset _kit_br _kit_pr 2>/dev/null || true

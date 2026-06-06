@@ -21,14 +21,23 @@
 set -uo pipefail
 
 # ── GATE 1: plugin mode only ──────────────────────────────────────────────────
-# Outside a plugin, the native CLAUDE.md is loaded — nothing to inject.
-if [ -z "${CLAUDE_PLUGIN_ROOT:-}" ]; then
-  exit 0
-fi
-
+# Plugin mode is detected WITHOUT relying on CLAUDE_PLUGIN_ROOT being exported to the hook process
+# env — Claude Code does NOT export it to SessionStart hook processes (anthropics/claude-code#27145,
+# #24529); it only substitutes the ${CLAUDE_PLUGIN_ROOT} token into the command-string at config
+# level. The script's own bundled root (REPO_ROOT, derived from BASH_SOURCE) is the authoritative
+# anchor. Plugin mode <=> CLAUDE_PLUGIN_ROOT set (it IS exported for PreToolUse/PostToolUse) OR the
+# bundled root differs from the project root. Project-scoped install / kit's own repo: roots
+# coincide -> no-op.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
+# _canon canonicalizes in a subshell so the script's cwd is NOT mutated; on a missing path bash
+# pwd -P falls back to the raw literal (falls toward emitting, safe) — matches the python
+# os.path.realpath path in inject-review-context.sh _bundled_root_directive() (PR-002).
+_canon() { ( cd "$1" 2>/dev/null && pwd -P ) || printf '%s' "$1"; }
+if [ -z "${CLAUDE_PLUGIN_ROOT:-}" ] && [ "$(_canon "${REPO_ROOT}")" = "$(_canon "${PROJECT_ROOT}")" ]; then
+  exit 0
+fi
 CONTEXT_FILE="${REPO_ROOT}/.claude/docs/plugin-context.md"
 MAX_BYTES="${CLAUDE_KIT_CONTEXT_MAX_BYTES:-25600}"   # 25 KB parity with the memory loader cap
 

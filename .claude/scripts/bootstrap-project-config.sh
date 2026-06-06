@@ -23,12 +23,16 @@
 set -uo pipefail
 
 # ── GATE 1: plugin mode only ──────────────────────────────────────────────────
-[ -n "${CLAUDE_PLUGIN_ROOT:-}" ] || exit 0
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+# shellcheck source=lib/paths.sh
+[ -f "${REPO_ROOT}/.claude/scripts/lib/paths.sh" ] && . "${REPO_ROOT}/.claude/scripts/lib/paths.sh"
+# Plugin mode is env-independent (lib/paths.sh KIT_PLUGIN_MODE) — Claude Code does NOT export
+# CLAUDE_PLUGIN_ROOT to SessionStart hooks (anthropics/claude-code#27145). Project installs use install.sh.
+[ "${KIT_PLUGIN_MODE:-0}" = "1" ] || exit 0
 # ── GATE 2: explicit opt-in (userConfig) ──────────────────────────────────────
 [ "${CLAUDE_PLUGIN_OPTION_PROVISION_SETTINGS_LOCAL:-}" = "true" ] || exit 0
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
 SOURCE="${REPO_ROOT}/.claude/settings.local.json.default"
 TARGET="${PROJECT_ROOT}/.claude/settings.local.json"

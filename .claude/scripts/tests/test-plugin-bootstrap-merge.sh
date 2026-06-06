@@ -74,10 +74,25 @@ D="$ROOT_TMP/d"; mkdir -p "$D/.claude"
 run_bootstrap "$D" $PLUGIN                     # opt-in absent
 [ ! -f "$D/.claude/settings.local.json" ] && ok "no opt-in → no-op (nothing provisioned)" || bad "no opt-in → unexpectedly provisioned"
 
-# ── Case E: opt-in but NOT plugin mode → no-op ────────────────────────────────
-E="$ROOT_TMP/e"; mkdir -p "$E/.claude"
-run_bootstrap "$E" $OPTIN                      # CLAUDE_PLUGIN_ROOT unset
-[ ! -f "$E/.claude/settings.local.json" ] && ok "no plugin mode → no-op (nothing provisioned)" || bad "no plugin mode → unexpectedly provisioned"
+# ── Case E (Fix B): project-scoped install (bundled root == project root) → no-op even with opt-in. ──
+# Copy the hook + paths.sh into a temp project so the BASH_SOURCE-derived bundled root == project root.
+E="$ROOT_TMP/e"; mkdir -p "$E/.claude/scripts/lib"
+cp "$HOOK" "$E/.claude/scripts/bootstrap-project-config.sh"
+cp .claude/scripts/lib/paths.sh "$E/.claude/scripts/lib/paths.sh"
+cp "$DEFAULT" "$E/.claude/settings.local.json.default"
+env -u CLAUDE_PLUGIN_ROOT CLAUDE_PLUGIN_OPTION_PROVISION_SETTINGS_LOCAL=true \
+    CLAUDE_PROJECT_DIR="$E" CLAUDE_WORKFLOW_STATE_DIR="$E/.claude/workflow-state" \
+    bash "$E/.claude/scripts/bootstrap-project-config.sh" </dev/null >/dev/null 2>&1 || true
+[ ! -f "$E/.claude/settings.local.json" ] && ok "project-scoped (bundled == project) + opt-in → no-op" || bad "project-scoped → unexpectedly provisioned"
+
+# ── Case G (Fix B, RED): env-unset plugin mode (bundled != project) + opt-in → MUST provision. ──
+# CLAUDE_PLUGIN_ROOT unset (anthropics/claude-code#27145); real $HOOK bundled root != $G → plugin mode.
+# Pre-fix GATE 1 bailed on unset env → no provisioning (RED).
+G="$ROOT_TMP/g"; mkdir -p "$G/.claude"
+env -u CLAUDE_PLUGIN_ROOT CLAUDE_PLUGIN_OPTION_PROVISION_SETTINGS_LOCAL=true \
+    CLAUDE_PROJECT_DIR="$G" CLAUDE_WORKFLOW_STATE_DIR="$G/.claude/workflow-state" \
+    bash "$HOOK" </dev/null >/dev/null 2>&1 || true
+[ -f "$G/.claude/settings.local.json" ] && ok "env-unset plugin (bundled != project) + opt-in → provisions" || bad "env-unset plugin + opt-in → failed to provision"
 
 # ── Case F (CR-001): malformed existing target → untouched + NO sentinel (retryable) ──
 F="$ROOT_TMP/f"; mkdir -p "$F/.claude"

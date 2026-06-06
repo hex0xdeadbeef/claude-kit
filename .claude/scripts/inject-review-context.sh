@@ -96,18 +96,36 @@ def _emit(ctx):
     print(json.dumps({"hookSpecificOutput": {"hookEventName": "SubagentStart", "additionalContext": ctx}}))
 
 
+def _kit_plugin_mode():
+    # Env-independent plugin detection — mirror of lib/paths.sh KIT_PLUGIN_MODE. Claude Code does NOT
+    # export CLAUDE_PLUGIN_ROOT to SubagentStart hook processes (anthropics/claude-code#27145, #24529).
+    # LIB_DIR (= <bundled_root>/.claude/scripts/lib) is the authoritative anchor.
+    if os.environ.get("CLAUDE_PLUGIN_ROOT"):
+        return True
+    lib_dir = os.environ.get("LIB_DIR", "")
+    if not lib_dir:
+        return False
+    bundled_root = os.path.dirname(os.path.dirname(os.path.dirname(lib_dir)))
+    project_root = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    try:
+        return os.path.realpath(bundled_root) != os.path.realpath(project_root)
+    except Exception:
+        return bundled_root != project_root
+
+
 def _bundled_root_directive():
-    # R1 (reviewer-rule-delivery): in plugin mode the reviewer's bundled -rules skill lives
-    # under CLAUDE_PLUGIN_ROOT, not the project. The reviewer runs in isolated context and
-    # never sees the SessionStart inject-kit-context.sh directive, so carry it here (the only
-    # reviewer-side runtime context holding CLAUDE_PLUGIN_ROOT). Byte-identical marker to
-    # inject-kit-context.sh so one resolution rule covers commands AND reviewers. Empty in
-    # project mode (var unset) -> inert.
-    pr = os.environ.get("CLAUDE_PLUGIN_ROOT", "")
-    if not pr:
+    # R1 (reviewer-rule-delivery): in plugin mode the reviewer's bundled -rules skill lives under the
+    # plugin root, not the project. The reviewer runs in isolated context and never sees the
+    # SessionStart inject-kit-context.sh directive, so carry it here. Plugin mode is detected via the
+    # env-independent _kit_plugin_mode() (mirror of lib/paths.sh KIT_PLUGIN_MODE). Byte-identical
+    # marker to inject-kit-context.sh. Empty in project mode (roots coincide) -> inert.
+    if not _kit_plugin_mode():
         return ""
+    lib_dir = os.environ.get("LIB_DIR", "")
+    bundled_root = os.path.dirname(os.path.dirname(os.path.dirname(lib_dir))) if lib_dir else ""
+    anchor = os.environ.get("CLAUDE_PLUGIN_ROOT", "") or bundled_root
     return (
-        f"BUNDLED KIT ROOT: {pr}\n"
+        f"BUNDLED KIT ROOT: {anchor}\n"
         "Resolve every kit .claude/skills, .claude/templates, and supporting protocol file "
         "under this BUNDLED KIT ROOT — they ship inside the plugin, not your project. "
         "Project STATE (.claude/prompts, .claude/workflow-state, .claude/agent-memory) "
@@ -566,9 +584,11 @@ if comp_lines:
 # IMP-04 delta-review-mode
 _delta_mode = (
     _extract_top_level(content, "delta_review_mode")
-    # Part 3 / P1: default to 'strict' when running as a plugin (CLAUDE_PLUGIN_ROOT set), else 'off'.
+    # Part 3 / P1 + Fix B (audit F3): default to 'strict' in plugin mode via the env-independent
+    # bundled-root detection (_kit_plugin_mode()), else 'off'. An explicit CLAUDE_DELTA_REVIEW_MODE
+    # always wins (outer or).
     or (os.environ.get("CLAUDE_DELTA_REVIEW_MODE")
-        or ("strict" if os.environ.get("CLAUDE_PLUGIN_ROOT") else "off")).lower()
+        or ("strict" if _kit_plugin_mode() else "off")).lower()
 )
 if _delta_mode in ("warn", "strict"):
     emit_delta_focus_block(
