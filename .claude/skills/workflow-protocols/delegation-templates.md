@@ -28,6 +28,7 @@ diff-manifest — both required for iteration 2+ correctness.
     - "Iteration: N/3"
     - "Prior iteration issues: checkpoint.issues_history[] (if iteration > 1)"
   delegation_prompt_template: |
+    {if a BUNDLED KIT ROOT directive is present in your (orchestrator) context — plugin mode: paste that directive block here VERBATIM, before the line below (see pre_delegation STEP -3)}
     Review the implementation plan at .claude/prompts/{feature}.md
 
     [Context from planner]:
@@ -49,6 +50,16 @@ diff-manifest — both required for iteration 2+ correctness.
     Iteration: {N}/3
   returns: "Verdict (APPROVED/NEEDS_CHANGES/REJECTED) + issues + handoff for coder"
   pre_delegation: |
+    STEP -3 (F3 — redundant BUNDLED KIT ROOT prompt channel):
+    If your own orchestrator context contains a "BUNDLED KIT ROOT" directive (injected by
+    SessionStart inject-kit-context.sh in plugin mode), copy that directive VERBATIM into the
+    head of the delegation_prompt_template above, before the "Review ..." line. The delegation
+    prompt always reaches the agent, so this is a third channel (prompt + sidecar + SubagentStart
+    hook) — the reviewer can resolve its bundled -rules skill even when the best-effort sidecar is
+    absent. In a project-scoped install no such directive is present in your context → omit it
+    (the reviewer uses project-relative paths). Source the literal "BUNDLED KIT ROOT:" marker
+    from your injected context.
+
     STEP MODE (delta-review-mode — KD-3, R-3):
     Write delta_review_mode to checkpoint once per pipeline run (idempotent).
     Read CLAUDE_DELTA_REVIEW_MODE env (default "off" if unset).
@@ -194,6 +205,7 @@ diff-manifest — both required for iteration 2+ correctness.
     - "Prior iteration issues: checkpoint.issues_history[] (if iteration > 1)"
     - "Design spec: path + acceptance criteria count (if complexity L/XL and spec exists)"
   delegation_prompt_template: |
+    {if a BUNDLED KIT ROOT directive is present in your (orchestrator) context — plugin mode: paste that directive block here VERBATIM, before the line below (see pre_delegation STEP -3)}
     Review code changes on the current branch.
 
     [Context from coder]:
@@ -224,6 +236,16 @@ diff-manifest — both required for iteration 2+ correctness.
     Iteration: {N}/3
   returns: "Verdict (APPROVED/APPROVED_WITH_COMMENTS/CHANGES_REQUESTED) + issues + handoff for completion"
   pre_delegation: |
+    STEP -3 (F3 — redundant BUNDLED KIT ROOT prompt channel):
+    If your own orchestrator context contains a "BUNDLED KIT ROOT" directive (injected by
+    SessionStart inject-kit-context.sh in plugin mode), copy that directive VERBATIM into the
+    head of the delegation_prompt_template above, before the "Review ..." line. The delegation
+    prompt always reaches the agent, so this is a third channel (prompt + sidecar + SubagentStart
+    hook) — the worktree-isolated reviewer can resolve its bundled -rules skill even when the
+    best-effort sidecar is absent. In a project-scoped install no such directive is present in
+    your context → omit it (the reviewer uses project-relative paths). Source the literal
+    "BUNDLED KIT ROOT:" marker from your injected context.
+
     STEP SHA (KD-2 — iteration_commit_sha):
     Record current HEAD SHA in checkpoint before delegating to code-reviewer.
     This SHA represents the coder's committed state for this review iteration.
