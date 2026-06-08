@@ -58,7 +58,7 @@ diff-manifest — both required for iteration 2+ correctness.
     hook) — the reviewer can resolve its bundled -rules skill even when the best-effort sidecar is
     absent. In a project-scoped install no such directive is present in your context → omit it
     (the reviewer uses project-relative paths). Source the literal "BUNDLED KIT ROOT:" marker
-    from your injected context.
+    from your injected context. If your context lacks the directive (e.g. after a compaction — anthropics/claude-code#15174), read the bundled root from .claude/workflow-state/.bundled-kit-root and synthesize the directive from it.
 
     STEP MODE (delta-review-mode — KD-3, R-3):
     Write delta_review_mode to checkpoint once per pipeline run (idempotent).
@@ -139,6 +139,26 @@ diff-manifest — both required for iteration 2+ correctness.
     1. Validate output (SEE output_validation in incomplete-output-recovery.md —
        load that file if INCOMPLETE verdict detected)
     2. Extract verdict from VERDICT: header (first line)
+
+    2.0 (B4 — reviewer setup-error recovery; NOT a {plan|code} rejection):
+        If the extracted verdict == "REJECTED" AND the agent narrative contains the literal
+        signature "Rubric unresolvable" (the reviewer could not resolve its -rules rubric from a
+        trusted anchor — see plan-reviewer.md / code-reviewer.md STARTUP):
+          a. This is an ENVIRONMENT/setup failure, not a {plan|code} defect. Do NOT STOP the
+             pipeline and do NOT increment the {plan_review|code_review} iteration counter.
+          b. Recover the bundled root: read .claude/workflow-state/.bundled-kit-root (or use the
+             BUNDLED KIT ROOT directive already in your context).
+          c. Re-dispatch the SAME agent ONCE, inlining the BUNDLED KIT ROOT directive at the head
+             of the delegation prompt (STEP -3) AND, for code-reviewer, re-writing the sidecar
+             (STEP -2). This is a setup retry, not a review iteration.
+          d. Log to .claude/workflow-state/handoff-validation.jsonl:
+             {"record_kind": "reviewer_setup_error_recovery", "agent": "{agent}",
+              "feature": "{feature}", "signature": "Rubric unresolvable", "session_id": "{session_id}"}
+          e. If the re-dispatch ALSO returns REJECTED with "Rubric unresolvable" → genuine
+             environment failure → STOP with: "[workflow] FATAL: reviewer rubric unresolvable after
+             BUNDLED KIT ROOT re-dispatch — check plugin install / .bundled-kit-root marker."
+          f. Otherwise continue normal routing with the re-dispatch verdict as this iteration's result.
+        NOTE: the VERDICT enum is unchanged (no new value); this is orchestrator-side routing only.
 
     2.5 (IMP-04 — KD-4 contract-break routing): Scan issues for BLOCKER whose
         problem text starts with the exact literal prefix:
@@ -244,7 +264,7 @@ diff-manifest — both required for iteration 2+ correctness.
     hook) — the worktree-isolated reviewer can resolve its bundled -rules skill even when the
     best-effort sidecar is absent. In a project-scoped install no such directive is present in
     your context → omit it (the reviewer uses project-relative paths). Source the literal
-    "BUNDLED KIT ROOT:" marker from your injected context.
+    "BUNDLED KIT ROOT:" marker from your injected context. If your context lacks the directive (e.g. after a compaction — anthropics/claude-code#15174), read the bundled root from .claude/workflow-state/.bundled-kit-root and synthesize the directive from it.
 
     STEP SHA (KD-2 — iteration_commit_sha):
     Record current HEAD SHA in checkpoint before delegating to code-reviewer.
@@ -272,15 +292,27 @@ diff-manifest — both required for iteration 2+ correctness.
     skip code delta emission gracefully (non-blocking, AC-5).
 
     STEP -2 (P3 — sidecar write for worktree-isolated code-reviewer):
-    Before STEP -1 (.iteration-in-flight write), invoke:
+    Before STEP -1 (.iteration-in-flight write), resolve the bundled kit root (B2 — plugin-safe path) and invoke:
+      KIT_ROOT="$(cat .claude/workflow-state/.bundled-kit-root 2>/dev/null)"
       echo '{"session_id": "{session_id}"}' \
-        | bash .claude/scripts/inject-review-context.sh code-reviewer --sidecar-only
+        | bash "${KIT_ROOT:-.}/.claude/scripts/inject-review-context.sh" code-reviewer --sidecar-only
     Produces .claude/workflow-state/code-reviewer-INJECTED-CONTEXT.md.
     Native worktree creation copies this file into the worktree via repo-root .worktreeinclude;
     code-reviewer.md startup reads it from .claude/workflow-state/code-reviewer-INJECTED-CONTEXT.md
     as additionalContext-equivalent.
-    Best-effort: missing sidecar is non-blocking — code-reviewer falls back to
-    its current "no prior context" path.
+    VERIFY (F4 — do not launch a reviewer that will false-REJECT): after the write, assert the
+    sidecar exists and is non-empty:
+      test -s .claude/workflow-state/code-reviewer-INJECTED-CONTEXT.md
+    In PLUGIN MODE the script ships under BUNDLED KIT ROOT (not the project); the .bundled-kit-root
+    marker (written by inject-kit-context.sh) supplies its path, and ${KIT_ROOT:-.} falls back to the
+    project-relative path in a project-scoped install (byte-identical to prior behavior). If the
+    sidecar is MISSING or EMPTY, the BUNDLED KIT ROOT directive MUST still reach the reviewer via
+    STEP -3 (delegation-prompt channel); confirm STEP -3 inlined it (read the .bundled-kit-root marker
+    if your context lacks the directive). Prompt + sidecar are two channels — at least one MUST carry
+    the directive in plugin mode; if BOTH are absent, STOP with a setup error rather than dispatching
+    a reviewer that will REJECT on an unresolvable rubric (see post_delegation step 2.0).
+    Best-effort caveat (project-scoped install): a missing sidecar is non-blocking — the reviewer
+    falls back to project-relative rubric paths that resolve natively.
     Rationale (revised 2026-05-27): SubagentStart fires for worktree agents, but
     inject-review-context's additionalContext does not reliably reach a worktree reviewer —
     the worktree runs origin/main's hooks (worktree.baseRef:"fresh") and the main-repo checkpoint
@@ -365,6 +397,26 @@ diff-manifest — both required for iteration 2+ correctness.
     1. Validate output (SEE output_validation in incomplete-output-recovery.md —
        load that file if INCOMPLETE verdict detected)
     2. Extract verdict from VERDICT: header (first line)
+
+    2.0 (B4 — reviewer setup-error recovery; NOT a {plan|code} rejection):
+        If the extracted verdict == "REJECTED" AND the agent narrative contains the literal
+        signature "Rubric unresolvable" (the reviewer could not resolve its -rules rubric from a
+        trusted anchor — see plan-reviewer.md / code-reviewer.md STARTUP):
+          a. This is an ENVIRONMENT/setup failure, not a {plan|code} defect. Do NOT STOP the
+             pipeline and do NOT increment the {plan_review|code_review} iteration counter.
+          b. Recover the bundled root: read .claude/workflow-state/.bundled-kit-root (or use the
+             BUNDLED KIT ROOT directive already in your context).
+          c. Re-dispatch the SAME agent ONCE, inlining the BUNDLED KIT ROOT directive at the head
+             of the delegation prompt (STEP -3) AND, for code-reviewer, re-writing the sidecar
+             (STEP -2). This is a setup retry, not a review iteration.
+          d. Log to .claude/workflow-state/handoff-validation.jsonl:
+             {"record_kind": "reviewer_setup_error_recovery", "agent": "{agent}",
+              "feature": "{feature}", "signature": "Rubric unresolvable", "session_id": "{session_id}"}
+          e. If the re-dispatch ALSO returns REJECTED with "Rubric unresolvable" → genuine
+             environment failure → STOP with: "[workflow] FATAL: reviewer rubric unresolvable after
+             BUNDLED KIT ROOT re-dispatch — check plugin install / .bundled-kit-root marker."
+          f. Otherwise continue normal routing with the re-dispatch verdict as this iteration's result.
+        NOTE: the VERDICT enum is unchanged (no new value); this is orchestrator-side routing only.
     2.1 (P-1 alias normalization): If extracted verdict == "NEEDS_CHANGES" (code-review legacy alias):
         a. Normalize: routing_verdict = "CHANGES_REQUESTED"
         b. Append record to .claude/workflow-state/handoff-validation.jsonl:

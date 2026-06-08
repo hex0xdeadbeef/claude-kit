@@ -159,6 +159,28 @@ if state_summary:
     parts.append("## Workflow State (verified)\n" + "\n".join(state_summary))
 
 text = "\n\n".join(parts) if parts else "PostCompact: no workflow state to verify"
+# B1 (BUGREPORT-plugin-mode-2026-06-09): re-inject BUNDLED KIT ROOT after compaction.
+# PostCompact additionalContext is a working channel (unlike SessionStart+compact —
+# anthropics/claude-code#15174). The .bundled-kit-root marker is the single source of
+# truth, written by inject-kit-context.sh in plugin mode. Prepend (head position) so the
+# directive survives the 6000-char CAP→PREVIEW path below (PR-002). Project mode: no
+# marker → no-op. Directive string is byte-identical to inject-kit-context.sh.
+_marker = os.path.join(state_dir, ".bundled-kit-root")
+if os.path.isfile(_marker):
+    try:
+        with open(_marker) as _mf:
+            _root = _mf.read().strip()
+    except Exception:
+        _root = ""
+    if _root:
+        _directive = (
+            f"BUNDLED KIT ROOT: {_root}\n"
+            "Resolve every kit .claude/skills, .claude/templates, and supporting protocol file "
+            "under this BUNDLED KIT ROOT — they ship inside the plugin, not your project. "
+            "Project STATE (.claude/prompts, .claude/workflow-state, .claude/agent-memory) "
+            "stays under your project root.\n\n"
+        )
+        text = _directive + text
 print(json.dumps({"additionalContext": text}))
 PYTHON_EOF
 )

@@ -193,7 +193,7 @@ startup:
       action: "Load workflow-protocols skill"
       files:
         - ".claude/skills/workflow-protocols/SKILL.md"
-      plugin_path_note: "Plugin mode: if a BUNDLED KIT ROOT directive is present in context, resolve this SKILL.md AND its on-demand supporting files under that root (bundled skills ship in the plugin, not the project). Project-scoped install: paths are already project-local — ignore."
+      plugin_path_note: "Plugin mode: if a BUNDLED KIT ROOT directive is present in context, resolve this SKILL.md AND its on-demand supporting files under that root (bundled skills ship in the plugin, not the project). If no BUNDLED KIT ROOT directive is present in context (e.g. after compaction — anthropics/claude-code#15174), read the bundled root from .claude/workflow-state/.bundled-kit-root and resolve under it. Project-scoped install: paths are already project-local — ignore."
       purpose: "Overview of handoff, checkpoint, re-routing, and metrics protocols. Supporting files loaded on-demand per event triggers."
 
     - step: 1

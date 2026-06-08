@@ -38,6 +38,18 @@ _canon() { ( cd "$1" 2>/dev/null && pwd -P ) || printf '%s' "$1"; }
 if [ -z "${CLAUDE_PLUGIN_ROOT:-}" ] && [ "$(_canon "${REPO_ROOT}")" = "$(_canon "${PROJECT_ROOT}")" ]; then
   exit 0
 fi
+
+# ── Durable bundled-root marker (B1: BUGREPORT-plugin-mode-2026-06-09) ─────────
+# SessionStart additionalContext is NOT re-injected after compaction when the hook fires with
+# source=compact (anthropics/claude-code#15174). Persist the bundled root to project STATE so the
+# orchestrator/commands and the PostCompact hook can recover it deterministically. Reaching here
+# => plugin mode. Best-effort: never blocks session start (exit-0 contract preserved).
+_MARKER_DIR="${PROJECT_ROOT}/.claude/workflow-state"
+if mkdir -p "${_MARKER_DIR}" 2>/dev/null; then
+  printf '%s\n' "${REPO_ROOT}" > "${_MARKER_DIR}/.bundled-kit-root" 2>/dev/null \
+    || echo "[inject-kit-context] WARN: failed to write .bundled-kit-root marker" >&2
+fi
+
 CONTEXT_FILE="${REPO_ROOT}/.claude/docs/plugin-context.md"
 MAX_BYTES="${CLAUDE_KIT_CONTEXT_MAX_BYTES:-25600}"   # 25 KB parity with the memory loader cap
 
