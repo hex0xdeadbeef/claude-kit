@@ -88,7 +88,7 @@ startup:
     - step: 0
       action: "Load design-rules skill"
       file: ".claude/skills/design-rules/SKILL.md"
-      plugin_path_note: "Plugin mode: if a BUNDLED KIT ROOT directive is present in context, resolve this path AND any on-demand supporting files from this skill (loaded later per event triggers) under that root (bundled skills ship in the plugin, not the project). Project-scoped install: paths are already project-local — ignore."
+      plugin_path_note: "Plugin mode: if a BUNDLED KIT ROOT directive is present in context, resolve this path AND any on-demand supporting files from this skill (loaded later per event triggers) under that root (bundled skills ship in the plugin, not the project). If no BUNDLED KIT ROOT directive is present in context (e.g. after compaction — anthropics/claude-code#15174), read the bundled root from .claude/workflow-state/.bundled-kit-root and resolve under it. Project-scoped install: paths are already project-local — ignore."
 
     - step: 1
       action: "Check for existing spec (--from-spec or .claude/prompts/{feature}-spec.md)"

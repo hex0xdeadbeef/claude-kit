@@ -71,6 +71,20 @@ else
     bad "bare \${REPO_ROOT}-anchored workflow-state found (would write to plugin cache): $leak"
 fi
 
+# ── B3 (BUGREPORT-plugin-mode-2026-06-09): planner step-2 plan-template Read carries a plugin_path_note ──
+PLANNER=".claude/commands/planner.md"
+if [ -f "$PLANNER" ] && python3 - "$PLANNER" <<'PY'
+import sys
+txt = open(sys.argv[1], encoding="utf-8").read()
+i = txt.find('file: ".claude/templates/plan-template.md"')
+sys.exit(0 if (i != -1 and 'plugin_path_note' in txt[i:i+600]) else 1)
+PY
+then
+    ok "planner step-2 plan-template Read carries a plugin_path_note (B3/Bug A1)"
+else
+    bad "planner step-2 plan-template Read MISSING plugin_path_note (Bug A1)"
+fi
+
 echo ""
 echo "Total: PASS=${PASS} FAIL=${FAIL}"
 [ "$FAIL" -eq 0 ]

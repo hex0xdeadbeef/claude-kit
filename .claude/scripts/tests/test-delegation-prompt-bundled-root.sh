@@ -40,4 +40,29 @@ for pair in "$CR:code-reviewer" "$PR:plan-reviewer"; do
   fi
 done
 
+# ── B2 (BUGREPORT-plugin-mode-2026-06-09): plugin-safe sidecar path + F4 verify ──
+
+# Case D — STEP -2 resolves the sidecar script under the .bundled-kit-root marker
+if grep -qF '.bundled-kit-root' "$DT"; then
+  pass "delegation-templates: STEP -2 resolves bundled script via .bundled-kit-root marker"
+else
+  fail "delegation-templates: STEP -2 missing .bundled-kit-root marker resolution"
+fi
+
+# Case E (PR-003) — no bare project-relative pipe-prefixed sidecar invocation remains.
+# Scope the negative assertion to the EXECUTABLE pipe form, not prose mentions of the script name,
+# so the STATUS-block rationale that references inject-review-context.sh does not trip it.
+if grep -qF '| bash .claude/scripts/inject-review-context.sh' "$DT"; then
+  fail "delegation-templates: bare project-relative '| bash .claude/scripts/inject-review-context.sh' invocation still present (breaks plugin mode)"
+else
+  pass "delegation-templates: no bare project-relative sidecar invocation remains (PR-003 scope)"
+fi
+
+# Case F — STEP -2 carries the F4 non-empty-sidecar verify gate
+if grep -qF 'test -s .claude/workflow-state/code-reviewer-INJECTED-CONTEXT.md' "$DT"; then
+  pass "delegation-templates: STEP -2 F4 non-empty-sidecar verify gate present"
+else
+  fail "delegation-templates: STEP -2 F4 verify gate missing"
+fi
+
 exit $rc

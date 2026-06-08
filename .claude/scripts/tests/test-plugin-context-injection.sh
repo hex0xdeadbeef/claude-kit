@@ -82,6 +82,15 @@ else
     bad "plugin with-CLAUDE.md should emit directive WITHOUT Language Profile: $(printf '%s' "$outC" | head -c 160)"
 fi
 
+# Case E (B1): plugin mode writes the durable .bundled-kit-root marker to project workflow-state.
+# Cases A/D ran with CLAUDE_PROJECT_DIR="$TMP" (plugin mode) → marker must exist + contain bundled root.
+MARKER_FILE="$TMP/.claude/workflow-state/.bundled-kit-root"
+if [ -s "$MARKER_FILE" ] && grep -qF "$REPO_ROOT" "$MARKER_FILE"; then
+    ok "B1: durable .bundled-kit-root marker written in plugin mode"
+else
+    bad "B1: .bundled-kit-root marker missing/empty in plugin mode"
+fi
+
 # ── cleanup ───────────────────────────────────────────────────────────────────
 rm -rf "$TMP" 2>/dev/null || true
 
