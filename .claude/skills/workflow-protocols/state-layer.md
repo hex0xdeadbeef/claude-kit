@@ -18,13 +18,11 @@ directory:
     canonical_helper: ".claude/scripts/lib/state_render.py::latest_checkpoint(state_dir)"
     bash_pattern: "ls -t .claude/workflow-state/*-checkpoint.yaml 2>/dev/null | head -n1"
     rationale: |
-      P2 fix (audit ref: .claude/prompts/workflow-hook-loop-audit.md § P2).
-      Five readers historically used `sorted(glob.glob(...))[-1]` (alphabetical)
-      while one (`notify-workflow-complete.sh:24`) used `ls -t | head -n1` (mtime).
-      With divergent feature names the two orders disagree → different hooks make
-      different decisions about which workflow is active. The mtime semantics is
-      the correct one; the helper localises it so future drift requires changing
-      one line in one file.
+      P2 fix (audit ref: .claude/prompts/workflow-hook-loop-audit.md § P2). Readers historically
+      mixed `sorted(glob.glob(...))[-1]` (alphabetical) with `notify-workflow-complete.sh:24`'s
+      `ls -t | head -n1` (mtime); with divergent feature names the two orders disagree, so different
+      hooks pick different active workflows. mtime is the correct semantics; the helper localises it
+      so future drift requires changing one line in one file.
     documented_exceptions:
       - script: ".claude/scripts/check-uncommitted.sh:28"
         form: "ls -t … | head -n1 (inline bash, single call site, no Python entry-point)"
@@ -117,13 +115,12 @@ files:
     lifecycle: session-specific
     cleanup: "SubagentStop deletion (primary) → PreCompact 30-min staleness auto-delete (secondary, crash recovery)"
     purpose: |
-      Sentinel that PreCompact auto-trigger reads to BLOCK auto-compaction
-      mid-review (would otherwise fragment the reviewer's verdict narrative).
-      Audit refs: .claude/prompts/workflow-hook-loop-audit.md § P1 (PreCompact
-      consumer cooldown) + § P5 (write-side automation). Before P5, the write
-      side was a manual orchestrator step that could be silently skipped,
-      disabling the protection. P5 moved the write into inject-review-context.sh
-      so the lifecycle is symmetric with SubagentStop deletion.
+      Sentinel that the PreCompact auto-trigger reads to BLOCK auto-compaction mid-review (would
+      otherwise fragment the reviewer's verdict narrative). Audit refs:
+      .claude/prompts/workflow-hook-loop-audit.md § P1 (PreCompact consumer cooldown) + § P5
+      (write-side automation: P5 moved the write into inject-review-context.sh for lifecycle
+      symmetry with SubagentStop deletion, replacing a manual orchestrator step that could be
+      silently skipped).
 
   - name: ".stop-block-attempts-{session_id}"
     format: "plaintext (single line: COUNT:UNCOMMITTED_COUNT)"

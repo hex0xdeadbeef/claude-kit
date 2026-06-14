@@ -133,12 +133,10 @@ startup:
         produce ZERO stderr WARN lines from this step. Verify with:
           test -z "$(grep -E '<your-[a-z-]+>' .claude/PROJECT-KNOWLEDGE.md)" && echo "PASS: filled PK"
       purpose: |
-        Prevents silent Go-fallback for non-Go projects. The cascade order
-        (PROJECT-KNOWLEDGE.md > CLAUDE.md Language Profile > SKIP) is designed
-        to be ZERO-COST when PK is properly populated. The pre-flight WARN is
-        the early-warning signal that something is missing. Generic regex
-        '<your-[a-z-]+>' is extensible to future PK slot additions without
-        grep-pattern updates.
+        Prevents silent Go-fallback for non-Go projects. The cascade
+        (PROJECT-KNOWLEDGE.md > CLAUDE.md Language Profile > SKIP) is ZERO-COST when PK is
+        populated; the pre-flight WARN is the early signal that a slot is missing. Generic regex
+        '<your-[a-z-]+>' extends to future PK slots without grep-pattern updates.
 
     - step: 0.06
       action: "Pre-flight: native memory freshness check"
@@ -166,9 +164,8 @@ startup:
         /workflow with default mode, observe exactly one stderr WARN line
         matching the template above.
       purpose: |
-        Surfaces the silent staleness that auto-memory and subagent memory can
-        accumulate. Default warn-only is non-blocking; opt-in strict is for
-        environments where stale memory must be cleared before XL runs proceed.
+        Surfaces the silent staleness auto-memory and subagent memory accumulate. Default
+        warn-only is non-blocking; opt-in strict clears stale memory before XL runs proceed.
         Mirrors the step 0.05 PROJECT-KNOWLEDGE.md pre-flight pattern.
 
     - step: 0
