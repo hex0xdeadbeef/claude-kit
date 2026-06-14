@@ -8,25 +8,23 @@ re_routing:
   severity: MEDIUM
 
   triggers:
-    - trigger: "plan-review finds the plan is too simple for the current route"
+    - trigger: "plan-review finds the plan too simple for the current route"
       action: "Downgrade route"
       examples:
         - "L→M: plan turned out < 3 Parts, remove mandatory Sequential Thinking"
         - "M→S: only 1 Part, 1 layer — skip plan-review in next iteration"
-
-    - trigger: "plan-review finds the plan is too complex for the current route"
+    - trigger: "plan-review finds the plan too complex for the current route"
       action: "Upgrade route"
       examples:
         - "S→M: cross-layer dependencies discovered — add full plan-review"
         - "M→L: 4+ Parts, 3+ layers — add Sequential Thinking"
-
     - trigger: "coder evaluate finds hidden complexity"
       action: "Upgrade route or RETURN to planner"
       examples:
         - "M→L: evaluate discovered DB migration needed (not accounted for in plan)"
 
   tracking:
-    when: "Immediately when re-routing decision is made (before continuing pipeline)"
+    when: "Immediately when the re-routing decision is made (before continuing pipeline)"
     action: "Update checkpoint re_routing fields"
     fields:
       occurred: true
@@ -51,8 +49,7 @@ re_routing:
           - append issues_history entry (phase=4)
           - re-route to Phase 3 (/coder) via review-response.md path
         when_emitted: |
-          Reviewer agents are instructed to PREFER CHANGES_REQUESTED. NEEDS_CHANGES emission
-          may still occur via:
+          Reviewer agents are instructed to PREFER CHANGES_REQUESTED. NEEDS_CHANGES may still occur via:
           - regex_fallback path in save-review-checkpoint.sh (non-deterministic agent text)
           - verdict-recovery agent on incomplete-output recovery
           - legacy review-completions.jsonl restore on session resume
@@ -68,5 +65,5 @@ re_routing:
             session_id: "{session_id}"
       - source: "plan_review_verdict"
         note: |
-          plan_review_verdict.enum already canonicalises NEEDS_CHANGES (it is the
-          authoritative variant for plan-review). No alias normalisation needed.
+          plan_review_verdict.enum already canonicalises NEEDS_CHANGES (the authoritative
+          variant for plan-review). No alias normalisation needed.

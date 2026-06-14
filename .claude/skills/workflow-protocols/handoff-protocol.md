@@ -176,12 +176,11 @@ handoff_protocol:
         {"$verdict_contract": "...", "verdict": "...", "issues": [...], "handoff": {...}}
         ```
 
-      Rationale for sentinel prefix (dev.to/pockit-tools 2026 best practice): LLM subagents
-      cannot invoke native structured-output APIs (Anthropic tool_use with constrained
-      decoding) — they emit free text captured via SubagentStop transcript read. The
-      sentinel is the only stable anchor the hook regex can pin to, even if the fence is
-      malformed. The "validation sandwich" (prompt engineering + post-hoc schema validation)
-      is the LEVEL 2 pattern — the best achievable without native structured output.
+      Rationale for sentinel prefix: subagents cannot invoke native structured-output APIs
+      (Anthropic tool_use constrained decoding) — they emit free text captured via SubagentStop
+      transcript read. The sentinel is the only stable anchor the hook regex can pin to even if
+      the fence is malformed (the "validation sandwich": prompt engineering + post-hoc schema
+      validation, the LEVEL 2 pattern — best achievable without native structured output).
 
       post_normalization_example: |
         Agent emits (advisory IDs):
@@ -217,24 +216,18 @@ handoff_protocol:
       payloads: validate-handoff.sh treats records with neither $handoff_contract nor
       $verdict_contract discriminator as strict if EITHER env is set to strict.
 
-      CR-003 — warn-mode silent-accept semantics: in the default warn mode,
-      validate-handoff.sh exits rc=0 on JSON Schema failure (it only logs the
-      failure to handoff-validation.jsonl). save-review-checkpoint.sh keys
-      verdict_source off the validator's exit code, so in warn mode a
-      schema-INVALID VERDICT_JSON block is recorded as verdict_source=
-      "structured_json" — not "structured_json_schema_invalid" — and is
-      indistinguishable from a schema-VALID block in the marker line alone.
-      The canonical signal that something failed is the verdict_schema_invalid
-      record in handoff-validation.jsonl; readers that need to detect
-      schema-invalid payloads in warn mode MUST cross-reference that log
-      instead of relying on verdict_source. verdict_source=
-      "structured_json_schema_invalid" is only emitted in strict mode (rc=2),
-      where the regex fallback rescues the run. This asymmetry is by-design
-      per the Phase-A A5 rollout: warn mode prioritizes agent-output resilience
-      (no false rejections during the instruction-adoption period) over strict
-      per-record signalling. Flip CLAUDE_VERDICT_VALIDATION_MODE=strict once
-      plan-reviewer.md and code-reviewer.md agents demonstrate stable emission
-      of schema-valid envelopes.
+      CR-003 — warn-mode silent-accept semantics: in the default warn mode, validate-handoff.sh
+      exits rc=0 on JSON Schema failure (logs the failure to handoff-validation.jsonl only).
+      save-review-checkpoint.sh keys verdict_source off the validator exit code, so a schema-INVALID
+      VERDICT_JSON block is recorded as verdict_source="structured_json" (not
+      "structured_json_schema_invalid") — indistinguishable from a schema-VALID block in the marker
+      line alone. The canonical failure signal is the verdict_schema_invalid record in
+      handoff-validation.jsonl; warn-mode readers needing to detect schema-invalid payloads MUST
+      cross-reference that log rather than verdict_source. "structured_json_schema_invalid" is emitted
+      only in strict mode (rc=2), where the regex fallback rescues the run. By-design (Phase-A A5):
+      warn mode prioritizes agent-output resilience (no false rejections during instruction adoption)
+      over per-record signalling. Flip CLAUDE_VERDICT_VALIDATION_MODE=strict once plan-reviewer.md and
+      code-reviewer.md emit stable schema-valid envelopes.
     fail_modes:
       - code: "structured_json_schema_invalid"
         meaning: "VERDICT_JSON block parsed cleanly but failed JSON Schema validation (e.g., wrong enum, missing required field)"

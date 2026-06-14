@@ -73,13 +73,10 @@ diff-manifest — both required for iteration 2+ correctness.
 
     STEP -1 (P0-04): Write .claude/workflow-state/.iteration-in-flight BEFORE delegating.
 
-    STATUS (since P5 fix 2026-05-22, commit landing this task): this STEP is now
-    legacy-but-idempotent. `inject-review-context.sh` writes the sentinel
-    automatically at SubagentStart (and at orchestrator pre_delegation
-    `--sidecar-only` for worktree code-reviewer via the STEP -2 sidecar
-    invocation, which calls the same hook). Emitting the manual Write here is
-    still permitted and harmless (the hook overwrites with the same shape on
-    its fire); skipping it is now safe. See .claude/prompts/p5-iif-autowrite.md.
+    STATUS: legacy-but-idempotent since the P5 fix. inject-review-context.sh writes the sentinel
+    automatically at SubagentStart (and via the STEP -2 `--sidecar-only` invocation for the
+    worktree code-reviewer, which calls the same hook). Emitting the manual Write here is permitted
+    and harmless (hook overwrites with the same shape); skipping it is now safe. See .claude/prompts/p5-iif-autowrite.md.
 
     Use Write tool (auto-allowed). Content (JSON, one file per session):
       {"agent": "plan-reviewer", "started_at": "{ISO-8601 UTC timestamp, e.g. 2026-04-23T14:30:00Z}", "feature": "{feature}", "iteration": {N}}
@@ -313,21 +310,17 @@ diff-manifest — both required for iteration 2+ correctness.
     a reviewer that will REJECT on an unresolvable rubric (see post_delegation step 2.0).
     Best-effort caveat (project-scoped install): a missing sidecar is non-blocking — the reviewer
     falls back to project-relative rubric paths that resolve natively.
-    Rationale (revised 2026-05-27): SubagentStart fires for worktree agents, but
-    inject-review-context's additionalContext does not reliably reach a worktree reviewer —
-    the worktree runs origin/main's hooks (worktree.baseRef:"fresh") and the main-repo checkpoint
-    is absent from the worktree. The file-sidecar (delivered via .worktreeinclude) is the reliable
-    channel. Confirmed by probe: pre-fix additionalContext=no; sidecar-via-.worktreeinclude=delivered.
+    Rationale: SubagentStart fires for worktree agents, but inject-review-context's additionalContext
+    does not reliably reach a worktree reviewer — the worktree runs origin/main's hooks
+    (worktree.baseRef:"fresh") and the main-repo checkpoint is absent from the worktree. The
+    file-sidecar (delivered via .worktreeinclude) is the reliable channel.
 
     STEP -1 (P0-04): Write .claude/workflow-state/.iteration-in-flight BEFORE delegating.
 
-    STATUS (since P5 fix 2026-05-22, commit landing this task): this STEP is now
-    legacy-but-idempotent. `inject-review-context.sh` writes the sentinel
-    automatically at SubagentStart (and at orchestrator pre_delegation
-    `--sidecar-only` for worktree code-reviewer via the STEP -2 sidecar
-    invocation, which calls the same hook). Emitting the manual Write here is
-    still permitted and harmless (the hook overwrites with the same shape on
-    its fire); skipping it is now safe. See .claude/prompts/p5-iif-autowrite.md.
+    STATUS: legacy-but-idempotent since the P5 fix. inject-review-context.sh writes the sentinel
+    automatically at SubagentStart (and via the STEP -2 `--sidecar-only` invocation for the
+    worktree code-reviewer, which calls the same hook). Emitting the manual Write here is permitted
+    and harmless (hook overwrites with the same shape); skipping it is now safe. See .claude/prompts/p5-iif-autowrite.md.
 
     Use Write tool (auto-allowed). Content (JSON, one file per session):
       {"agent": "code-reviewer", "started_at": "{ISO-8601 UTC timestamp, e.g. 2026-04-23T14:30:00Z}", "feature": "{feature}", "iteration": {N}}
