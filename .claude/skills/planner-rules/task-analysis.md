@@ -1,7 +1,5 @@
 # Task Analysis
 
-Task classification and routing BEFORE planning begins.
-
 ---
 
 ## Purpose
