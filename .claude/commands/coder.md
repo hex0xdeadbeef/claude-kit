@@ -205,9 +205,7 @@ startup:
         Mirror of P1 code-shapes pattern (planner-rules/code-shapes/<LANGUAGE>.md).
         TDD is the unconditional default cycle for /coder Phase 2 — RGR runs are
         part of implementation, not verification. Full VERIFY suite still runs
-        only at Phase 3. For unmatched LANGUAGE — _default.md pseudocode is
-        strictly more informative than the previous silent SKIP behaviour
-        shipped in v1.17 CG1.
+        only at Phase 3.
 
     - action: "Conditional: Load Review Response protocol"
       condition: "Re-entry after CHANGES_REQUESTED (iteration > 1 in handoff context)"
@@ -216,8 +214,7 @@ startup:
       purpose: "Load review feedback handling protocol. Triggers TRIAGE → VERIFY → EVALUATE → IMPLEMENT → DOCUMENT response pattern on re-entry."
 
     # The coder-rules spec-check protocol is loaded JUST-IN-TIME at WORKFLOW phase 3.5,
-    # not eagerly here — it is unused during EVALUATE/IMPLEMENT. Deferred per audit #7,
-    # mirroring the conditional Review Response load above.
+    # not eagerly here — it is unused during EVALUATE/IMPLEMENT.
 
     - action: "TodoWrite"
       purpose: "Create Parts list for tracking"
@@ -549,7 +546,7 @@ workflow:
       purpose: "Verify implementation matches plan before code-review handoff"
       reference: ".claude/skills/coder-rules/spec-check.md"
       steps:
-        - "Load .claude/skills/coder-rules/spec-check.md (just-in-time — deferred from STARTUP per audit #7; not needed during EVALUATE/IMPLEMENT)"
+        - "Load .claude/skills/coder-rules/spec-check.md (just-in-time — not needed during EVALUATE/IMPLEMENT)"
         - "Run spec compliance checklist against plan"
         - "S complexity: lightweight mode (Parts coverage only)"
         - "M/L/XL: full checklist (coverage + scope + deviations + AC + interfaces)"
