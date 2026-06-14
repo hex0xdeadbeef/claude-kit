@@ -58,7 +58,7 @@ Auto-escalation: 6 MINOR in Part 3 → escalate to MAJOR
 Verdict: NEEDS_CHANGES
 Issues: 0 BLOCKER, 1 MAJOR (escalated), 1 MINOR
 ```
-**Why:** Many small issues = systemic problem (source: troubleshooting.md). 5+ MINOR in same Part should be escalated to MAJOR via Decision Matrix auto-escalation rules.
+**Why:** 5+ MINOR in same Part should be escalated to MAJOR via Decision Matrix auto-escalation rules.
 
 For more examples, see [Troubleshooting](troubleshooting.md) and [Architecture Checks](architecture-checks.md).
 
@@ -79,7 +79,7 @@ For more examples, see [Troubleshooting](troubleshooting.md) and [Architecture C
 For all troubleshooting cases, see [Troubleshooting](troubleshooting.md).
 
 ## References (ON-DEMAND — do NOT read eagerly)
-Do NOT read supporting files upfront. This SKILL.md contains all essential rules inline. Load files only when the specific trigger condition is met:
+Do NOT read supporting files upfront. Load files only when the specific trigger condition is met:
 - [Architecture Checks](architecture-checks.md) — **Read when:** plan has 4+ Parts or 3+ layers AND you need detailed import matrix / domain purity rules beyond what's in the agent artifact.
 - [Required Sections](required-sections.md) — **Read when:** plan is missing sections and you need to verify which are truly required vs optional.
 - [Checklist](checklist.md) — **Read when:** self-verifying before outputting verdict (optional, only if uncertain about coverage).

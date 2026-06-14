@@ -116,7 +116,7 @@ inline_checks:
   note: |
     plan-reviewer has Read/Grep/Glob only (no Task/Agent tool; Bash disallowed).
     Run these checks INLINE with grep against the plan's code examples — do NOT
-    dispatch a subagent (no such agent exists and the reviewer cannot launch one).
+    dispatch a subagent.
 
   procedure:
     - layer_imports: "grep each Part's code-example import lines; verify against LAYER_RULE (SKIP with consolidated NIT if LAYER_RULE unset OR ARCHITECTURE_STYLE != layered)"
