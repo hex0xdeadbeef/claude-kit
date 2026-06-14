@@ -291,8 +291,6 @@ VERDICT_JSON:
 - Do NOT wrap the block in markdown preamble ("Here is the JSON…") — the `VERDICT_JSON:` sentinel is the only anchor the hook searches for.
 - If the JSON block is malformed, missing, or fails schema validation, the hook falls back to regex on the `VERDICT:` line — your review is still captured, but `verdict_source` in `review-completions.jsonl` will record `regex_fallback` instead of `structured_json`.
 
-Why P4 ordering: putting `VERDICT_JSON:` immediately after `VERDICT:` guarantees the structured envelope arrives whole even when narrative is truncated by the 32 K subagent token cap. The trailing narrative is the fungible part.
-
 ### Code Review: {branch}
 Issues: {N} BLOCKER, {N} MAJOR, {N} MINOR
 
@@ -332,8 +330,6 @@ For handoff contract see [handoff-protocol.md] in workflow-protocols skill → c
 
 **Ready for:** merge | /coder (if CHANGES_REQUESTED)
 
-<!-- P4: VERDICT_JSON rules moved adjacent to the example block in § Output Format above. -->
-<!-- The trailing duplicate previously here (deleted per Edit 5.2). -->
 
 
 ### Canonical IDs (IMP-03)
@@ -382,7 +378,6 @@ Follows [Agent Memory Protocol](../skills/workflow-protocols/agent-memory-protoc
 - Kit-default values (Go-shaped, retained for backwards-compat with existing kit users): `.claude/`, `internal/`, `cmd/`, `go.mod`, `go.sum`, `Makefile`, `CLAUDE.md`.
 - **MANDATORY for non-Go projects:** override `worktree.sparsePaths` via `settings.json` OR `settings.local.json` BEFORE first code-review run. The QUICK CHECK pre-flight (below) verifies at least one non-`.claude/` source path is resolvable on disk; if all paths beyond `.claude/` are unresolvable AND PK→LANGUAGE != 'go', code-reviewer emits a BLOCKER issue (`worktree-misconfigured`) and exits with REJECTED verdict.
 - See `.claude/settings.local.json.example` for non-Go template sparsePaths blocks (Python, TypeScript, Rust, Java commented out — uncomment for your stack).
-- Impact: faster worktree creation and lower disk usage, especially in monorepos.
 
 ### QUICK CHECK Pre-flight (step 0.5 — Worktree sparsePaths sanity)
 
