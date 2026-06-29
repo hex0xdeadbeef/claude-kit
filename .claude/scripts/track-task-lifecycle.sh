@@ -1,5 +1,5 @@
 #!/bin/bash
-# Hook: SubagentStart (matcher: code-researcher)
+# Hook: SubagentStart (matcher: (claude-kit:)?code-researcher — bare or plugin-namespaced)
 # Purpose: Log code-researcher invocations for pipeline metrics
 # Non-blocking: always exit 0 (logging only)
 #

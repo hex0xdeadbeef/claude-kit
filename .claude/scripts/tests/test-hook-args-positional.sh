@@ -29,12 +29,12 @@ check_arg() {
 }
 
 rc=0
-check_arg "plan-reviewer"   "inject-review-context.sh"        "plan-reviewer"   || rc=1
-check_arg "code-reviewer"   "inject-review-context.sh"        "code-reviewer"   || rc=1
-check_arg "code-researcher" "caveman-suspend-for-reviewer.sh" "code-researcher" || rc=1
-check_arg "plan-reviewer"   "caveman-suspend-for-reviewer.sh" "plan-reviewer"   || rc=1
-check_arg "code-reviewer"   "caveman-suspend-for-reviewer.sh" "code-reviewer"   || rc=1
-check_arg "verdict-recovery" "caveman-suspend-for-reviewer.sh" "verdict-recovery" || rc=1
+check_arg "(claude-kit:)?plan-reviewer"   "inject-review-context.sh"        "plan-reviewer"   || rc=1
+check_arg "(claude-kit:)?code-reviewer"   "inject-review-context.sh"        "code-reviewer"   || rc=1
+check_arg "(claude-kit:)?code-researcher" "caveman-suspend-for-reviewer.sh" "code-researcher" || rc=1
+check_arg "(claude-kit:)?plan-reviewer"   "caveman-suspend-for-reviewer.sh" "plan-reviewer"   || rc=1
+check_arg "(claude-kit:)?code-reviewer"   "caveman-suspend-for-reviewer.sh" "code-reviewer"   || rc=1
+check_arg "(claude-kit:)?verdict-recovery" "caveman-suspend-for-reviewer.sh" "verdict-recovery" || rc=1
 
 if [[ "${rc}" -ne 0 ]]; then
   exit 1

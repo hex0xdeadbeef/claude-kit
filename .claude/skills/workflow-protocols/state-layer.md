@@ -55,7 +55,7 @@ files:
   - name: "review-completions.jsonl"
     format: JSONL
     written_by:
-      - "save-review-checkpoint.sh (SubagentStop, matcher: plan-reviewer|code-reviewer)"
+      - "save-review-checkpoint.sh (SubagentStop, matcher: (claude-kit:)?(plan-reviewer|code-reviewer))"
     read_by:
       - "inject-review-context.sh (SubagentStart) — prior verdicts for review agents"
       - "verify-state-after-compact.sh (PostCompact) — integrity verification"
@@ -93,7 +93,7 @@ files:
   - name: "agent-id-registry.jsonl"
     format: JSONL
     written_by:
-      - "track-task-lifecycle.sh (SubagentStart, matcher: plan-reviewer|code-reviewer) — IMP-01"
+      - "track-task-lifecycle.sh (SubagentStart, matcher: (claude-kit:)?(plan-reviewer|code-reviewer)) — IMP-01"
     read_by:
       - "save-review-checkpoint.sh (SubagentStop) — recover agent_type when payload omits it"
     schema: "{agent_id, agent_type, session_id, registered_at}"
@@ -104,12 +104,12 @@ files:
   - name: ".iteration-in-flight"
     format: "JSON (single object: agent, started_at, feature, source)"
     written_by:
-      - "inject-review-context.sh (SubagentStart, matcher: plan-reviewer|code-reviewer) — P5 auto-write at hook entry; idempotent over orchestrator's manual write"
+      - "inject-review-context.sh (SubagentStart, matcher: (claude-kit:)?(plan-reviewer|code-reviewer)) — P5 auto-write at hook entry; idempotent over orchestrator's manual write"
       - "Orchestrator — delegation-templates.md STEP -1 (legacy-but-idempotent since P5 fix 2026-05-22; harmless if both fire — same content shape, last-writer-wins on the `agent` field)"
     read_by:
       - "save-progress-before-compact.sh (PreCompact auto) — reads `agent` field for the BLOCKED reason text; ignores all other fields; checks mtime for 30-min staleness window"
     deleted_by:
-      - "save-review-checkpoint.sh (SubagentStop, matcher: plan-reviewer|code-reviewer|verdict-recovery) — P0-04 deletion on successful review completion"
+      - "save-review-checkpoint.sh (SubagentStop, matcher: (claude-kit:)?(plan-reviewer|code-reviewer|verdict-recovery)) — P0-04 deletion on successful review completion"
       - "save-progress-before-compact.sh (PreCompact auto) — staleness auto-delete when mtime > 30 min"
     schema: "JSON object — required: `agent` (string, e.g. 'plan-reviewer'); optional: `started_at` (ISO-8601 UTC), `feature` (checkpoint feature name or 'unknown'), `source` (forensic — 'inject-review-context.sh' if hook-written, omitted by orchestrator), `iteration` (legacy orchestrator field, ignored by consumer)"
     lifecycle: session-specific
@@ -154,7 +154,7 @@ files:
   - name: "task-events.jsonl"
     format: JSONL
     written_by:
-      - "track-task-lifecycle.sh (SubagentStart, matcher: code-researcher)"
+      - "track-task-lifecycle.sh (SubagentStart, matcher: (claude-kit:)?code-researcher)"
     read_by:
       - "Orchestrator (Phase 5) — code_researcher_metrics in pipeline-metrics"
     schema: "{timestamp, event, agent_type, agent_id, session_id}"

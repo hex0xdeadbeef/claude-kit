@@ -209,7 +209,7 @@
     ],
     "SubagentStart": [
       {
-        "matcher": "code-researcher",
+        "matcher": "(claude-kit:)?code-researcher",
         "hooks": [
           {
             "type": "command",
@@ -226,7 +226,7 @@
         ]
       },
       {
-        "matcher": "plan-reviewer",
+        "matcher": "(claude-kit:)?plan-reviewer",
         "hooks": [
           {
             "type": "command",
@@ -250,7 +250,7 @@
         ]
       },
       {
-        "matcher": "code-reviewer",
+        "matcher": "(claude-kit:)?code-reviewer",
         "hooks": [
           {
             "type": "command",
@@ -274,7 +274,7 @@
         ]
       },
       {
-        "matcher": "verdict-recovery",
+        "matcher": "(claude-kit:)?verdict-recovery",
         "hooks": [
           {
             "type": "command",
@@ -288,7 +288,7 @@
     ],
     "SubagentStop": [
       {
-        "matcher": "plan-reviewer|code-reviewer|verdict-recovery",
+        "matcher": "(claude-kit:)?(plan-reviewer|code-reviewer|verdict-recovery)",
         "hooks": [
           {
             "type": "command",

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # caveman-suspend-for-reviewer.sh
-# Hook: SubagentStart (matcher: plan-reviewer | code-reviewer |
-#                             verdict-recovery | code-researcher)
+# Hook: SubagentStart (matcher: (claude-kit:)?(plan-reviewer|code-reviewer|
+#                             verdict-recovery|code-researcher) — bare or plugin-namespaced)
 # Purpose: Suspend caveman for reviewer/researcher delegations by emitting
 #          an exemption marker as additionalContext.
 #

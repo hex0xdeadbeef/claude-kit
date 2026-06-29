@@ -11,8 +11,9 @@ LENS=".claude/skills/design-rules/critique-lenses.md"
 TPL=".claude/templates/spec-template.md"
 rc=0; fail(){ echo "FAIL: $1"; rc=1; }; pass(){ echo "PASS: $1"; }
 
-# CS-1 (AC1.8): SubagentStop matcher remains exactly plan-reviewer|code-reviewer|verdict-recovery
-if grep -q '"plan-reviewer|code-reviewer|verdict-recovery"' "$SETTINGS"; then pass "CS-1 SubagentStop matcher intact"; else fail "CS-1 SubagentStop matcher changed"; fi
+# CS-1 (AC1.8): SubagentStop matcher is the expected value, untouched by design-critique
+# (post matcher-hardening forward-compat fix: (claude-kit:)?(plan-reviewer|code-reviewer|verdict-recovery))
+if grep -q '"(claude-kit:)?(plan-reviewer|code-reviewer|verdict-recovery)"' "$SETTINGS"; then pass "CS-1 SubagentStop matcher intact"; else fail "CS-1 SubagentStop matcher changed"; fi
 # CS-1b: no design-critic / design-reviewer agent wired anywhere in settings (Part 1 + GATE-2 excluded Part 3)
 if grep -qiE 'design-critic|design-reviewer' "$SETTINGS"; then fail "CS-1b a design critic/reviewer agent leaked into settings.json"; else pass "CS-1b no design critic agent in settings.json"; fi
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Hook: SubagentStop (matcher: plan-reviewer|code-reviewer)
+# Hook: SubagentStop (matcher: (claude-kit:)?(plan-reviewer|code-reviewer|verdict-recovery))
 # Purpose: Write marker about review agent completion + sync agent memory from worktree
 # Blocking: exit 2 only if BOTH primary and fallback writes fail
 # IMP-06: defensive fallback to /tmp when primary write fails — logging should not block agent
