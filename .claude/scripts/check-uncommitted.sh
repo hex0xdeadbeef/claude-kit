@@ -125,6 +125,15 @@ except Exception:
     if [[ "$NEW_COUNT" -ge "$STOP_BLOCK_MAX" ]]; then
       # Circuit breaker — allow stop with a loud WARN per kit convention
       echo "[check-uncommitted] WARN: ${NEW_COUNT} consecutive blocks for ${UNCOMMITTED} uncommitted file(s); allowing stop (circuit breaker — STOP_BLOCK_MAX=${STOP_BLOCK_MAX}). To re-arm: rm ${BLOCK_LOG}; to disable: edit STOP_BLOCK_MAX at top of check-uncommitted.sh." >&2
+      # CC 2.1.163: surface the breaker trip in-context (ALLOW path — no decision:block).
+      # Forward-compatible: pre-2.1.163 ignores the unknown field; absence of `decision`
+      # always allows the stop. Best-effort feedback — never a canonical issue-ID hash input.
+      if command -v python3 >/dev/null 2>&1; then
+        _CB_U="$UNCOMMITTED" _CB_N="$NEW_COUNT" python3 -c "
+import json, os
+print(json.dumps({'hookSpecificOutput': {'hookEventName': 'Stop', 'additionalContext': f\"Stop circuit breaker tripped: {os.environ['_CB_N']} consecutive Stop-blocks with {os.environ['_CB_U']} uncommitted file(s); allowing stop. Commit manually (git add + git commit) or investigate the commit precondition (e.g. a failing pre-commit-build).\"}}))
+" || true
+      fi
       exit 0
     fi
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Hook: SubagentStop (matcher: plan-reviewer|code-reviewer)
+# Hook: SubagentStop (matcher: (claude-kit:)?(plan-reviewer|code-reviewer|verdict-recovery))
 # Purpose: Write marker about review agent completion + sync agent memory from worktree
 # Blocking: exit 2 only if BOTH primary and fallback writes fail
 # IMP-06: defensive fallback to /tmp when primary write fails — logging should not block agent
@@ -571,6 +571,12 @@ if verdict == "UNKNOWN" and is_review_agent and agent_id:
         except Exception:
             pass
         print(f"save-review-checkpoint: verdict still UNKNOWN after block, allowing stop", file=sys.stderr)
+        # CC 2.1.163: surface the no-verdict outcome in-context (ALLOW path — no decision:block).
+        # Forward-compatible: pre-2.1.163 ignores the unknown field. Best-effort feedback; on the
+        # rare double-write-failure path that ends in sys.exit(2) below, Claude Code ignores stdout
+        # and this is dropped (acceptable — additionalContext carries no contract obligation).
+        # additionalContext text is never a canonical issue-ID hash input.
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "SubagentStop", "additionalContext": f"Reviewer {effective_agent_type} produced no parseable VERDICT after a retry; checkpoint saved with verdict UNKNOWN. Orchestrator: invoke verdict-recovery or re-dispatch the reviewer."}}))
 # --- End IMP-H ---
 
 # --- IMP-03: ALWAYS log SubagentStop payload for contract discovery ---

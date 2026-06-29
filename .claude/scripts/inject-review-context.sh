@@ -1,5 +1,5 @@
 #!/bin/bash
-# Hook: SubagentStart (matcher: plan-reviewer, code-reviewer — separate entries)
+# Hook: SubagentStart (matcher: (claude-kit:)?plan-reviewer, (claude-kit:)?code-reviewer — separate entries, bare or plugin-namespaced)
 # Purpose: Inject workflow context as additionalContext for review agents
 # Non-blocking: exit 0 always (context injection is additive, never blocks agent)
 #
