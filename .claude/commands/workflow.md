@@ -373,8 +373,7 @@ skill_references:
 
 hooks:
   authoritative: |
-    .claude/settings.json is the authoritative wiring (16 event types, 29 scripts + 2 prompt
-    hooks). Hooks fire deterministically; the orchestrator does NOT read settings.json at
+    .claude/settings.json is the authoritative wiring (16 event types, 29 scripts). Hooks fire deterministically; the orchestrator does NOT read settings.json at
     runtime. For the complete list, see settings.json.
   pipeline_load_bearing: |
     A few hooks shape pipeline flow (rationale not obvious from the wiring alone):

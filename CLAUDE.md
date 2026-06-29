@@ -168,7 +168,7 @@ Project-local terse-output mode for `/workflow` runs (lite-only intensity in v1;
 
 ## Enforcement
 
-- Hooks + permissions: see `.claude/settings.json` (authoritative; 16 event types, 29 scripts + 2 prompt hooks; conditional `if` on PreToolUse/PostToolUse since v2.1.85; security hooks unconditional). Local overrides in `.claude/settings.local.json` (template at `settings.local.json.example`); arrays merge, deny wins.
+- Hooks + permissions: see `.claude/settings.json` (authoritative; 16 event types, 29 scripts; conditional `if` on PreToolUse/PostToolUse since v2.1.85; security hooks unconditional). Local overrides in `.claude/settings.local.json` (template at `settings.local.json.example`); arrays merge, deny wins.
 - MCP servers: see `.mcp.json` (3 servers: sequential-thinking, context7, tree_sitter; requires `npx` + `uvx` per Soft Prerequisites table above).
 - Memory: auto-memory enabled (`autoMemoryEnabled: true` in settings.json); subagent memory per agent definitions in `.claude/agents/`.
 
