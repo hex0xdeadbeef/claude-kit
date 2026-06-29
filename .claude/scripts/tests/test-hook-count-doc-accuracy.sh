@@ -30,7 +30,9 @@ for ev, arr in h.items():
                 scripts.add(hk["command"].replace("${CLAUDE_PLUGIN_ROOT}/", ""))
             elif t == "prompt":
                 prompts += 1
-expected = f"{events} event types, {len(scripts)} scripts + {prompts} prompt hooks"
+expected = f"{events} event types, {len(scripts)} scripts"
+if prompts:
+    expected += f" + {prompts} prompt hooks"
 print(f"[computed] {expected}")
 
 def norm(p):

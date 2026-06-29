@@ -913,7 +913,6 @@ Configured in `.claude/settings.json` — they enforce quality automatically. Se
 | `track-task-lifecycle.sh` | SubagentStart (code-researcher / plan-reviewer / code-reviewer) | Track subagent task lifecycle events for pipeline metrics |
 | `audit-config-change.sh` | ConfigChange | Audit config changes; block writes during active workflow |
 | `log-permission-denied.sh` | PermissionDenied | Log tool-call denials by auto-mode classifier (not explicit deny rules) |
-| import matrix enforcer (type: prompt) | PreToolUse (Write / Edit `if: internal/**/*.go`) | Enforce Go architecture import matrix via LLM evaluation — fires only on internal Go files |
 | `caveman-activate.sh` | SessionStart | Inject project-local caveman lite-mode terse-output ruleset as `additionalContext` (token optimization, since v1.21.0) |
 | `mcp-preload-warn.sh` | SessionStart | Warn (non-blocking) at session start when `CLAUDE_KIT_MCP_PRELOAD=on` but `.mcp.json` lacks `alwaysLoad` on `sequential-thinking`, scoped to active workflow checkpoints |
 | `caveman-suspend-for-reviewer.sh` | SubagentStart (`plan-reviewer` / `code-reviewer` / `verdict-recovery` / `code-researcher`) | Emit `[caveman OFF for this delegation]` exemption marker so reviewer/researcher VERDICT_JSON envelopes remain byte-stable across iterations (defence-in-depth for IMP-03 canonical_id stability) |

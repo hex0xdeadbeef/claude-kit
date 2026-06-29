@@ -3,9 +3,9 @@
 # Asserts the native-plugin SCAFFOLD is valid and loadable WITHOUT moving the .claude/ tree:
 #   - .claude-plugin/plugin.json   : valid manifest, name=claude-kit, components → ./.claude/... + ./.mcp.json
 #   - .claude-plugin/marketplace.json : valid single-repo marketplace listing the plugin (source ./)
-#   - .claude/hooks/hooks.json     : converted from settings.json — 16 events, 44 command (all
-#                                    ${CLAUDE_PLUGIN_ROOT}-prefixed across both script prefixes) + 2 prompt
-#                                    (parsed-equal to settings.json) = 46 entries
+#   - .claude/hooks/hooks.json     : converted from settings.json — 16 events, 45 command (all
+#                                    ${CLAUDE_PLUGIN_ROOT}-prefixed across both script prefixes) + 0 prompt
+#                                    (parsed-equal to settings.json) = 45 entries
 #   - git-tracked                  : the 3 plugin files MUST be tracked (global gitignore ignores .claude/)
 #   - claude plugin validate --strict exits 0 (skipped gracefully if the claude CLI is absent)
 #   - component-path SHAPES match the schemastore manifest schema (agents=./*.md files,
@@ -142,7 +142,7 @@ for name, passed in chk:
 PYEOF
 )
 
-# ── hooks.json: 16 events / 44 command (all prefixed, both prefixes) / 2 prompt ─
+# ── hooks.json: 16 events / 45 command (all prefixed, both prefixes) / 0 prompt ─
 while IFS='|' read -r st nm; do
     [ "$st" = "PASS" ] && ok "$nm" || bad "$nm"
 done < <(python3 - "$HOOKS" "$SETTINGS" <<'PYEOF'
@@ -185,8 +185,8 @@ has_scripts = any("/.claude/scripts/" in c for c in allcmds)
 has_meta = any("/.claude/agents/meta-agent/scripts/" in c for c in allcmds)
 chk.append(("command paths cover .claude/scripts/ prefix", has_scripts))
 chk.append(("command paths cover .claude/agents/meta-agent/scripts/ prefix", has_meta))
-# prompt hooks parsed-equal to settings.json (byte-stable contract — IMP / import-matrix enforcer)
-chk.append(("2 prompt hooks parsed-equal to settings.json", h_prompts == s_prompts))
+# prompt-hook parity hooks.json vs settings.json (generic-only invariant: 0 prompt hooks)
+chk.append(("0 prompt hooks parsed-equal to settings.json", h_prompts == s_prompts))
 for name, passed in chk:
     print(f"{'PASS' if passed else 'FAIL'}|{name}")
 PYEOF

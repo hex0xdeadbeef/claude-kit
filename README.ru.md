@@ -900,7 +900,6 @@ cp .mcp.json.example .mcp.json   # fresh setup
 | `track-task-lifecycle.sh` | SubagentStart (code-researcher / plan-reviewer / code-reviewer) | Отслеживает события жизненного цикла задач субагентов для метрик пайплайна |
 | `audit-config-change.sh` | ConfigChange | Аудитирует изменения конфигурации; блокирует запись во время активного workflow |
 | `log-permission-denied.sh` | PermissionDenied | Логирует отказы в вызовах инструментов классификатором авто-режима (не явными правилами deny) |
-| применятель матрицы импортов (type: prompt) | PreToolUse (Write / Edit `if: internal/**/*.go`) | Обеспечивает соблюдение матрицы импортов архитектуры Go через LLM-оценку — срабатывает только на внутренних Go-файлах |
 | `caveman-activate.sh` | SessionStart | Внедряет проектно-локальный набор правил терсе-вывода caveman lite-mode как `additionalContext` (оптимизация токенов, начиная с v1.21.0) |
 | `mcp-preload-warn.sh` | SessionStart | Предупреждает (не блокирующе) при старте сессии, когда `CLAUDE_KIT_MCP_PRELOAD=on`, но в `.mcp.json` отсутствует `alwaysLoad` у `sequential-thinking`, с областью действия по активным контрольным точкам workflow |
 | `caveman-suspend-for-reviewer.sh` | SubagentStart (`plan-reviewer` / `code-reviewer` / `verdict-recovery` / `code-researcher`) | Выдаёт маркер исключения `[caveman OFF for this delegation]`, чтобы конверты VERDICT_JSON ревьюера/исследователя оставались байт-стабильными между итерациями (защита в глубину для стабильности canonical_id по IMP-03) |
