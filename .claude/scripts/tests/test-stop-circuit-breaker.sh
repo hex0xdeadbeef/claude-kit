@@ -70,7 +70,9 @@ run_stop_hook() {
     input=""
   fi
   cd "$REPO_DIR"
-  STDOUT=$(echo "$input" | bash "$HOOK" 2>/tmp/p3-stderr.$$)
+  # CLAUDE_WORKFLOW_STATE_DIR pins the sandbox state dir (stray-.claude fix 2026-07-01:
+  # check-uncommitted.sh now anchors STATE_DIR_LOCAL to CLAUDE_PROJECT_DIR/REPO_ROOT when unset).
+  STDOUT=$(echo "$input" | CLAUDE_WORKFLOW_STATE_DIR="$STATE_DIR" bash "$HOOK" 2>/tmp/p3-stderr.$$)
   STDERR=$(cat /tmp/p3-stderr.$$)
   rm -f /tmp/p3-stderr.$$
   cd - >/dev/null
@@ -244,7 +246,7 @@ build_repo_with_uncommitted 3
 mkdir -p "${STATE_DIR}/.stop-block-attempts-evil"
 # Send malicious session_id
 cd "$REPO_DIR"
-echo '{"session_id":"evil/HIJACK"}' | bash "$HOOK" >/dev/null 2>&1
+echo '{"session_id":"evil/HIJACK"}' | CLAUDE_WORKFLOW_STATE_DIR="$STATE_DIR" bash "$HOOK" >/dev/null 2>&1
 cd - >/dev/null
 # Counter should go to .stop-block-attempts-default, NOT into the evil dir
 [[ ! -f "${STATE_DIR}/.stop-block-attempts-evil/HIJACK" ]]
@@ -252,7 +254,7 @@ assert_pass "T7.d.a — malicious session_id does NOT write inside attacker-prep
 [[ -f "${STATE_DIR}/.stop-block-attempts-default" ]]
 assert_pass "T7.d.b — malicious session_id falls back to .stop-block-attempts-default" "$?"
 # Also test '..' and other shell-unsafe chars
-echo '{"session_id":"../escape"}' | (cd "$REPO_DIR" && bash "$HOOK" >/dev/null 2>&1)
+echo '{"session_id":"../escape"}' | (cd "$REPO_DIR" && CLAUDE_WORKFLOW_STATE_DIR="$STATE_DIR" bash "$HOOK" >/dev/null 2>&1)
 [[ ! -f "${STATE_DIR}/../escape" ]] && [[ ! -f "${REPO_DIR}/.claude/workflow-state/.stop-block-attempts-../escape" ]]
 assert_pass "T7.d.c — session_id with '..' falls back to default (no parent-dir escape)" "$?"
 find "$REPO_DIR" -mindepth 1 -delete 2>/dev/null; rmdir "$REPO_DIR" 2>/dev/null || true

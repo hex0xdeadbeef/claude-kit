@@ -19,7 +19,11 @@ command -v python3 >/dev/null 2>&1 || {
   exit 0
 }
 
-STATE_DIR="${CLAUDE_WORKFLOW_STATE_DIR:-.claude/workflow-state}"
+# stray-.claude fix (2026-07-01): anchor state to project root, never cwd (hooks run in cwd).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+STATE_DIR="${CLAUDE_WORKFLOW_STATE_DIR:-${CLAUDE_PROJECT_DIR:-${REPO_ROOT}}/.claude/workflow-state}"
+export STATE_DIR
 
 # CWD-independent lib path
 LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib"
@@ -38,7 +42,7 @@ except Exception as _import_err:
     print('{"additionalContext": ""}')
     sys.exit(0)
 
-state_dir = os.environ.get("CLAUDE_WORKFLOW_STATE_DIR", ".claude/workflow-state")
+state_dir = os.environ.get("STATE_DIR") or os.environ.get("CLAUDE_WORKFLOW_STATE_DIR", ".claude/workflow-state")
 warnings = []
 state_summary = []
 
