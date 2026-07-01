@@ -33,7 +33,10 @@ command -v python3 >/dev/null 2>&1 || {
 INPUT=$(cat)
 
 # ── Log directory (Fix MINOR-1: error handling for mkdir) ──
-LOG_DIR=".claude/workflow-state"
+# stray-.claude fix (2026-07-01): anchor state to project root, never cwd (hooks run in cwd).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+LOG_DIR="${CLAUDE_WORKFLOW_STATE_DIR:-${CLAUDE_PROJECT_DIR:-${REPO_ROOT}}/.claude/workflow-state}"
 LOG_FILE="$LOG_DIR/hook-log.txt"
 mkdir -p "$LOG_DIR" 2>/dev/null || {
   echo "[protect-files] FATAL: cannot create log directory $LOG_DIR" >&2

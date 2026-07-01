@@ -8,7 +8,11 @@
 
 set -uo pipefail
 
-STATE_DIR=".claude/workflow-state"
+# stray-.claude fix (2026-07-01): anchor state to project root, never cwd (hooks run in cwd).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+STATE_DIR="${CLAUDE_WORKFLOW_STATE_DIR:-${CLAUDE_PROJECT_DIR:-${REPO_ROOT}}/.claude/workflow-state}"
+export STATE_DIR
 mkdir -p "$STATE_DIR" 2>/dev/null || true
 
 INPUT=$(cat)
@@ -18,7 +22,7 @@ python3 << 'PYTHON_EOF' 2>/dev/null || true
 import json, os
 from datetime import datetime, timezone
 
-STATE_DIR = ".claude/workflow-state"
+STATE_DIR = os.environ.get("STATE_DIR") or os.environ.get("CLAUDE_WORKFLOW_STATE_DIR", ".claude/workflow-state")
 EVENTS_FILE = os.path.join(STATE_DIR, "task-events.jsonl")
 
 try:

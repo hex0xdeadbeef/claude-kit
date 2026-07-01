@@ -57,9 +57,10 @@ if os.environ['OMIT_TR'] != 'true':
 print(json.dumps(data))
 ")
 
-  # Run hook from within tmp dir so relative paths (.claude/workflow-state, .claude/PROJECT-KNOWLEDGE.md)
-  # resolve to the stub tree, not the live kit repo.
-  ( cd "$tmp" && printf '%s' "$payload" | bash "$HOOK" ) >/dev/null 2>&1 || true
+  # Run hook from within tmp dir. PK/CLAUDE.md cascade reads resolve via cwd (=$tmp); the
+  # state LOG_DIR now anchors to CLAUDE_PROJECT_DIR (stray-.claude fix 2026-07-01), so set it
+  # to the stub tree explicitly — otherwise the log lands under the live kit repo (REPO_ROOT).
+  ( cd "$tmp" && printf '%s' "$payload" | CLAUDE_PROJECT_DIR="$tmp" bash "$HOOK" ) >/dev/null 2>&1 || true
 
   local log="$tmp/.claude/workflow-state/hook-log.txt"
   local content=""

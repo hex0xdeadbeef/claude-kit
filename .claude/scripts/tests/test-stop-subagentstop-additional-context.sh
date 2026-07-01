@@ -37,7 +37,7 @@ build_repo() {
     printf 'feature: "f"\nphase_completed: 2\ncomplexity: "L"\n' > "${STATE_DIR}/f-checkpoint.yaml" )
 }
 run_stop() {  # sid -> sets STDOUT/RC
-  STDOUT=$(cd "$REPO_DIR" && echo "{\"session_id\":\"$1\"}" | bash "$STOP_HOOK" 2>/dev/null); RC=$?
+  STDOUT=$(cd "$REPO_DIR" && echo "{\"session_id\":\"$1\"}" | CLAUDE_WORKFLOW_STATE_DIR="$STATE_DIR" bash "$STOP_HOOK" 2>/dev/null); RC=$?
 }
 has_decision_block(){ echo "$1" | python3 -c "import json,sys
 try: sys.exit(0 if json.load(sys.stdin).get('decision')=='block' else 1)

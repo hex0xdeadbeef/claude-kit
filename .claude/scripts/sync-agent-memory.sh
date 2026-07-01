@@ -41,7 +41,10 @@ if [[ ! "$WORKTREE_PATH" = /* ]] || [[ "$WORKTREE_PATH" = *"{"* ]] || [[ "$WORKT
 fi
 
 SRC_DIR="$WORKTREE_PATH/.claude/agent-memory/$AGENT_TYPE"
-DST_DIR=".claude/agent-memory/$AGENT_TYPE"
+# stray-.claude fix (2026-07-01): anchor state to project root, never cwd (hooks run in cwd).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+DST_DIR="${CLAUDE_PROJECT_DIR:-${REPO_ROOT}}/.claude/agent-memory/$AGENT_TYPE"
 
 if [[ ! -d "$SRC_DIR" ]]; then
   echo "[sync-agent-memory] WARN: no memory dir in worktree for $AGENT_TYPE" >&2

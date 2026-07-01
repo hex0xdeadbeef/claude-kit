@@ -171,6 +171,7 @@ Project-local terse-output mode for `/workflow` runs (lite-only intensity in v1;
 - Hooks + permissions: see `.claude/settings.json` (authoritative; 16 event types, 29 scripts; conditional `if` on PreToolUse/PostToolUse since v2.1.85; security hooks unconditional). Local overrides in `.claude/settings.local.json` (template at `settings.local.json.example`); arrays merge, deny wins.
 - MCP servers: see `.mcp.json` (3 servers: sequential-thinking, context7, tree_sitter; requires `npx` + `uvx` per Soft Prerequisites table above).
 - Memory: auto-memory enabled (`autoMemoryEnabled: true` in settings.json); subagent memory per agent definitions in `.claude/agents/`.
+- State-write anchoring (stray-`.claude` invariant): every hook that WRITES `.claude/workflow-state` or `.claude/agent-memory` MUST anchor its dir to `${CLAUDE_WORKFLOW_STATE_DIR:-${CLAUDE_PROJECT_DIR:-${REPO_ROOT}}/.claude/workflow-state}` (canonical form in `.claude/scripts/lib/paths.sh`), never a bare relative `.claude/...` literal — Claude Code runs hooks in the current directory (docs: code.claude.com/docs/en/hooks), so a relative path scatters stray `.claude/` dirs into random project subdirs. Locked by `.claude/scripts/tests/test-no-relative-claude-state-paths.sh`. Deferred (not anchored): cwd-relative `.claude/prompts` READS.
 
 ## Conventions
 

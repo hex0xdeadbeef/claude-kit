@@ -9,6 +9,10 @@
 
 set -euo pipefail
 
+# stray-.claude fix (2026-07-01): anchor state to project root, never cwd (hooks run in cwd).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
 # P3: hard-coded breaker threshold (no env var per user direction 2026-05-22).
 # I-02 INVARIANT: STOP_BLOCK_MAX MUST stay < the platform's stop-hook block cap
 # (CLAUDE_CODE_STOP_HOOK_BLOCK_CAP, default 8 since Claude Code v2.1.143). Our breaker
@@ -80,7 +84,7 @@ if [ "$UNCOMMITTED" -gt 0 ]; then
     # >= STOP_BLOCK_MAX, emit WARN and exit 0 (allow stop) instead of
     # re-emitting decision:block.  Counter file cleaned up at SessionEnd
     # by session-analytics.sh glob delete.
-    STATE_DIR_LOCAL="${CLAUDE_WORKFLOW_STATE_DIR:-.claude/workflow-state}"
+    STATE_DIR_LOCAL="${CLAUDE_WORKFLOW_STATE_DIR:-${CLAUDE_PROJECT_DIR:-${REPO_ROOT}}/.claude/workflow-state}"
     SESSION_ID="default"
     if [[ -n "$STOP_INPUT" ]] && command -v python3 >/dev/null 2>&1; then
       SESSION_ID=$(echo "$STOP_INPUT" | python3 -c "

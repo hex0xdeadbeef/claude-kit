@@ -47,7 +47,11 @@ export _AGENT_TYPE="$AGENT_TYPE"
 LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib"
 export LIB_DIR
 
-STATE_DIR="${CLAUDE_WORKFLOW_STATE_DIR:-.claude/workflow-state}"
+# stray-.claude fix (2026-07-01): anchor state to project root, never cwd (hooks run in cwd).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+STATE_DIR="${CLAUDE_WORKFLOW_STATE_DIR:-${CLAUDE_PROJECT_DIR:-${REPO_ROOT}}/.claude/workflow-state}"
+export STATE_DIR
 
 # P5: write .iteration-in-flight for review agents so PreCompact protection
 # is symmetric with the SubagentStop deletion at save-review-checkpoint.sh:725-741.
@@ -347,7 +351,7 @@ try:
 except Exception:
     current_session_id = ""
 
-state_dir = os.environ.get("CLAUDE_WORKFLOW_STATE_DIR", ".claude/workflow-state")
+state_dir = os.environ.get("STATE_DIR") or os.environ.get("CLAUDE_WORKFLOW_STATE_DIR", ".claude/workflow-state")
 prompts_dir = ".claude/prompts"
 
 # --- P3: eager .verdict-block-{agent_id} TTL eviction (mirrors save-review-checkpoint) ---
