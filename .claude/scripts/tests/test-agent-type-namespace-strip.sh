@@ -3,8 +3,8 @@
 # A plugin-namespaced 'claude-kit:plan-reviewer' must normalize to bare 'plan-reviewer' so the
 # exact-match membership tests (REVIEW_AGENTS, agent-id registry) fire. Identity on bare inputs.
 # agent_type is NOT a canonical-ID hash input, so this cannot affect issue-ID stability.
-# Harness mirrors test-subagent-type-normalize.sh (emit_save). track-task-lifecycle.sh uses a
-# CWD-relative STATE_DIR (does not honor CLAUDE_WORKFLOW_STATE_DIR), so case A sandboxes via cd.
+# Harness mirrors test-subagent-type-normalize.sh (emit_save). Both hooks now anchor STATE_DIR to
+# CLAUDE_PROJECT_DIR (stray-.claude fix 2026-07-01), so case A sets CLAUDE_PROJECT_DIR="$tmp".
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SRC_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -31,7 +31,7 @@ emit_track_registry_type() {  # agent_type agent_id -> prints agent-id-registry 
   local at="$1" aid="$2" tmp payload out
   tmp="$(mktemp -d)"; mkdir -p "$tmp/.claude/workflow-state"
   payload="$(python3 -c "import json,sys; print(json.dumps({'agent_type':sys.argv[1],'agent_id':sys.argv[2],'session_id':'s1','hook_event_name':'SubagentStart'}))" "$at" "$aid")"
-  ( cd "$tmp" && bash "$TRACK_HOOK" <<< "$payload" >/dev/null 2>&1 )
+  ( cd "$tmp" && CLAUDE_PROJECT_DIR="$tmp" bash "$TRACK_HOOK" <<< "$payload" >/dev/null 2>&1 )
   out="$(tail -n1 "$tmp/.claude/workflow-state/agent-id-registry.jsonl" 2>/dev/null)"
   rm -rf "$tmp"
   printf '%s' "$out" | field agent_type
