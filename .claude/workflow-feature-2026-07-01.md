@@ -158,3 +158,23 @@ Part 5: Global invariant guard + docs (+ optional command-vector)
   acceptance: "grep guard fails on any future relative site; suite green; +3 test count"
 
 gate2_recommendation: "Implement all 5 parts in order (1->5). Part 1+2 are highest-value (hot-path + contract-risk). Part 5 makes regression impossible."
+
+## Implementation Status (Phase 6 — shipped)
+
+completed_2026-07-01:
+  branch: fix/stray-claude-dirs-path-anchor
+  parts:
+    - "Part 1 (f807c1e): auto-fmt.sh, pre-commit-build.sh, protect-files.sh — code-review APPROVED"
+    - "Part 2 (8b353db): track-task-lifecycle.sh, save-review-checkpoint.sh, inject-review-context.sh — APPROVED (2 NITs applied)"
+    - "Part 3 (0852be2): enrich-context.sh, save-progress-before-compact.sh, verify-state-after-compact.sh, session-analytics.sh, check-uncommitted.sh — APPROVED_WITH_COMMENTS"
+    - "Part 4 (66224c6): audit-config-change.sh, log-permission-denied.sh, log-stop-failure.sh, sync-agent-memory.sh — APPROVED"
+    - "Part 5: test-no-relative-claude-state-paths.sh invariant guard + lib/paths.sh + CLAUDE.md docs — APPROVED_WITH_COMMENTS (CR-001 single-quote coverage, CR-002 tightened exclusion, CR-003 doc fix applied)"
+  method: "each part = TDD (behavioral+structural test RED -> anchor fix GREEN) -> full suite -> formal code-reviewer agent -> commit"
+  tests_added: [test-hotpath-hooks-state-anchor.sh, test-subagent-lifecycle-state-anchor.sh, test-lifecycle-compact-state-anchor.sh, test-lowfreq-loggers-state-anchor.sh, test-no-relative-claude-state-paths.sh]
+  test_harnesses_updated: [test-auto-fmt-dispatch.sh, test-agent-type-namespace-strip.sh, test-stop-circuit-breaker.sh, test-stop-subagentstop-additional-context.sh, test-checkpoint-selection-mtime.sh]
+  suite: "124 -> 129 tests, all green before AND after each part"
+  contract_safety: "no handoff/VERDICT envelope change, no canonical-ID change, no new env vars, no settings.json/hook-wiring change — verified by 5 independent code-reviewer passes"
+  deferred:
+    - "cwd-relative .claude/prompts READS (inject-review-context prompts_dir/pk_path, enrich PROMPTS_DIR, save-progress load_state, check-uncommitted ls checkpoint selector) — a distinct context-miss bug (reviewer/selector reads wrong dir when cwd != root), NOT a stray-dir write. Out of scope for this Задача."
+    - "Model-driven relative .claude/ writes via command/skill Write instructions (24+ refs) — [UNVERIFIED-impact]; orchestrator generally absolutizes via Write tool."
+    - "test-aggregate-pipeline-metrics.sh (root orphan test-*.sh) still relative — a test harness (controls its own cwd), excluded from the guard scope; pre-existing independent failure on HEAD."

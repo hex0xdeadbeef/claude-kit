@@ -54,3 +54,13 @@ else
   KIT_PLUGIN_MODE=0
 fi
 unset _kit_br _kit_pr 2>/dev/null || true
+
+# ── State-write anchoring invariant (stray-.claude fix, 2026-07-01) ──────────────────────────
+# Every hook that WRITES workflow-state or agent-memory MUST anchor its dir to the canonical form
+# above (CLAUDE_PROJECT_DIR primary, REPO_ROOT fallback) — never a bare relative ".claude/..."
+# literal, which resolves against the hook's cwd and scatters stray .claude/ dirs into random
+# project subdirs when the hook fires with cwd != project root. Scripts that embed a python heredoc
+# export STATE_DIR through the environment so the python side reads it via
+# `os.environ.get("STATE_DIR") or os.environ.get("CLAUDE_WORKFLOW_STATE_DIR", ...)`.
+# The invariant is locked by .claude/scripts/tests/test-no-relative-claude-state-paths.sh.
+# Deferred (NOT anchored): cwd-relative ".claude/prompts" READS — a distinct context-miss concern.
