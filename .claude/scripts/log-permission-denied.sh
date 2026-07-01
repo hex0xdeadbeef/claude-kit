@@ -17,7 +17,11 @@ INPUT=$(cat)
 # Graceful degradation
 command -v python3 >/dev/null 2>&1 || exit 0
 
-LOG_DIR=".claude/workflow-state"
+# stray-.claude fix (2026-07-01): anchor state to project root, never cwd (hooks run in cwd).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+LOG_DIR="${CLAUDE_WORKFLOW_STATE_DIR:-${CLAUDE_PROJECT_DIR:-${REPO_ROOT}}/.claude/workflow-state}"
+export STATE_DIR="$LOG_DIR"
 mkdir -p "$LOG_DIR" 2>/dev/null || exit 0
 
 # Pass INPUT via env var (heredoc consumes python's stdin — can't read from there)
@@ -27,7 +31,7 @@ python3 << 'PYTHON_EOF'
 import json, os, glob
 from datetime import datetime, timezone
 
-STATE_DIR = ".claude/workflow-state"
+STATE_DIR = os.environ.get("STATE_DIR") or os.environ.get("CLAUDE_WORKFLOW_STATE_DIR", ".claude/workflow-state")
 LOG_FILE = os.path.join(STATE_DIR, "hook-log.txt")
 
 # Parse payload

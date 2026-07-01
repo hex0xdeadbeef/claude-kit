@@ -251,14 +251,14 @@ T9_STATE="$(mktemp -d)"
 # Newer checkpoint at phase_completed: 2 (retry should fire) — alphabetical-FIRST
 # Older checkpoint at phase_completed: 4 (retry should NOT fire) — alphabetical-LAST
 seed_divergent_checkpoints "$T9_STATE" "a-new" "z-old" 2 4
-# log-permission-denied.sh hard-codes STATE_DIR = ".claude/workflow-state" in
-# the heredoc (does NOT honour CLAUDE_WORKFLOW_STATE_DIR — verified iter 2).
-# Build the kit-relative path inside T9_STATE and run from there.
+# log-permission-denied.sh now anchors STATE_DIR to CLAUDE_PROJECT_DIR/REPO_ROOT and
+# honours CLAUDE_WORKFLOW_STATE_DIR (stray-.claude fix 2026-07-01), so pin it to the
+# seeded sandbox dir explicitly rather than relying on a cwd-relative read.
 mkdir -p "${T9_STATE}/.claude/workflow-state"
 # Reseed inside the kit-relative path
 seed_divergent_checkpoints "${T9_STATE}/.claude/workflow-state" "a-new" "z-old" 2 4
 out=$(cd "$T9_STATE" && echo '{"tool_name":"Bash","tool_input":{"command":"echo test"},"reason":"classifier-denied"}' \
-  | bash "${KIT_ROOT}/.claude/scripts/log-permission-denied.sh" 2>/dev/null)
+  | CLAUDE_WORKFLOW_STATE_DIR="${T9_STATE}/.claude/workflow-state" bash "${KIT_ROOT}/.claude/scripts/log-permission-denied.sh" 2>/dev/null)
 # Expected: retry:true (because newer-mtime checkpoint has phase_completed:2)
 echo "$out" | python3 -c "
 import json, sys
@@ -276,7 +276,7 @@ assert_pass "T9.a — retry:true emitted (mtime-newer checkpoint has phase=2, al
 find "${T9_STATE}/.claude/workflow-state" -mindepth 1 -delete
 seed_divergent_checkpoints "${T9_STATE}/.claude/workflow-state" "a-new" "z-old" 4 2
 out=$(cd "$T9_STATE" && echo '{"tool_name":"Bash","tool_input":{"command":"echo test"},"reason":"classifier-denied"}' \
-  | bash "${KIT_ROOT}/.claude/scripts/log-permission-denied.sh" 2>/dev/null)
+  | CLAUDE_WORKFLOW_STATE_DIR="${T9_STATE}/.claude/workflow-state" bash "${KIT_ROOT}/.claude/scripts/log-permission-denied.sh" 2>/dev/null)
 # Expected: NO retry emission (output should be empty, since the script
 # only prints when emit_retry is True).
 if [[ -z "$(echo "$out" | tr -d '[:space:]')" ]]; then
