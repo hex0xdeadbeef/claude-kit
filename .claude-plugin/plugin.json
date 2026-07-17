@@ -2,12 +2,24 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "claude-kit",
   "displayName": "Claude Kit",
-  "version": "1.44.0",
+  "version": "1.45.0",
   "description": "Multi-agent /workflow development pipeline (planner → plan-review → coder → code-review) with typed handoff contracts, lifecycle hooks, and MCP servers.",
-  "author": { "name": "Dmitriy Mamykin", "url": "https://github.com/hex0xdeadbeef" },
+  "author": {
+    "name": "Dmitriy Mamykin",
+    "url": "https://github.com/hex0xdeadbeef"
+  },
   "repository": "https://github.com/hex0xdeadbeef/claude-kit",
-  "keywords": ["workflow", "multi-agent", "pipeline", "tdd", "code-review", "planning"],
-  "commands": ["./.claude/commands/"],
+  "keywords": [
+    "workflow",
+    "multi-agent",
+    "pipeline",
+    "tdd",
+    "code-review",
+    "planning"
+  ],
+  "commands": [
+    "./.claude/commands/"
+  ],
   "agents": [
     "./.claude/agents/code-researcher.md",
     "./.claude/agents/code-reviewer.md",
