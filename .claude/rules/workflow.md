@@ -22,6 +22,7 @@ Model Routing (all workflow pipeline agents: opus + effort:xhigh):
 - opus (effort: xhigh): /workflow, /planner, /designer, /coder, /meta-agent, /project-researcher, plan-reviewer, code-reviewer
 - haiku (effort: medium): code-researcher — fast read-only codebase exploration
 - haiku (effort: low): verdict-recovery — minimal fallback agent for missing verdicts
+- sonnet (effort: high): design-critic — blind role critic for /designer Phase 3.5a panel (small-diverse-judges-under-a-large-arbiter configuration; arXiv 2404.18796)
 
 Context (v2.1.94+):
 - Claude Code default effort changed from `medium` → `high` for API-key/Team/Enterprise users in v2.1.94

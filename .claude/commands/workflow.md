@@ -170,7 +170,7 @@ startup:
 
     - step: 0
       action: "Task Analysis — task classification"
-      reference: "For details see [task-analysis.md] in planner-rules skill"
+      reference: "For details see [task-analysis.md] in planner-rules skill. Includes Step 1.5 Bounded Recon (TA-scout, <=5 reads ceiling, 0-read fast path) — evidence-grounded classification."
       purpose: "Determine complexity (S/M/L/XL) and route BEFORE planning"
       decisions:
         S: "/planner --minimal → skip Phase 2 → /coder → code-reviewer (agent)"

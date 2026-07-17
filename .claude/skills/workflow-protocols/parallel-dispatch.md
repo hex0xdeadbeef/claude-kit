@@ -30,7 +30,7 @@ flowchart TD
     Q4 -->|overlap| A3
 ```
 
-## Use Case 1: Research Multi-Dispatch — /planner Phase 3 (WIRED — see planner.md complex_search.background_mode.parallel_fanout)
+## Use Case 1: Research Multi-Dispatch — /planner Phase 3 (WIRED — see planner.md complex_search.background_mode.parallel_fanout; designer variant = Use Case 1b below)
 
 When to use:
 - L/XL complexity, 3+ independent research questions
@@ -58,6 +58,13 @@ Return: structured summary ≤2000 tokens (patterns, files, imports, key snippet
 Async integration point:
 - Check results at transition to DESIGN
 - If late findings contradict design → inline revision (≤1 part) or re-evaluate
+
+## Use Case 1b: Designer EXPLORE Multi-Dispatch — /designer Phase 1 (WIRED — see designer.md optional_background_research.parallel_fanout)
+
+Same pattern as Use Case 1, scoped to /designer: 2+ independent research AREAS (affected
+subsystem, contract surfaces, test landscape, in-repo prior art) → one background
+code-researcher per area, single message, integrated at the designer async_integration_point
+before PROPOSE. Single-researcher mode remains the fallback for coupled areas.
 
 ## Use Case 2: Independent Failure Investigation — /coder debugging (FUTURE PATTERN)
 
