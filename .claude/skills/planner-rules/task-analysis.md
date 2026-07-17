@@ -45,6 +45,33 @@ task_types:
 
 ---
 
+## Step 1.5: Bounded Recon (TA-scout)
+
+Purpose: ground the complexity estimate in evidence instead of description-only guessing.
+Misclassification costs a wasted pipeline route; five quick reads cost seconds.
+
+```yaml
+ta_scout:
+  budget:
+    glob_grep: "unlimited within reason — surface sizing is cheap"
+    reads: "<= 5 targeted Reads. This is a CEILING, not a mandate."
+  fast_path: "Obvious-S tasks (single named file, pattern exists, no unknowns) classify at 0 reads."
+  activate_when:
+    - "Classification is torn between two adjacent classes (S/M, M/L, L/XL)"
+    - "The task names files, symbols, or subsystems you have not seen this session"
+    - "The task claims something exists ('extend X') — verify X exists before routing"
+  protocol:
+    - "Glob the areas the task description names — surface size signal (file counts)"
+    - "Grep for claimed symbols/patterns — existence check"
+    - "Up to 5 targeted Reads ONLY where the two steps above leave the class ambiguous"
+  output_fields:
+    blast_radius: "estimated files + layers touched, from evidence"
+    evidence: "list of path:line references backing the estimate (may be empty on fast path)"
+    confidence: "high | medium | low — low confidence => note re-routing likelihood"
+```
+
+---
+
 ## Step 2: Estimate Complexity
 
 ```yaml
@@ -178,6 +205,9 @@ Route: {minimal | standard | full}
 Sequential Thinking: {required | recommended | not_needed}
 Plan Review: {skip | standard}
 Preconditions: {all_clear | warnings_list}
+Blast Radius: "{N files, M layers — from recon evidence, or 'unscouted (fast path)'}"
+Evidence: ["{path:line}", ...]   # empty list on fast path
+Confidence: {high | medium | low}
 
 Rationale: "{1-2 sentences explaining chosen complexity and route}"
 ```

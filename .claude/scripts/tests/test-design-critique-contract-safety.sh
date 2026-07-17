@@ -14,8 +14,12 @@ rc=0; fail(){ echo "FAIL: $1"; rc=1; }; pass(){ echo "PASS: $1"; }
 # CS-1 (AC1.8): SubagentStop matcher is the expected value, untouched by design-critique
 # (post matcher-hardening forward-compat fix: (claude-kit:)?(plan-reviewer|code-reviewer|verdict-recovery))
 if grep -q '"(claude-kit:)?(plan-reviewer|code-reviewer|verdict-recovery)"' "$SETTINGS"; then pass "CS-1 SubagentStop matcher intact"; else fail "CS-1 SubagentStop matcher changed"; fi
-# CS-1b: no design-critic / design-reviewer agent wired anywhere in settings (Part 1 + GATE-2 excluded Part 3)
-if grep -qiE 'design-critic|design-reviewer' "$SETTINGS"; then fail "CS-1b a design critic/reviewer agent leaked into settings.json"; else pass "CS-1b no design critic agent in settings.json"; fi
+# CS-1b (revised by ta-designer-uplift, user-approved 2026-07-17): design-critic is now a
+# sanctioned agent, wired ONLY via the caveman-suspend matcher alternation on the
+# code-researcher SubagentStart entry. Guard: it must appear EXACTLY once in settings.json
+# (that alternation) and design-reviewer must not appear at all — no uncontrolled leakage.
+dc_count=$(grep -o 'design-critic' "$SETTINGS" | wc -l | tr -d ' ') || true
+if [[ "${dc_count:-0}" -eq 1 ]] && ! grep -qiE 'design-reviewer' "$SETTINGS"; then pass "CS-1b design-critic wired exactly once (approved matcher), no design-reviewer"; else fail "CS-1b design-critic wiring count=${dc_count:-0} (expected exactly 1) or design-reviewer leaked"; fi
 
 # CS-2 (AC1.10): designer_to_planner contract has NO $handoff_contract discriminator (Part 1).
 # Extract ONLY the designer_to_planner block — stop at the next contract key so we do not

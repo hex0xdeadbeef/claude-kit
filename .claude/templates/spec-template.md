@@ -59,6 +59,7 @@ spec:
     findings:
       - id: "DC-1"                  # local ref only — NOT the canonical issue ID (first 8 hex of sha256 over category|location|problem); never enters a verdict envelope
         lens: "boundary"
+        role: "Architect"           # OPTIONAL — panel role that produced the finding (Phase 3.5a); absent on the fallback single-context path
         finding: "{Complete sentence naming the specific missed case for THIS task.}"
         severity: "HIGH|MEDIUM|LOW"
         disposition: "addressed|accepted-risk|out-of-scope"
@@ -70,6 +71,11 @@ spec:
       accepted_risk: 0
       out_of_scope: 0
       unresolved_high: 0           # HIGH findings not yet addressed — surfaced at the user gate
+    panel:                          # OPTIONAL — present only when Phase 3.5a (role panel) ran; consumers SKIP if absent
+      roles_dispatched: ["Architect", "Security", "Ops/SRE", "QA/Testability", "Product/DX"]
+      roles_returned: ["..."]
+      model: "sonnet"
+      fallback_used: false
 
   acceptance_criteria:
     - "{Criterion 1 — verifiable}"

@@ -276,7 +276,7 @@
     ],
     "SubagentStart": [
       {
-        "matcher": "(claude-kit:)?code-researcher",
+        "matcher": "(claude-kit:)?(code-researcher|design-critic)",
         "hooks": [
           {
             "type": "command",
