@@ -138,7 +138,11 @@ Project-local terse-output mode for `/workflow` runs (lite-only intensity in v1;
 
 **Files:** skill body at `.claude/skills/caveman/SKILL.md`; activation + reviewer-exemption hooks under `.claude/scripts/caveman-*.sh`; tests under `.claude/scripts/tests/test-caveman-*.sh` (activation, reviewer-suspend, no-regression with golden-file canonical-id stability).
 
-**Empirical validation:** capture Messages-token count from a representative `/workflow` XL run BEFORE and AFTER setting `CLAUDE_CAVEMAN_MODE=lite` to validate the ≥20% reduction lower bound; record both numbers in `.claude/workflow-state/pipeline-metrics.jsonl`.
+**Empirical validation (honest status):** the `lite` level is **unbenchmarked** — by upstream and by us. Upstream ships `COMPRESSION = { 'full': 0.65 }` (`src/hooks/caveman-stats.js:19`) with the comment "Only 'full' has measured data; lite / ultra / wenyan modes show no estimate until benchmarked" (`src/hooks/caveman-stats.js:16-17`), and no `lite` arm exists in its `evals/` or `benchmarks/`. Upstream's headline figure is that same 0.65 output-only ratio, measured on `full` against a `"You are a helpful assistant."` baseline (`benchmarks/run.py:42`) — a methodology upstream's own `evals/README.md` calls inflated. Do NOT quote any upstream ratio for `lite`.
+
+What IS measured locally: the injected body costs **999 tokens** (tiktoken `o200k_base`, frontmatter stripped), paid once per session into a cacheable prompt prefix. Taking a hypothetical one-fifth output saving purely as an illustrative divisor — NOT a measured rate — break-even needs roughly 5000 output tokens of main-session prose per session; an XL `/workflow` run clears that, a quick ad-hoc session does not. The compressible surface is main-session prose ONLY: reviewers are exempt (`caveman-suspend-for-reviewer.sh`), and code blocks, YAML-first artifacts, and the hash-bound fields in Boundaries are all exempt.
+
+**The only authority is an A/B against your provider's own usage page:** run the same task with `CLAUDE_CAVEMAN_MODE=off` and `=lite`, compare billed tokens, record both in `.claude/workflow-state/pipeline-metrics.jsonl`. If it loses for your workload, set it to `off` — that outranks anything this file claims.
 
 ## Error Handling (All Agents)
 
