@@ -23,15 +23,20 @@ SKILL_FILE="${REPO_ROOT}/.claude/skills/caveman/SKILL.md"
 rc=0
 PASS=0
 FAIL=0
+SKIPPED=0
 
 if [[ ! -f "${SKILL_FILE}" ]]; then
   echo "[test-caveman-upstream-parity] FAIL: SKILL.md not found at ${SKILL_FILE}"
   exit 1
 fi
 
+# CR-002: markers are matched against a WHITESPACE-FLATTENED copy of the body, so a line
+# wrap that splits a marker phrase across two lines cannot silently break the guard.
+SKILL_FLAT="$(tr '\n' ' ' < "${SKILL_FILE}" | tr -s ' ')"
+
 check() {
   local label="$1" pattern="$2"
-  if grep -qiE -- "${pattern}" "${SKILL_FILE}"; then
+  if printf '%s' "${SKILL_FLAT}" | grep -qiE -- "${pattern}"; then
     echo "  PASS: ${label}"
     PASS=$((PASS + 1))
   else
@@ -95,27 +100,41 @@ else
 fi
 
 echo "── D) AC-8 token budget (<= 1000; pre-change baseline was 956) ──"
+# CR-001: this check is the ONLY enforcement of the injected-body cost cap. If it is skipped
+# it MUST NOT read as success — a guard that reports "0 failed" while enforcing nothing is
+# worse than no guard, because it manufactures false confidence. Per the kit's soft-prereq
+# convention the skip stays non-blocking (rc unchanged), but it is counted and surfaced in
+# the summary line so "budget NOT enforced" is impossible to miss.
+tok=""
 if command -v uv >/dev/null 2>&1; then
-  tok=$(SKILL_FILE="${SKILL_FILE}" uv run --quiet --with tiktoken python - <<'PYEOF' 2>/dev/null || echo "SKIP"
+  tok=$(SKILL_FILE="${SKILL_FILE}" uv run --quiet --with tiktoken python - <<'PYEOF' 2>/dev/null || echo ""
 import os, tiktoken
 src = open(os.environ["SKILL_FILE"]).read()
 body = "---".join(src.split("---")[2:])
 print(len(tiktoken.get_encoding("o200k_base").encode(body)))
 PYEOF
   )
-  if [[ "${tok}" == "SKIP" || -z "${tok}" ]]; then
-    echo "  SKIP: tiktoken unavailable — token budget not enforced this run"
-  elif [[ "${tok}" =~ ^[0-9]+$ ]] && [[ "${tok}" -le 1000 ]]; then
-    echo "  PASS: injected body ${tok} tokens (<= 1000)"
-    PASS=$((PASS + 1))
-  else
-    echo "  FAIL: injected body ${tok} tokens exceeds AC-8 budget of 1000"
-    FAIL=$((FAIL + 1))
-    rc=1
-  fi
-else
-  echo "  SKIP: uv not installed — token budget not enforced this run"
 fi
 
-echo "─── caveman-upstream-parity: ${PASS} passed, ${FAIL} failed ───"
+if [[ ! "${tok}" =~ ^[0-9]+$ ]]; then
+  echo "  SKIP: uv/tiktoken unavailable — AC-8 TOKEN BUDGET NOT ENFORCED THIS RUN"
+  echo "        Install uv to enforce it: https://astral.sh/uv"
+  SKIPPED=$((SKIPPED + 1))
+elif [[ "${tok}" -le 1000 ]]; then
+  echo "  PASS: injected body ${tok} tokens (<= 1000, headroom $((1000 - tok)))"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: injected body ${tok} tokens exceeds the AC-8 budget of 1000 (over by $((tok - 1000)))"
+  echo "        The body is injected at EVERY SessionStart, so growth is a recurring cost."
+  echo "        FIX BY TIGHTENING PROSE OR RECLAIMING DUPLICATION — do not raise the cap."
+  echo "        Prose duplicated in the always-loaded CLAUDE.md is the cheapest reclaim."
+  FAIL=$((FAIL + 1))
+  rc=1
+fi
+
+summary="─── caveman-upstream-parity: ${PASS} passed, ${FAIL} failed"
+if [[ "${SKIPPED}" -gt 0 ]]; then
+  summary="${summary}, ${SKIPPED} SKIPPED (token budget NOT enforced)"
+fi
+echo "${summary} ───"
 exit ${rc}
