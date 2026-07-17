@@ -14,7 +14,6 @@
     "ENABLE_PROMPT_CACHING_1H": "1"
   },
   "permissions": {
-    "defaultMode": "acceptEdits",
     "allow": [
       "Edit",
       "Write",
@@ -71,6 +70,7 @@
       "Write(.env.local)",
       "Read(secrets/**)",
       "Read(**/.ssh/id_*)"
-    ]
+    ],
+    "defaultMode": "acceptEdits"
   }
 }
