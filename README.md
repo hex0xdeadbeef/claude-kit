@@ -674,7 +674,7 @@ Project-local fork of the [caveman skill](https://github.com/juliusbrussee/cavem
 
 | Value | Behavior |
 |-------|----------|
-| `lite` *(only intensity supported in v1; shipped default)* | Drops filler ("just", "really", "basically"), pleasantries ("sure", "happy to"), hedging ("it might be worth"). Keeps complete sentences, articles, technical terms, code blocks. ~30-40% Messages-token reduction expected. |
+| `lite` *(only intensity supported in v1; shipped default)* | Drops filler ("just", "really", "basically"), pleasantries ("sure", "happy to"), hedging ("it might be worth"). Keeps complete sentences, articles, technical terms, code blocks. Savings for `lite` are unbenchmarked — measure with an A/B (see CLAUDE.md § Caveman Token Compression Policy). |
 | `off` *(opt-out)* | SessionStart hook exits silently — zero injection, byte-identical to pre-v1.21.0 behavior. (For a full reset, also remove the var and delete the `.claude/workflow-state/.caveman-mode` flag file.) |
 
 <details>
