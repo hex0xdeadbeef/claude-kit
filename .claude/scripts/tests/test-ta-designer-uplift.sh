@@ -98,5 +98,31 @@ ck "role field on finding"     "${SPEC_TMPL}" '^[[:space:]]+role:'
 ck "panel sub-block"           "${SPEC_TMPL}" '^[[:space:]]+panel:'
 ck "fallback_used field"       "${SPEC_TMPL}" "fallback_used"
 
-echo "─── ta-designer-uplift guard: ${PASS} passed, ${FAIL} failed ───"
+echo "── G) designer.md token ceiling (load-bearing per code-review CR-001) ──"
+# Ceiling 2957 = the approved baseline 2275 tokens (o200k_base, commit a86dd0e) * 1.30 plan cap.
+# Measured 2949 at merge. A skipped check must NOT read as success (guard-fail-loudly).
+SKIPPED=0
+if command -v uv >/dev/null 2>&1; then
+  dtok=$(DESIGNER="${DESIGNER}" uv run --quiet --with tiktoken python - <<'PYEOF' 2>/dev/null || echo ""
+import os, tiktoken
+print(len(tiktoken.get_encoding("o200k_base").encode(open(os.environ["DESIGNER"]).read())))
+PYEOF
+  )
+  if [[ ! "${dtok}" =~ ^[0-9]+$ ]]; then
+    echo "  SKIP: tiktoken unavailable — TOKEN CEILING NOT ENFORCED THIS RUN"; SKIPPED=$((SKIPPED+1))
+  elif [[ "${dtok}" -le 2957 ]]; then
+    echo "  PASS: designer.md ${dtok} tokens (<= 2957 ceiling, headroom $((2957-dtok)))"; PASS=$((PASS+1))
+  else
+    echo "  FAIL: designer.md ${dtok} tokens exceeds the 2957 ceiling (over by $((dtok-2957)))"
+    echo "        The command body loads on EVERY /designer invocation. Trim prose or move"
+    echo "        content to a just-in-time file — do not raise the ceiling."
+    FAIL=$((FAIL+1)); rc=1
+  fi
+else
+  echo "  SKIP: uv not installed — TOKEN CEILING NOT ENFORCED THIS RUN"; SKIPPED=$((SKIPPED+1))
+fi
+
+summary="─── ta-designer-uplift guard: ${PASS} passed, ${FAIL} failed"
+if [[ "${SKIPPED}" -gt 0 ]]; then summary="${summary}, ${SKIPPED} SKIPPED (token ceiling NOT enforced)"; fi
+echo "${summary} ───"
 exit ${rc}

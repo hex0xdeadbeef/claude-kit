@@ -18,7 +18,7 @@ if grep -q '"(claude-kit:)?(plan-reviewer|code-reviewer|verdict-recovery)"' "$SE
 # sanctioned agent, wired ONLY via the caveman-suspend matcher alternation on the
 # code-researcher SubagentStart entry. Guard: it must appear EXACTLY once in settings.json
 # (that alternation) and design-reviewer must not appear at all — no uncontrolled leakage.
-dc_count=$(grep -c 'design-critic' "$SETTINGS") || true
+dc_count=$(grep -o 'design-critic' "$SETTINGS" | wc -l | tr -d ' ') || true
 if [[ "${dc_count:-0}" -eq 1 ]] && ! grep -qiE 'design-reviewer' "$SETTINGS"; then pass "CS-1b design-critic wired exactly once (approved matcher), no design-reviewer"; else fail "CS-1b design-critic wiring count=${dc_count:-0} (expected exactly 1) or design-reviewer leaked"; fi
 
 # CS-2 (AC1.10): designer_to_planner contract has NO $handoff_contract discriminator (Part 1).
