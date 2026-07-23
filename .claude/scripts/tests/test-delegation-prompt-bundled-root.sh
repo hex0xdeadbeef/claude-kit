@@ -49,7 +49,7 @@ else
   fail "delegation-templates: STEP -2 missing .bundled-kit-root marker resolution"
 fi
 
-# Case E (PR-003) — no bare project-relative pipe-prefixed sidecar invocation remains.
+# Case E — no bare project-relative pipe-prefixed sidecar invocation remains.
 # Scope the negative assertion to the EXECUTABLE pipe form, not prose mentions of the script name,
 # so the STATUS-block rationale that references inject-review-context.sh does not trip it.
 if grep -qF '| bash .claude/scripts/inject-review-context.sh' "$DT"; then

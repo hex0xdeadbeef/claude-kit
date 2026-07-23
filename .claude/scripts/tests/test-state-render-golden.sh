@@ -228,7 +228,7 @@ assert_not_contains "LRU-5: oldest file deleted" "$OLDEST" "compact-overflow-100
 rm -f "${STATE_DIR}"/compact-overflow-*.log
 
 # -----------------------------------------------------------------------
-# CR-004: CAP sync guard — all 4 bash hooks must have CAP=8192
+# CAP sync guard — all 4 bash hooks must have CAP=8192
 # Prevents CONTEXT_SIZE_CAP drift between state_render.py and bash scripts.
 # -----------------------------------------------------------------------
 echo "--- CR-004: CAP=6000 sync across all hooks (P5) ---"

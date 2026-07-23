@@ -217,7 +217,7 @@ run_stop_hook "session-T7"
 find "$REPO_DIR" -mindepth 1 -delete 2>/dev/null; rmdir "$REPO_DIR" 2>/dev/null || true
 
 # ============================================================================
-# T7.c (CR-002): non-git invocation — drain stdin cleanly, exit 0, no counter file
+# T7.c: non-git invocation — drain stdin cleanly, exit 0, no counter file
 # Pins the invariant that the stdin drain runs BEFORE the git rev-parse
 # short-circuit so the harness's piped JSON is always consumed (preventing
 # SIGPIPE on the next event).  A future refactor moving the drain below the
@@ -238,7 +238,7 @@ assert_pass "T7.c.c — non-git invocation does NOT create counter file" "$?"
 find "$NONGIT_DIR" -mindepth 1 -delete 2>/dev/null; rmdir "$NONGIT_DIR" 2>/dev/null || true
 
 # ============================================================================
-# T7.d (CR-001): malicious session_id with path-traversal chars → default bucket
+# T7.d: malicious session_id with path-traversal chars → default bucket
 # ============================================================================
 echo "--- T7.d (CR-001): session_id with '/' or '..' falls back to default bucket ---"
 build_repo_with_uncommitted 3
@@ -261,7 +261,7 @@ find "$REPO_DIR" -mindepth 1 -delete 2>/dev/null; rmdir "$REPO_DIR" 2>/dev/null 
 
 # ============================================================================
 # T8: SessionEnd cleanup deletes .stop-block-attempts-*
-# PR-002 honoured: session-analytics.sh invoked under CLAUDE_WORKFLOW_STATE_DIR=sandbox
+# session-analytics.sh is invoked under CLAUDE_WORKFLOW_STATE_DIR=sandbox
 # so analytics JSONL append does NOT pollute the real .claude/workflow-state/.
 # ============================================================================
 echo "--- T8: session-analytics.sh SessionEnd cleanup deletes all .stop-block-attempts-* ---"

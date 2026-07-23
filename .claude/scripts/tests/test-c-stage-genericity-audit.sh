@@ -128,7 +128,7 @@ if awk '/Location-stability guidance/,/Iteration 2\+/' .claude/agents/code-revie
 fi
 pass "CG4.3 — Location-stability bullets are language-agnostic"
 
-# CG4.4 — first PREFER bullet is Part-anchored symbol (mirror G4 PR-001 from P-stage)
+# CG4.4 — first PREFER bullet is Part-anchored symbol (mirrors G4 in the P-stage audit)
 FIRST_BULLET=$(awk '/Location-stability guidance/,/Iteration 2\+/' .claude/agents/code-reviewer.md \
                  | grep -E '^- (PREFER|ACCEPT|AVOID):' | head -1)
 if ! echo "$FIRST_BULLET" | grep -qE '^- PREFER:.*Part [0-9]+:'; then
