@@ -75,7 +75,7 @@ if ! grep -qE 'VERDICT_JSON|\$handoff_contract|\$verdict_contract' "${CLAUDE_MD}
 fi
 
 # ─── Bare PROJECT-KNOWLEDGE.md path forbidden — defer to canonical hook ─────────
-# PR-004 fix: avoid bash-regex divergence from canonical Perl lookbehind by invoking
+# Avoid bash-regex divergence from canonical Perl lookbehind by invoking
 # the canonical .claude/agents/meta-agent/scripts/check-references.sh hook directly.
 HOOK_STDIN=$(printf '{"tool_name":"Edit","tool_input":{"file_path":"%s"}}' "${CLAUDE_MD}")
 HOOK_OUT=$(echo "${HOOK_STDIN}" | bash "${REPO_ROOT}/.claude/agents/meta-agent/scripts/check-references.sh" 2>/dev/null || true)

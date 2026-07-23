@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # test-no-relative-claude-state-paths.sh
-# Part 5 (stray-.claude fix): INVARIANT GUARD. No hook script may define its workflow-state or
+# Stray-.claude fix: INVARIANT GUARD. No hook script may define its workflow-state or
 # agent-memory write directory as a BARE RELATIVE `.claude/...` literal — such a path resolves
 # against the hook's cwd (docs: "Handlers run in the current directory"), scattering stray
 # .claude/ dirs into random subdirs of the user's project. Every state/memory write dir MUST be

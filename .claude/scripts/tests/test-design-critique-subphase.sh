@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Test (Part 1 / DE-1): /designer has a Phase 3.5 CRITIQUE sub-phase between PROPOSE (3) and
+# Test (DE-1): /designer has a Phase 3.5 CRITIQUE sub-phase between PROPOSE (3) and
 # WRITE SPEC (4), it loads critique-lenses.md just-in-time, references the disposition forcing
 # function, and the SKILL.md + design-checklist.md are wired for it. Asserts AC1.1.
 set -uo pipefail
@@ -25,7 +25,7 @@ if printf '%s' "$P35" | grep -qiE 'disposition|accepted-risk'; then pass "S-4 Ph
 # S-5: pipeline.flow includes a CRITIQUE step
 if grep -qiE 'EXPLORE.*CLARIFY.*PROPOSE.*CRITIQUE.*SPEC.*GATE' "$DES"; then pass "S-5 pipeline.flow updated with CRITIQUE"; else fail "S-5 pipeline.flow missing CRITIQUE"; fi
 
-# S-6: SKILL.md has a phase-driven load trigger for critique-lenses.md (AC: Part 3 of plan)
+# S-6: SKILL.md has a phase-driven load trigger for critique-lenses.md
 if grep -q "critique-lenses.md" "$SKILL"; then pass "S-6 SKILL.md references critique-lenses.md"; else fail "S-6 SKILL.md no critique-lenses.md trigger"; fi
 
 # S-7: design-checklist.md has a Phase 3.5 CRITIQUE section

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Part 6 / Proposal F + PR-008 gate: env on + .mcp.json without alwaysLoad + NO active
+# Gate: env on + .mcp.json without alwaysLoad + NO active
 # workflow checkpoint → silent (no WARN). Scopes warning to active pipeline contexts.
 
 set -euo pipefail
@@ -12,7 +12,7 @@ trap 'rm -rf "${TMP}"' EXIT
 cat > "${TMP}/.mcp.json" <<'JSON'
 {"mcpServers":{"sequential-thinking":{"command":"npx"}}}
 JSON
-# NO checkpoint file → PR-008 gate must close
+# NO checkpoint file → the gate must close
 
 export CLAUDE_KIT_MCP_PRELOAD=on
 export CLAUDE_MCP_CONFIG_PATH="${TMP}/.mcp.json"

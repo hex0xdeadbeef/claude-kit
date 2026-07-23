@@ -2,8 +2,8 @@
 # F5 (CLAUDE_KIT_BUG_code-reviewer-plugin-skill-resolution) — rubric provenance observability.
 # Both reviewers MUST report the absolute path they loaded the -rules skill from and WARN when
 # that path is outside the active BUNDLED KIT ROOT (turns a silent wrong-source load into a
-# visible one). Envelope guard (PR-001): F5 is output-line-only — it must NOT add a column-0
-# ^VERDICT: line. Falsifiable: the pinned markers below are absent before Part 3 lands.
+# visible one). Envelope guard: F5 is output-line-only — it must NOT add a column-0
+# ^VERDICT: line. Falsifiable: the pinned markers below are absent before the change lands.
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"; cd "$ROOT"
 rc=0

@@ -1,13 +1,13 @@
 # TypeScript — TDD reference shape
 
-Resolved when `PROJECT-KNOWLEDGE.md → LANGUAGE = typescript`. Idiomatic TypeScript
+Resolved when `.claude/PROJECT-KNOWLEDGE.md → LANGUAGE = typescript`. Idiomatic TypeScript
 with Jest/Vitest (`describe`/`it`/`expect`), `jest.fn()` mocks, `it.each` for table-driven.
 
 ## Reference scenario — `Service.get(itemId)` — 3 cycles Red-Green-Refactor
 
 ### Cycle 1: happy path
 
-**RED**:
+**RED** — `npx jest --testNamePattern 'returns item when found'` must fail here: `Service.get` does not exist yet.
 ```typescript
 describe('Service.get', () => {
   it('returns item when found', async () => {
@@ -21,10 +21,9 @@ describe('Service.get', () => {
     expect(repo.findById).toHaveBeenCalledWith('123');
   });
 });
-// Run: npx jest --testNamePattern 'returns item when found' → FAIL (Service.get does not exist).
 ```
 
-**GREEN**:
+**GREEN** — `npx jest` now passes.
 ```typescript
 class Service {
   constructor(private readonly repo: Repository) {}
@@ -33,14 +32,13 @@ class Service {
     return this.repo.findById(itemId);
   }
 }
-// Run: npx jest → PASS.
 ```
 
 **REFACTOR**: none needed.
 
 ### Cycle 2: not-found error
 
-**RED**:
+**RED** — `npx jest` must fail here: `get` returns `null` silently.
 ```typescript
 it('throws NotFoundError when item missing', async () => {
   const repo = { findById: jest.fn().mockResolvedValue(null) };
@@ -48,7 +46,6 @@ it('throws NotFoundError when item missing', async () => {
 
   await expect(svc.get('999')).rejects.toThrow(/get item 999/);
 });
-// Run: jest → FAIL (returns null silently).
 ```
 
 **GREEN**:
@@ -70,7 +67,7 @@ class Service {
 
 ### Cycle 3: repo error wrapping (it.each)
 
-**RED**:
+**RED** — `npx jest` must fail here: the repository error is propagated unwrapped.
 ```typescript
 it.each([
   { repoErr: new Error('connection refused'), expectedMsg: 'get item 123' },
@@ -87,10 +84,9 @@ it.each([
     expect(err.cause).toBe(repoErr);
   }
 });
-// FAIL — repo error propagated unwrapped.
 ```
 
-**GREEN**:
+**GREEN** — all 3 cycles pass.
 ```typescript
 class ServiceError extends Error {
   constructor(message: string, options: { cause?: Error } = {}) {
@@ -102,6 +98,11 @@ class ServiceError extends Error {
 class Service {
   constructor(private readonly repo: Repository) {}
 
+  /**
+   * Returns the item stored under `itemId`. Throws `NotFoundError` when no such item
+   * exists, and throws `ServiceError` wrapping any repository failure with the item id
+   * so callers can attribute the failure without inspecting the repository layer.
+   */
   async get(itemId: string): Promise<Item> {
     let item: Item | null;
     try {
@@ -115,8 +116,12 @@ class Service {
     return item;
   }
 }
-// All 3 cycles PASS.
 ```
+
+Note the doc comment on the final `get`: it states what the function returns and the
+error contract callers rely on. It says nothing about the TDD cycle that produced it —
+per `coder-rules/SKILL.md` § Comment Policy, comments describe the code, never the
+process. Cycle status belongs in this prose, not in the code.
 
 Invariants illustrated:
 1. RED shown first in every cycle.

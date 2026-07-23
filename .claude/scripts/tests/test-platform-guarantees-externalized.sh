@@ -21,7 +21,7 @@ fi
 # EX-2: the >= 2.1.141 version floor stays stated inline in CLAUDE.md (not lost with the table).
 grep -q '>= 2\.1\.141' CLAUDE.md || err "EX-2 CLAUDE.md no longer states the >= 2.1.141 version floor inline"
 
-# EX-3 (structural invariant, not byte-diff against a vanished source — PR-001): the doc carries
+# EX-3 (structural invariant, not byte-diff against a vanished source): the doc carries
 # >=9 guarantee data rows AND the full distinct version set the kit depends on.
 rows="$(grep -cE '^\|.*\| 2\.1\.[0-9]+' "$DOC" 2>/dev/null || true)"
 if [[ "${rows:-0}" -lt 9 ]]; then

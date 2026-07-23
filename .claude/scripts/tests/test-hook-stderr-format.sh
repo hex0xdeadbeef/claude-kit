@@ -53,7 +53,7 @@ run_test \
 # Test 3: grep-check yields 0 violations in current tree (AC-2 regression guard)
 # Verifies that after all P1-06 fixes are applied, no echo >&2 lines are non-conforming.
 echo "--- grep-check: 0 non-conforming >&2 lines in tree ---"
-# Two shapes accepted (Part 3 / Proposal J extension):
+# Two shapes accepted:
 #   legacy: "[name] LABEL: msg"
 #   new:    "[name][session=<sid>][eff=<level>] LABEL: msg"  (from lib/log.sh)
 # The trailing "LABEL: msg" predicate is the byte-stable invariant.

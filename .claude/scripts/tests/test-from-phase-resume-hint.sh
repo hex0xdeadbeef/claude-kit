@@ -5,7 +5,7 @@
 # / phase_name=completion) — the run is finished, nothing to resume, and README +
 # workflow.md both mark Phase 5 as not independently resumable. The Resume hint
 # MUST be preserved verbatim for resumable phases (regression guard). Docs are
-# intentionally left unchanged (they already agree). Content-anchored per PR-003.
+# intentionally left unchanged (they already agree). Content-anchored.
 set -euo pipefail
 SCRIPT_NAME="$(basename "$0")"
 PROJECT_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"

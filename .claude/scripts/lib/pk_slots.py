@@ -34,7 +34,7 @@ _SLOT_RE = re.compile(r"^(\s*)-\s+([A-Z][A-Z0-9_]*)\s*:(.*)$")
 def _indent(line):
     # Space-only indentation: counts leading spaces. Safe because YAML forbids
     # tabs in indentation, so a spec-valid PROJECT-KNOWLEDGE.md never tab-indents
-    # a slot continuation (CR-001). A tab-led line would read as indent 0 and end
+    # a slot continuation. A tab-led line would read as indent 0 and end
     # the block; acceptable since the fallback path keeps the full content.
     return len(line) - len(line.lstrip(" "))
 

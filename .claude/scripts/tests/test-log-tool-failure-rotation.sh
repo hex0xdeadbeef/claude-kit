@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Part 2 / AD-4: tool-failures.jsonl head-trim rotation at CLAUDE_TOOL_FAILURES_MAX_LINES cap.
+# AD-4: tool-failures.jsonl head-trim rotation at CLAUDE_TOOL_FAILURES_MAX_LINES cap.
 # Pre-fills the file with N+1 lines, fires one event, asserts resulting file has exactly N lines.
 
 set -euo pipefail

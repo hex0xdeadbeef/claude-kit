@@ -1,18 +1,64 @@
 ---
 name: coder-rules
-description: Implementation rules and patterns for /coder command. Load at /coder startup (step 0) or when /workflow enters Phase 3. Covers: 5 CRITICAL rules (plan-only, import matrix, clean domain, no log+return, tests pass), evaluate protocol (PROCEED/REVISE/RETURN), dependency-ordered implementation.
+description: Implementation rules and patterns for /coder command. Load at /coder startup (step 0) or when /workflow enters Phase 3. Covers: 6 CRITICAL rules (plan-only, import matrix, clean domain, no log+return, tests pass, comment quality), the comment policy for source files, evaluate protocol (PROCEED/REVISE/RETURN), dependency-ordered implementation.
 disable-model-invocation: true
 ---
 
 # Coder Rules
 
-## 5 CRITICAL Rules
+## 6 CRITICAL Rules
 
 - RULE_1 Plan Only: Implement ONLY what's in the plan. No improvements.
 - RULE_2 Layer Dependency: NEVER violate {LAYER_RULE} (resolved from PROJECT-KNOWLEDGE.md; CLAUDE.md fallback). SKIP if slot unset OR {ARCHITECTURE_STYLE} != "layered".
 - RULE_3 Clean Domain: NEVER add {DOMAIN_PROHIBIT} (resolved from PROJECT-KNOWLEDGE.md → DOMAIN_PROHIBIT; CLAUDE.md fallback) to domain entities. Tags belong in DTOs at the API/transport layer (your project's highest LAYERS entry per PROJECT-KNOWLEDGE.md → LAYERS). SKIP if slot unset.
 - RULE_4 No Log+Return: NEVER log AND return error simultaneously.
 - RULE_5 Tests Pass: Code NOT ready until tests pass.
+- RULE_6 Comment Quality: Comments describe the code, never the workflow that produced it. See Comment Policy below.
+
+## Comment Policy
+
+Applies to every comment you write into a source file, in any language. It does NOT
+apply to plan, spec, handoff, checkpoint or commit-message text, where process
+vocabulary is correct and expected.
+
+**Write a comment only when it earns its place.** Default to none. Add one where the
+logic is not self-evident: a hidden constraint, a non-obvious invariant, a workaround
+for a specific defect, or behaviour that would surprise a reader. If deleting the
+comment would not confuse a future reader, do not write it.
+
+**A comment's subject is the code it sits on.** A declaration comment names the thing
+being described and states what it is, what it returns, or what it does. Explain the
+non-obvious WHY; do not restate WHAT the code already says through its identifiers.
+If the code is too unclear to explain itself, simplify the code instead of annotating it.
+
+**FORBIDDEN — process references.** Never mention the workflow that produced the code:
+
+- plan part identifiers (`Part 3`, `part 2 of the plan`)
+- acceptance-criteria identifiers (`AC-2`, `per AC 4`)
+- review issue identifiers (`CR-004`, `PR-006 fix`)
+- pipeline phase names, iteration numbers, proposal and initiative identifiers
+- phrases such as `per plan`, `as specified`, `per review`, `requested by the reviewer`
+
+Traceability from code to plan Parts and acceptance criteria belongs in the handoff
+artifact and the commit message. Those are the permanent record of the change; a
+source comment is not, and it rots as the file evolves.
+
+**FORBIDDEN — change narrative.** Never describe the code relative to a previous
+version: `now uses X instead of Y`, `previously this returned nil`, `no longer needed`,
+`removed the old path`, `added in this refactor`. A reader of the file cannot see the
+version you are comparing against. Describe only what the code is now.
+
+**Do not retrofit.** Do not add comments, doc comments, or type annotations to code you
+did not change in this task.
+
+**Keep comments true.** A comment that contradicts the code is worse than no comment.
+When you change a line, update or delete the comment above it.
+
+Grounding: Anthropic prompting best practices (do not comment code you did not change;
+comment only where logic is not self-evident); `go.dev/doc/comment` (a declaration's doc
+comment states what the thing returns or does, and must not pin the current
+implementation's internals); Google engineering practices (comments explain why, not
+what); PEP 8 (comments that contradict the code are worse than none).
 
 ## Evaluate Protocol
 
@@ -55,7 +101,7 @@ Write output to `.claude/prompts/{feature}-evaluate.md`.
 Follow Parts order from plan. The plan's Parts list is the source of truth.
 If plan unordered: use {LAYERS} slot dependency direction when {ARCHITECTURE_STYLE} == "layered";
 otherwise follow plan order verbatim and emit consolidated NIT if ambiguous.
-After each Part: PostToolUse hooks auto-format files (slot-driven via `auto-fmt.sh`: reads `FMT_CMD` and `LANG_EXT` from PROJECT-KNOWLEDGE.md cascade; supports `{}` placeholder for per-file mode). Run resolved {LINT_CMD} only for import/error checks. Check 5 CRITICAL Rules above continuously.
+After each Part: PostToolUse hooks auto-format files (slot-driven via `auto-fmt.sh`: reads `FMT_CMD` and `LANG_EXT` from PROJECT-KNOWLEDGE.md cascade; supports `{}` placeholder for per-file mode). Run resolved {LINT_CMD} only for import/error checks. Check 6 CRITICAL Rules above continuously.
 Do NOT run FMT manually between Parts — hooks handle formatting, VERIFY handles final FMT+LINT.
 IMPORTANT: Do NOT run the FULL test suite (resolved {TEST_CMD}) between Parts — full verification runs ONCE at Step 4 VERIFY.
 Compile errors are caught by LINT; logic errors are caught at VERIFY.

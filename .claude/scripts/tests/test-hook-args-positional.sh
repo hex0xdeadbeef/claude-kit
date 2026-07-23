@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # RED then GREEN: handlers that take a positional argument (inject-review-context.sh and
 # caveman-suspend-for-reviewer.sh) must deliver the expected agent-type token via args[0].
-# Part 1 step 1.5 of changelog-v2.1.121-141-uplift.
+# Step 1.5 of changelog-v2.1.121-141-uplift.
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

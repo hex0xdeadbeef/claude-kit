@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-plugin-context-injection.sh — Part 5 (P2) of the plugin-equivalence roadmap
+# test-plugin-context-injection.sh — plugin-equivalence SessionStart context injection
 #   + bundled-root path directive (plugin-skill-path-fix, 2026-06-04).
 # Asserts inject-kit-context.sh, in plugin mode (CLAUDE_PLUGIN_ROOT set), ALWAYS injects a
 # "BUNDLED KIT ROOT" path directive (so the model resolves read-by-path skills/templates under the
@@ -53,7 +53,7 @@ fi
 
 # Case B: project-scoped install (env unset, bundled root == project root) → no-op.
 # CLAUDE_PROJECT_DIR == $REPO_ROOT (the script's own bundled root) is the faithful project-scoped
-# scenario; env -u guarantees no ambient CLAUDE_PLUGIN_ROOT masks the no-op assertion (PR-001).
+# scenario; env -u guarantees no ambient CLAUDE_PLUGIN_ROOT masks the no-op assertion.
 outB="$(env -u CLAUDE_PLUGIN_ROOT CLAUDE_PROJECT_DIR="$REPO_ROOT" bash "$HOOK" </dev/null 2>/dev/null || true)"
 assert_empty "$outB" "project-scoped (bundled root == project root, env unset)"
 

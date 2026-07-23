@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-worktree-injection-sidecar.sh — Part 4 / P3 (AC-P3.3)
+# test-worktree-injection-sidecar.sh — --sidecar-only writes the sidecar atomically
 #
 # Coverage:
 #   1. inject-review-context.sh --sidecar-only writes the sidecar file (atomic)

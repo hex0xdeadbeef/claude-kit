@@ -7,8 +7,8 @@
 #
 # Coverage: 16 ACs automated. CG1.1-CG1.3 retargeted post-T1 (tdd-go → tdd-rules/tdd-shapes).
 # Manual: CG1.4, CG2.4, CG4.5, CG5.4 (visual cross-ref).
-# Awk active-body extractor uses 3-state machine (PR-001 fix from plan-review iter 1).
-# CG3.5 uses jq for structural assertion (PR-002 fix from plan-review iter 1).
+# Awk active-body extractor uses 3-state machine.
+# CG3.5 uses jq for structural assertion.
 
 set -euo pipefail
 
@@ -128,7 +128,7 @@ if awk '/Location-stability guidance/,/Iteration 2\+/' .claude/agents/code-revie
 fi
 pass "CG4.3 — Location-stability bullets are language-agnostic"
 
-# CG4.4 — first PREFER bullet is Part-anchored symbol (mirror G4 PR-001 from P-stage)
+# CG4.4 — first PREFER bullet is Part-anchored symbol (mirrors G4 in the P-stage audit)
 FIRST_BULLET=$(awk '/Location-stability guidance/,/Iteration 2\+/' .claude/agents/code-reviewer.md \
                  | grep -E '^- (PREFER|ACCEPT|AVOID):' | head -1)
 if ! echo "$FIRST_BULLET" | grep -qE '^- PREFER:.*Part [0-9]+:'; then

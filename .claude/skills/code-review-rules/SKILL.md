@@ -47,6 +47,38 @@ Check each area using grep search patterns from [Examples](examples.md):
 - Error handling: no log+return, proper wrapping
 - Security: no hardcoded secrets, no token leaks (see [Security Checklist](security-checklist.md))
 - Test coverage: new code has tests
+- Comment hygiene: comments in changed source files describe the code, not the workflow (see below)
+
+### Step 3a: Comment hygiene
+Scan the comment lines in the diff. Raise an issue when a source comment does either of:
+
+1. **References the development process** — a plan Part identifier, an acceptance-criteria
+   identifier, a review issue identifier, a pipeline phase name, an iteration number, a
+   proposal identifier, or a phrase such as "per plan" / "as specified" / "per review".
+2. **Narrates the change** — describes the code relative to a previous version
+   ("now uses X instead of Y", "previously returned nil", "no longer needed",
+   "added in this refactor").
+
+Both belong in the handoff artifact and the commit message, not in a source file.
+The coder's normative rule is `coder-rules/SKILL.md` § Comment Policy (RULE_6).
+
+Scope: only comments on lines this diff added or modified. Do NOT raise pre-existing
+comments the change did not touch, and do NOT ask for comments to be added — the policy
+defaults to no comment.
+
+File the issue with `category: "style"` and this EXACT problem string, unmodified:
+
+```
+Source comment references the development process rather than the code it documents. Process references (plan parts, acceptance criteria, review issue identifiers, phase names) and change narrative belong in the handoff artifact and the commit message, not in source files.
+```
+
+The string is a fixed literal because `problem` is a canonical-issue-ID hash input —
+interpolating anything into it rotates the ID between iterations. Put the place in the
+`location` field instead, and name the enclosing symbol or function there rather than a
+bare line number, which drifts.
+
+Severity: MINOR. No new escalation rule — the existing "5+ MINOR in same file → MAJOR"
+auto-escalation already covers a file saturated with such comments.
 
 ### Step 4: Apply Decision Matrix and form verdict
 Count issues by severity. Apply Decision Matrix and Auto-Escalation rules above.

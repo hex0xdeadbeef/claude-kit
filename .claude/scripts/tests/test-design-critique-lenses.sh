@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Test (Part 1 / DE-2): critique-lenses.md exists and defines the adversarial design-critique
+# Test (DE-2): critique-lenses.md exists and defines the adversarial design-critique
 # lens set, the anti-theater forcing function, the disposition enum, and the DC-not-canonical note.
 # Asserts AC1.2 + AC1.11 (DC-* local-ref-only) from .claude/prompts/adversarial-design-critique-part1.md.
 set -uo pipefail

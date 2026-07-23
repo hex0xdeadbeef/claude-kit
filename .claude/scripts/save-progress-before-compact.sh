@@ -57,11 +57,11 @@ LOG_FILE = os.path.join(STATE_DIR, "hook-log.txt")
 BLOCK_STATE_FILE = os.path.join(STATE_DIR, "precompact-block-state.json")
 MAX_BLOCKS_PER_PART = 3
 
-# --- REMOVED: extract_yaml_section, extract_scalar definitions (AC-2) ---
+# --- YAML extraction helpers live in lib/state_render.py, not here ---
 # These are now imported from state_render.
 
-# --- UNCHANGED: append_log, load_checkpoint, check_midpart ---
-# --- UNCHANGED: load_block_state, save_block_state ---
+# --- append_log, load_checkpoint, check_midpart ---
+# --- load_block_state, save_block_state ---
 
 def append_log(msg):
     try:
@@ -132,9 +132,9 @@ def save_block_state(state_dict):
     except Exception:
         pass
 
-# --- CHANGED: build_additional_context now uses render() with checkpoint_ref ---
-# PR-003 fix: removed feature/content params — load_state() re-reads from disk.
-# Call site updated to match (no args). Double-I/O is acceptable: the checkpoint
+# --- build_additional_context: renders via render() with checkpoint_ref ---
+# build_additional_context() takes no arguments — load_state() re-reads the
+# checkpoint from disk. Double-I/O is acceptable: the checkpoint
 # is small (<10 KB) and blocking logic above already read it via load_checkpoint().
 def build_additional_context():
     """Build additionalContext string. Uses shared render() for all sections.
@@ -151,7 +151,7 @@ def build_additional_context():
         "recent_completions_summary",  # P5: per-iter summary (renamed from recent_completions_5)
     ]) or "No workflow state found before compaction."
 
-# --- UNCHANGED: Main decision (mid-Part + iteration-in-flight) ---
+# --- Main decision (mid-Part + iteration-in-flight) ---
 feature, content = load_checkpoint()
 blocked = False
 reason = None
@@ -288,7 +288,7 @@ if blocked and COOLDOWN_SECONDS > 0:
     # (the loop case) keep cooldown active; distinct sentinels each get
     # their own first block.
     #
-    # The plan (PR-001) suggested `>=` as a defence against FS-timestamp
+    # A `>=` comparison was considered as a defence against FS-timestamp
     # coarseness, but a smoke test verified macOS APFS gives sub-second
     # `os.path.getmtime` precision (~100 ms diff observable between two
     # writes 100 ms apart).  With `>=`, equal-mtime cases (which DO

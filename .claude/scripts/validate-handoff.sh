@@ -23,13 +23,13 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 SCHEMA_FILE="${REPO_ROOT}/.claude/schemas/handoff.schema.json"
-# Part 1 / P1: honor CLAUDE_WORKFLOW_STATE_DIR for log paths so test sandboxes
+# Honor CLAUDE_WORKFLOW_STATE_DIR for log paths so test sandboxes
 # don't pollute the production log. Fallback preserves legacy hook-mode behavior
 # (env unset → identical to pre-P1 path).
 WORKFLOW_STATE_DIR_RESOLVED="${CLAUDE_WORKFLOW_STATE_DIR:-${CLAUDE_PROJECT_DIR:-${REPO_ROOT}}/.claude/workflow-state}"
 mkdir -p "${WORKFLOW_STATE_DIR_RESOLVED}" 2>/dev/null || true
 VALIDATION_LOG="${WORKFLOW_STATE_DIR_RESOLVED}/handoff-validation.jsonl"
-# Part 3 / P1: default validation modes to 'strict' when running as a plugin (CLAUDE_PLUGIN_ROOT set),
+# Default validation modes to 'strict' when running as a plugin (CLAUDE_PLUGIN_ROOT set),
 # else 'warn'. An explicit env var always wins (outer :-); a missing helper degrades to 'warn'
 # (inner :-), keeping project-scoped behavior byte-identical.
 # shellcheck source=lib/kit-env-defaults.sh
@@ -78,12 +78,12 @@ fi
 RECORD_KIND="handoff"
 MODE="${MODE_HANDOFF}"
 if command -v jq &>/dev/null; then
-  # PR-006: capture jq exit code explicitly so we can emit a breadcrumb when the
+  # Capture jq exit code explicitly so we can emit a breadcrumb when the
   # discriminator read fails (e.g. malformed JSON that slipped past earlier guards).
   # Silent fall-through to "handoff" kind is safe but leaves no trace — the WARN
   # below gives the user one line to understand why strict-mode didn't engage.
   #
-  # CR-004: bracket-index syntax .["$verdict_contract"] is REQUIRED — jq treats a
+  # Bracket-index syntax .["$verdict_contract"] is REQUIRED — jq treats a
   # $-prefix in .$foo as a variable reference (attempting to deref a jq variable
   # named $foo), which errors out on an undefined variable. The bracket form is
   # the only way to read a JSON object key that begins with a literal '$'. Same
@@ -110,7 +110,7 @@ if command -v jq &>/dev/null; then
     # strict-mode caller just because the default-handoff fallback uses warn.
     _handoff_disc=$(jq -r '.["$handoff_contract"] // empty' "${HANDOFF_FILE}" 2>/dev/null)
     if [[ -z "${_handoff_disc}" ]]; then                                # nesting: open both-disc-absent
-      # Part 4 / P4 (iter 2): shape-detect verdict envelope before falling through.
+      # Shape-detect verdict envelope before falling through.
       # All three keys must be present (verdict: string, issues: array, handoff: object) —
       # conservative match avoids false positives on partial shapes.
       _verdict_shape=$(jq -r '
@@ -149,7 +149,7 @@ else
   exit 0
 fi
 
-# ─── Part 2 / P2: log rotation threshold + helper ──────────────────────────────
+# ─── Log rotation threshold + helper ──────────────────────────────
 # Sanitize threshold: positive integer or fall back to default.
 MAX_LINES_RAW="${CLAUDE_VALIDATION_LOG_MAX_LINES:-10000}"
 if [[ ! "${MAX_LINES_RAW}" =~ ^[0-9]+$ ]] || [[ "${MAX_LINES_RAW}" -le 0 ]]; then
@@ -173,13 +173,13 @@ fi
 # Args:
 #   $1 = log file path
 #   $2 = max lines threshold (optional; defaults to MAX_LOG_LINES global)
-#        — addresses PR-40d39d21 (iter 2): explicit param enables future
+#        — explicit param enables future
 #        per-call thresholds (e.g. different rotation policy for .jsonl vs -detail.log)
 #        without refactor.
 # Behavior: if file exists and exceeds threshold, mv → ${file}.1 (overwriting prior archive).
 # Failures (e.g. permission denied) are silently swallowed — rotation must NEVER block validation.
 #
-# RACE-WINDOW NOTE (PR-52bb42a0, iter 2):
+# RACE-WINDOW NOTE:
 #   Between `wc -l` (read) and `mv -f` (rename), another concurrent hook may append.
 #   In the worst case: two processes both observe lines > threshold, both call mv -f;
 #   the second mv overwrites the rotated .log.1 with a freshly-created (very short) log,
@@ -201,7 +201,7 @@ rotate_if_oversized() {
 
 # ─── Run validation ─────────────────────────────────────────────────────────────
 VALIDATION_RC=0
-# Part 3 / P3: --verbose surfaces all branch errors (no "N other errors hidden"
+# --verbose surfaces all branch errors (no "N other errors hidden"
 # suppression). Primary cause becomes greppable in detail.log.
 VALIDATION_OUTPUT=$("${VALIDATOR_CMD[@]}" \
   --verbose \
@@ -223,7 +223,7 @@ LOG_ENTRY+="\"file\":\"${HANDOFF_FILE}\",\"valid\":${VALID_BOOL},"
 LOG_ENTRY+="\"mode\":\"${MODE}\",\"rc\":${VALIDATION_RC},"
 LOG_ENTRY+="\"record_kind\":\"${RECORD_KIND}\","
 LOG_ENTRY+="\"bytes\":${HANDOFF_BYTES}}"
-# Part 2 / P2: rotate before append to bound disk usage.
+# Rotate before append to bound disk usage.
 rotate_if_oversized "${VALIDATION_LOG}"
 echo "${LOG_ENTRY}" >> "${VALIDATION_LOG}" 2>/dev/null || true
 
@@ -236,10 +236,10 @@ fi
 # Validation failed — report errors
 echo "[validate-handoff] FAIL: ${HANDOFF_FILE}" >&2
 
-# Part 5 / P5: write JSONL entry to detail.log instead of raw multi-line text.
+# Write JSONL entry to detail.log instead of raw multi-line text.
 # Single line of valid JSON per failure → grep / jq filtering becomes possible.
 DETAIL_LOG="${VALIDATION_LOG%.jsonl}-detail.log"
-# UTF-8 NOTE (PR-481732af, iter 2): on macOS `cut -c` is byte-oriented (BSD cut).
+# UTF-8 NOTE: on macOS `cut -c` is byte-oriented (BSD cut).
 # check-jsonschema output is ASCII-only (verified via inspection of all 1920 lines
 # in handoff-validation-detail.log — no non-ASCII bytes), so multibyte truncation
 # is a theoretical concern, not an observed defect. Acknowledged and accepted as-is
@@ -268,7 +268,7 @@ DETAIL_ENTRY=$(jq -n -c \
   --arg full "${FULL_OUTPUT_CAPPED}" \
   '{timestamp: $ts, file: $file, record_kind: $kind, rc: $rc, error_summary: $summary, full_output: $full}' \
   2>/dev/null || echo "{}")
-# Part 2 / P2: rotate detail.log before append.
+# Rotate detail.log before append.
 rotate_if_oversized "${DETAIL_LOG}"
 echo "${DETAIL_ENTRY}" >> "${DETAIL_LOG}" 2>/dev/null || true
 

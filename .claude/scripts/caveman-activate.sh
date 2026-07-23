@@ -75,7 +75,7 @@ Boundaries (claude-kit): VERDICT: enum lines verbatim. VERDICT_JSON fenced block
 Stop: 'stop caveman' or 'normal mode'."
 fi
 
-# ── PR-1ad2b19b iter 2 fix: pass body via env var, NOT chained redirection ──
+# ── Pass body via env var, NOT chained redirection ──
 # Why: `python3 - "${mode}" <<'PYEOF' <<<"${body}"` (the iter-1 form) chains
 # two stdin redirections; bash's left-to-right rule means the here-string
 # overrides the heredoc, so python3 receives BODY as stdin (no program text)

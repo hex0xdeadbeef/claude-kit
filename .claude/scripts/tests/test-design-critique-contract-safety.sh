@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Test (Part 1 / contract-safety guard): the design-critique feature must NOT touch the
+# Contract-safety guard: the design-critique feature must NOT touch the
 # hashed/locked pipeline path. Asserts AC1.8 (SubagentStop matcher unchanged), AC1.9 (no new H2),
 # AC1.10 (designer_to_planner has no $handoff_contract in Part 1), and that no new design
 # artifact wires save-review-checkpoint.sh (canonical-ID hash path untouched).

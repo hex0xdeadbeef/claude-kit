@@ -68,6 +68,8 @@ plan:
       code: |
         # FULL implementation in your project's language.
         # See .claude/PROJECT-KNOWLEDGE.md → LANGUAGE for syntax.
+        # Comments inside this block describe the code only — never the plan, the Part
+        # number, an acceptance criterion, or a review issue. See coder-rules § Comment Policy.
         #
         # <!-- EXAMPLE (lang: go) — for reference only, replace with your language -->
         # package example

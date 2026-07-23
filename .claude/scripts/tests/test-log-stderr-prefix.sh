@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Part 3 / AD-1: lib/log.sh log_stderr function emits the additive prefix
+# AD-1: lib/log.sh log_stderr function emits the additive prefix
 # [<basename>][session=<short-sid>][eff=<level>] LABEL: <message>
 # Degrades to "unknown" placeholders when CLAUDE_CODE_SESSION_ID / CLAUDE_EFFORT absent.
 

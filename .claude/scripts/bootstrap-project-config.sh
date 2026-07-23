@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bootstrap-project-config.sh — roadmap Part 6 / P3 (self-provisioning, gated).
+# bootstrap-project-config.sh — gated self-provisioning of project config.
 #
 # In a project-scoped install, install.sh seeds the user's .claude/settings.local.json from the
 # kit's opinionated .claude/settings.local.json.default (env defaults: prompt-cache TTL,
@@ -87,7 +87,7 @@ PYEOF
 )"
 fi
 
-# ── Sentinel: provision once — but NOT on a merge ERROR (CR-001), so a fixable
+# ── Sentinel: provision once — but NOT on a merge ERROR, so a fixable
 #    malformed settings.local.json gets one more attempt next session. Transcript
 #    visibility via stderr only (no additionalContext noise).
 case "${result:-}" in

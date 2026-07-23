@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-plugin-strict-defaults.sh — Part 3 (P1) of the plugin-equivalence roadmap.
+# test-plugin-strict-defaults.sh — plugin-equivalence strict defaults.
 # Asserts kit-consumed validation modes default to 'strict' when running as a PLUGIN
 # (CLAUDE_PLUGIN_ROOT set) — with NO env-injection dependency and NO next-session lag — while
 # staying byte-identical (warn/off) in a project-scoped install. An explicit env var always wins.
@@ -81,10 +81,10 @@ if command -v check-jsonschema >/dev/null 2>&1 && command -v jq >/dev/null 2>&1;
     # explicit env=warn wins even under plugin (exit 0)
     env "${UNSET_MODES[@]}" CLAUDE_PLUGIN_ROOT="/fake/plugin" CLAUDE_HANDOFF_VALIDATION_MODE="warn" CLAUDE_WORKFLOW_STATE_DIR="$STATE" bash "$VH" "$BAD" >/dev/null 2>&1; rc_envwins=$?
     [ "$rc_envwins" = "0" ] && ok "functional: explicit env=warn wins under plugin (exit 0)" || bad "functional: env-override expected exit 0, got $rc_envwins"
-    # Fix B: env-unset plugin (CLAUDE_PROJECT_DIR != bundled root) → strict default → BLOCK (exit 2). RED pre-fix.
+    # env-unset plugin (CLAUDE_PROJECT_DIR != bundled root) → strict default → BLOCK (exit 2). RED pre-fix.
     env "${UNSET_MODES[@]}" -u CLAUDE_PLUGIN_ROOT CLAUDE_PROJECT_DIR="$TMP" CLAUDE_WORKFLOW_STATE_DIR="$STATE" bash "$VH" "$BAD" >/dev/null 2>&1; rc_eup=$?
     [ "$rc_eup" = "2" ] && ok "functional: env-unset plugin (bundled != project) BLOCKS (exit 2)" || bad "functional: env-unset plugin expected exit 2, got $rc_eup"
-    # PR-002: explicit env=warn wins even under env-unset plugin mode (exit 0).
+    # explicit env=warn wins even under env-unset plugin mode (exit 0).
     env "${UNSET_MODES[@]}" -u CLAUDE_PLUGIN_ROOT CLAUDE_HANDOFF_VALIDATION_MODE="warn" CLAUDE_PROJECT_DIR="$TMP" CLAUDE_WORKFLOW_STATE_DIR="$STATE" bash "$VH" "$BAD" >/dev/null 2>&1; rc_eupw=$?
     [ "$rc_eupw" = "0" ] && ok "functional: explicit env=warn wins under env-unset plugin (exit 0)" || bad "functional: env-unset explicit-warn expected exit 0, got $rc_eupw"
 else

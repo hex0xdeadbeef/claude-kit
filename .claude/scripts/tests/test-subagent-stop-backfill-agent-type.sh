@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# test-subagent-stop-backfill-agent-type.sh — Part 4 / P3 (AC-P3.1)
+# test-subagent-stop-backfill-agent-type.sh — marker.agent backfill from effective_agent_type
 #
 # Coverage:
 #   1. Empty agent_type with effective_agent_type=code-reviewer (recovered via heuristic)
 #      yields marker.agent='code-reviewer' (NOT 'unknown')
-#   2. Pre-Part-4 behavior preserved when raw agent_type is non-empty (no promotion)
+#   2. Prior behavior preserved when raw agent_type is non-empty (no promotion)
 
 set -uo pipefail
 

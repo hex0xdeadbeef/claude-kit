@@ -4,7 +4,7 @@
 # with VERDICT: REJECTED + a setup-error note when the rubric is unresolvable from a trusted
 # anchor. Also a regression guard: the Case-C markers consumed by
 # test-inject-review-context-bundled-root.sh must remain intact (F1 APPENDS, never replaces).
-# Falsifiable: the pinned literals below are absent before Part 1 lands.
+# Falsifiable: the pinned literals below are absent before the change lands.
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"; cd "$ROOT"
 rc=0
@@ -51,7 +51,7 @@ check_casec(){ # $1=body  $2=skill-path  $3=label
 check_casec "$CR" ".claude/skills/code-review-rules/SKILL.md" "code-reviewer"
 check_casec "$PR" ".claude/skills/plan-review-rules/SKILL.md" "plan-reviewer"
 
-# Case C — envelope-shape guard (PR-001): exactly ONE column-0 ^VERDICT: line per body
+# Case C — envelope-shape guard: exactly ONE column-0 ^VERDICT: line per body
 check_verdict_count(){ # $1=body  $2=label
   local n; n=$(grep -c '^VERDICT: ' "$1")
   if [ "$n" -eq 1 ]; then

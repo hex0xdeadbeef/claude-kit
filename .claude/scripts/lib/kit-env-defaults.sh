@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# kit-env-defaults.sh — strict-when-plugin defaults for kit-consumed modes (roadmap Part 3 / P1).
+# kit-env-defaults.sh — strict-when-plugin defaults for kit-consumed modes.
 #
 # The kit's strict contract-validation is normally seeded as env vars in
 # .claude/settings.local.json (by install.sh). In PLUGIN mode that seeding cannot happen — a

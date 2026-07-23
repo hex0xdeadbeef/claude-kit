@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-additional-context-cap-6k.sh — Part 3 / P5
+# test-additional-context-cap-6k.sh
 #
 # Coverage:
 #   1. Synthetic 5 prior iters x 14 issues -> additionalContext <= 6000 chars

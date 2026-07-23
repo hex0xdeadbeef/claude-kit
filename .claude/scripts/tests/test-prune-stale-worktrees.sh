@@ -9,7 +9,7 @@
 #
 # Cases:
 #   OLD          — locked, agent-*, metadata backdated > threshold  -> REMOVED
-#   GONE         — locked, agent-*, checkout dir deleted, backdated  -> REMOVED (PR-004)
+#   GONE         — locked, agent-*, checkout dir deleted, backdated  -> REMOVED
 #   NEW          — locked, agent-*, fresh mtime                      -> SURVIVES (age guard)
 #   OTHER        — locked, NOT under agent-*, backdated old          -> SURVIVES (scope guard)
 #   main         — the repo root                                     -> SURVIVES (never touched)

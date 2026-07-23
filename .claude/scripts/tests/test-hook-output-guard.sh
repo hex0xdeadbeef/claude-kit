@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Tests for P1-09 hook output guard
+# Tests for the hook output guard
 # Covers: save-progress-before-compact.sh guard (AC-1, AC-2, AC-8), session-analytics.sh cleanup (AC-3)
 # Run: bash .claude/scripts/tests/test-hook-output-guard.sh
 

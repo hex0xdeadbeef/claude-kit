@@ -5,7 +5,7 @@
 # IMP-06: defensive fallback to /tmp when primary write fails — logging should not block agent
 # IMP-H: verdict protection — blocks agent stop once if no verdict found (review agents only)
 #
-# Worktree path resolution (IMP-04 → IMP-11):
+# Worktree path resolution (IMP-04):
 #   Delegated to resolve-worktree-path.py (shared utility).
 #   Fallback chain: payload fields → .git/worktrees/ scan → git worktree list --porcelain
 #
@@ -14,7 +14,7 @@
 #   Runs BEFORE worktree cleanup (blocking hook).
 #   Memory sync failure is NON_CRITICAL — logged but does not block.
 #
-# Verdict extraction (IMP-01, 2026-03-30):
+# Verdict extraction (IMP-01):
 #   SubagentStop payload MAY contain last_assistant_message (added in v2.1.47).
 #   Transcript fallback: agent_transcript_path (agent-specific) checked first,
 #   transcript_path (parent session) as fallback.
@@ -23,12 +23,12 @@
 #   parent session where agent output is a tool_result — role:assistant search finds orchestrator
 #   messages, not the reviewer's VERDICT output.
 #
-# Agent-ID Registry (IMP-01, 2026-04-10):
+# Agent-ID Registry (IMP-01):
 #   When payload omits agent_type (e.g. code-reviewer with isolation:worktree),
 #   recover it via agent-id-registry.jsonl written by track-task-lifecycle.sh at SubagentStart.
 #   effective_agent_type is used for IMP-H, worktree resolution, memory sync, and marker.
 #
-# P0-2 worktree heuristic (2026-04-10):
+# P0-2 worktree heuristic:
 #   SubagentStart does NOT fire for isolation:worktree agents (platform behavior),
 #   so the registry is empty for code-reviewer. Fallback: infer code-reviewer from
 #   agent_transcript_path presence in SubagentStop payload (only worktree agents have it).
@@ -63,7 +63,7 @@ DEBUG_FILE = os.path.join(STATE_DIR, "worktree-events-debug.jsonl")
 # (saving the second attempt). When the user does not retry, sentinels orphan
 # indefinitely and prevent re-injection.
 # CLAUDE_VERDICT_BLOCK_TTL_HOURS=6 (default) evicts files older than 6 h.
-# Setting it to 0 disables eviction (pre-Part-4 behaviour).
+# Setting it to 0 disables eviction.
 def _evict_stale_verdict_blocks(state_dir):
     import time as _t, glob as _g
     try:
@@ -121,7 +121,7 @@ def _normalize_agent_type(s):
         s = s.rsplit(":", 1)[-1]
     return s
 
-# IMP-07: agent_type fallback includes "name" (WorktreeCreate uses "name" field)
+# agent_type fallback includes "name" (WorktreeCreate uses "name" field)
 agent_type = (
     data.get("agent_type")
     or data.get("agent_name")
@@ -193,7 +193,7 @@ if effective_agent_type in REVIEW_AGENTS and agent_id and effective_agent_type !
 # --- P2-2: Anomaly detection — log when SubagentStart didn't fire ---
 # Only log anomaly when type was recovered via P0-2 heuristic (agent_transcript_path),
 # NOT when recovered via IMP-01 registry (which means SubagentStart DID fire correctly).
-# CR-003: registry-recovered types (effective_agent_type != agent_type but found in registry)
+# Registry-recovered types (effective_agent_type != agent_type but found in registry)
 # are legitimate, not anomalies — avoid misleading "heuristic" message for them.
 _recovered_via_heuristic = (
     effective_agent_type in REVIEW_AGENTS
@@ -305,7 +305,7 @@ def _extract_verdict_json(text):
 
 
 def _compute_canonical_id(prefix, category, location, problem):
-    """Deterministic content-addressed ID with input normalization (P2 fix).
+    """Deterministic content-addressed ID with input normalization.
 
     Canonical form: {prefix}{sha256(norm(category) + '|' + norm(location or '') + '|' + norm(problem))[:8]}
       where norm(s) = NFKC -> strip -> collapse internal whitespace -> lowercase -> strip terminal [.;:,]+
@@ -362,7 +362,7 @@ if output:
         # Collision dedup: if two issues hash to the same canonical ID, keep the
         # first in canonical_issue_ids and log an id_collision record.
         #
-        # CRITICAL CR-004 regression guard: do NOT move the insertion point outside
+        # CRITICAL regression guard: do NOT move the insertion point outside
         # the `if parsed is not None and isinstance(parsed, dict) and "verdict" in parsed:`
         # block (lines 274-331 of the pre-IMP-03 file). The normalization mutates
         # parsed["issues"][*]["id"] and re-serialises raw_json so the tempfile write
@@ -539,7 +539,7 @@ if verdict == "UNKNOWN" and output:
 # is only present for isolation:worktree agents). Covers the case where both registry lookup
 # AND P0-2 heuristic fail to resolve effective_agent_type.
 
-# NOTE (CR-004): The agent_transcript_path heuristic assumes all worktree agents
+# NOTE: The agent_transcript_path heuristic assumes all worktree agents
 # are review agents. If a new non-review worktree agent is added, update
 # REVIEW_AGENTS and this condition to avoid false verdict-blocking.
 is_review_agent = (
@@ -609,7 +609,7 @@ except Exception:
     pass
 # --- End IMP-03 ---
 
-# --- IMP-04 → IMP-11: Resolve worktree_path via shared utility ---
+# --- IMP-04: Resolve worktree_path via shared utility ---
 # Agents known to run with isolation: worktree
 # Uses effective_agent_type so worktree resolution works even when payload omits agent_type.
 WORKTREE_AGENTS = {"code-reviewer"}
@@ -706,7 +706,7 @@ marker = {
     "verdict_source": verdict_source,          # IMP-02: HOW verdict was extracted
     "canonical_issue_ids": canonical_issue_ids,  # IMP-03: dedup'd canonical IDs
 }
-# IMP-02: WHERE the transcript was read from (debug-only provenance, renamed from verdict_source)
+# IMP-02: WHERE the transcript was read from (debug-only provenance)
 if transcript_used:
     marker["verdict_transcript_source"] = "transcript:" + (transcript_source or "unknown")
 # Include worktree_path and memory sync status in marker

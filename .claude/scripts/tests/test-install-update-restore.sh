@@ -208,7 +208,7 @@ assert_eq "T8.no-skills" "restored=0" "$out"
 out=$(restore_custom_files "$FIX/backup" "$FIX/src" "$FIX/target")
 assert_eq "T8.no-files" "restored=0" "$out"
 
-# ── T9: paths with spaces (CR-002) ─────────────────────────────────────────────
+# ── T9: paths with spaces ──────────────────────────────────────────────────────
 # Defense-in-depth regression for the quoting contract (literal-pattern strip
 # + all double-quoted path expansions throughout install.sh).
 echo "T9: paths with spaces"
@@ -223,7 +223,7 @@ out=$(merge_frontmatter_skills "$FIX/backup" "$FIX/src" "$FIX/target")
 assert_grep_str "T9.merge-frontmatter-ran" "merged=" "$out"
 assert_grep "T9.merged-custom-skill" "- my-custom-skill" "$FIX/target/.claude/agents/code-reviewer.md"
 
-# ── T10: parse_kv micro-test (CR-003) ──────────────────────────────────────────
+# ── T10: parse_kv micro-test ───────────────────────────────────────────────────
 # Direct contract verification of the awk-based positional extractor.
 # ANSI-C quoting ($'...') avoids multi-line literal indentation traps.
 echo "T10: parse_kv micro-test"
@@ -233,7 +233,7 @@ assert_eq "T10.zeros" $'0\n0' "$(parse_kv "merged=0 skills_added=0")"
 # Value containing = (awk split takes LAST field per design — kv[n])
 assert_eq "T10.eq-in-value" "token" "$(parse_kv "key=base64=token")"
 
-# ── T11: restore_custom_skills idempotency (CR-004) ────────────────────────────
+# ── T11: restore_custom_skills idempotency ─────────────────────────────────────
 # Verifies the explicit "rm -rf + cp -r" branch handles re-runs cleanly.
 echo "T11: restore_custom_skills idempotency"
 FIX="${TMP_ROOT}/t11"; build_fixture "$FIX"
@@ -245,7 +245,7 @@ assert_eq "T11.run2-counts" "restored=1" "$out"
 second_content=$(cat "$FIX/target/.claude/skills/my-team-skill/SKILL.md")
 assert_eq "T11.content-identical" "$first_content" "$second_content"
 
-# ── T12: merge_frontmatter_skills tolerates inline YAML comments (CR-001) ──────
+# ── T12: merge_frontmatter_skills tolerates inline YAML comments ───────────────
 # Regression for the regex relaxation: ITEM_RE + SKILLS_RE accept optional
 # `  # comment` on each skill item; on rewrite, comments are dropped.
 echo "T12: merge_frontmatter_skills with inline YAML comments"

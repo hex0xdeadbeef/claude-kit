@@ -57,7 +57,7 @@ export STATE_DIR
 # is symmetric with the SubagentStop deletion at save-review-checkpoint.sh:725-741.
 # Idempotent: overwrites any prior orchestrator STEP -1 write (same content shape).
 # Best-effort: write failure logs a WARN per kit convention and proceeds with
-# context injection (the harness is not blocked on sentinel write failure per AC-P5.4).
+# context injection (the harness is not blocked on sentinel write failure).
 # Audit ref: .claude/prompts/workflow-hook-loop-audit.md § P5.
 # Plan ref:  .claude/prompts/p5-iif-autowrite.md.
 case "$AGENT_TYPE" in
@@ -118,7 +118,7 @@ def _kit_plugin_mode():
 
 
 def _bundled_root_directive():
-    # R1 (reviewer-rule-delivery): in plugin mode the reviewer's bundled -rules skill lives under the
+    # In plugin mode the reviewer's bundled -rules skill lives under the
     # plugin root, not the project. The reviewer runs in isolated context and never sees the
     # SessionStart inject-kit-context.sh directive, so carry it here. Plugin mode is detected via the
     # env-independent _kit_plugin_mode() (mirror of lib/paths.sh KIT_PLUGIN_MODE). Byte-identical
@@ -137,7 +137,7 @@ def _bundled_root_directive():
     )
 
 
-# Uniform import fallback (AC-3, KD-6)
+# Uniform import fallback (KD-6)
 try:
     sys.path.insert(0, os.environ['LIB_DIR'])
     from state_render import _extract_yaml_section, _extract_scalar, _extract_top_level, latest_checkpoint
@@ -221,8 +221,8 @@ def emit_delta_focus_block(lines, state_dir, feature, agent_type, content, curre
     """Emit [Iter N focus — delta only] block into additionalContext lines.
 
     Non-blocking: any failure returns silently without modifying lines.
-    AC-1: mode=off never reaches here (guarded at call site).
-    AC-5/KD-5: missing SHA → WARN stderr + return.
+    mode=off never reaches here (guarded at call site).
+    Missing SHA → WARN stderr + return.
     """
     try:
         iter_num = int(str(current_iter_str).split("/")[0])
@@ -271,7 +271,7 @@ def emit_delta_focus_block(lines, state_dir, feature, agent_type, content, curre
         block.append(f"Full plan: .claude/prompts/{feature}.md")
 
     elif agent_type == "code-reviewer":
-        # Extract iteration_commit_sha[iter_num - 1] from checkpoint YAML (PR-001: anchored regex)
+        # Extract iteration_commit_sha[iter_num - 1] from checkpoint YAML (anchored regex)
         prior_sha = None
         sha_section = _extract_yaml_section(content, "iteration_commit_sha")  # renamed
         if sha_section:
@@ -286,7 +286,7 @@ def emit_delta_focus_block(lines, state_dir, feature, agent_type, content, curre
                     break
 
         if not prior_sha:
-            # AC-5: graceful no-op — do not block review
+            # Graceful no-op — do not block review
             import sys as _sys
             print(
                 f"[inject-review-context] WARN: iteration_commit_sha[{iter_num - 1}] "
@@ -588,7 +588,7 @@ if comp_lines:
 # IMP-04 delta-review-mode
 _delta_mode = (
     _extract_top_level(content, "delta_review_mode")
-    # Part 3 / P1 + Fix B (audit F3): default to 'strict' in plugin mode via the env-independent
+    # Default to 'strict' in plugin mode via the env-independent
     # bundled-root detection (_kit_plugin_mode()), else 'off'. An explicit CLAUDE_DELTA_REVIEW_MODE
     # always wins (outer or).
     or (os.environ.get("CLAUDE_DELTA_REVIEW_MODE")
@@ -685,7 +685,7 @@ if not pk_block_added:
     except Exception:
         pass  # Telemetry is best-effort; never block injection
 
-# Proposal G: surface current effort level to reviewer when available.
+# Surface current effort level to reviewer when available.
 # Reads $CLAUDE_EFFORT (v2.1.133+ hook subprocess env) first; falls back to
 # effort.level from the SubagentStart hook payload. Omitted when both absent.
 _eff_level = os.environ.get("CLAUDE_EFFORT", "").strip()

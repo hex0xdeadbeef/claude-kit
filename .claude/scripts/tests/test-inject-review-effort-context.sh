@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Part 3 / Proposal G: inject-review-context.sh must read $CLAUDE_EFFORT and surface it
+# inject-review-context.sh must read $CLAUDE_EFFORT and surface it
 # in the additionalContext payload. When env unset, the effort line is omitted (not "").
 
 set -euo pipefail

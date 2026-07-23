@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Part 2: log-tool-failure.sh must exit 0 on every path (non-blocking analytics hook).
+# log-tool-failure.sh must exit 0 on every path (non-blocking analytics hook).
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

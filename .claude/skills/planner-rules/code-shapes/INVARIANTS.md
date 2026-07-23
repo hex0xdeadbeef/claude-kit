@@ -14,6 +14,23 @@ plan a non-Go/non-Python project produces.
 4. **No truncation** — every control-flow path returns a value, raises, or
    panics. No silent drop-through.
 
+## Comment invariant
+
+Comments inside a shape file's code fences describe the code, never the pipeline.
+
+Never demonstrate a comment that references a plan Part, an acceptance criterion, a
+review issue identifier, a phase name, or the change history. These files are training
+data for the `code:` blocks /planner writes into plans, and /coder transcribes those
+blocks into source — a process comment demonstrated here reaches the codebase. The
+normative rule is `coder-rules/SKILL.md` § Comment Policy.
+
+A comment that names the language-neutral slot an idiom comes from (for example
+`# ERROR_WRAP convention` in `_default.md`) is permitted: it describes the line it sits
+on, not the workflow.
+
+Locked by `.claude/scripts/tests/test-comment-policy.sh` — CP-3 scans every
+`code-shapes/<lang>.md` for forbidden comments, CP-5 asserts this section exists.
+
 ## Adding a new language
 
 1. Copy `_default.md`.

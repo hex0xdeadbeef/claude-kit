@@ -81,6 +81,18 @@ search_patterns:
     severity: blocker
     use_case: "Hardcoded credentials"
 
+  process_referencing_comment:
+    pattern: '^[[:space:]]*(//|#|--|;)[[:space:]].*(Part [0-9]|AC-?[0-9]|CR-[0-9]|PR-[0-9]|IMP-[0-9]|Proposal [A-Z]|per plan|per spec|as specified|per review|Phase [0-9])'
+    severity: minor
+    use_case: "Source comment cites a plan Part, acceptance criterion, review issue, proposal, or pipeline phase. Run against the diff only. Comment markers cover C-family, shell/Python, SQL/Lua, and Lisp/asm."
+    false_positives: "A project may have its own domain concept named 'Phase N' (a delivery phase, a migration phase). Read the hit before filing — a domain phase is legitimate, a pipeline phase is not."
+
+  change_narrative_comment:
+    pattern: '^[[:space:]]*(//|#|--|;)[[:space:]].*(previously|no longer|used to |instead of the old|was renamed|added in this (refactor|change|PR))'
+    severity: minor
+    use_case: "Source comment describes the code relative to a previous version. Run against the diff only."
+    false_positives: "'instead of' frequently appears in legitimate rationale ('returns 413 instead of an opaque 500'), which describes current behaviour and is fine. Only flag comparisons against a PREVIOUS VERSION of this code."
+
 ---
 
 ## Usage

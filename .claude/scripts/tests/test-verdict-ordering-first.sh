@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-verdict-ordering-first.sh — Part 5 / P4 (AC-P4.4)
+# test-verdict-ordering-first.sh — verdict envelope survives narrative truncation
 #
 # Coverage:
 #   1. Synthetic transcript with VERDICT: + VERDICT_JSON: BEFORE narrative truncation

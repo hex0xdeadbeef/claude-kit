@@ -2,7 +2,7 @@
 # check-artifact-size.sh — PreToolUse hook (Write/Edit)
 # Deterministic SIZE_GATE: blocks writes exceeding critical thresholds.
 #
-# Hook contract (PreToolUse — IMP-10):
+# Hook contract (PreToolUse):
 #   stdin: JSON {"tool_name":"Write","tool_input":{"file_path":"...","content":"..."}}
 #   stdout (deny): JSON {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"..."}}
 #   stdout (allow): no output (empty stdout)
@@ -64,7 +64,7 @@ else
   exit 0
 fi
 
-# Block on critical — IMP-10: use PreToolUse hookSpecificOutput envelope (not Stop format)
+# Block on critical — use PreToolUse hookSpecificOutput envelope (not Stop format)
 if (( LINE_COUNT > CRITICAL )); then
   DENY_REASON="SIZE_GATE: ${TYPE} artifact is ${LINE_COUNT} lines (critical threshold: ${CRITICAL}). Split via progressive_offloading before writing."
   DENY_REASON="$DENY_REASON" python3 -c "

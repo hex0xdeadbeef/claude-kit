@@ -34,7 +34,7 @@ manifests = {
 # SubagentStart fires per-agent; SubagentStop covers the review/recovery set.
 START_AGENTS = ["code-researcher", "plan-reviewer", "code-reviewer", "verdict-recovery"]
 STOP_AGENTS = ["plan-reviewer", "code-reviewer", "verdict-recovery"]
-# PR-002: explicitly probe the non-first alternatives namespaced, to catch a
+# Explicitly probe the non-first alternatives namespaced, to catch a
 # wrong-precedence regression like '(claude-kit:)?plan-reviewer|code-reviewer|...'
 STOP_PRECEDENCE_PROBES = ["claude-kit:code-reviewer", "claude-kit:verdict-recovery"]
 UNRELATED = ["general-purpose", "claude-kit:general-purpose"]
@@ -102,7 +102,7 @@ for label, path in manifests.items():
             else:
                 fail(f"{label} SubagentStop NO fullmatch for '{tgt}'")
 
-    # PR-002: alternation precedence — non-first alternatives must match namespaced.
+    # alternation precedence — non-first alternatives must match namespaced.
     for tgt in STOP_PRECEDENCE_PROBES:
         if fullmatch_any(stop_matchers, tgt):
             ok(f"{label} SubagentStop precedence ok for '{tgt}'")

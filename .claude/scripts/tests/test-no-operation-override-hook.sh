@@ -51,7 +51,7 @@ PY
 
 # (d) ZERO `block-dangerous` references in shipped files (excl. prompts/, workflow-state/, .git/,
 #     the audit artifact, and THIS test file — its grep pattern contains the token)
-# Hermetic (CR-001): scope to TRACKED files via git ls-files — auto-excludes .git/, gitignored
+# Hermetic: scope to TRACKED files via git ls-files — auto-excludes .git/, gitignored
 # nested .claude/worktrees/ checkouts, and workflow-state/. Then drop prompts/, the audit artifact,
 # scripts/tests/ (allowlists/guards legitimately reference removed artifacts, e.g. the c5
 # settings-diff allowlist), the audit artifact, and THIS test file.

@@ -3,7 +3,7 @@
 #
 # Usage: bash .claude/scripts/tests/test-save-review-checkpoint.sh
 #
-# Coverage (IMP-02 Part 10):
+# Coverage (IMP-02):
 #   1. structured_json happy path           — valid VERDICT_JSON block parsed and schema-validated
 #   2. regex_fallback                       — no VERDICT_JSON block, VERDICT: line rescues
 #   3. dual-VERDICT mismatch                — structured JSON APPROVED vs human NEEDS_CHANGES
@@ -53,7 +53,7 @@ run_hook() {
   # Discard stdout (hook prints "decision: block" JSON only when verdict UNKNOWN; our
   # tests engineer a verdict in every payload so block should never fire).
   echo "${payload}" | bash "${HOOK}" >/dev/null 2>&1 || true
-  # CR-002: unset both envs on every run so one test's sandbox/mode cannot leak
+  # Unset both envs on every run so one test's sandbox/mode cannot leak
   # into the next one's hook invocation. Without this, a test that runs in strict
   # mode would carry the mode forward to subsequent warn-mode scenarios, and the
   # sandbox path from the prior run would be read by the hook even though the
@@ -327,7 +327,7 @@ assert_eq "verdict still APPROVED"              "APPROVED"          "$(marker_fi
 assert_eq "verdict_source structured_json"      "structured_json"   "$(marker_field "${SCENARIO_9_SANDBOX}" verdict_source)"
 assert_eq "canonical_issue_ids has 1 entry"     "1"                 "$(canonical_ids_field "${SCENARIO_9_SANDBOX}" length)"
 assert_eq "canonical id has PR- prefix"         "PR-"               "$(canonical_ids_field "${SCENARIO_9_SANDBOX}" first_prefix)"
-# PR-003 strengthening: deterministic hash equality matches scenarios 6/7 pattern
+# Deterministic hash equality matches scenarios 6/7 pattern
 # P2 normalization: lowercases location "Part 5" -> "part 5" before sha256.
 EXPECTED_HASH_9=$(python3 -c 'import hashlib; print(hashlib.sha256(b"architecture|part 5|repository layer imports handler").hexdigest()[:8])')
 assert_eq "canonical id matches expected hash"  "PR-${EXPECTED_HASH_9}" "$(canonical_ids_field "${SCENARIO_9_SANDBOX}" first_id)"

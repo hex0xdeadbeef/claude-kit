@@ -23,7 +23,7 @@ if [[ "$FILE_PATH" == *"agent-memory"* ]]; then
   exit 0
 fi
 
-# --- PK-01: PROJECT-KNOWLEDGE.md canonical path check ---
+# --- PROJECT-KNOWLEDGE.md canonical path check ---
 # Canonical path is the canonical form (SEE .claude/rules/kit-authoring-conventions.md → Path Conventions).
 # Detects the bare form (no `.claude/` prefix) and logs to stdout.
 # Runs for ANY file type (this block is BEFORE the .md-only filter below).
@@ -47,7 +47,7 @@ esac
 if [[ "$PK_SKIP" == "false" ]] && [[ -f "$FILE_PATH" ]]; then
   PK_BARE_LINES=$(perl -ne 'print "$.:$_" if /(?<![\/.])PROJECT-KNOWLEDGE\.md/' "$FILE_PATH" 2>/dev/null || true)
   if [[ -n "$PK_BARE_LINES" ]]; then
-    # Part 3 / P1: default PK_PATH mode to 'strict' in plugin mode (CLAUDE_PLUGIN_ROOT set), else 'warn'.
+    # Default PK_PATH mode to 'strict' in plugin mode (CLAUDE_PLUGIN_ROOT set), else 'warn'.
     _pk_default="warn"; [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && _pk_default="strict"
     if [[ "${CLAUDE_PK_PATH_MODE:-$_pk_default}" == "strict" ]]; then
       echo "❌ PK path validation FAILED for ${FILE_PATH}:"
@@ -62,7 +62,7 @@ if [[ "$PK_SKIP" == "false" ]] && [[ -f "$FILE_PATH" ]]; then
     fi
   fi
 fi
-# --- end PK-01 ---
+# --- end PROJECT-KNOWLEDGE.md canonical path check ---
 
 # Only check .claude/ artifact files
 if [[ ! "$FILE_PATH" =~ \.claude/ ]] || [[ ! "$FILE_PATH" =~ \.md$ ]]; then

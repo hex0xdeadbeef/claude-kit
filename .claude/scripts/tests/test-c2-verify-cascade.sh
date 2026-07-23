@@ -2,7 +2,7 @@
 # test-c2-verify-cascade.sh
 #
 # Asserts AC-C2.1..AC-C2.10 from .claude/prompts/coder-code-review-generic-analysis.md §8 C2
-# Tests Part 1 (C2 — VERIFY/QUICK CHECK cascade slot-driven)
+# Tests C2 — VERIFY/QUICK CHECK cascade slot-driven
 
 set -euo pipefail
 
@@ -67,7 +67,7 @@ grep -q 'resolved command\|verify_startup cascade' .claude/skills/coder-rules/SK
   || fail "AC-C2.5 — coder-rules/SKILL.md does not reference resolved VERIFY_CMD"
 pass "AC-C2.5 — coder-rules/SKILL.md references resolved VERIFY_CMD"
 
-# AC-C2.9: handoff schema unchanged (C1) — pre-merge gate (see CR-003)
+# AC-C2.9: handoff schema unchanged (C1) — pre-merge gate
 if [[ -d .git ]]; then
   CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
   if [[ "$CURRENT_BRANCH" == "main" ]]; then
@@ -92,7 +92,7 @@ fi
 # ════════════════════════════════════════════════════════════════════════
 # MANUAL (operator procedure)
 # ════════════════════════════════════════════════════════════════════════
-# AC-C2.6 (REVISED per PR-002): kit's actual VERIFY_CMD = "bash .claude/scripts/tests/test-*.sh"
+# AC-C2.6 (REVISED): kit's actual VERIFY_CMD = "bash .claude/scripts/tests/test-*.sh"
 #   (NOT the Go literal from spec). Verify resolution at PK step-1 returns kit's value.
 #   Procedure: read PROJECT-KNOWLEDGE.md L37, confirm VERIFY_CMD = "bash .claude/scripts/tests/test-*.sh".
 #   Run /coder on kit fixture, confirm verify_status.command_used matches PK value.

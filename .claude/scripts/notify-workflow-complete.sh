@@ -26,7 +26,7 @@ if [[ -z "${latest_cp}" || ! -f "${latest_cp}" ]]; then
   exit 0
 fi
 
-# PR-007 fix: anchor at column 0, strip BOTH spaces AND quotes
+# Anchor at column 0, strip BOTH spaces AND quotes
 phase="$(grep -E '^phase_completed:' "${latest_cp}" | head -n1 | awk -F: '{print $2}' | tr -d ' "')"
 verdict="$(grep -E '^verdict:' "${latest_cp}" | head -n1 | awk -F: '{print $2}' | tr -d ' "')"
 
@@ -39,7 +39,7 @@ esac
 # I-03: read the Stop payload (v2.1.145+ includes background_tasks). Suppress the
 # "workflow complete" notification while genuine background work is still running
 # (e.g. a backgrounded code-researcher) — firing now would be premature. Placed on the
-# emit path only (after the env/phase/verdict gates) per PR-002 review note: the
+# emit path only, after the env/phase/verdict gates: the
 # default-OFF and non-final-Stop early-exits never need to drain stdin (harmless — each
 # Stop hook gets its own stdin copy and exits at once). session_crons is intentionally
 # NOT gated on — that is the kit's own auto-checkpoint cron, expected during a run.

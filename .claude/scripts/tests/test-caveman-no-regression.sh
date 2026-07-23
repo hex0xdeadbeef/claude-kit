@@ -29,7 +29,7 @@ FAIL=0
 # ─── Section A: canonical_id stability via fixture validation ─────────────
 echo "── A) canonical_id stability via fixture validation ──"
 
-# PR-b1f5b34c iter 2 fix: required-fixtures precondition.
+# Required-fixtures precondition.
 # Without this, the glob loop below silently passes when fixtures are absent.
 required_fixtures=(
   "valid-plan-verdict.json"
@@ -49,7 +49,7 @@ for required in "${required_fixtures[@]}"; do
   fi
 done
 
-# PR-da5c5581 iter 2 fix: removed tautological python3 sha256-format block.
+# No python3 sha256-format assertion here — it would be tautological.
 # The glob fixture-validation below IS the meaningful canonical_id test.
 for fixture in "${FIXTURES_DIR}"/valid-*.json; do
   [[ -f "${fixture}" ]] || continue
@@ -92,7 +92,7 @@ else
   done
 fi
 
-# PR-deba0943 iter 2 fix: automated AC15 grep — exactly 5 caveman entries.
+# Automated AC15 grep — exactly 5 caveman entries.
 # grep -c outputs `0` (with rc=1) when no matches; the `||` chain inside $() doubles output,
 # so we capture grep's output independently and treat its rc as informational only.
 caveman_count=0
@@ -109,7 +109,7 @@ else
   rc=1
 fi
 
-# ─── Section C (PR-5f01999e iter 2 fix): canonical_id stability under lite ──
+# ─── Section C: canonical_id stability under lite ──
 # Rationale: caveman lite is defined to preserve complete sentences (SKILL.md
 # clause 5). Therefore the canonical_id (sha256 of category|location|problem)
 # for any issue must be byte-identical between caveman-OFF and caveman-LITE.

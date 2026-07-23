@@ -10,9 +10,9 @@
 #   T4: check-uncommitted.sh bash one-liner picks mtime-newest
 #   T5: save-progress-before-compact.sh picks mtime-newest (via additionalContext feature)
 #   T6: enrich-context.sh hash-guard reads mtime-newest (verify via hash differing across selections)
-#   T7: verify-state-after-compact.sh picks mtime-newest (PR-003 iter-2)
-#   T8: inject-review-context.sh picks mtime-newest (PR-003 iter-2)
-#   T9: log-permission-denied.sh inline carve-out picks mtime-newest (PR-001 iter-2)
+#   T7: verify-state-after-compact.sh picks mtime-newest
+#   T8: inject-review-context.sh picks mtime-newest
+#   T9: log-permission-denied.sh inline carve-out picks mtime-newest
 
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -70,7 +70,7 @@ EOF
 
   # Back-date OLDER_CP by 1 hour; keep NEWER_CP at current time.  Using
   # os.utime via inline python3 (portable across timezones — touch -t
-  # interprets local time per the P1 iter-1 lesson learned).
+  # interprets local time).
   python3 - "$NEWER_CP" "$OLDER_CP" <<'PY'
 import os, sys, time
 newer, older = sys.argv[1], sys.argv[2]
@@ -203,7 +203,7 @@ assert_pass "T6.a — enrich-context.sh wrote hash of mtime-newer checkpoint (a-
 assert_pass "T6.b — enrich-context.sh did NOT write hash of alphabetical-last (z-old)" "$?"
 
 # ============================================================================
-# T7: verify-state-after-compact.sh picks mtime-newest (PR-003 iter-2)
+# T7: verify-state-after-compact.sh picks mtime-newest
 # ============================================================================
 echo "--- T7: verify-state-after-compact.sh additionalContext reflects mtime-newest ---"
 seed_divergent_checkpoints "$TMP_STATE"
@@ -221,7 +221,7 @@ sys.exit(0 if (newer in ac and older not in ac) else 1)
 assert_pass "T7 — verify-state-after-compact.sh selects a-new (mtime-newer)" "$?"
 
 # ============================================================================
-# T8: inject-review-context.sh picks mtime-newest (PR-003 iter-2)
+# T8: inject-review-context.sh picks mtime-newest
 # ============================================================================
 echo "--- T8: inject-review-context.sh additionalContext reflects mtime-newest ---"
 seed_divergent_checkpoints "$TMP_STATE"
@@ -241,7 +241,7 @@ sys.exit(0 if (newer in ac and older not in ac) else 1)
 assert_pass "T8 — inject-review-context.sh selects a-new (mtime-newer)" "$?"
 
 # ============================================================================
-# T9: log-permission-denied.sh inline carve-out picks mtime-newest (PR-001 iter-2)
+# T9: log-permission-denied.sh inline carve-out picks mtime-newest
 # ============================================================================
 echo "--- T9: log-permission-denied.sh inline carve-out picks mtime-newest ---"
 # log-permission-denied emits retry:true ONLY when the selected checkpoint
