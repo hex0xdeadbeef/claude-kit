@@ -46,7 +46,7 @@ Install claude-kit as a native Claude Code **plugin**: shared across all your pr
 /plugin install claude-kit@claude-kit
 ```
 
-Plugin commands are namespaced — you run `/claude-kit:workflow`, `/claude-kit:planner`, `/claude-kit:coder`, `/claude-kit:designer`. The internal pipeline delegation (planner → plan-reviewer → coder → code-reviewer) resolves automatically by description, so it works regardless of the prefix.
+Plugin commands are namespaced — you run `/claude-kit:workflow`, `/claude-kit:planner`, `/claude-kit:coder`, `/claude-kit:designer`. Two invocation mechanisms are in play, and they are not interchangeable: the review **agents** (plan-reviewer, code-reviewer) resolve automatically by description, so they work regardless of the prefix, while `designer`, `planner`, and `coder` are **commands** — `/workflow` invokes each one explicitly by name, and none of them is ever auto-delegated.
 
 <details>
 <summary>Alternative: <code>install.sh</code> (project-scoped — copies the kit into one repo)</summary>

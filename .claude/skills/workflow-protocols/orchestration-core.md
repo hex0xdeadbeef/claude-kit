@@ -49,9 +49,11 @@ flowchart LR
 
 **Phase 0.5 — Task Analysis:** Classify (type + S/M/L/XL) → Route. S: skip plan-review. L/XL: Sequential Thinking recommended/required.
 
-**Phase 0.7 — Design (L/XL only):** Execute /designer. Output: `.claude/prompts/{feature}-spec.md`. User approval gate required. SKIP for S/M complexity.
+**Phase 0.7 — Design (L/XL only):** Execute /designer — invoke it with the Skill tool by name, `designer` (plugin mode: `claude-kit:designer`). Output: `.claude/prompts/{feature}-spec.md`. User approval gate required. SKIP for S/M complexity.
+- The orchestrator never performs the design phase itself: no self-written draft, no ad-hoc critic subagents. Phase 3.5 CRITIQUE is 7 in-context lenses inside /designer.
 - If user rejects design → iterate within /designer (not a pipeline loop — internal to designer)
 - Checkpoint: `phase_completed: 0.7, phase_name: "design"`
+- Before Phase 1 starts, the unconditional `pipeline.spec_gate` (workflow.md) must pass: on the L/XL route a missing or unapproved spec is FATAL, not a silent skip.
 
 **Phase 1 — Planning:** Execute /planner. If spec exists → planner references spec. Output: `.claude/prompts/{feature}.md`
 

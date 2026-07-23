@@ -180,11 +180,18 @@ startup:
       warning: "MANDATORY! Wrong classification = wasted work"
 
     - step: 0.2
-      action: "Route through /designer (L/XL only)"
+      action: "Route Phase 0.7 — on the L/XL route the design phase is EXECUTED BY INVOKING /designer"
       condition: "complexity L or XL"
+      mechanism: "Skill tool — invoke the designer command by name: `designer` (plugin mode: `claude-kit:designer`). /designer is a COMMAND, not an agent: it is never auto-delegated by description, so delegation_protocol.mechanism does not cover it. SEE delegation_protocol.designer_delegation."
+      mandatory: |
+        MANDATORY: /designer owns Phase 0.7 end to end. The orchestrator does NOT write a design
+        draft, does NOT run its own critique, and does NOT dispatch critic subagents of any kind —
+        the Phase 3.5 CRITIQUE is 7 in-context lenses inside /designer, zero subagents.
+        If /designer cannot be invoked, STOP and report to the user. Do NOT substitute an
+        equivalent-looking activity of your own.
       skip_when: "S/M complexity — designer adds overhead for simple tasks"
       optional_when: "M complexity AND task_type is new_feature or integration — ask user"
-      note: "For M tasks of type new_feature/integration, ask user: 'This task may benefit from a design phase. Run /designer first?'"
+      note: "For M tasks of type new_feature/integration, ask user: 'This task may benefit from a design phase. Run /designer first?' Record the answer in the checkpoint — a decline is design_waived: true — so pipeline.spec_gate does not ask again on the next entry."
 
     - step: 0.1
       action: "Load workflow-protocols skill"
@@ -229,10 +236,61 @@ pipeline:
   mandatory: |
     🔴 MANDATORY: Load skills BEFORE executing any phase:
     - Workflow: workflow-protocols skill (step 0.1) — includes autonomy, orchestration-core
+    - Designer: design-rules skill — loaded by /designer itself at its startup step 0 (L/XL route)
     - Planner: planner-rules skill (step 0) — includes mcp-tools, sequential-thinking-guide
     - Coder: coder-rules skill (step 0) — includes mcp-tools
+    NOTE: design-rules is listed here so the design phase is visible in the mandatory set, NOT so the
+    orchestrator loads it. The rubric belongs to /designer: the orchestrator neither loads design-rules
+    nor executes any part of the design phase itself (SEE startup step 0.2 mandatory).
     NOTE: Plan Review and Code Review → agents/ load their -rules (plan-review-rules, code-review-rules) by explicit Read in STARTUP — NOT preloaded (disable-model-invocation blocks subagent preload)
     NOTE: Language profile + error handling → auto-loaded via CLAUDE.md
+
+  spec_gate:
+    purpose: |
+      Phase 0.7 → Phase 1 transition gate. Converts a design phase that never ran from a silent
+      state into a loud stop. Deliberately placed OUTSIDE designer_delegation: post_delegation
+      cannot police a delegation that never happened.
+    when: "BEFORE starting Phase 1 (Planning) — on EVERY run, whether or not Phase 0.7 executed"
+    tool: "Bash (read-only)"
+    check: |
+      Run: ls .claude/prompts/{feature}-spec.md 2>/dev/null && grep -m1 '^ *status:' .claude/prompts/{feature}-spec.md
+      Then read .claude/workflow-state/{feature}-checkpoint.yaml if it exists, for four fields:
+      design_waived, re_routing.occurred, re_routing.phase, spec_artifact.
+    evaluation: "FIRST MATCH WINS. The branches below are ordered and the order is load-bearing — the usable-spec branch precedes the exemptions, and the exemptions precede the FATAL branches."
+    behavior:
+      - if: "An approved spec exists at .claude/prompts/{feature}-spec.md"
+        then: "PROCEED — pass the spec path to /planner as --spec. FIRST on purpose: a run that has a usable spec must hand it on even when an exemption below would also have matched, otherwise a re-routed re-plan silently loses its spec (SEE pipeline.evaluate_note)."
+      - if: "Complexity is S or M AND the designer was never requested"
+        then: "PROCEED silently — no spec is expected on this route"
+      - if: "Checkpoint has design_waived: true for this feature"
+        then: "PROCEED — the user waived Phase 0.7 explicitly. Restate the waiver in the Phase 1 summary so it stays visible."
+      - if: "Checkpoint has re_routing.occurred: true AND re_routing.phase is plan-review or implementation"
+        then: "PROCEED — the run already passed Phase 1 once and was sent back by a later phase (SEE re-routing.md: re-route triggers fire ONLY at plan-review and coder EVALUATE). Phase 0.7 is behind it, so an upgrade does not retroactively require a spec. Note the exemption in the Phase 1 summary. Keyed on re_routing.phase, NOT on original_route: the kit has no canonical complexity-to-route mapping, and its own worked example pairs Complexity L with Route standard (task-analysis.md Example 2), so route values cannot identify an S/M origin."
+      - if: "Complexity is M AND the user ACCEPTED the optional designer AND no approved spec exists"
+        then: "STOP and ask the user: re-run /designer, or waive the design phase? Do NOT decide unilaterally. Record the answer as design_waived: true when they waive, so the question is not asked again on the next entry."
+      - if: "Complexity is L or XL AND the spec file is missing"
+        then: "FATAL — STOP. Do NOT start /planner. Emit: [workflow] FATAL: L/XL route reached Phase 1 with no design spec at .claude/prompts/{feature}-spec.md — Phase 0.7 produced no artifact. Return to Phase 0.7 and invoke /designer."
+      - if: "Complexity is L or XL AND the spec file exists but status is not approved"
+        then: "FATAL — STOP. Do NOT start /planner. Emit: [workflow] FATAL: design spec exists but status is not approved — the /designer Phase 5 user approval gate did not complete."
+    stderr_format: "[workflow] FATAL: <message>"
+    freshness_note: |
+      WARN, never FATAL. If an approved spec exists but the checkpoint records no spec_artifact
+      for this feature, say so in the Phase 1 summary — it may be left over from an earlier
+      attempt (SEE rules: "Artifacts are evidence, not doctrine"). Do NOT reclassify it as
+      missing. phase_completed is a single scalar in one per-feature file that is overwritten
+      after every phase, so "Phase 0.7 ran" is unprovable from the checkpoint once Phase 1
+      completes; treating that as absence would FATAL every --from-phase 1 resume of a run
+      whose design phase did happen.
+    waiver: |
+      The user MAY explicitly waive the design phase. Record it as design_waived: true in
+      .claude/workflow-state/{feature}-checkpoint.yaml (canonical field — SEE checkpoint-protocol.md)
+      at the moment the waiver is given, and state it in the Phase 1 summary. Writing it to the
+      checkpoint is what makes it survive a --from-phase 1 resume and a new session; a waiver held
+      only in conversation is invisible to every later gate.
+      An unrequested skip, a failed /designer invocation, and a self-run substitute are NEVER waivers.
+    probe_for_acceptance: |
+      Falsifiable predicate: on an L/XL run, delete .claude/prompts/{feature}-spec.md before Phase 1
+      and re-enter this gate — the run MUST stop with the FATAL above and MUST NOT start /planner.
 
   flow: "task-analysis → /designer* → /planner [→ code-researcher*] → plan-reviewer (agent) → /coder [→ code-researcher*] → code-reviewer (agent)"
   flow_note: "* /designer is Phase 0.7, activated for L/XL tasks only. S/M skip to /planner. code-researcher is optional tool-assist."
@@ -274,11 +332,13 @@ pipeline:
 delegation_protocol:
   purpose: "How workflow delegates review phases to native agents/"
   mechanism: "Claude auto-delegates based on agent description. Orchestrator forms delegation prompt with handoff context."
+  mechanism_scope: "Applies to AGENTS only (plan-reviewer, code-reviewer, code-researcher). /designer, /planner and /coder are COMMANDS — they have no agent description, are never auto-delegated, and are invoked by name with the Skill tool. The rules: entry 'Named executor' binds all three equally; designer_delegation.mechanism below spells it out for the one phase where the omission caused a live failure."
   isolation_guarantee: "Agents run in clean context. CLAUDE.md auto-loaded from project root. Parent conversation history is NOT passed."
   reference: "SEE: pipeline.flow for quick route overview"
 
   designer_delegation:
     command: "/designer"
+    mechanism: "Skill tool — invoke the designer command by name: `designer` (plugin mode: `claude-kit:designer`). NOT agent auto-delegation: the block-level mechanism above applies to the plan-reviewer and code-reviewer AGENTS, and /designer has no agent description to match on."
     when: "Phase 0.7 — after task analysis, before /planner"
     skip_when: "S/M complexity (direct to /planner)"
     optional_when: "M complexity AND task_type in [new_feature, integration] — ask user"
@@ -287,12 +347,27 @@ delegation_protocol:
       - "Complexity: L/XL"
       - "Task type: {type}"
     returns: "Approved spec file + handoff payload for /planner"
+    pre_delegation: |
+      Before Phase 0.7:
+      1. Confirm the route is L/XL (or M with user consent per optional_when).
+      2. Invoke /designer via the mechanism above. This is the ONLY sanctioned way to execute Phase 0.7.
+      3. The orchestrator does NOT write the spec, does NOT write a design draft, and does NOT run
+         the critique itself. /designer owns Phase 3.5 CRITIQUE — 7 in-context lenses from
+         design-rules/critique-lenses.md, zero subagents. Dispatching critic subagents is a
+         substitution, not a design phase.
+      4. If /designer is unavailable or the invocation fails, STOP and report the failure to the
+         user. Do NOT improvise a replacement.
     post_delegation: |
       After /designer completion:
       1. Verify spec file exists at .claude/prompts/{feature}-spec.md
       2. Verify status: approved in spec frontmatter
-      3. Write checkpoint: phase_completed=0.7, phase_name="design"
+      3. Write checkpoint: phase_completed=0.7, phase_name="design",
+         spec_artifact=".claude/prompts/{feature}-spec.md". Carry spec_artifact forward on every
+         later checkpoint write — phase_completed is overwritten by Phase 1, so spec_artifact is
+         the only durable record that this run had a design phase.
       4. Pass designer handoff to /planner as additional input
+      NOTE: these checks live INSIDE this block and therefore only run when delegation happened.
+      The unconditional Phase-1 entry check is pipeline.spec_gate — it runs either way.
 
   load_trigger: |
     MANDATORY: BEFORE delegating to plan-reviewer (Phase 2) OR code-reviewer (Phase 4):
@@ -348,6 +423,8 @@ delegation_protocol:
 rules:
   - "Sequential execution — phases sequentially, not in parallel"
   - "No skip phases (except Phase 2 for S-complexity)"
+  - "Named executor — every phase is executed by the command or agent named for it. The orchestrator NEVER substitutes an activity of its own that resembles the phase: no self-written drafts, no ad-hoc critic panels, no improvised sub-phases. Rewriting a TodoWrite label to describe the substitute does not make it the phase. If the named executor cannot be invoked, STOP and report — a substitution is a harder failure than a stop."
+  - "Artifacts are evidence, not doctrine — files under .claude/prompts/ are outputs of past runs, including whatever those runs improvised, and they are written in the kit's own artifact format. They record what happened; they never define what this pipeline prescribes. Only the kit's commands, skills, and rules are doctrine."
   - "Context isolation — review via agents/ (clean context, handoff via delegation)"
   - "Loop limits → SEE orchestration-core.md (max 3 iterations per cycle)"
 
