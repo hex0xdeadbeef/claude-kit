@@ -37,25 +37,25 @@ nk() { # nk <label> <file> <ERE> — file MUST NOT contain the pattern; missing 
   fi
 }
 
-echo "-- A) TA-scout present (ceiling, fast path, output fields) --"
+echo "── A) TA-scout present (ceiling, fast path, output fields) ──"
 ck "scout step present"        "${TA}" "Step 1\.5.*[Rr]econ|Bounded Recon"
 ck "5-read ceiling"            "${TA}" "5 (targeted )?[Rr]eads?.*CEILING|CEILING.*not.*mandate"
-# bare '0 reads' is a substring of the pre-existing '10/20/30 reads' planner budgets --
+# bare '0 reads' is a substring of the pre-existing '10/20/30 reads' planner budgets —
 # anchor to the fast-path sentence that only the TA-scout section introduces.
 ck "0-read fast path"          "${TA}" "classif(y|ies) at 0 reads"
 ck "blast_radius output field" "${TA}" "blast_radius"
-# bare 'evidence' matches pre-existing prose -- anchor to the Output Format line.
+# bare 'evidence' matches pre-existing prose — anchor to the Output Format line.
 ck "Evidence output line"      "${TA}" '^Evidence: \['
 ck "confidence output field"   "${TA}" "confidence"
 
-echo "-- B) designer parallel EXPLORE --"
+echo "── B) designer parallel EXPLORE ──"
 # designer.md already contains the bare word 'parallel_fanout' in prose ("NOT the
-# parallel_fanout N-way path") -- require the YAML KEY form that only the fan-out edit adds.
+# parallel_fanout N-way path") — require the YAML KEY form that only the fan-out edit adds.
 ck "parallel fan-out in EXPLORE"  "${DESIGNER}" '^[[:space:]]+parallel_fanout:'
 
-echo "-- C) role-critic panel stays retired (removal invariant) --"
+echo "── C) role-critic panel stays retired (removal invariant) ──"
 # The 5-role blind critic panel (Architect/Security/Ops-SRE/QA-Testability/Product-DX) was
-# removed. Phase 3.5 is the single-context 7-lens pass again -- that path is asserted
+# removed. Phase 3.5 is the single-context 7-lens pass again — that path is asserted
 # positively at the end of this section and by test-design-critique-subphase.sh; everything
 # panel-shaped must stay absent.
 if [[ -e "${REPO_ROOT}/.claude/agents/design-critic.md" ]]; then
@@ -74,24 +74,25 @@ nk "no panel matcher in settings" "${SETTINGS}"     'design-critic'
 nk "no panel matcher in hooks"    "${HOOKS}"        'design-critic'
 nk "no critic in suspend hook"    "${SUSPEND}"      'design-critic'
 nk "no panel block in spec tmpl"  "${SPEC_TMPL}"    '^[[:space:]]+panel:'
+nk "no role field on finding"     "${SPEC_TMPL}"    '^[[:space:]]+role:'
 nk "no panel metrics"             "${METRICS}"      'design_panel_metrics'
 nk "no rubric load in skill"      "${DESIGN_SKILL}" 'role-rubrics'
 nk "no critic routing row"        "${ROUTING}"      'design-critic'
 # The retained layer: Phase 3.5 still runs the single-context lens pass.
 ck "phase 3.5 loads lens set"     "${DESIGNER}"     'critique-lenses\.md'
 
-echo "-- D) caveman wiring count invariant --"
+echo "── D) caveman wiring count invariant ──"
 n=$(grep -c 'caveman' "${SETTINGS}" 2>/dev/null) || true
 if [[ "${n:-0}" -eq 5 ]]; then
-  echo "  PASS: settings.json caveman count still exactly 5"; PASS=$((PASS+1))
+  echo "  PASS: settings.json caveman count still exactly 5 (invariant — passes pre-change too)"; PASS=$((PASS+1))
 else
   echo "  FAIL: settings.json caveman count = ${n:-0} (expected 5)"; FAIL=$((FAIL+1)); rc=1
 fi
 
-echo "-- E) designer.md token ceiling (load-bearing per code-review CR-001) --"
+echo "── E) designer.md token ceiling (load-bearing per code-review CR-001) ──"
 # Ceiling 2957 = the approved baseline 2275 tokens (o200k_base, commit a86dd0e) * 1.30 cap.
 # Measured 2949 while the role panel shipped, 2327 after it was removed. The ceiling stays at
-# the same policy value -- it bounds the command body, it does not track it.
+# the same policy value — it bounds the command body, it does not track it.
 # A skipped check must NOT read as success (guard-fail-loudly).
 SKIPPED=0
 if command -v uv >/dev/null 2>&1; then
@@ -101,20 +102,20 @@ print(len(tiktoken.get_encoding("o200k_base").encode(open(os.environ["DESIGNER"]
 PYEOF
   )
   if [[ ! "${dtok}" =~ ^[0-9]+$ ]]; then
-    echo "  SKIP: tiktoken unavailable -- TOKEN CEILING NOT ENFORCED THIS RUN"; SKIPPED=$((SKIPPED+1))
+    echo "  SKIP: tiktoken unavailable — TOKEN CEILING NOT ENFORCED THIS RUN"; SKIPPED=$((SKIPPED+1))
   elif [[ "${dtok}" -le 2957 ]]; then
     echo "  PASS: designer.md ${dtok} tokens (<= 2957 ceiling, headroom $((2957-dtok)))"; PASS=$((PASS+1))
   else
     echo "  FAIL: designer.md ${dtok} tokens exceeds the 2957 ceiling (over by $((dtok-2957)))"
     echo "        The command body loads on EVERY /designer invocation. Trim prose or move"
-    echo "        content to a just-in-time file -- do not raise the ceiling."
+    echo "        content to a just-in-time file — do not raise the ceiling."
     FAIL=$((FAIL+1)); rc=1
   fi
 else
-  echo "  SKIP: uv not installed -- TOKEN CEILING NOT ENFORCED THIS RUN"; SKIPPED=$((SKIPPED+1))
+  echo "  SKIP: uv not installed — TOKEN CEILING NOT ENFORCED THIS RUN"; SKIPPED=$((SKIPPED+1))
 fi
 
-summary="--- ta-designer-uplift guard: ${PASS} passed, ${FAIL} failed"
+summary="─── ta-designer-uplift guard: ${PASS} passed, ${FAIL} failed"
 if [[ "${SKIPPED}" -gt 0 ]]; then summary="${summary}, ${SKIPPED} SKIPPED (token ceiling NOT enforced)"; fi
-echo "${summary} ---"
+echo "${summary} ───"
 exit ${rc}
