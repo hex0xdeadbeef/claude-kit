@@ -136,10 +136,36 @@ startup:
       warning: "MANDATORY! Wrong classification = wasted work or insufficient planning"
 
     - step: 0.5
-      action: "Load spec if provided"
+      action: "Load spec if provided — and gate the L/XL route on it"
       check: "If --spec provided OR .claude/prompts/{feature}-spec.md exists"
       action_if_found: "Read spec → use as input for Phase 1 (Understand) and Phase 4 (Design)"
-      action_if_not_found: "Proceed without spec (standard flow)"
+      action_if_not_found: |
+        Resolve in this order — the severity depends on the caller:
+        1. Checkpoint (.claude/workflow-state/{feature}-checkpoint.yaml) has design_waived: true,
+           OR re_routing.occurred: true AND re_routing.phase is plan-review or implementation
+           → PROCEED without spec. Both mark a run that legitimately has none.
+           These two predicates MUST stay byte-identical to workflow.md pipeline.spec_gate. Do NOT
+           key the second one on original_route: the kit has no canonical complexity-to-route
+           mapping and its own worked example pairs Complexity L with Route standard
+           (task-analysis.md Example 2), so route values cannot identify an S/M origin.
+        2. S/M route → PROCEED without spec (standard flow).
+        3. L/XL AND orchestrated → STOP. Emit:
+           "[planner] FATAL: L/XL task has no approved design spec at
+           .claude/prompts/{feature}-spec.md — Phase 0.7 did not run or produced nothing.
+           Run /designer first." Do NOT plan.
+        4. L/XL AND standalone → WARN, do not abort. Emit:
+           "[planner] WARN: L/XL task has no design spec — planning without one. Run /designer
+           first if that was not intentional." Confirm once with the user, then proceed.
+           FATAL is wrong for this caller: there is no orchestrator to return to and no
+           Phase 0.7 to re-enter, and standalone /planner is a documented invocation.
+      caller_signal: |
+        "Orchestrated" vs "standalone" is directly observable, not a guess: commands run INSIDE
+        the orchestrator's context (SEE .claude/rules/workflow.md § Commands vs Agents), so an
+        orchestrated /planner has the live /workflow pipeline state in the same context — the
+        TodoWrite phase list and the pipeline.spec_gate result from this same run. Standalone
+        means none of that is present. A stale checkpoint on disk from an earlier run is NOT
+        evidence of orchestration; only in-context pipeline state for THIS run is.
+      note: "Mirrors workflow.md pipeline.spec_gate, with severity split by caller. Branch-1 exemptions are read from the checkpoint so a waiver survives a resume or a new session."
 
     - step: 1
       action: TodoWrite

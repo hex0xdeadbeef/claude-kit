@@ -22,6 +22,17 @@ checkpoint_protocol:
     complexity: "S|M|L|XL"
     route: "minimal|standard|full"
     session_type: "workflow|project-research|ad-hoc"
+    spec_artifact: "null|.claude/prompts/{feature}-spec.md"
+    # Optional. Written by the orchestrator in designer_delegation.post_delegation when Phase 0.7
+    # produced an approved spec. Carry it forward on every later checkpoint write — it is the only
+    # durable record that this run had a design phase, because phase_completed is a single scalar
+    # that Phase 1 overwrites. Read by workflow.md pipeline.spec_gate.freshness_note.
+    design_waived: false
+    # Optional. Set true ONLY when the user explicitly waived Phase 0.7 for this feature.
+    # Written by the orchestrator at the moment of the waiver; read by workflow.md
+    # pipeline.spec_gate and by /planner startup step 0.5 so the waiver survives a
+    # --from-phase 1 resume and a new session. An unrequested skip, a failed /designer
+    # invocation, and a self-run substitute are NEVER waivers — see workflow.md spec_gate.waiver.
     re_routing:
       occurred: false
       original_route: "null|minimal|standard|full"
@@ -120,6 +131,8 @@ checkpoint_protocol:
       complexity: "L"
       route: "standard"
       session_type: "workflow"
+      spec_artifact: ".claude/prompts/{feature}-spec.md"   # carried forward from Phase 0.7
+      design_waived: false
       re_routing:
         occurred: false
         original_route: null

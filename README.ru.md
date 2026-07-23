@@ -48,7 +48,7 @@
 /plugin install claude-kit@claude-kit
 ```
 
-Команды плагина имеют namespace — вы запускаете `/claude-kit:workflow`, `/claude-kit:planner`, `/claude-kit:coder`, `/claude-kit:designer`. Внутренняя делегация пайплайна (planner → plan-reviewer → coder → code-reviewer) резолвится автоматически по описанию, поэтому работает независимо от префикса.
+Команды плагина имеют namespace — вы запускаете `/claude-kit:workflow`, `/claude-kit:planner`, `/claude-kit:coder`, `/claude-kit:designer`. Здесь работают два разных механизма вызова, и они не взаимозаменяемы: **агенты** ревью (plan-reviewer, code-reviewer) резолвятся автоматически по описанию и потому работают независимо от префикса, а `designer`, `planner` и `coder` — это **команды**: `/workflow` вызывает каждую из них явно по имени, и ни одна из них никогда не делегируется автоматически.
 
 <details>
 <summary>Альтернатива: <code>install.sh</code> (project-scoped — копирует кит в один репозиторий)</summary>
