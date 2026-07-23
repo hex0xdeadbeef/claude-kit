@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # .claude/scripts/lib/log.sh
-# Shared stderr logger for kit hook scripts (AD-1, Proposal J).
+# Shared stderr logger for kit hook scripts.
 #
 # Usage from a hook script:
 #   # shellcheck source=lib/log.sh

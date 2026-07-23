@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # test-auto-fmt-dispatch.sh — verify auto-fmt.sh slot-driven dispatch (P1+P2+P3 ACs)
 # Usage: bash .claude/scripts/tests/test-auto-fmt-dispatch.sh
-# Covers: AC-P1-1..3, AC-P2-1..4, AC-P3-1..3 + cascade fallback + iter-2 regression guards
+# Covers: AC-P1-1..3, AC-P2-1..4, AC-P3-1..3 + cascade fallback + regression guards
 #
 # 8 cases (TC-1..TC-8):
 #   TC-1 Go per-file substitution        — AC-P2-2
@@ -10,8 +10,8 @@
 #   TC-4 Empty FMT_CMD → SKIP            — AC-P2-3
 #   TC-5 Generated-pattern skip          — AC-P3-2
 #   TC-6 Cascade to CLAUDE.md            — AC-P2-1, AC-P1-2 cascade
-#   TC-7 FAILED-branch logging           — PR-e22c8795 regression guard
-#   TC-8 Missing tool_response key       — PR-34518de3 regression guard
+#   TC-7 FAILED-branch logging           — regression guard
+#   TC-8 Missing tool_response key       — regression guard
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -30,7 +30,7 @@ run_case() {
   # Args: <case-name> <pk-content> <claude-md-content> <relative-file-path>
   #       <expected-log-substring> [omit_tool_response]
   # When omit_tool_response=true, the synthetic JSON omits the tool_response key,
-  # exercising the parser's default-success=True branch (CR-004 + PR-34518de3 guard).
+  # exercising the parser's default-success=True branch (regression guard).
   local name="$1" pk="$2" cl="$3" rel="$4" expect="$5" omit_tr="${6:-false}"
 
   local tmp; tmp=$(mktemp -d)
@@ -134,7 +134,7 @@ run_case \
   "src/foo.go" \
   "cascade-.*src/foo\.go"
 
-# TC-7: FAILED-branch logging when formatter exits non-zero (PR-e22c8795 regression guard)
+# TC-7: FAILED-branch logging when formatter exits non-zero (regression guard)
 run_case \
   "TC-7 FAILED-branch logging" \
   $'- LANG_EXT: .go\n- FMT_CMD: "false {}"' \
@@ -142,8 +142,8 @@ run_case \
   "src/foo.go" \
   "auto-fmt: FAILED on .* \(exit 1\)"
 
-# TC-8: missing tool_response key — parser defaults success=True (PR-34518de3 regression guard)
-# Refactored to use run_case helper with omit_tool_response=true (CR-004).
+# TC-8: missing tool_response key — parser defaults success=True (regression guard)
+# Uses the run_case helper with omit_tool_response=true.
 run_case \
   "TC-8 missing tool_response --> formatter runs (defaults success=True)" \
   $'- LANG_EXT: .go\n- FMT_CMD: "echo notool-{}"' \

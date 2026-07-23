@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Part 4 / Proposal E: audit-skill-loads.sh flags claude-proactive invocations of
+# audit-skill-loads.sh flags claude-proactive invocations of
 # disable-model-invocation: true skills as pipeline_anomaly: true.
 
 set -euo pipefail

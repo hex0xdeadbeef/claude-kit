@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# paths.sh — canonical KIT path resolution for plugin / project dual-mode (roadmap Part 2 / B2).
+# paths.sh — canonical KIT path resolution for plugin / project dual-mode.
 #
 # The kit runs in two distribution modes that put its files in different places:
 #   - project-scoped install (install.sh / .claude-copy): everything lives under <project>/.claude/
@@ -45,7 +45,7 @@ KIT_ROOT="${REPO_ROOT:-$PWD}"
 # PreToolUse/PostToolUse) OR the canonicalized bundled root differs from the project root. In a
 # project-scoped install (or the kit's own repo) the two roots coincide -> KIT_PLUGIN_MODE=0.
 # Canonicalize in command-substitution subshells (cd && pwd -P) so cwd is not mutated; missing path
-# falls back to the raw literal (falls toward plugin-mode=1, safe — mirrors Fix A _canon).
+# falls back to the raw literal (falls toward plugin-mode=1, safe — mirrors _canon).
 _kit_br="$( cd "${KIT_ROOT:-}" 2>/dev/null && pwd -P || printf '%s' "${KIT_ROOT:-}" )"
 _kit_pr="$( cd "${KIT_PROJECT_ROOT:-}" 2>/dev/null && pwd -P || printf '%s' "${KIT_PROJECT_ROOT:-}" )"
 if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] || [ "${_kit_br}" != "${_kit_pr}" ]; then

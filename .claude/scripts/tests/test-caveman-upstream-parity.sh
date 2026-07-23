@@ -30,7 +30,7 @@ if [[ ! -f "${SKILL_FILE}" ]]; then
   exit 1
 fi
 
-# CR-002: markers are matched against a WHITESPACE-FLATTENED copy of the body, so a line
+# Markers are matched against a WHITESPACE-FLATTENED copy of the body, so a line
 # wrap that splits a marker phrase across two lines cannot silently break the guard.
 SKILL_FLAT="$(tr '\n' ' ' < "${SKILL_FILE}" | tr -s ' ')"
 
@@ -100,7 +100,7 @@ else
 fi
 
 echo "── D) AC-8 token budget (<= 1000; pre-change baseline was 956) ──"
-# CR-001: this check is the ONLY enforcement of the injected-body cost cap. If it is skipped
+# This check is the ONLY enforcement of the injected-body cost cap. If it is skipped
 # it MUST NOT read as success — a guard that reports "0 failed" while enforcing nothing is
 # worse than no guard, because it manufactures false confidence. Per the kit's soft-prereq
 # convention the skip stays non-blocking (rc unchanged), but it is counted and surfaced in

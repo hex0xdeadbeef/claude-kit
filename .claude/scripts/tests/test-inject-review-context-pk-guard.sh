@@ -79,7 +79,7 @@ for slot in LANG_EXT VERIFY_CMD ERROR_WRAP LAYER_RULE DOMAIN_PROHIBIT; do
 done
 # AC-2: LAYER_RULE multi-line block-scalar continuation survives
 if has "${A_OUT}" "MARKER_LAYER_CONT"; then pass "AC-2 LAYER_RULE continuation captured"; else fail "AC-2 LAYER_RULE continuation truncated"; fi
-# AC-2b: DOMAIN_PROHIBIT multi-line continuation survives (PR-002)
+# AC-2b: DOMAIN_PROHIBIT multi-line continuation survives
 if has "${A_OUT}" "MARKER_DOMAIN_CONT"; then pass "AC-2b DOMAIN_PROHIBIT continuation captured"; else fail "AC-2b DOMAIN_PROHIBIT continuation truncated"; fi
 # AC-2c: ERROR_WRAP slot-owned trailing comment captured (plan-review note)
 if has "${A_OUT}" "MARKER_ERRWRAP_COMMENT"; then pass "AC-2c ERROR_WRAP comment captured"; else fail "AC-2c ERROR_WRAP comment dropped"; fi

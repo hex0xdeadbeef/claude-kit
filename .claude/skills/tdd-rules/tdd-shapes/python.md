@@ -1,6 +1,6 @@
 # Python — TDD reference shape
 
-Resolved when `PROJECT-KNOWLEDGE.md → LANGUAGE = python`. Idiomatic Python 3.10+
+Resolved when `.claude/PROJECT-KNOWLEDGE.md → LANGUAGE = python`. Idiomatic Python 3.10+
 with pytest, `unittest.mock`, `pytest.mark.parametrize`.
 
 ## Reference scenario — `Service.get(item_id)` — 3 cycles Red-Green-Refactor

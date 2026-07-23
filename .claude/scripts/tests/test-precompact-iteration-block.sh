@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-precompact-iteration-block.sh — smoke tests for P0-04 iteration-in-flight blocking
+# test-precompact-iteration-block.sh — smoke tests for iteration-in-flight blocking
 # Usage: bash .claude/scripts/tests/test-precompact-iteration-block.sh
 # Covers: AC-1 (dirty → block), AC-2 (clean → proceed), AC-3 (stale → proceed + delete),
 #         AC-4 (S-route simulation → never blocks), + BONUS (manual trigger pass-through)

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Part 2: log-tool-failure.sh appends one JSONL line with expected keys when a Bash tool fails.
+# log-tool-failure.sh appends one JSONL line with expected keys when a Bash tool fails.
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

@@ -5,7 +5,7 @@
 # (Architecture layers >= 3, Parts in plan >= 4). The planner-author side is
 # canonicalized DOWN to match the reviewer side (which ENFORCES 4/3 as MAJOR)
 # and the planner-rules routing table (L = 4-6 Parts / 3+ layers).
-# Content-anchored (no line-number addressing) per plan-review PR-003.
+# Content-anchored (no line-number addressing).
 set -euo pipefail
 SCRIPT_NAME="$(basename "$0")"
 PROJECT_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"

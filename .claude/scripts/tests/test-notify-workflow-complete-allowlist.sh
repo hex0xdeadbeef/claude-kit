@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Part 5 / Proposal H: env on + APPROVED checkpoint emits terminalSequence with only
+# env on + APPROVED checkpoint emits terminalSequence with only
 # allowlisted OSC codes (0/1/2/9/99/777 + BEL). Verifies no CSI / OSC 8 / OSC 52 / OSC 1337.
 
 set -euo pipefail
@@ -12,7 +12,7 @@ trap 'rm -rf "${TMP}"' EXIT
 export CLAUDE_KIT_PHASE_COMPLETION_NOTIFY=on
 export CLAUDE_WORKFLOW_STATE_DIR="${TMP}"
 
-# Both unquoted and quoted-value fixtures must work (PR-007 quote-stripping)
+# Both unquoted and quoted-value fixtures must work (quote-stripping)
 cat > "${TMP}/01-approved-checkpoint.yaml" <<'YAML'
 phase_completed: 5
 verdict: APPROVED
@@ -32,7 +32,7 @@ if echo "${ts}" | grep -qE $'^\x1b\\]8;'; then echo "FAIL: OSC 8 present" >&2; e
 if echo "${ts}" | grep -qE $'^\x1b\\]52;'; then echo "FAIL: OSC 52 present" >&2; exit 1; fi
 if echo "${ts}" | grep -qE $'^\x1b\\]1337;'; then echo "FAIL: OSC 1337 present" >&2; exit 1; fi
 
-# Quoted-value fixture (PR-007)
+# Quoted-value fixture
 cat > "${TMP}/02-approved-quoted-checkpoint.yaml" <<'YAML'
 phase_completed: 5
 verdict: "APPROVED"

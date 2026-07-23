@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Part 5 / Proposal H + PR-007: env on + NEEDS_CHANGES checkpoint emits NO notification.
+# env on + NEEDS_CHANGES checkpoint emits NO notification.
 # NEEDS_CHANGES is the canonical not-APPROVED workflow checkpoint verdict per
 # checkpoint-protocol.md (CHANGES_REQUESTED is code-review-specific, not in workflow
-# checkpoint enum). PR-007 fix replaced the iter-1 CHANGES_REQUESTED fixture.
+# checkpoint enum). The fixture uses NEEDS_CHANGES, not CHANGES_REQUESTED.
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Part 4: aggregate-pipeline-metrics.sh degrades gracefully when telemetry is unset.
+# aggregate-pipeline-metrics.sh degrades gracefully when telemetry is unset.
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

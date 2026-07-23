@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-plugin-path-awareness.sh — Part 2 (B2) of the plugin-equivalence roadmap.
+# test-plugin-path-awareness.sh — plugin-equivalence path awareness.
 # Asserts that PROJECT STATE (workflow-state/) resolves to the user's project
 # (${CLAUDE_PROJECT_DIR}) and NOT the plugin cache, while remaining byte-identical in a
 # project-scoped install (where CLAUDE_PROJECT_DIR == REPO_ROOT, or is unset and falls back to it).
@@ -55,13 +55,13 @@ done
 
 # ── Regression guard: no script anchors workflow-state to a BARE ${REPO_ROOT}/ (no project fallback) ──
 # Match ${REPO_ROOT}/.claude/workflow-state NOT immediately preceded by 'CLAUDE_PROJECT_DIR:-'.
-# CR-002: recurse into ALL of .claude/scripts/ (incl. lib/) so a future helper-script leak is caught.
-# SCOPE NOTE (CR-001): only the ${REPO_ROOT}-anchored class is in Part 2 — that was the real bug
+# Recurse into ALL of .claude/scripts/ (incl. lib/) so a future helper-script leak is caught.
+# SCOPE NOTE: only the ${REPO_ROOT}-anchored class is in scope — that was the real bug
 # (state would land in the ephemeral plugin cache). The remaining CWD-relative state-writers
 # (e.g. "${CLAUDE_WORKFLOW_STATE_DIR:-.claude/workflow-state}") are NOT a leak: Claude Code runs
 # hooks with CWD == project root in both modes, so they already resolve into the user's project.
 # Making every state-writer EXPLICITLY ${CLAUDE_PROJECT_DIR}-anchored (bash + python forms) is a
-# separate robustness hardening, deferred to a follow-up — not part of the Part-2 bug-fix class.
+# separate robustness hardening, deferred to a follow-up — not part of the in-scope bug-fix class.
 leak="$(grep -rnE --include='*.sh' --exclude-dir=tests '\$\{REPO_ROOT\}/\.claude/workflow-state' .claude/scripts/ 2>/dev/null \
         | grep -vF 'CLAUDE_PROJECT_DIR:-${REPO_ROOT}}/.claude/workflow-state' \
         | grep -vE ':[0-9]+:[[:space:]]*#' || true)"

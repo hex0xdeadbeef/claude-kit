@@ -95,7 +95,7 @@ if [[ -n "$hits" ]]; then
 fi
 pass "AC-C5.9 — all 9 slots use {SLOT_NAME} curly-brace placeholder convention"
 
-# AC-C5.13/14/15/16: contract-preservation pre-merge gate (see CR-003)
+# AC-C5.13/14/15/16: contract-preservation pre-merge gate
 if [[ -d .git ]]; then
   CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
   if [[ "$CURRENT_BRANCH" == "main" ]]; then
@@ -120,7 +120,7 @@ if [[ -d .git ]]; then
       # caveman-skill-integration extension). Also allows the WorktreeCreate-hook
       # removal (fix/worktree-create-contract): the prepare-worktree.sh "command" line,
       # the "WorktreeCreate": [ event-key line, and the empty "args": [] array line.
-      # Also allows the plugin-equivalence Part 5 (P2) SessionStart context-injection hook:
+      # Also allows the plugin-equivalence SessionStart context-injection hook:
       # the inject-kit-context.sh "command" line (plugin-mode-only, no-op in project mode).
       # Also allows the Option-B removal of block-dangerous-commands.sh (audit
       # operation-blocking-native-permissions): its PreToolUse Bash group's "command" line

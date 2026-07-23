@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # test-lowfreq-loggers-state-anchor.sh
-# Part 4 (stray-.claude fix): the low-frequency logger hooks + the agent-memory sync must anchor
+# Stray-.claude fix: the low-frequency logger hooks + the agent-memory sync must anchor
 # their write dir to ${CLAUDE_PROJECT_DIR}, never a relative path resolved against the hook's cwd.
 #   audit-config-change.sh (ConfigChange), log-permission-denied.sh (PermissionDenied),
 #   log-stop-failure.sh (StopFailure)  -> .claude/workflow-state (bash anchor + export + python prefers)
 #   sync-agent-memory.sh (invoked as subprocess by save-review-checkpoint) -> .claude/agent-memory
-# See .claude/workflow-feature-2026-07-01.md (Part 4).
+# See .claude/workflow-feature-2026-07-01.md.
 
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

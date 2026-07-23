@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-plugin-scaffold.sh — Part 1 of the plugin-equivalence roadmap.
+# test-plugin-scaffold.sh — plugin-equivalence scaffold.
 # Asserts the native-plugin SCAFFOLD is valid and loadable WITHOUT moving the .claude/ tree:
 #   - .claude-plugin/plugin.json   : valid manifest, name=claude-kit, components → ./.claude/... + ./.mcp.json
 #   - .claude-plugin/marketplace.json : valid single-repo marketplace listing the plugin (source ./)
@@ -192,7 +192,7 @@ for name, passed in chk:
 PYEOF
 )
 
-# ── CR-001: command-hook DEEP fidelity — unprefix hooks.json == settings.json hooks (full structure) ──
+# ── command-hook DEEP fidelity — unprefix hooks.json == settings.json hooks (full structure) ──
 # Self-guards future re-syncs: a dropped/reordered hook or altered matcher/if/args on ANY command
 # hook is caught, not just count + prefix presence. (Prompt hooks already get full parity above.)
 while IFS='|' read -r st nm; do

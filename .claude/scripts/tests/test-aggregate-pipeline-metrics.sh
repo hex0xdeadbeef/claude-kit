@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Part 4 / Proposal D: aggregate-pipeline-metrics.sh emits per-agent OTEL breakdown
+# aggregate-pipeline-metrics.sh emits per-agent OTEL breakdown
 # from a synthetic claude_code.llm_request OTEL log.
 
 set -euo pipefail

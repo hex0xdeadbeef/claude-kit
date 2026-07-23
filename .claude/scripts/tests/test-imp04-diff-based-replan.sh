@@ -203,7 +203,7 @@ echo
 echo "AC-10: KD-6 unmappable-location fallback documented"
 assert_fixed_string "imp04_unmapped_location record_kind" "imp04_unmapped_location" "${MANIFEST_MD}"
 assert_fixed_string "KD-6 fallback rule"                  "KD-6 fallback" "${MANIFEST_MD}"
-# CR-002: telemetry signal split — cross-cutting (empty location) vs unmapped (non-empty no-match)
+# Telemetry signal split — cross-cutting (empty location) vs unmapped (non-empty no-match)
 assert_fixed_string "imp04_cross_cutting_issue record_kind"   "imp04_cross_cutting_issue" "${MANIFEST_MD}"
 assert_fixed_string "cross_cutting documented in protocol"    "imp04_cross_cutting_issue" "${PROTOCOL_MD}"
 echo

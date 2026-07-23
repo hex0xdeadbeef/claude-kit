@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-canonical-id-normalization.sh — Part 1 / P2
+# test-canonical-id-normalization.sh
 #
 # Coverage:
 #   1. Whitespace-only differences yield identical hashes

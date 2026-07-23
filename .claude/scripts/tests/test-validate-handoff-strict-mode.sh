@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Part 2 / PR-004 fix: strict-mode validate-handoff.sh must exit 2 on malformed handoff.
+# strict-mode validate-handoff.sh must exit 2 on malformed handoff.
 # Verifies the continueOnBlock-only stdout JSON path does NOT mask the strict-mode block.
 
 set -euo pipefail

@@ -13,7 +13,7 @@ FIXTURE_DIR="${SCRIPT_DIR}/fixtures/state-render"
 SCRIPTS_DIR=".claude/scripts"
 LIB_DIR="${SCRIPTS_DIR}/lib"
 
-# CR-001 fix: use isolated temp STATE_DIR so tests never touch real .claude/workflow-state/
+# Use isolated temp STATE_DIR so tests never touch real .claude/workflow-state/
 # All 4 hooks honor CLAUDE_WORKFLOW_STATE_DIR — exporting it makes every hook call hermetic.
 TEST_STATE_DIR=$(mktemp -d)
 export CLAUDE_WORKFLOW_STATE_DIR="$TEST_STATE_DIR"
@@ -70,7 +70,7 @@ print(hs.get('additionalContext', '') or d.get('additionalContext', ''), end='')
 "
 }
 
-# CR-001 fix: setup_state writes to isolated TEST_STATE_DIR, not real workflow-state.
+# setup_state writes to isolated TEST_STATE_DIR, not real workflow-state.
 # Pre-seeds review-completions.jsonl with 3 deterministic entries so all hooks that
 # read completions produce stable output regardless of the host machine's state.
 setup_state() {
@@ -92,7 +92,7 @@ echo ""
 
 # -----------------------------------------------------------------------
 # AC-8: Golden output — enrich-context.sh
-# CR-001 fix: use assert_contains for stable parts instead of assert_eq.
+# Use assert_contains for stable parts instead of assert_eq.
 # Plans section varies by machine (.claude/prompts/ is gitignored + not seeded here).
 # Recent reviews uses assert_contains "Recent reviews:" (content is deterministic
 # from seeded completions but timestamps appear in hook-specific format).
@@ -129,7 +129,7 @@ echo "--- AC-8: verify-state golden output ---"
 setup_state "${FIXTURE_DIR}/verify-state/state.yaml"
 EXPECTED=$(cat "${FIXTURE_DIR}/verify-state/expected.txt")
 ACTUAL_RAW=$(bash "${SCRIPTS_DIR}/verify-state-after-compact.sh" 2>/dev/null | extract_context)
-# CR-001 fix: normalize temp STATE_DIR path → placeholder before golden compare
+# Normalize temp STATE_DIR path → placeholder before golden compare
 ACTUAL=$(echo "$ACTUAL_RAW" | sed "s|${STATE_DIR}|STATE_DIR|g")
 assert_eq "verify-state: output matches golden fixture" "$ACTUAL" "$EXPECTED"
 cleanup_state
@@ -196,7 +196,7 @@ rm -rf "$EMPTY_STATE_DIR"
 # -----------------------------------------------------------------------
 echo "--- AC-3: import failure → uniform fallback ---"
 setup_state "${FIXTURE_DIR}/enrich-context/state.yaml"
-# CR-a3c01bfe fix: nest trap so a kill between mv calls restores real lib.
+# Nest trap so a kill between mv calls restores real lib.
 # Outer EXIT trap already cleans TEST_STATE_DIR; extend it to also restore lib.
 trap "mv '${LIB_DIR}.bak' '${LIB_DIR}' 2>/dev/null; rm -rf '$TEST_STATE_DIR'" EXIT
 mv "${LIB_DIR}" "${LIB_DIR}.bak"

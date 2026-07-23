@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Test (Part 1 / DE-3): spec-template.md has an additive design_critique YAML block (findings +
+# Test (DE-3): spec-template.md has an additive design_critique YAML block (findings +
 # disposition + summary), AND spec-quality.md enforces the critique completeness gate (rationale
-# required for non-addressed dispositions). Asserts AC1.3 + AC1.4 (PR-001 traceability).
+# required for non-addressed dispositions). Asserts AC1.3 + AC1.4 (traceability).
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"; cd "$ROOT" || { echo "FAIL: cannot cd to repo root"; exit 1; }
 TPL=".claude/templates/spec-template.md"
@@ -37,14 +37,14 @@ fi
 # T-5: DC-* declared local-ref-only / not canonical (AC1.11 in template)
 if printf '%s' "$TPLREGION" | grep -qi "canonical"; then pass "T-5 DC-not-canonical note in template"; else fail "T-5 missing DC-not-canonical note in template"; fi
 
-# T-6 (AC1.4 / PR-001): spec-quality.md requires rationale for non-addressed dispositions
+# T-6 (AC1.4): spec-quality.md requires rationale for non-addressed dispositions
 if grep -qi "rationale" "$SQ" && grep -qiE 'disposition|accepted-risk' "$SQ"; then
   pass "T-6 spec-quality enforces rationale for non-addressed dispositions"
 else
   fail "T-6 spec-quality missing rationale-required gate"
 fi
 
-# T-7 (PR-002): spec-quality states the gate is advisory (designer self-check), not a hook
+# T-7: spec-quality states the gate is advisory (designer self-check), not a hook
 if grep -qiE 'advisory|self-check|self check' "$SQ"; then pass "T-7 spec-quality marks gate advisory (no hook)"; else fail "T-7 spec-quality does not state gate is advisory"; fi
 
 [ "$rc" -eq 0 ] && echo "ALL PASS: test-design-critique-spec-template" || echo "SOME FAILED: test-design-critique-spec-template"

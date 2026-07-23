@@ -52,8 +52,8 @@ while IFS= read -r line; do
     *) continue ;;
   esac
   name="$(basename "$wt")"
-  # AGE SOURCE (PR-002): the .git/worktrees/<name> METADATA-dir mtime — the same signal
-  # resolve-worktree-path.py Strategy 2 trusts. (PR-006) Metadata mtime approximates the
+  # AGE SOURCE: the .git/worktrees/<name> METADATA-dir mtime — the same signal
+  # resolve-worktree-path.py Strategy 2 trusts. Metadata mtime approximates the
   # last git activity on the worktree; for a leaked/killed agent that is its creation/lock
   # time (nothing writes to it after the agent dies), so age >= threshold is a reliable
   # "definitively dead" signal. The metadata dir also persists when the checkout directory
@@ -63,7 +63,7 @@ while IFS= read -r line; do
   [[ -z "$m" ]] && continue
   age=$(( NOW - m ))
   if (( age >= MAX_AGE_SECS )); then
-    # PR-001: a single --force will NOT remove a LOCKED worktree; unlock first, then remove.
+    # A single --force will NOT remove a LOCKED worktree; unlock first, then remove.
     git worktree unlock "$wt" >/dev/null 2>&1 || true
     git worktree remove --force "$wt" >/dev/null 2>&1 || true
     removed=$(( removed + 1 ))

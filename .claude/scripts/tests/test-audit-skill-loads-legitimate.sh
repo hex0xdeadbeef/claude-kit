@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Part 4 / Proposal E: audit-skill-loads.sh does NOT flag user-slash or nested-skill
+# audit-skill-loads.sh does NOT flag user-slash or nested-skill
 # invocations of disable-model-invocation: true skills (these are legitimate triggers).
 
 set -euo pipefail

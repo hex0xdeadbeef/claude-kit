@@ -1,6 +1,6 @@
 # Go — TDD reference shape
 
-Resolved when `PROJECT-KNOWLEDGE.md → LANGUAGE = go`. Idiomatic Go with
+Resolved when `.claude/PROJECT-KNOWLEDGE.md → LANGUAGE = go`. Idiomatic Go with
 `*testing.T`, table-driven `t.Run`, testify (`require`/`assert`/mock).
 
 ## Reference scenario — `Service.Get(ctx, id)` — 3 cycles Red-Green-Refactor

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Part 6 / Proposal F: env on + active checkpoint + .mcp.json without alwaysLoad → WARN
+# env on + active checkpoint + .mcp.json without alwaysLoad → WARN
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -11,7 +11,7 @@ trap 'rm -rf "${TMP}"' EXIT
 cat > "${TMP}/.mcp.json" <<'JSON'
 {"mcpServers":{"sequential-thinking":{"command":"npx"}}}
 JSON
-# Active workflow checkpoint required by PR-008 gate
+# Active workflow checkpoint required by the gate
 cat > "${TMP}/fixture-checkpoint.yaml" <<'YAML'
 phase_completed: 3
 verdict: null

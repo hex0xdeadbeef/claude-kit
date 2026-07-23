@@ -2,7 +2,7 @@
 # test-c4-dependency-order-skip.sh
 #
 # Asserts AC-C4.1..AC-C4.6 from .claude/prompts/coder-code-review-generic-analysis.md §8 C4
-# Tests Part 7 (C4 — Coder dependency-order SKIP-align)
+# Tests C4 — Coder dependency-order SKIP-align
 
 set -euo pipefail
 
@@ -44,7 +44,7 @@ grep -q '{ARCHITECTURE_STYLE} == "layered"' .claude/skills/coder-rules/SKILL.md 
   || fail "AC-C4.3b — coder-rules/SKILL.md missing ARCHITECTURE_STYLE conditional"
 pass "AC-C4.3 — coder-rules/SKILL.md L53 wording matches"
 
-# AC-C4.6: handoff schema + PK schema + plan structure unchanged — pre-merge gate (see CR-003)
+# AC-C4.6: handoff schema + PK schema + plan structure unchanged — pre-merge gate
 if [[ -d .git ]]; then
   CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
   if [[ "$CURRENT_BRANCH" == "main" ]]; then

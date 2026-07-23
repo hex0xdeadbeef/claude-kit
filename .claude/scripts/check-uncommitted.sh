@@ -97,7 +97,7 @@ except Exception:
     print('default')
 " 2>/dev/null || echo "default")
     fi
-    # CR-001: charset guard against path-traversal via malicious session_id.
+    # Charset guard against path-traversal via malicious session_id.
     # A payload like `session_id: "evil/HIJACK"` would otherwise let the
     # BLOCK_LOG concat write to STATE_DIR/.stop-block-attempts-evil/HIJACK
     # under an attacker-prepped sibling dir (which the SessionEnd glob

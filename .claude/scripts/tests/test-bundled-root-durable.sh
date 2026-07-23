@@ -6,7 +6,7 @@
 #   2. project-scoped install (roots coincide, no CLAUDE_PLUGIN_ROOT) -> NO marker (no-op preserved).
 #   3. verify-state-after-compact.sh (PostCompact) re-injects the directive from the marker.
 #   4. no marker -> no directive leaked.
-#   5. (PR-002) directive lands at the HEAD of output (within first 1000 chars = the CAP PREVIEW window).
+#   5. directive lands at the HEAD of output (within first 1000 chars = the CAP PREVIEW window).
 # Run: bash .claude/scripts/tests/test-bundled-root-durable.sh
 set -uo pipefail
 
@@ -74,7 +74,7 @@ else
 fi
 rm -rf "$SB2"
 
-# Case 5 (PR-002): directive at HEAD - within the first 1000 chars even with a checkpoint present
+# Case 5: directive at HEAD - within the first 1000 chars even with a checkpoint present
 SB3="$(mktemp -d -t blpc3.XXXXXX)"
 printf '%s\n' "/fake/plugin/root" > "$SB3/.bundled-kit-root"
 cat > "$SB3/big-checkpoint.yaml" <<'EOF'

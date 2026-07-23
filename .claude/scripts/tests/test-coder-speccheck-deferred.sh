@@ -20,7 +20,7 @@ else
 fi
 
 # SC-2: the Phase-3.5 block loads spec-check.md just-in-time. Two independent greps (a load/JIT
-# marker AND the path) — robust to future rewording that splits the directive across lines (PR-001).
+# marker AND the path) — robust to future rewording that splits the directive across lines.
 if printf '%s' "$P35" | grep -qiE 'load|just-in-time' && printf '%s' "$P35" | grep -q "spec-check.md"; then
   pass "SC-2 Phase 3.5 loads spec-check.md just-in-time"
 else

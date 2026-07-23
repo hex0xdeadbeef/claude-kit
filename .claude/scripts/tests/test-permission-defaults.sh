@@ -121,7 +121,7 @@ for r in ["Edit(.env)", "Write(.env)", "Edit(.env.local)", "Write(.env.local)"]:
 emit("Edit(.env.*)" not in dd and "Write(.env.*)" not in dd,
      "deny avoids broad Edit/Write(.env.*) (keeps .env.example/.sample editable)")
 
-# AC-13 — doc-content guard (PR-003): .example _permissions_comment documents the new deny rules
+# AC-13 — doc-content guard: .example _permissions_comment documents the new deny rules
 pc = " ".join(e.get("_permissions_comment", []))
 emit("git branch -D" in pc and "curl" in pc,
      ".example _permissions_comment documents the new deny rules (git branch -D, curl)")

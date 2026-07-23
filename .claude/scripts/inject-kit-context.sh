@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # inject-kit-context.sh
 # Hook: SessionStart (matcher: empty/always)
-# Purpose (roadmap Part 5 / P2 + plugin-skill-path-fix 2026-06-04): in PLUGIN mode the kit's
+# Purpose: in PLUGIN mode the kit's
 #   bundled files (skills, templates, supporting protocol files) live under the plugin root, NOT
 #   the user's project. The kit's reference skills are `disable-model-invocation: true`, so they
 #   are loaded by explicit file Read (not by description) — and the commands Read them with
@@ -33,7 +33,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
 # _canon canonicalizes in a subshell so the script's cwd is NOT mutated; on a missing path bash
 # pwd -P falls back to the raw literal (falls toward emitting, safe) — matches the python
-# os.path.realpath path in inject-review-context.sh _bundled_root_directive() (PR-002).
+# os.path.realpath path in inject-review-context.sh _bundled_root_directive().
 _canon() { ( cd "$1" 2>/dev/null && pwd -P ) || printf '%s' "$1"; }
 if [ -z "${CLAUDE_PLUGIN_ROOT:-}" ] && [ "$(_canon "${REPO_ROOT}")" = "$(_canon "${PROJECT_ROOT}")" ]; then
   exit 0

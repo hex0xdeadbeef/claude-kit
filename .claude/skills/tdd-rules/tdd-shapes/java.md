@@ -1,6 +1,6 @@
 # Java — TDD reference shape
 
-Resolved when `PROJECT-KNOWLEDGE.md → LANGUAGE = java`. Idiomatic Java 17+ with
+Resolved when `.claude/PROJECT-KNOWLEDGE.md → LANGUAGE = java`. Idiomatic Java 17+ with
 JUnit 5 (`@Test`, `assertEquals`, `assertThrows`), Mockito, `@ParameterizedTest`.
 
 ## Reference scenario — `Service.get(itemId)` — 3 cycles Red-Green-Refactor

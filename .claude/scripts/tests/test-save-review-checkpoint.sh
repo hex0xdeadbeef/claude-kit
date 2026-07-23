@@ -3,7 +3,7 @@
 #
 # Usage: bash .claude/scripts/tests/test-save-review-checkpoint.sh
 #
-# Coverage (IMP-02 Part 10):
+# Coverage (IMP-02):
 #   1. structured_json happy path           — valid VERDICT_JSON block parsed and schema-validated
 #   2. regex_fallback                       — no VERDICT_JSON block, VERDICT: line rescues
 #   3. dual-VERDICT mismatch                — structured JSON APPROVED vs human NEEDS_CHANGES
@@ -327,7 +327,7 @@ assert_eq "verdict still APPROVED"              "APPROVED"          "$(marker_fi
 assert_eq "verdict_source structured_json"      "structured_json"   "$(marker_field "${SCENARIO_9_SANDBOX}" verdict_source)"
 assert_eq "canonical_issue_ids has 1 entry"     "1"                 "$(canonical_ids_field "${SCENARIO_9_SANDBOX}" length)"
 assert_eq "canonical id has PR- prefix"         "PR-"               "$(canonical_ids_field "${SCENARIO_9_SANDBOX}" first_prefix)"
-# PR-003 strengthening: deterministic hash equality matches scenarios 6/7 pattern
+# Deterministic hash equality matches scenarios 6/7 pattern
 # P2 normalization: lowercases location "Part 5" -> "part 5" before sha256.
 EXPECTED_HASH_9=$(python3 -c 'import hashlib; print(hashlib.sha256(b"architecture|part 5|repository layer imports handler").hexdigest()[:8])')
 assert_eq "canonical id matches expected hash"  "PR-${EXPECTED_HASH_9}" "$(canonical_ids_field "${SCENARIO_9_SANDBOX}" first_id)"

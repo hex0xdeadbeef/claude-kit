@@ -6,7 +6,7 @@
 # planner.md, plan-reviewer.md, task-analysis.md.
 #
 # Coverage: 16/19 ACs automated (manual: G1.4, G2.3, G3.3/3.4, G5.5).
-# G4.3 is automated per plan-review feedback PR-001.
+# G4.3 is automated.
 
 set -euo pipefail
 
@@ -96,7 +96,7 @@ if [[ "$EXAMPLE_COUNT" -lt 2 ]]; then
 fi
 pass "G4.2 — at least 2 examples present (count: $EXAMPLE_COUNT)"
 
-# G4.3 — first PREFER/ACCEPT/AVOID bullet is Part-anchored symbol-only form (PR-001)
+# G4.3 — first PREFER/ACCEPT/AVOID bullet is Part-anchored symbol-only form
 FIRST_BULLET=$(awk '/Location-stability guidance/,/Iteration 2\+/' .claude/agents/plan-reviewer.md \
                  | grep -E '^- (PREFER|ACCEPT|AVOID):' | head -1)
 if ! echo "$FIRST_BULLET" | grep -qE '^- PREFER:.*Part [0-9]+:'; then

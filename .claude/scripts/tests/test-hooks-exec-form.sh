@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # RED then GREEN: every type-command hook handler in settings.json must have an args field.
-# Part 1 step 1.3/1.4 of changelog-v2.1.121-141-uplift.
+# Step 1.3/1.4 of changelog-v2.1.121-141-uplift.
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

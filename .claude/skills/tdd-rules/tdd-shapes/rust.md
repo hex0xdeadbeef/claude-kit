@@ -1,6 +1,6 @@
 # Rust — TDD reference shape
 
-Resolved when `PROJECT-KNOWLEDGE.md → LANGUAGE = rust`. Idiomatic Rust with
+Resolved when `.claude/PROJECT-KNOWLEDGE.md → LANGUAGE = rust`. Idiomatic Rust with
 `#[test]`, `assert_eq!`, `mockall`-style mocks, parameterised via `rstest`.
 
 ## Reference scenario — `Service::get(item_id)` — 3 cycles Red-Green-Refactor

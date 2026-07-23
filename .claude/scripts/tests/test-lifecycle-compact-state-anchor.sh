@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # test-lifecycle-compact-state-anchor.sh
-# Part 3 (stray-.claude fix): the session / compact / stop lifecycle hooks must anchor their
+# Stray-.claude fix: the session / compact / stop lifecycle hooks must anchor their
 # state dir to ${CLAUDE_PROJECT_DIR}, never a relative `.claude/workflow-state` resolved against
 # the hook's cwd. Covers enrich-context.sh (UserPromptSubmit), save-progress-before-compact.sh
 # (PreCompact), verify-state-after-compact.sh (PostCompact), session-analytics.sh (SessionEnd),

@@ -1,6 +1,6 @@
 # Default TDD-shape (pseudocode)
 
-Loaded by /coder when `PROJECT-KNOWLEDGE.md → LANGUAGE` is unset OR not one of
+Loaded by /coder when `.claude/PROJECT-KNOWLEDGE.md → LANGUAGE` is unset OR not one of
 `{go, python, typescript, rust, java}`. Demonstrates the three invariants
 without committing to a concrete syntax.
 

@@ -4,7 +4,7 @@
 # (bug report v1.33.0: opaque "MCP error -32000: Connection closed"). The fix uses a version
 # RANGE (>=3.10, matching the package's Requires-Python) + only-system to reuse an installed
 # interpreter. Asserts .mcp.json AND .mcp.json.example carry the fix, stay byte-identical for
-# tree_sitter, and that the npx servers are untouched (PR-001). Run: bash <this file>.
+# tree_sitter, and that the npx servers are untouched. Run: bash <this file>.
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -39,7 +39,7 @@ out.append(("args-python-preference-flag", "--python-preference" in args))
 out.append(("args-only-system", "only-system" in args))
 out.append(("args-server-pkg", "mcp-server-tree-sitter" in args))
 out.append(("args-no-python3.11", "python3.11" not in args))
-# PR-001: server set unchanged (exactly the 3 kit servers; npx ones untouched)
+# Server set unchanged (exactly the 3 kit servers; npx ones untouched)
 out.append(("exactly-3-servers", sorted(srv.keys()) == ["context7", "sequential-thinking", "tree_sitter"]))
 out.append(("context7-command-npx", srv.get("context7", {}).get("command") == "npx"))
 out.append(("sequential-thinking-command-npx", srv.get("sequential-thinking", {}).get("command") == "npx"))

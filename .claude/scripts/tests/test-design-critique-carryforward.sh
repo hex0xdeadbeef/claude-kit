@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Test (Part 2 / DE-4): the design critique is carried forward to the planner without changing any
+# Test (DE-4): the design critique is carried forward to the planner without changing any
 # contract shape. handoff-contracts.md gains an OPTIONAL critique_summary on designer_to_planner;
-# designer.md emits it (producer symmetry, PR-001); planner.md phase_4 maps HIGH accepted-risk/
+# designer.md emits it (producer symmetry); planner.md phase_4 maps HIGH accepted-risk/
 # out-of-scope findings into the EXISTING areas_needing_attention[]; the schema is untouched.
 # Asserts AC2.1, AC2.2, AC2.3, AC2.3b, AC2.4.
 set -uo pipefail
@@ -47,7 +47,7 @@ fi
 # CF-5 (AC2.3b): schema untouched — no critique key added to handoff.schema.json
 if grep -qi 'critique' "$SCHEMA"; then fail "CF-5 handoff.schema.json gained a critique key (schema must be untouched)"; else pass "CF-5 handoff.schema.json untouched (no critique key)"; fi
 
-# CF-6 (PR-001): producer symmetry — designer.md handoff_output emits critique_summary
+# CF-6: producer symmetry — designer.md handoff_output emits critique_summary
 if grep -q "critique_summary" "$DES"; then pass "CF-6 designer.md producer emits critique_summary"; else fail "CF-6 designer.md handoff_output does not emit critique_summary (producer/contract asymmetry)"; fi
 
 [ "$rc" -eq 0 ] && echo "ALL PASS: test-design-critique-carryforward" || echo "SOME FAILED: test-design-critique-carryforward"

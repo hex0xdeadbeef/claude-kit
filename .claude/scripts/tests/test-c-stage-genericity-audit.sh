@@ -7,8 +7,8 @@
 #
 # Coverage: 16 ACs automated. CG1.1-CG1.3 retargeted post-T1 (tdd-go → tdd-rules/tdd-shapes).
 # Manual: CG1.4, CG2.4, CG4.5, CG5.4 (visual cross-ref).
-# Awk active-body extractor uses 3-state machine (PR-001 fix from plan-review iter 1).
-# CG3.5 uses jq for structural assertion (PR-002 fix from plan-review iter 1).
+# Awk active-body extractor uses 3-state machine.
+# CG3.5 uses jq for structural assertion.
 
 set -euo pipefail
 

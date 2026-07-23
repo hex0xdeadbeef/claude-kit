@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-verdict-block-ttl-cleanup.sh — Part 4 / P3 (AC-P3.2)
+# test-verdict-block-ttl-cleanup.sh — .verdict-block-* TTL eviction on hook entry
 #
 # Coverage:
 #   1. .verdict-block-* file older than CLAUDE_VERDICT_BLOCK_TTL_HOURS is evicted on hook entry

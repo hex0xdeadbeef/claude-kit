@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-handoff-size-cap.sh — Part 2 / P1
+# test-handoff-size-cap.sh
 #
 # Coverage:
 #   1. Every handoff-validation.jsonl row gets a 'bytes' integer field

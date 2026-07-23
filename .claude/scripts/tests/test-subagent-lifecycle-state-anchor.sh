@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # test-subagent-lifecycle-state-anchor.sh
-# Part 2 (stray-.claude fix): the subagent-lifecycle hooks that write workflow-state
+# Stray-.claude fix: the subagent-lifecycle hooks that write workflow-state
 # (track-task-lifecycle.sh SubagentStart, save-review-checkpoint.sh SubagentStop,
 # inject-review-context.sh SubagentStart) must anchor STATE_DIR to ${CLAUDE_PROJECT_DIR},
 # never a relative `.claude/workflow-state` that resolves against the hook's cwd.
 # These scripts embed python heredocs that INDEPENDENTLY re-derive the state dir, so the
 # bash-resolved absolute STATE_DIR must be exported and preferred by the python.
-# See .claude/workflow-feature-2026-07-01.md (Part 2).
+# See .claude/workflow-feature-2026-07-01.md.
 
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -57,7 +57,7 @@ behavioral_no_stray track-task-lifecycle.sh "" '{"hook_event_name":"SubagentStar
 behavioral_no_stray save-review-checkpoint.sh "" '{"hook_event_name":"SubagentStop","agent_type":"code-reviewer","agent_id":"a1","session_id":"s1","last_assistant_message":"VERDICT: APPROVED"}'
 behavioral_no_stray inject-review-context.sh "code-reviewer" '{"session_id":"s1"}'
 
-# CR-002: isolate the REPO_ROOT-fallback branch — omit CLAUDE_PROJECT_DIR (and CLAUDE_WORKFLOW_STATE_DIR)
+# Isolate the REPO_ROOT-fallback branch — omit CLAUDE_PROJECT_DIR (and CLAUDE_WORKFLOW_STATE_DIR)
 # entirely. The script is copied under ${proj}/.claude/scripts/, so REPO_ROOT (=SCRIPT_DIR/../..) == ${proj};
 # state must still anchor to ${proj}, never the subdir cwd.
 behavioral_reporoot_branch() {

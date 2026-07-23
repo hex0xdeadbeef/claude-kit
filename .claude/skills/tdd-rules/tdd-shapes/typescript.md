@@ -1,6 +1,6 @@
 # TypeScript — TDD reference shape
 
-Resolved when `PROJECT-KNOWLEDGE.md → LANGUAGE = typescript`. Idiomatic TypeScript
+Resolved when `.claude/PROJECT-KNOWLEDGE.md → LANGUAGE = typescript`. Idiomatic TypeScript
 with Jest/Vitest (`describe`/`it`/`expect`), `jest.fn()` mocks, `it.each` for table-driven.
 
 ## Reference scenario — `Service.get(itemId)` — 3 cycles Red-Green-Refactor

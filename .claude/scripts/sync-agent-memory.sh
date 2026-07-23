@@ -7,7 +7,7 @@
 # Can be called from SubagentStop hook or manually for debugging.
 # Memory sync is NON_CRITICAL — caller decides whether to block on failure.
 #
-# Safety (IMP-08, 2026-03-30):
+# Safety:
 #   - Only copies files NEWER than their main-repo counterparts (cp -p preserves mtime)
 #   - Skips files identical to main repo (seeded but unmodified by agent)
 #   - Never deletes main-repo files — additive sync only
@@ -32,7 +32,7 @@ if [[ ! -d "$WORKTREE_PATH" ]]; then
   exit 1
 fi
 
-# IMP-08: Validate worktree_path is a real worktree, not a bogus JSON-named dir
+# Validate worktree_path is a real worktree, not a bogus JSON-named dir
 # Worktree paths must be absolute and should not contain JSON characters
 if [[ ! "$WORKTREE_PATH" = /* ]] || [[ "$WORKTREE_PATH" = *"{"* ]] || [[ "$WORKTREE_PATH" = *"}"* ]]; then
   echo "[sync-agent-memory] ERROR: rejecting suspicious worktree path: $WORKTREE_PATH" >&2
@@ -75,7 +75,7 @@ for src_file in "${REGULAR_FILES[@]}"; do
   filename=$(basename "$src_file")
   dst_file="$DST_DIR/$filename"
 
-  # IMP-08: Only sync files that were actually modified by the agent
+  # Only sync files that were actually modified by the agent
   # Skip if destination exists and files are identical (seeded but unmodified)
   if [[ -f "$dst_file" ]]; then
     if cmp -s "$src_file" "$dst_file"; then

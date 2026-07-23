@@ -22,7 +22,7 @@ fi
 
 # Case B — project-scoped install (env unset, bundled root == project root) → directive ABSENT (inert).
 # CLAUDE_PROJECT_DIR == $ROOT (the script's own bundled root); env -u guarantees no ambient
-# CLAUDE_PLUGIN_ROOT masks the inert assertion (PR-001).
+# CLAUDE_PLUGIN_ROOT masks the inert assertion.
 SB=$(mktemp -d -t injbundleB.XXXXXX)
 printf 'feature: feat-b\ncomplexity: L\nphase_completed: 4\niteration:\n  plan_review: 1/3\n  code_review: 1/3\n' > "$SB/feat-b-checkpoint.yaml"
 OUTB=$(echo '{"session_id":"x"}' | env -u CLAUDE_PLUGIN_ROOT CLAUDE_PROJECT_DIR="$ROOT" CLAUDE_WORKFLOW_STATE_DIR="$SB" bash .claude/scripts/inject-review-context.sh plan-reviewer 2>/dev/null || true)
@@ -47,7 +47,7 @@ check_body(){ # $1=body file  $2=skill path
 check_body .claude/agents/plan-reviewer.md ".claude/skills/plan-review-rules/SKILL.md"
 check_body .claude/agents/code-reviewer.md ".claude/skills/code-review-rules/SKILL.md"
 
-# Case D — plugin mode + NO checkpoint (early-exit path) still carries the directive (CR-002)
+# Case D — plugin mode + NO checkpoint (early-exit path) still carries the directive
 SB=$(mktemp -d -t injbundleD.XXXXXX)   # empty: no *-checkpoint.yaml -> hook hits "No checkpoint found"
 OUTD=$(echo '{"session_id":"x"}' | CLAUDE_PLUGIN_ROOT="/fake/plugin" CLAUDE_WORKFLOW_STATE_DIR="$SB" bash .claude/scripts/inject-review-context.sh plan-reviewer 2>/dev/null || true)
 rm -rf "$SB"

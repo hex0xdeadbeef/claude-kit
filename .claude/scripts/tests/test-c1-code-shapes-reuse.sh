@@ -2,7 +2,7 @@
 # test-c1-code-shapes-reuse.sh
 #
 # Asserts AC-C1.1..AC-C1.6 from .claude/prompts/coder-code-review-generic-analysis.md §8 C1
-# Tests Part 2 (C1 — Reuse planner-rules/code-shapes/)
+# Tests C1 — Reuse planner-rules/code-shapes/
 
 set -euo pipefail
 

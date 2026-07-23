@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
 # test-validate-handoff.sh — smoke tests for validate-handoff.sh
 # Usage: bash .claude/scripts/tests/test-validate-handoff.sh
-# Covers: AC-3, AC-4, AC-5 + direct/hook dual-mode regression (CR-001)
-#         + AC-P1..AC-P5 (handoff-validation-investigation iter 2)
+# Covers: AC-3, AC-4, AC-5 + direct/hook dual-mode regression
+#         + AC-P1..AC-P5 (handoff-validation-investigation)
 
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VALIDATE="${SCRIPT_DIR}/../validate-handoff.sh"
 FIXTURES="${SCRIPT_DIR}/fixtures"
-# REPO_ROOT for AC-P1-3 env-unset legacy-fallback test (PR-d1a15e56)
+# REPO_ROOT for AC-P1-3 env-unset legacy-fallback test
 REPO_ROOT_RESOLVED="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 
 # Temp dir for hook-mode fixtures that need specific filenames (*-handoff.json guard)
 TMPDIR_HOOK="$(mktemp -d -t validate-handoff-tests.XXXXXX)"
 
-# Part 6 / P1 verification: sandbox the log path for ALL tests so prod log is never
+# Verification: sandbox the log path for ALL tests so prod log is never
 # polluted. Replaces ad-hoc per-test cleanup. Without this, the existing 18 tests would
 # continue to write to prod .claude/workflow-state/handoff-validation.jsonl.
 TMP_LOG_DIR="$(mktemp -d -t validate-handoff-logs.XXXXXX)"
@@ -135,7 +135,7 @@ run_test \
   "${FIXTURES}/invalid-coder-to-code-review-bad-iteration.json"
 
 # ─── Hook mode (stdin JSON) ─────────────────────────────────────────────────────
-# CR-001: hook invocation path was previously untested. These two cases cover:
+# Hook invocation path coverage. These two cases cover:
 #   (a) the filename guard that skips non-handoff writes (cheap path)
 #   (b) the validation path through stdin JSON parsing (full pipeline)
 
@@ -207,12 +207,12 @@ run_verdict_test "invalid malformed fields (strict)" \
 run_verdict_test "invalid wrong enum (warn mode → non-blocking)" \
   0 "warn" "${FIXTURES}/invalid-wrong-enum-for-plan.json"
 
-# ─── handoff-validation-investigation iter 2: Parts 1-5 regression coverage ───
+# ─── handoff-validation-investigation: Parts 1-5 regression coverage ───
 echo ""
 echo "─── Part 1 (P1) — log-path env override ───"
 
 # AC-P1-1: With CLAUDE_WORKFLOW_STATE_DIR set, log file appears in sandbox.
-# Iter 2 (PR-ccde5b0a): use INLINE env passing (not export/restore) so test ordering
+# Use INLINE env passing (not export/restore) so test ordering
 # is decoupled and the global TMP_LOG_DIR sandbox is never mutated.
 ISOLATED_DIR="$(mktemp -d -t handoff-test-isolated.XXXXXX)"
 unset CLAUDE_HANDOFF_VALIDATION_MODE CLAUDE_VERDICT_VALIDATION_MODE CLAUDE_ISSUE_ID_VALIDATION_MODE
@@ -227,7 +227,7 @@ else
 fi
 rm -rf "${ISOLATED_DIR}"
 
-# AC-P1-3 (PR-d1a15e56): env-UNSET → legacy fallback path resolution.
+# AC-P1-3: env-UNSET → legacy fallback path resolution.
 # Use bash -x trace + non-existent file so the existence guard exits BEFORE the log
 # append, giving us ZERO side effects on the prod log while still observing the
 # resolved VALIDATION_LOG value in the trace.
@@ -349,7 +349,7 @@ CLAUDE_WORKFLOW_STATE_DIR="${P5_DIR}" \
 P5_DETAIL="${P5_DIR}/handoff-validation-detail.log"
 
 # AC-P5-1: every line in NEWLY-CREATED detail.log is valid JSON.
-# Iter 2 (PR-41eaff6f): comment clarified — assertion scope is the freshly-created
+# Assertion scope is the freshly-created
 # sandbox detail.log, NOT the production detail.log. Real prod log may have legacy
 # plain-text entries from pre-Part-5 runs (mixed format is acceptable per plan
 # § Part 5 backward-compat note). Once P2 rotation archives the legacy entries

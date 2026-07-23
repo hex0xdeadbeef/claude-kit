@@ -25,7 +25,7 @@ grep -qiF "already inlined in" "$SKILL" \
   || fail "AC-F9 — SKILL.md does not note delegation-templates already inlines the shapes"
 pass "AC-F9 — SKILL.md handoff triggers scope the read off the delegation path"
 
-# F9 contract-shape byte-unchanged guard (PR-001): the 3 schema-validated
+# F9 contract-shape byte-unchanged guard: the 3 schema-validated
 # discriminators must still be present in BOTH the contracts ref and the inlined
 # templates — proves the reword did not alter a contract shape.
 for disc in planner_to_plan_review plan_review_to_coder coder_to_code_review; do

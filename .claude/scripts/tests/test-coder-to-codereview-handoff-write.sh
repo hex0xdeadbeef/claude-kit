@@ -23,7 +23,7 @@ grep -q '"\$handoff_contract": "coder_to_code_review"' "$DELEG" \
   || fail "AC-P2-1b — STEP 0 does not reference coder_to_code_review discriminator"
 pass "AC-P2-1b — STEP 0 references coder_to_code_review"
 
-# AC-P2-4: 600-char narrative cap is documented (split into 2 independent assertions for robustness — PR-e7711e45)
+# AC-P2-4: 600-char narrative cap is documented (split into 2 independent assertions for robustness)
 # Extract STEP 0 block first via awk for precise scoping (avoids regex distance fragility).
 # Range start: 'STEP 0 (IMP-01.2'; range end: next 'Before delegating' header (start of iter-2+ block).
 STEP0_BLOCK=$(awk '/STEP 0 \(IMP-01\.2/{flag=1} flag{print} /^    Before delegating to code-reviewer/{if(flag){flag=0}}' "$DELEG" 2>/dev/null || true)

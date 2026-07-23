@@ -84,7 +84,7 @@ if [[ "${MERMAID_COUNT}" -ne 4 ]]; then
 fi
 
 # ─── Expected internal anchor refs (10) — captured pre-refactor ───────────────
-# PR-001 fix: broadened regex \(#[^)]+\) for emoji-prefix robustness;
+# Regex \(#[^)]+\) tolerates an emoji prefix;
 # explicit list below acts as defence-in-depth.
 EXPECTED_ANCHORS=(
   "(#-architecture)"

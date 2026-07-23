@@ -27,7 +27,7 @@
 # fallback should add explicit `- KEY: value` lines OR (preferred) populate
 # .claude/PROJECT-KNOWLEDGE.md.
 #
-# Note on FMT_CMD format (PR-f23384de):
+# Note on FMT_CMD format:
 #   FMT_CMD MUST begin with the formatter binary token (the first whitespace-delimited word
 #   of FMT_CMD, extracted via `awk '{print $1}'` default field-split, is what `command -v`
 #   checks). The `{}` placeholder MAY appear LATER as an argument. Templates beginning with
@@ -111,7 +111,7 @@ try:
                 # Strip trailing inline comment ONLY when the value is not fully quoted.
                 # Match YAML inline-comment delimiter ' #' (space-hash) instead of bare '#'
                 # so '#' chars inside FMT_CMD args (e.g., black --target=#3) survive parsing
-                # even when the value is not fully quoted (CR-003 robustness).
+                # even when the value is not fully quoted (robustness).
                 stripped = v.strip()
                 if not ((stripped.startswith('"') and stripped.endswith('"')) or
                         (stripped.startswith("'") and stripped.endswith("'"))):

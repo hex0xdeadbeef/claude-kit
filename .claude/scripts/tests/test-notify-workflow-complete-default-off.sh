@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Part 5 / Proposal H: notify-workflow-complete.sh defaults OFF (no env, no notification
+# notify-workflow-complete.sh defaults OFF (no env, no notification
 # even with an APPROVED checkpoint). Verifies the gate decision.
 
 set -euo pipefail

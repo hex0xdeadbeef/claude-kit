@@ -60,7 +60,7 @@ fi
 rm -f "${TMP_DIR}/.caveman-mode"
 unset CLAUDE_CAVEMAN_MODE
 
-# ─── Test 4 (PR-9863a5bf fix): invalid mode → WARN + fallback to lite ──────────
+# ─── Test 4: invalid mode → WARN + fallback to lite ──────────
 # Single hook invocation captures both streams; greps split them by prefix.
 export CLAUDE_CAVEMAN_MODE="ultra"
 out_and_err=$(echo '' | bash "${HOOK}" 2>&1)
@@ -77,7 +77,7 @@ fi
 rm -f "${TMP_DIR}/.caveman-mode"
 unset CLAUDE_CAVEMAN_MODE
 
-# ─── Test 5 (PR-7f0fbe89 fix): sandbox env honored — assert real flag mtime unchanged ──
+# ─── Test 5: sandbox env honored — assert real flag mtime unchanged ──
 # Portable mtime: Darwin uses `stat -f '%m'`, Linux uses `stat -c '%Y'`. Try both.
 unset_envs
 REPO_FLAG="$(cd "${SCRIPT_DIR}/../../.." && pwd)/.claude/workflow-state/.caveman-mode"
@@ -101,7 +101,7 @@ else
 fi
 rm -f "${TMP_DIR}/.caveman-mode"
 
-# ─── Test 6 (PR-8aed4cd5 fix): atomic write — flag content always valid (never partial) ──
+# ─── Test 6: atomic write — flag content always valid (never partial) ──
 # Use `loop_failed` flag so ONE FAIL does not double-count with a PASS.
 unset_envs
 loop_failed=0

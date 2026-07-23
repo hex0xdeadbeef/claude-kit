@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-plugin-bootstrap-merge.sh — Part 6 (P3) of the plugin-equivalence roadmap.
+# test-plugin-bootstrap-merge.sh — plugin-equivalence bootstrap merge.
 # Asserts bootstrap-project-config.sh idempotently provisions the project's settings.local.json
 # from the kit's .default (USER WINS), ONLY in plugin mode AND only when explicitly opted-in, and
 # only once (first-run sentinel). No-op otherwise.
@@ -74,7 +74,7 @@ D="$ROOT_TMP/d"; mkdir -p "$D/.claude"
 run_bootstrap "$D" $PLUGIN                     # opt-in absent
 [ ! -f "$D/.claude/settings.local.json" ] && ok "no opt-in → no-op (nothing provisioned)" || bad "no opt-in → unexpectedly provisioned"
 
-# ── Case E (Fix B): project-scoped install (bundled root == project root) → no-op even with opt-in. ──
+# ── Case E: project-scoped install (bundled root == project root) → no-op even with opt-in. ──
 # Copy the hook + paths.sh into a temp project so the BASH_SOURCE-derived bundled root == project root.
 E="$ROOT_TMP/e"; mkdir -p "$E/.claude/scripts/lib"
 cp "$HOOK" "$E/.claude/scripts/bootstrap-project-config.sh"
@@ -85,7 +85,7 @@ env -u CLAUDE_PLUGIN_ROOT CLAUDE_PLUGIN_OPTION_PROVISION_SETTINGS_LOCAL=true \
     bash "$E/.claude/scripts/bootstrap-project-config.sh" </dev/null >/dev/null 2>&1 || true
 [ ! -f "$E/.claude/settings.local.json" ] && ok "project-scoped (bundled == project) + opt-in → no-op" || bad "project-scoped → unexpectedly provisioned"
 
-# ── Case G (Fix B, RED): env-unset plugin mode (bundled != project) + opt-in → MUST provision. ──
+# ── Case G (RED): env-unset plugin mode (bundled != project) + opt-in → MUST provision. ──
 # CLAUDE_PLUGIN_ROOT unset (anthropics/claude-code#27145); real $HOOK bundled root != $G → plugin mode.
 # Pre-fix GATE 1 bailed on unset env → no provisioning (RED).
 G="$ROOT_TMP/g"; mkdir -p "$G/.claude"
@@ -94,7 +94,7 @@ env -u CLAUDE_PLUGIN_ROOT CLAUDE_PLUGIN_OPTION_PROVISION_SETTINGS_LOCAL=true \
     bash "$HOOK" </dev/null >/dev/null 2>&1 || true
 [ -f "$G/.claude/settings.local.json" ] && ok "env-unset plugin (bundled != project) + opt-in → provisions" || bad "env-unset plugin + opt-in → failed to provision"
 
-# ── Case F (CR-001): malformed existing target → untouched + NO sentinel (retryable) ──
+# ── Case F: malformed existing target → untouched + NO sentinel (retryable) ──
 F="$ROOT_TMP/f"; mkdir -p "$F/.claude"
 printf '{ this is NOT valid json !!!' > "$F/.claude/settings.local.json"
 before="$(cat "$F/.claude/settings.local.json")"

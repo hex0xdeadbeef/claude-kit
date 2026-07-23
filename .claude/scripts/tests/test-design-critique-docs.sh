@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Test (Part 4 / D1): the adversarial-design-critique feature is documented. CLAUDE.md has a
+# Test (D1): the adversarial-design-critique feature is documented. CLAUDE.md has a
 # concise note and the two review-relevant agent-memory catalogs mention it. Asserts AC4.1,
 # AC4.1b/c, AC4.2. (AC4.1d / DOC-4 dropped: the internal design-of-record
 # .claude/workflow-feature-2026-06-02.md was removed from the shipped kit in 370bcab, so its
@@ -24,7 +24,7 @@ if grep -q "design_critique" "$PRMEM"; then pass "DOC-2 plan-reviewer memory men
 # DOC-3 (AC4.1c): code-researcher agent-memory mentions critique-lenses
 if grep -q "critique-lenses" "$CRMEM"; then pass "DOC-3 code-researcher memory mentions critique-lenses"; else fail "DOC-3 code-researcher memory missing critique-lenses"; fi
 
-# DOC-5 (AC4.2 / PR-001): CLAUDE.md within the 200-line size budget (path-independent wc -l)
+# DOC-5 (AC4.2): CLAUDE.md within the 200-line size budget (path-independent wc -l)
 LINES="$(wc -l < "$CMD" | tr -d ' ')"
 if [[ "$LINES" -le 200 ]]; then pass "DOC-5 CLAUDE.md within 200-line budget ($LINES)"; else fail "DOC-5 CLAUDE.md exceeds 200-line budget ($LINES)"; fi
 

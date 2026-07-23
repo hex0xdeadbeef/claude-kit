@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Part 2 / PR-004 fix: validate-handoff.sh in warn mode must emit structured JSON
+# validate-handoff.sh in warn mode must emit structured JSON
 # with decision="block" when validation fails AND exit 0 (continueOnBlock contract).
 # Uses canonical ec=0 idiom (not 2>/dev/null || true mask).
 

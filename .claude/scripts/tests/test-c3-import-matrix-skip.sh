@@ -73,7 +73,7 @@ grep -q 'Refactor imports per the resolved rule' .claude/skills/coder-rules/SKIL
   || fail "AC-C3.5c — coder-rules/SKILL.md L101 'Common Issues' does not reference resolved LAYER_RULE"
 pass "AC-C3.5 — coder.md + coder-rules/SKILL.md RULE_2 + Common Issues reference LAYER_RULE+SKIP"
 
-# AC-C3.8/C3.10: contract-preservation pre-merge gate (see CR-003)
+# AC-C3.8/C3.10: contract-preservation pre-merge gate
 if [[ -d .git ]]; then
   CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
   if [[ "$CURRENT_BRANCH" == "main" ]]; then

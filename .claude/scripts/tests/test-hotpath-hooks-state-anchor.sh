@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # test-hotpath-hooks-state-anchor.sh
-# Part 1 (stray-.claude fix): the hot-path Pre/PostToolUse logger hooks must anchor their
+# Stray-.claude fix: the hot-path Pre/PostToolUse logger hooks must anchor their
 # LOG_DIR/STATE_DIR to ${CLAUDE_PROJECT_DIR} (project root), NOT to a relative `.claude/...`
 # path that resolves against the hook's cwd. When Claude Code fires a hook with cwd = a
 # subdirectory (docs: "Handlers run in the current directory"), a relative path scatters a
