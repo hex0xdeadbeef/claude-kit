@@ -7,7 +7,7 @@ Resolved when `PROJECT-KNOWLEDGE.md → LANGUAGE = rust`. Idiomatic Rust with
 
 ### Cycle 1: happy path
 
-**RED**:
+**RED** — `cargo test` must fail here: `Service::get` does not exist yet.
 ```rust
 #[tokio::test]
 async fn service_get_returns_item_when_found() {
@@ -22,10 +22,9 @@ async fn service_get_returns_item_when_found() {
     assert_eq!(item.id, "123");
     assert_eq!(item.name, "Test");
 }
-// Run: cargo test service_get_returns_item_when_found → FAIL (Service::get does not exist).
 ```
 
-**GREEN**:
+**GREEN** — `cargo test` now passes (intentionally panicky — refined in cycle 2).
 ```rust
 pub struct Service<R: Repository> { repo: R }
 
@@ -36,12 +35,11 @@ impl<R: Repository> Service<R> {
         Ok(self.repo.find_by_id(item_id).await.unwrap().unwrap())
     }
 }
-// Run: cargo test → PASS (intentionally panicky GREEN — refined in cycle 2).
 ```
 
 ### Cycle 2: not-found error
 
-**RED**:
+**RED** — `cargo test` must fail here: the current GREEN panics on `None`.
 ```rust
 #[tokio::test]
 async fn service_get_returns_not_found_when_missing() {
@@ -56,7 +54,6 @@ async fn service_get_returns_not_found_when_missing() {
     assert!(matches!(err, ServiceError::NotFound { .. }));
     assert!(format!("{err}").contains("get item 999"));
 }
-// FAIL — current GREEN panics on None.
 ```
 
 **GREEN**:
@@ -70,6 +67,10 @@ pub enum ServiceError {
 }
 
 impl<R: Repository> Service<R> {
+    /// Returns the item stored under `item_id`. Returns `ServiceError::NotFound` when no
+    /// such item exists, and `ServiceError::Repo` — carrying the item id and the underlying
+    /// repository failure as its `#[source]` — so callers can attribute the failure without
+    /// inspecting the repository layer.
     pub async fn get(&self, item_id: &str) -> Result<Item, ServiceError> {
         let item = self.repo.find_by_id(item_id).await
             .map_err(|err| ServiceError::Repo {
@@ -82,9 +83,15 @@ impl<R: Repository> Service<R> {
 }
 ```
 
+Note the doc comment on the final `get`: it states what the function returns and the
+error contract callers rely on. It says nothing about the TDD cycle that produced it —
+per `coder-rules/SKILL.md` § Comment Policy, comments describe the code, never the
+process. Cycle status belongs in this prose, not in the code.
+
 ### Cycle 3: repo error wrapping (rstest parameterised)
 
-**RED**:
+**RED** (incremental — add ONE case per cycle) — this case already passes: the repo-error
+wrapping landed in the cycle 2 GREEN, so the REFACTOR step follows directly.
 ```rust
 #[rstest]
 #[case(RepoError::Connection("refused".into()), "get item 123")]
@@ -103,18 +110,16 @@ async fn service_get_wraps_repo_errors(#[case] repo_err: RepoError, #[case] expe
     use std::error::Error;
     assert!(err.source().is_some());
 }
-// PASS — already implemented in cycle 2 GREEN, REFACTOR step.
 ```
 
-**REFACTOR** — extract repo-error mapping if `map_err` repeats:
+**REFACTOR** — extract repo-error mapping if `map_err` repeats; all 3 cycles still pass:
 ```rust
 fn wrap_repo_err(item_id: &str) -> impl Fn(RepoError) -> ServiceError + '_ {
     move |source| ServiceError::Repo { item_id: item_id.to_string(), source }
 }
-// All 3 cycles still PASS.
 ```
 
 Invariants illustrated:
-1. RED shown first in every cycle, with explicit `// FAIL` annotation.
+1. RED shown first in every cycle.
 2. Test names descriptive (`service_get_returns_not_found_when_missing`).
 3. All 3 paths: happy / not-found / repo-error-wrap with `#[source]` chain.

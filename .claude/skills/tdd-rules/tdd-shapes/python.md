@@ -7,7 +7,7 @@ with pytest, `unittest.mock`, `pytest.mark.parametrize`.
 
 ### Cycle 1: happy path
 
-**RED**:
+**RED** — `pytest -k test_service_get_returns_item_when_found` must fail here: `Service.get` does not exist yet.
 ```python
 def test_service_get_returns_item_when_found():
     repo = MagicMock()
@@ -19,10 +19,9 @@ def test_service_get_returns_item_when_found():
     assert item.id == "123"
     assert item.name == "Test"
     repo.find_by_id.assert_called_once_with("123")
-# Run: pytest -k test_service_get_returns_item_when_found → FAIL (Service.get does not exist).
 ```
 
-**GREEN**:
+**GREEN** — `pytest` now passes.
 ```python
 class Service:
     def __init__(self, repo: Repository) -> None:
@@ -30,14 +29,13 @@ class Service:
 
     def get(self, item_id: str) -> Item:
         return self._repo.find_by_id(item_id)
-# Run: pytest → PASS.
 ```
 
 **REFACTOR**: none needed.
 
 ### Cycle 2: not-found error
 
-**RED**:
+**RED** — `pytest` must fail here: `get` returns `None` silently.
 ```python
 def test_service_get_raises_not_found_when_missing():
     repo = MagicMock()
@@ -46,7 +44,6 @@ def test_service_get_raises_not_found_when_missing():
 
     with pytest.raises(NotFoundError, match="get item 999"):
         service.get("999")
-# Run: pytest → FAIL (returns None silently).
 ```
 
 **GREEN**:
@@ -66,7 +63,7 @@ class Service:
 
 ### Cycle 3: repo error wrapping (parametrised)
 
-**RED**:
+**RED** (incremental — add ONE case per cycle) — `pytest` must fail here: the repository error propagates unwrapped.
 ```python
 @pytest.mark.parametrize("repo_err,expected_in_message", [
     (RepoError("connection refused"), "get item 123"),
@@ -80,10 +77,9 @@ def test_service_get_wraps_repo_errors(repo_err, expected_in_message):
         service.get("123")
     assert expected_in_message in str(exc_info.value)
     assert exc_info.value.__cause__ is repo_err
-# FAIL — repo error propagated unwrapped.
 ```
 
-**GREEN**:
+**GREEN** — all 3 cycles pass.
 ```python
 class ServiceError(Exception): pass
 
@@ -92,6 +88,14 @@ class Service:
         self._repo = repo
 
     def get(self, item_id: str) -> Item:
+        """Return the item stored under item_id.
+
+        Raises:
+            NotFoundError: when no such item exists.
+            ServiceError: chained from the underlying repository failure and
+                carrying the item id, so callers can attribute the failure
+                without inspecting the repository layer.
+        """
         try:
             item = self._repo.find_by_id(item_id)
         except RepoError as err:
@@ -99,8 +103,12 @@ class Service:
         if item is None:
             raise NotFoundError(f"get item {item_id}: not found")
         return item
-# All 3 cycles PASS.
 ```
+
+Note the docstring on the final `get`: it states what the function returns and the
+error contract callers rely on. It says nothing about the TDD cycle that produced it —
+per `coder-rules/SKILL.md` § Comment Policy, comments describe the code, never the
+process. Cycle status belongs in this prose, not in the code.
 
 Invariants illustrated:
 1. RED shown first in every cycle.

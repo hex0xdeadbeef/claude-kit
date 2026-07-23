@@ -15,6 +15,22 @@ propagates into every test suite a non-Go project produces.
    happy path (item found), error case (repo error / wrap), and edge case
    (None / nil / null / not-found).
 
+## Comment invariant
+
+Comments inside a shape file's code fences describe the code, never the pipeline.
+
+A cycle-status note (`Run: <test command>`, `FAIL`, `PASS`, `All 3 cycles pass`)
+belongs in the surrounding markdown prose on the bold `**RED**` / `**GREEN**` /
+`**REFACTOR**` line, NOT inside the fence. These files are training data: a status
+comment demonstrated here teaches /coder that annotating source with pipeline state
+is house style, which is exactly what `coder-rules/SKILL.md` § Comment Policy forbids.
+
+Every shape file SHOULD carry at least one genuine doc comment on its final
+implementation, stating what the function returns and its error contract, so the
+file models a code-describing comment rather than only forbidding the other kind.
+
+Locked by `.claude/scripts/tests/test-comment-policy.sh` (CP-3, CP-4).
+
 ## Adding a new language
 
 1. Copy `_default.md`.

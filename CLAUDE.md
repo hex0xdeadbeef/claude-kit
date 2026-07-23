@@ -88,6 +88,12 @@ Canonical references: <https://code.claude.com/docs/en/memory> (auto-memory), <h
 
 **Verification:** `bash .claude/scripts/tests/test-tdd-shapes-extracted.sh` asserts the cascade-block + skill skeleton remain intact (TD-1..TD-5).
 
+## Code Comment Policy
+
+Comments in source files describe the code, never the workflow that produced it. Process references (plan Parts, acceptance criteria, review issue ids, phase names, "per plan") and change narrative ("now uses X instead of Y") belong in the handoff artifact and the commit message. Normative rule: `.claude/skills/coder-rules/SKILL.md` § Comment Policy (RULE_6), mirrored in `.claude/commands/coder.md` § RULES; exemplars carry the same invariant (`tdd-shapes/INVARIANTS.md`, `code-shapes/INVARIANTS.md`). Reviewer check: `.claude/skills/code-review-rules/SKILL.md` § Step 3a — `category: "style"`, MINOR, fixed problem string so the canonical issue ID stays byte-stable. No env var, no schema change.
+
+**Verification:** `bash .claude/scripts/tests/test-comment-policy.sh` (CP-1..CP-6).
+
 ## Design Critique Sub-Phase
 
 **Phase 3.5 (CRITIQUE):** `/designer` (L/XL) stress-tests the selected approach through a fixed multi-lens set (`.claude/skills/design-rules/critique-lenses.md`) before writing the spec. Each lens yields a concrete task-bound finding or an explicit "no finding — reason" (anti-theater forcing function); each finding carries a disposition (`addressed | accepted-risk | out-of-scope`, rationale required when not `addressed`). Findings are recorded in the additive `spec.design_critique` block; HIGH unresolved findings are carried into `/planner`'s `areas_needing_attention` (existing array — no contract-shape change).

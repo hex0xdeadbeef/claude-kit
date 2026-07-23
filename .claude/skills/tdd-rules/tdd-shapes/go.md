@@ -7,7 +7,7 @@ Resolved when `PROJECT-KNOWLEDGE.md → LANGUAGE = go`. Idiomatic Go with
 
 ### Cycle 1: happy path
 
-**RED**:
+**RED** — `go test ./...` must fail here: `Service.Get` does not exist yet.
 ```go
 func TestServiceGet_ReturnsItemWhenFound(t *testing.T) {
     repo := mocks.NewRepository(t)
@@ -22,22 +22,20 @@ func TestServiceGet_ReturnsItemWhenFound(t *testing.T) {
     assert.Equal(t, "123", item.ID)
     assert.Equal(t, "Test", item.Name)
 }
-// Run: go test ./... → FAIL (Service.Get does not exist).
 ```
 
-**GREEN**:
+**GREEN** — `go test ./...` now passes.
 ```go
 func (s *Service) Get(ctx context.Context, id string) (*Item, error) {
     return s.repo.FindByID(ctx, id)
 }
-// Run: go test ./... → PASS.
 ```
 
 **REFACTOR**: none needed.
 
 ### Cycle 2: not-found error
 
-**RED**:
+**RED** — `go test ./...` must fail here: `Get` returns `nil, nil` silently.
 ```go
 func TestServiceGet_ReturnsErrNotFoundWhenMissing(t *testing.T) {
     repo := mocks.NewRepository(t)
@@ -49,7 +47,6 @@ func TestServiceGet_ReturnsErrNotFoundWhenMissing(t *testing.T) {
     require.Error(t, err)
     assert.True(t, errors.Is(err, ErrNotFound))
 }
-// Run: go test ./... → FAIL (returns nil, nil silently).
 ```
 
 **GREEN**:
@@ -70,7 +67,7 @@ func (s *Service) Get(ctx context.Context, id string) (*Item, error) {
 
 ### Cycle 3: repo error wrapping (table-driven)
 
-**RED** (incremental — add ONE case per cycle):
+**RED** (incremental — add ONE case per cycle) — must fail here: the repository error is returned unwrapped.
 ```go
 func TestServiceGet_ErrorPaths(t *testing.T) {
     tests := []struct {
@@ -97,11 +94,13 @@ func TestServiceGet_ErrorPaths(t *testing.T) {
         })
     }
 }
-// FAIL — repo error returned unwrapped.
 ```
 
-**GREEN**:
+**GREEN** — all 3 cycles pass.
 ```go
+// Get returns the item stored under id. It returns an error wrapping ErrNotFound
+// when no such item exists, and wraps any repository failure with the item id so
+// callers can attribute the failure without inspecting the repository layer.
 func (s *Service) Get(ctx context.Context, id string) (*Item, error) {
     item, err := s.repo.FindByID(ctx, id)
     if err != nil {
@@ -112,11 +111,15 @@ func (s *Service) Get(ctx context.Context, id string) (*Item, error) {
     }
     return item, nil
 }
-// All 3 cycles PASS.
 ```
 
+Note the doc comment on the final `Get`: it states what the function returns and the
+error contract callers rely on. It says nothing about the TDD cycle that produced it —
+per `coder-rules/SKILL.md` § Comment Policy, comments describe the code, never the
+process. Cycle status belongs in this prose, not in the code.
+
 Invariants illustrated:
-1. RED shown first in every cycle, with `// MUST FAIL` annotation.
+1. RED shown first in every cycle.
 2. Test names descriptive (`TestServiceGet_ReturnsItemWhenFound`, not `TestGet1`).
 3. All 3 paths: happy / not-found / repo-error-wrap. Table-driven case added incrementally.
 

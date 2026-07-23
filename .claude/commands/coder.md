@@ -173,7 +173,7 @@ startup:
         - ".claude/skills/coder-rules/mcp-tools.md"
         - ".claude/skills/coder-rules/SKILL.md"
       plugin_path_note: "Plugin mode: if a BUNDLED KIT ROOT directive is present in context, resolve these paths AND any on-demand supporting files from this skill (loaded later per event triggers) under that root (bundled skills ship in the plugin, not the project). If no BUNDLED KIT ROOT directive is present in context (e.g. after compaction — anthropics/claude-code#15174), read the bundled root from .claude/workflow-state/.bundled-kit-root and resolve under it. Project-scoped install: paths are already project-local — ignore."
-      purpose: "Load MCP patterns (language profile + error handling → auto-loaded via CLAUDE.md). Load coder-rules skill for 5 CRITICAL rules and evaluate protocol."
+      purpose: "Load MCP patterns (language profile + error handling → auto-loaded via CLAUDE.md). Load coder-rules skill for 6 CRITICAL rules (incl. the Comment Policy) and evaluate protocol."
 
     - action: "Read .claude/prompts/{feature-name}.md"
       purpose: "Load plan"
@@ -591,6 +591,25 @@ rules:
   - id: RULE_5
     title: "Tests Pass"
     description: "Code NOT ready until tests pass."
+    severity: CRITICAL
+
+  - id: RULE_6
+    title: "Comment Quality"
+    description: |
+      Comments in source files describe the code, never the workflow that produced it.
+      Default to no comment; add one only where the logic is not self-evident (a hidden
+      constraint, a non-obvious invariant, a workaround, surprising behaviour). A
+      declaration comment names the thing being described and states what it is, returns,
+      or does.
+      FORBIDDEN in source files: plan part identifiers, acceptance-criteria identifiers,
+      review issue identifiers, pipeline phase names, iteration numbers, proposal
+      identifiers, and phrases such as "per plan" / "as specified" / "per review".
+      FORBIDDEN in source files: change narrative relative to a previous version
+      ("now uses X instead of Y", "previously returned nil", "no longer needed").
+      Code-to-plan traceability belongs in the handoff artifact and the commit message,
+      which are the permanent record of the change; a source comment is not.
+      Do not add or retrofit comments onto code you did not change in this task.
+      Full policy: .claude/skills/coder-rules/SKILL.md § Comment Policy.
     severity: CRITICAL
 
 ## ERROR HANDLING

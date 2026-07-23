@@ -8,7 +8,7 @@ without committing to a concrete syntax.
 
 ### Cycle 1: happy path
 
-**RED** — failing test first:
+**RED** — the project test command must fail here: `Service.get` does not exist yet.
 ```pseudocode
 test "service.get returns item when found":
     repo = MockRepo()
@@ -17,40 +17,36 @@ test "service.get returns item when found":
     item = service.get("123")
     assert item.id == "123"
     assert item.name == "Test"
-# Run project test command. MUST FAIL — Service.get does not exist yet.
 ```
 
-**GREEN** — minimal implementation:
+**GREEN** — minimal implementation; the project test command now passes.
 ```pseudocode
 class Service:
     constructor(repo): self.repo = repo
     function get(itemId):
         return self.repo.findById(itemId)
-# Run test. MUST PASS.
 ```
 
 **REFACTOR** — none needed for this minimal case.
 
 ### Cycle 2: not-found error
 
-**RED**:
+**RED** — the project test command must fail here: the current implementation returns None silently.
 ```pseudocode
 test "service.get raises when item missing":
     repo = MockRepo()
     repo.findById("999") -> returns None
     service = Service(repo)
     assert raises NotFoundError: service.get("999")
-# Run test. MUST FAIL — current implementation returns None silently.
 ```
 
-**GREEN**:
+**GREEN** — the project test command now passes; Cycle 1 still passes.
 ```pseudocode
 function get(itemId):
     item = self.repo.findById(itemId)
     if item is None:
         raise NotFoundError("get item " + itemId)
     return item
-# Run test. MUST PASS. Cycle 1 still passes.
 ```
 
 ### Cycle 3: repo error wrapping
@@ -67,8 +63,11 @@ test "service.get wraps repo errors":
     assert err.cause is RepoError
 ```
 
-**GREEN**:
+**GREEN** — all 3 cycles pass.
 ```pseudocode
+# get returns the item stored under itemId. It raises a not-found error when no
+# such item exists, and wraps any repository failure with the item id so callers
+# can attribute the failure without inspecting the repository layer.
 function get(itemId):
     try:
         item = self.repo.findById(itemId)
@@ -77,8 +76,12 @@ function get(itemId):
     if item is None:
         raise NotFoundError("get item " + itemId)
     return item
-# Run test. All 3 cycles MUST PASS.
 ```
+
+Note the doc comment on the final `get`: it states what the function returns and the
+error contract callers rely on. It says nothing about the TDD cycle that produced it —
+per `coder-rules/SKILL.md` § Comment Policy, comments describe the code, never the
+process. Cycle status belongs in this prose, not in the code.
 
 Invariants illustrated:
 1. RED phase shown FIRST in every cycle, before GREEN.

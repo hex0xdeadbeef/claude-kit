@@ -7,7 +7,7 @@ JUnit 5 (`@Test`, `assertEquals`, `assertThrows`), Mockito, `@ParameterizedTest`
 
 ### Cycle 1: happy path
 
-**RED**:
+**RED** — `mvn test -Dtest=ServiceTest#getReturnsItemWhenFound` must fail here: `Service.get` does not exist yet.
 ```java
 class ServiceTest {
     @Test
@@ -23,10 +23,9 @@ class ServiceTest {
         verify(repo).findById("123");
     }
 }
-// Run: mvn test -Dtest=ServiceTest#getReturnsItemWhenFound → FAIL (Service.get does not exist).
 ```
 
-**GREEN**:
+**GREEN** — `mvn test` now passes.
 ```java
 public class Service {
     private final Repository repo;
@@ -36,14 +35,13 @@ public class Service {
         return repo.findById(itemId);
     }
 }
-// Run: mvn test → PASS.
 ```
 
 **REFACTOR**: none needed.
 
 ### Cycle 2: not-found error
 
-**RED**:
+**RED** — `mvn test` must fail here: `get` returns `null` silently.
 ```java
 @Test
 void getThrowsNotFoundWhenMissing() {
@@ -55,7 +53,6 @@ void getThrowsNotFoundWhenMissing() {
         () -> svc.get("999"));
     assertTrue(err.getMessage().contains("get item 999"));
 }
-// FAIL — returns null silently.
 ```
 
 **GREEN**:
@@ -80,7 +77,7 @@ public class Service {
 
 ### Cycle 3: repo error wrapping (@ParameterizedTest)
 
-**RED**:
+**RED** — `mvn test` must fail here: the repository error is propagated unwrapped.
 ```java
 @ParameterizedTest
 @MethodSource("repoErrorCases")
@@ -100,10 +97,9 @@ static Stream<Arguments> repoErrorCases() {
         Arguments.of(new RepoException("connection refused"), "get item 123")
     );
 }
-// FAIL — repo error propagated unwrapped.
 ```
 
-**GREEN**:
+**GREEN** — all 3 cycles pass.
 ```java
 public class ServiceException extends RuntimeException {
     public ServiceException(String message, Throwable cause) { super(message, cause); }
@@ -113,6 +109,14 @@ public class Service {
     private final Repository repo;
     public Service(Repository repo) { this.repo = repo; }
 
+    /**
+     * Returns the item stored under {@code itemId}.
+     *
+     * @throws NotFoundException when no such item exists
+     * @throws ServiceException  wrapping any {@link RepoException}, tagged with the
+     *                           item id so callers can attribute the failure without
+     *                           inspecting the repository layer
+     */
     public Item get(String itemId) {
         Item item;
         try {
@@ -126,10 +130,14 @@ public class Service {
         return item;
     }
 }
-// All 3 cycles PASS.
 ```
 
+Note the Javadoc on the final `get`: it states what the method returns and the error
+contract callers rely on. It says nothing about the TDD cycle that produced it —
+per `coder-rules/SKILL.md` § Comment Policy, comments describe the code, never the
+process. Cycle status belongs in this prose, not in the code.
+
 Invariants illustrated:
-1. RED shown first in every cycle with `// FAIL` annotation.
+1. RED shown first in every cycle.
 2. Test names descriptive (`getReturnsItemWhenFound`, `getThrowsNotFoundWhenMissing`).
 3. All 3 paths: happy / not-found / repo-error-wrap via `Throwable` cause.
