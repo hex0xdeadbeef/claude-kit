@@ -14,32 +14,13 @@ set -uo pipefail
 
 AGENT_TYPE="${1:-unknown}"
 
-# Drain stdin (SubagentStart payload — parsed below for type resolution)
+# Drain stdin (SubagentStart payload — not consumed by this hook)
 _HOOK_INPUT=$(cat 2>/dev/null || true)
 : "${_HOOK_INPUT}"
 
-# Type resolution: the SubagentStart payload is preferred when it names an allowlisted type;
-# argv (settings args wiring) is the fallback. Rationale: design-critic rides the
-# code-researcher entry's matcher, whose hardcoded argv would mislabel it. For all existing
-# agents the payload type equals the argv value, so behavior is byte-identical. Payload key
-# chain mirrors save-review-checkpoint.sh (agent_type > agent_name > name). When python3 is
-# unavailable or the payload lacks a usable key, argv rules — graceful degradation.
-if command -v python3 >/dev/null 2>&1; then
-  stdin_type=$(printf '%s' "${_HOOK_INPUT}" | python3 -c 'import json,sys
-try:
-    d = json.load(sys.stdin)
-    print(d.get("agent_type") or d.get("agent_name") or d.get("name") or "")
-except Exception:
-    print("")' 2>/dev/null || echo "")
-  stdin_type="${stdin_type##*:}"   # strip plugin namespace prefix if present
-  if [[ "${stdin_type}" =~ ^(plan-reviewer|code-reviewer|verdict-recovery|code-researcher|design-critic)$ ]]; then
-    AGENT_TYPE="${stdin_type}"
-  fi
-fi
-
 # Allowlist guard — defensive even though settings.json matcher filters
 case "${AGENT_TYPE}" in
-  plan-reviewer|code-reviewer|verdict-recovery|code-researcher|design-critic)
+  plan-reviewer|code-reviewer|verdict-recovery|code-researcher)
     ;;
   *)
     echo "[caveman-suspend-for-reviewer] SKIP: agent_type='${AGENT_TYPE}' not in allowlist" >&2

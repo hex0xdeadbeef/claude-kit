@@ -109,8 +109,9 @@ if [[ -d .git ]]; then
       # with 1 single auto-fmt.sh entry. Allow diff if and only if every +/- line is
       # either (a) a "command" key referencing auto-fmt(-go).sh OR caveman-{activate,
       # suspend-for-reviewer}.sh (the four allowlisted reviewer/researcher matcher
-      # bindings, plus the ta-designer-uplift design-critic alternation on the
-      # code-researcher entry), (b) an "if" key matching the dropped Go-specific filter, (c) a
+      # bindings, plus the retired design-critic alternation on the code-researcher entry —
+      # kept so its REMOVAL line is allowlisted too), (b) an "if" key matching the dropped
+      # Go-specific filter, (c) a
       # "type": "command" line accompanying a new entry, (d) a structural-brace/comma
       # JSON line including bracket variants for new arrays, (e) a "matcher" key
       # for the new "verdict-recovery" SubagentStart entry or empty-matcher

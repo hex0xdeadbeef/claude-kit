@@ -74,7 +74,7 @@ output:
     known_risks:
       - "{risk + severity}"
     acceptance_criteria_count: N
-    critique_summary:                  # OPTIONAL (DE-4) — mirror of spec.design_critique.summary from Phase 3.5. Omit if no critique was produced. designer_to_planner stays non-schema-validated. MAY additionally carry the panel observability fields (roles_dispatched, roles_returned, fallback_used) mirrored from spec.design_critique.panel — additive, omit when absent.
+    critique_summary:                  # OPTIONAL (DE-4) — mirror of spec.design_critique.summary from Phase 3.5. Omit if no critique was produced. designer_to_planner stays non-schema-validated.
       total: N
       addressed: N
       accepted_risk: N
@@ -144,38 +144,16 @@ pipeline:
     - phase: 3.5
       name: "CRITIQUE / RED-TEAM"
       purpose: "Examine the SELECTED approach from critical and unexpected viewpoints before writing the spec"
-      structure: "3.5a PANEL (L/XL) -> 3.5b MERGE; fallback = single-context lens pass"
-      sub_phases:
-        - id: "3.5a"
-          name: "PANEL (blind role critics)"
-          condition: "complexity L or XL (ALL 5 roles on both — roster tiering rejected by user 2026-07-17)"
-          skip_when: "M-optional designer runs — go directly to the fallback single-context pass"
-          load: ".claude/skills/design-rules/role-rubrics.md (just-in-time)"
-          actions:
-            - "Compose ONE dispatch prompt per role: task summary + selected approach + key context excerpts + that role's brief from role-rubrics.md + the anti-theater rule + the output YAML shape"
-            - "Dispatch ALL critics (subagent_type: design-critic) in a SINGLE message — blind round, critics never see each other"
-            - "Continue any remaining spec-prep work while critics run in background"
-          timebox: "Structural: critic maxTurns (agent frontmatter) bounds each critic; parallel dispatch bounds wall-clock to ~one critic"
-          partial_panel_rule: ">= 2 critics returned → proceed to 3.5b with returned findings, record missing roles via panel.roles_returned; < 2 returned → FALLBACK to the single-context pass, record panel.fallback_used: true"
-          no_debate: "No cross-critic rounds (independence beats debate — arXiv 2311.17371). OPTIONAL: on a HIGH-severity conflict between two critics, the designer MAY send ONE targeted SendMessage follow-up to each — never a round-robin."
-        - id: "3.5b"
-          name: "MERGE / ARBITRATE (Chairman)"
-          actions:
-            - "Dedup findings across roles (same defect surfaced by two lenses → keep the stronger citation, note both roles)"
-            - "Theater rejection: findings without concrete task-bound content are discarded and count as skipped lenses"
-            - "Severity dampening: a finding without a concrete file:line or spec-section citation cannot remain HIGH"
-            - "Convergence warning: all critics agreeing near-verbatim is a WARNING flag (correlated blind spot), not extra confidence"
-            - "Assign each surviving finding a disposition: addressed | accepted-risk | out-of-scope (rationale required when disposition is not addressed) — the designer decides; roles advise. No voting."
-            - "Findings with disposition=addressed feed back into the approach / key_decisions / acceptance_criteria written in Phase 4"
-            - "Write findings into spec.design_critique with each finding's role field set; fill the panel sub-block (roles_dispatched, roles_returned, model, fallback_used)"
-      fallback:
-        name: "single-context lens pass (previous mechanism, unchanged)"
-        when: "3.5a skipped (M-optional) OR partial_panel_rule < 2 OR dispatch failure"
-        load: ".claude/skills/design-rules/critique-lenses.md (just-in-time)"
-        actions: "Run ALL 7 lenses (failure-mode, assumptions, boundary, misuse, operability, contracts, cost) in the designer context exactly as before; produce per-lens concrete findings or explicit 'no finding — reason' lines; record panel.fallback_used: true when the panel was attempted"
-      anti_theater: "Generic, non-task-specific findings are rejected — they count as skipped lenses (see spec-quality completeness gate). Applies to BOTH the panel and the fallback path."
-      skip_when: "Never skipped — whenever /designer runs (L/XL always, M when recommended per TRIGGERS), SOME critique path executes."
-      output: "design_critique findings list with role attribution (written into the spec in Phase 4)"
+      load: ".claude/skills/design-rules/critique-lenses.md (just-in-time)"
+      actions:
+        - "Load critique-lenses.md"
+        - "Run the SELECTED approach through ALL lenses (failure-mode, assumptions, boundary, misuse, operability, contracts, cost)"
+        - "For each lens: produce a concrete task-bound finding OR an explicit 'no finding — reason' line"
+        - "Assign each finding a disposition: addressed | accepted-risk | out-of-scope (rationale required when disposition is not addressed)"
+        - "Findings with disposition=addressed feed back into the approach / key_decisions / acceptance_criteria written in Phase 4"
+      anti_theater: "Generic, non-task-specific findings are rejected — they count as skipped lenses (see spec-quality completeness gate)."
+      skip_when: "Never skipped — whenever /designer runs (L/XL always, M when recommended per TRIGGERS), the critique applies."
+      output: "design_critique findings list (written into the spec in Phase 4)"
 
     - phase: 4
       name: "WRITE SPEC"

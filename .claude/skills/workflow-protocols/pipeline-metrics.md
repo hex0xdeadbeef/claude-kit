@@ -36,12 +36,6 @@ pipeline_metrics:
       total_duration_ms: N
       background_mode_used: true|false
       note: "Collected from Agent/Task tool return metadata (v2.1.30+). Zero if code-researcher not invoked."
-    design_panel_metrics:
-      roles_dispatched: N
-      roles_returned: N
-      fallback_used: true|false
-      critic_model: "sonnet"
-      note: "Phase 3.5a role-panel observability. Zero/absent if the run had no designer phase or the panel did not fire. Additive — older entries lack this block; consumers SKIP if absent."
     delta_review_mode: "off|warn|strict"
     # From checkpoint.delta_review_mode (set at plan-review pre_delegation).
     # Enables token-savings analysis: compare runs with off vs warn.

@@ -31,9 +31,7 @@ check_arg() {
 rc=0
 check_arg "(claude-kit:)?plan-reviewer"   "inject-review-context.sh"        "plan-reviewer"   || rc=1
 check_arg "(claude-kit:)?code-reviewer"   "inject-review-context.sh"        "code-reviewer"   || rc=1
-# design-critic rides this entry via matcher alternation; argv default stays code-researcher
-# (the suspend script resolves the true type from the SubagentStart payload — ta-designer-uplift).
-check_arg "(claude-kit:)?(code-researcher|design-critic)" "caveman-suspend-for-reviewer.sh" "code-researcher" || rc=1
+check_arg "(claude-kit:)?code-researcher" "caveman-suspend-for-reviewer.sh" "code-researcher" || rc=1
 check_arg "(claude-kit:)?plan-reviewer"   "caveman-suspend-for-reviewer.sh" "plan-reviewer"   || rc=1
 check_arg "(claude-kit:)?code-reviewer"   "caveman-suspend-for-reviewer.sh" "code-reviewer"   || rc=1
 check_arg "(claude-kit:)?verdict-recovery" "caveman-suspend-for-reviewer.sh" "verdict-recovery" || rc=1
