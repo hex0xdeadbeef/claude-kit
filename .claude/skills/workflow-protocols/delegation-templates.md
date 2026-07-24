@@ -125,12 +125,8 @@ diff-manifest — both required for iteration 2+ correctness.
        - resolved_ids[] entries: raw canonical-ID strings
     4. Write updated checkpoint before delegation
   planner_reinvocation_on_iter2plus: |
-    SEE .claude/skills/workflow-protocols/diff-manifest.md → section:
-    "Planner Re-invocation Template (iteration 2+)".
-    Load the file if not already in context.
-    If manifest file missing (first iter 2+ run before STEP 0.5 executed, or KD-6
-    triggered with empty mapping) → planner skips phase_0.8, writes plan without
-    diff section → plan-reviewer runs full validation (AC-8 path).
+    SEE .claude/skills/workflow-protocols/diff-manifest.md → "Planner Re-invocation Template (iteration 2+)"
+    (also covers the missing-manifest fallback → planner skips phase_0.8, plan-reviewer runs full validation, AC-8 path). Load the file if not already in context.
   post_delegation: |
     After receiving plan-reviewer output:
     1. Validate output (SEE output_validation in incomplete-output-recovery.md —
@@ -471,15 +467,7 @@ diff-manifest — both required for iteration 2+ correctness.
 
 ## subagent_type normalization (I-04)
 
-Platform Claude Code v2.1.140 matches the Agent-tool `subagent_type` case- and
-separator-insensitively (e.g. `"Code Reviewer"` → `code-reviewer`). As defense-in-depth,
-`save-review-checkpoint.sh` additionally normalizes the SubagentStop payload's `agent_type`
-(`_normalize_agent_type`: strip → lower → spaces/underscores → hyphens) before comparing
-against `REVIEW_AGENTS` / `WORKTREE_AGENTS`. `agent_type` is NOT part of the canonical
-issue-ID hash (`sha256(category|location|problem)`), so this does not affect ID stability;
-the normalization is identity on already-canonical names, so canonical payloads are byte-stable.
-Note: for non-canonical non-empty inputs the post-normalization mismatch makes the P1-2
-registry backfill and P2-2 anomaly paths reachable — both NON_CRITICAL and self-healing.
+SEE [State Layer](state-layer.md) § subagent_type normalization — `save-review-checkpoint.sh` normalizes the SubagentStop payload `agent_type` (defense-in-depth); `agent_type` is NOT part of the canonical issue-ID hash, so this does not affect ID stability.
 
 ## Degraded mode
 
