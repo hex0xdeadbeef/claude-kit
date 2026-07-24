@@ -275,3 +275,17 @@ cleanup_protocol:
     rotation_hint: "When file exceeds 100 lines, suggest user archive older entries"
 
   failure_handling: "Cleanup failure is NON_CRITICAL — warn but do not block commit"
+
+# ─────────────────────────────────────────────────────
+# subagent_type normalization (I-04)
+# ─────────────────────────────────────────────────────
+
+Platform Claude Code v2.1.140 matches the Agent-tool `subagent_type` case- and
+separator-insensitively (e.g. `"Code Reviewer"` → `code-reviewer`). As defense-in-depth,
+`save-review-checkpoint.sh` additionally normalizes the SubagentStop payload's `agent_type`
+(`_normalize_agent_type`: strip → lower → spaces/underscores → hyphens) before comparing
+against `REVIEW_AGENTS` / `WORKTREE_AGENTS`. `agent_type` is NOT part of the canonical
+issue-ID hash (`sha256(category|location|problem)`), so this does not affect ID stability;
+the normalization is identity on already-canonical names, so canonical payloads are byte-stable.
+Note: for non-canonical non-empty inputs the post-normalization mismatch makes the P1-2
+registry backfill and P2-2 anomaly paths reachable — both NON_CRITICAL and self-healing.

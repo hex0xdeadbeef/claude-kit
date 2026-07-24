@@ -73,10 +73,7 @@ diff-manifest — both required for iteration 2+ correctness.
 
     STEP -1 (P0-04): Write .claude/workflow-state/.iteration-in-flight BEFORE delegating.
 
-    STATUS: legacy-but-idempotent since the P5 fix. inject-review-context.sh writes the sentinel
-    automatically at SubagentStart (and via the STEP -2 `--sidecar-only` invocation for the
-    worktree code-reviewer, which calls the same hook). Emitting the manual Write here is permitted
-    and harmless (hook overwrites with the same shape); skipping it is now safe. See .claude/prompts/p5-iif-autowrite.md.
+    STATUS: optional — inject-review-context.sh auto-writes this sentinel at SubagentStart (and via the STEP -2 `--sidecar-only` invocation), so the manual Write here is harmless and skippable. See .claude/prompts/p5-iif-autowrite.md.
 
     Use Write tool (auto-allowed). Content (JSON, one file per session):
       {"agent": "plan-reviewer", "started_at": "{ISO-8601 UTC timestamp, e.g. 2026-04-23T14:30:00Z}", "feature": "{feature}", "iteration": {N}}
@@ -125,12 +122,8 @@ diff-manifest — both required for iteration 2+ correctness.
        - resolved_ids[] entries: raw canonical-ID strings
     4. Write updated checkpoint before delegation
   planner_reinvocation_on_iter2plus: |
-    SEE .claude/skills/workflow-protocols/diff-manifest.md → section:
-    "Planner Re-invocation Template (iteration 2+)".
-    Load the file if not already in context.
-    If manifest file missing (first iter 2+ run before STEP 0.5 executed, or KD-6
-    triggered with empty mapping) → planner skips phase_0.8, writes plan without
-    diff section → plan-reviewer runs full validation (AC-8 path).
+    SEE .claude/skills/workflow-protocols/diff-manifest.md → "Planner Re-invocation Template (iteration 2+)"
+    (also covers the missing-manifest fallback → planner skips phase_0.8, plan-reviewer runs full validation, AC-8 path). Load the file if not already in context.
   post_delegation: |
     After receiving plan-reviewer output:
     1. Validate output (SEE output_validation in incomplete-output-recovery.md —
@@ -264,63 +257,38 @@ diff-manifest — both required for iteration 2+ correctness.
     "BUNDLED KIT ROOT:" marker from your injected context. If your context lacks the directive (e.g. after a compaction — anthropics/claude-code#15174), read the bundled root from .claude/workflow-state/.bundled-kit-root and synthesize the directive from it.
 
     STEP SHA (KD-2 — iteration_commit_sha):
-    Record current HEAD SHA in checkpoint before delegating to code-reviewer.
-    This SHA represents the coder's committed state for this review iteration.
-    inject-review-context.sh reads iteration_commit_sha[N-1] on iter ≥2 to
-    compute git diff {prior_sha}..HEAD → file-level delta focus for code-reviewer.
-
-    Steps:
-    1. Run: git rev-parse HEAD → current_sha
-       On failure (git unavailable, detached HEAD): WARN + skip SHA write (non-blocking).
-    2. Determine N = current code_review iteration being started.
-       Read checkpoint.iteration.code_review = "{N}/3", parse N as integer.
-       (Counter is already incremented to N/3 at pre_delegation time.)
-    3. Update checkpoint: add/overwrite iteration_commit_sha[N] = current_sha.
-       Format (in checkpoint YAML):
-         iteration_commit_sha:
-           "1": "{sha}"   # written at iter 1 pre_delegation
-           "2": "{sha}"   # written at iter 2 pre_delegation
-    4. Hook reading convention: for code-reviewer SubagentStart iter N (N ≥ 2),
-       read iteration_commit_sha[N-1] as prior_sha.
-       Example: iter 2 → reads sha["1"] → git diff sha["1"]..HEAD.
-
-    Failure handling: if git rev-parse fails or checkpoint write fails →
-    log WARN, do NOT block delegation. Hook will detect missing SHA and
-    skip code delta emission gracefully (non-blocking, AC-5).
+    Before delegating to code-reviewer, record current HEAD SHA in checkpoint under
+    iteration_commit_sha[N] (N = the code_review iteration being started; counter already
+    incremented to N/3). Run `git rev-parse HEAD` → current_sha; write it to checkpoint YAML
+    under iteration_commit_sha with per-iteration keys ("1","2",...). On iter ≥2,
+    inject-review-context.sh reads iteration_commit_sha[N-1] as prior_sha and computes
+    git diff {prior_sha}..HEAD → file-level delta focus (iter 2 → reads sha["1"]).
+    Failure (git unavailable, detached HEAD, or checkpoint write fails): log WARN, do NOT
+    block delegation — the hook detects the missing SHA and skips code-delta emission
+    gracefully (non-blocking, AC-5).
 
     STEP -2 (P3 — sidecar write for worktree-isolated code-reviewer):
     Before STEP -1 (.iteration-in-flight write), resolve the bundled kit root (B2 — plugin-safe path) and invoke:
       KIT_ROOT="$(cat .claude/workflow-state/.bundled-kit-root 2>/dev/null)"
       echo '{"session_id": "{session_id}"}' \
         | bash "${KIT_ROOT:-.}/.claude/scripts/inject-review-context.sh" code-reviewer --sidecar-only
-    Produces .claude/workflow-state/code-reviewer-INJECTED-CONTEXT.md.
-    Native worktree creation copies this file into the worktree via repo-root .worktreeinclude;
-    code-reviewer.md startup reads it from .claude/workflow-state/code-reviewer-INJECTED-CONTEXT.md
-    as additionalContext-equivalent.
-    VERIFY (F4 — do not launch a reviewer that will false-REJECT): after the write, assert the
-    sidecar exists and is non-empty:
+    Produces .claude/workflow-state/code-reviewer-INJECTED-CONTEXT.md, copied into the worktree via
+    repo-root .worktreeinclude; code-reviewer.md startup reads it as additionalContext-equivalent.
+    VERIFY (F4 — do not launch a reviewer that will false-REJECT): after the write, assert non-empty:
       test -s .claude/workflow-state/code-reviewer-INJECTED-CONTEXT.md
-    In PLUGIN MODE the script ships under BUNDLED KIT ROOT (not the project); the .bundled-kit-root
-    marker (written by inject-kit-context.sh) supplies its path, and ${KIT_ROOT:-.} falls back to the
-    project-relative path in a project-scoped install (byte-identical to prior behavior). If the
-    sidecar is MISSING or EMPTY, the BUNDLED KIT ROOT directive MUST still reach the reviewer via
-    STEP -3 (delegation-prompt channel); confirm STEP -3 inlined it (read the .bundled-kit-root marker
-    if your context lacks the directive). Prompt + sidecar are two channels — at least one MUST carry
-    the directive in plugin mode; if BOTH are absent, STOP with a setup error rather than dispatching
-    a reviewer that will REJECT on an unresolvable rubric (see post_delegation step 2.0).
-    Best-effort caveat (project-scoped install): a missing sidecar is non-blocking — the reviewer
-    falls back to project-relative rubric paths that resolve natively.
-    Rationale: SubagentStart fires for worktree agents, but inject-review-context's additionalContext
-    does not reliably reach a worktree reviewer — the worktree runs origin/main's hooks
-    (worktree.baseRef:"fresh") and the main-repo checkpoint is absent from the worktree. The
-    file-sidecar (delivered via .worktreeinclude) is the reliable channel.
+    Plugin mode: the script ships under BUNDLED KIT ROOT; the .bundled-kit-root marker supplies its
+    path and ${KIT_ROOT:-.} falls back to the project-relative path (byte-identical) in a project-scoped
+    install. If the sidecar is MISSING or EMPTY, the BUNDLED KIT ROOT directive MUST still reach the
+    reviewer via STEP -3 (prompt channel); at least one of prompt+sidecar MUST carry it in plugin mode,
+    else STOP with a setup error rather than dispatching a reviewer that will REJECT on an unresolvable
+    rubric (see post_delegation step 2.0). Project-scoped install: a missing sidecar is non-blocking
+    (reviewer falls back to project-relative rubric paths). Why the sidecar: worktree agents run
+    origin/main's hooks (worktree.baseRef:"fresh"), so inject-review-context's additionalContext and
+    the main-repo checkpoint don't reliably reach them; the .worktreeinclude sidecar is the reliable channel.
 
     STEP -1 (P0-04): Write .claude/workflow-state/.iteration-in-flight BEFORE delegating.
 
-    STATUS: legacy-but-idempotent since the P5 fix. inject-review-context.sh writes the sentinel
-    automatically at SubagentStart (and via the STEP -2 `--sidecar-only` invocation for the
-    worktree code-reviewer, which calls the same hook). Emitting the manual Write here is permitted
-    and harmless (hook overwrites with the same shape); skipping it is now safe. See .claude/prompts/p5-iif-autowrite.md.
+    STATUS: optional — inject-review-context.sh auto-writes this sentinel at SubagentStart (and via the STEP -2 `--sidecar-only` invocation), so the manual Write here is harmless and skippable. See .claude/prompts/p5-iif-autowrite.md.
 
     Use Write tool (auto-allowed). Content (JSON, one file per session):
       {"agent": "code-reviewer", "started_at": "{ISO-8601 UTC timestamp, e.g. 2026-04-23T14:30:00Z}", "feature": "{feature}", "iteration": {N}}
@@ -369,12 +337,10 @@ diff-manifest — both required for iteration 2+ correctness.
             "truncated_length": 600,
             "session_id": "{session_id}"
           }
-      Rationale: silent truncation hides the loss of high_risk_areas / deviations
-      narrative content. Telemetry makes it observable; root-cause fix is
-      coder.md narrative_for_reviewer summary-only contract (see coder.md → handoff_output).
-      Failure handling: if write fails (disk error) or validation fails in strict mode →
-      log WARN and proceed with delegation (graceful degradation; agent still gets the
-      narrative via the delegation prompt template).
+      Rationale: telemetry makes silent truncation (loss of high_risk_areas / deviations content)
+      observable; root-cause fix is coder.md's narrative_for_reviewer summary-only contract.
+      On write failure (disk) or strict-mode validation failure: log WARN and proceed — agent
+      still gets the narrative via the delegation prompt template (graceful degradation).
 
     Before delegating to code-reviewer (iteration 2+ only):
     1. Read .claude/workflow-state/review-completions.jsonl for the most recent entry
@@ -471,15 +437,7 @@ diff-manifest — both required for iteration 2+ correctness.
 
 ## subagent_type normalization (I-04)
 
-Platform Claude Code v2.1.140 matches the Agent-tool `subagent_type` case- and
-separator-insensitively (e.g. `"Code Reviewer"` → `code-reviewer`). As defense-in-depth,
-`save-review-checkpoint.sh` additionally normalizes the SubagentStop payload's `agent_type`
-(`_normalize_agent_type`: strip → lower → spaces/underscores → hyphens) before comparing
-against `REVIEW_AGENTS` / `WORKTREE_AGENTS`. `agent_type` is NOT part of the canonical
-issue-ID hash (`sha256(category|location|problem)`), so this does not affect ID stability;
-the normalization is identity on already-canonical names, so canonical payloads are byte-stable.
-Note: for non-canonical non-empty inputs the post-normalization mismatch makes the P1-2
-registry backfill and P2-2 anomaly paths reachable — both NON_CRITICAL and self-healing.
+SEE [State Layer](state-layer.md) § subagent_type normalization — `save-review-checkpoint.sh` normalizes the SubagentStop payload `agent_type` (defense-in-depth); `agent_type` is NOT part of the canonical issue-ID hash, so this does not affect ID stability.
 
 ## Degraded mode
 
