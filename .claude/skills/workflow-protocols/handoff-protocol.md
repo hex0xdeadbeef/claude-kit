@@ -9,119 +9,17 @@ handoff_protocol:
   rule: "Every phase MUST create a handoff payload for the next phase"
 
   contract:
-    designer_to_planner:
-      producer: "/designer"
-      consumer: "/planner"
-      payload:
-        spec_artifact: ".claude/prompts/{feature}-spec.md"
-        metadata:
-          task_type: "{new_feature|integration|...}"
-          complexity: "{L|XL}"
-          approaches_considered: N
-          sequential_thinking_used: true|false
-        key_decisions:
-          - "Key decision description + rationale"
-        known_risks:
-          - "Risk description + severity"
-        acceptance_criteria_count: N
-
-    planner_to_plan_review:
-      producer: "/planner"
-      consumer: "plan-reviewer (agent)"
-      payload:
-        "$handoff_contract": "planner_to_plan_review"  # IMP-01: discriminator for schema validation. Quote the $ key in YAML.
-        artifact: ".claude/prompts/{feature}.md"
-        metadata:
-          task_type: "{new_feature|bug_fix|refactoring|...}"
-          complexity: "{S|M|L|XL}"
-          sequential_thinking_used: true|false
-          alternatives_considered: N
-          spec_referenced: true|false
-          spec_artifact: ".claude/prompts/{feature}-spec.md"  # if applicable, null otherwise
-        key_decisions:
-          - "Key decision description + rationale"
-        known_risks:
-          - "Known risk description"
-        areas_needing_attention:
-          - "Part N: why it needs attention"
-
-    plan_review_to_coder:
-      producer: "plan-reviewer (agent)"
-      consumer: "/coder"
-      payload:
-        "$handoff_contract": "plan_review_to_coder"  # IMP-01: discriminator for schema validation. Quote the $ key in YAML.
-        artifact: ".claude/prompts/{feature}.md"
-        verdict: "APPROVED|NEEDS_CHANGES|REJECTED"
-        issues_summary:
-          blocker: 0
-          major: 0
-          minor: 0
-        approved_with_notes:
-          - "Note about Part N"
-        iteration: "N/3"
-
-    coder_to_code_review:
-      producer: "/coder"
-      consumer: "code-reviewer (agent)"
-      payload:
-        branch: "feature/{name}"
-        parts_implemented: ["Part 1: DB", "Part 2: Domain"]
-        evaluate_adjustments:
-          - "Part N: adjustment description"
-        risks_mitigated:
-          - "Risk + how resolved"
-        deviations_from_plan:
-          - "Description + rationale"
-        verify_status:
-          lint: "PASS"
-          test: "PASS"
-          command_used: "go vet ./... && make fmt && make lint && make test"
-        spec_check:
-          status: "PASS|PARTIAL|FAIL"
-          coverage_pct: 100
-          deviations_confirmed:
-            - "Part N: adjustment description"
-          ac_coverage:
-            - "AC N: covered by TestXxx"
-          issues: []
-        iteration: "N/3"
-
-    code_review_to_completion:
-      producer: "code-reviewer (agent)"
-      consumer: "workflow/completion"
-      payload:
-        "$handoff_contract": "code_review_to_completion"  # IMP-01.2 discriminator
-        verdict: "APPROVED|APPROVED_WITH_COMMENTS|CHANGES_REQUESTED"
-        original_verdict: "{pre-normalization verdict, e.g. NEEDS_CHANGES}"  # OPTIONAL
-        issues:
-          - id: "CR-001"
-            severity: "BLOCKER|MAJOR|MINOR|NIT"
-            category: "architecture|security|error_handling|completeness|style"
-            location: "path/file{EXT}:line"
-            problem: "..."
-            suggestion: "..."
-        iteration: "N/3"
-        narrative_for_coder: "{brief recommendation summary ≤400 chars}"  # OPTIONAL
+    note: |
+      Base contract shapes are canonical in handoff-contracts.md § contract — load that file for the
+      payload shapes: designer_to_planner (incl. critique_summary), planner_to_plan_review,
+      plan_review_to_coder, coder_to_code_review. This file (handoff-protocol.md) loads only when
+      authoring a net-new IMP-02/03/04 envelope and adds only the envelope details below. The full
+      code_review_to_completion write-shape — with its "$handoff_contract" discriminator, the OPTIONAL
+      original_verdict, and the OPTIONAL narrative_for_coder — is authored in delegation-templates.md
+      step 6.5. handoff_artifacts.contracts_covered (below) records where each contract is written.
 
   narrative_casting:
-    purpose: "Context handoff to review phases without creation-process bias"
-    rule: "Review phases receive narrative context + artifact, NOT creation history"
-    template_fields:
-      - field: "context_source"
-        value: "{agent_name}"
-        description: "Which agent produced the artifact (planner | designer | coder)"
-      - field: "work_performed"
-        value: "{brief_description}"
-        description: "What the agent did"
-      - field: "key_decisions"
-        value: "[list]"
-        description: "Architectural/design decisions with rationale"
-      - field: "known_risks"
-        value: "[list]"
-        description: "Identified risks and their status"
-      - field: "reviewer_recommendations"
-        value: "[list]"
-        description: "Specific areas for reviewer attention"
+    note: "Canonical in handoff-contracts.md § narrative_casting (byte-identical copy). Load that file for the template_fields: context_source, work_performed, key_decisions, known_risks, reviewer_recommendations."
 
   code_researcher_contract:
     note: "Lightweight contract — code-researcher is a tool-agent, not a pipeline phase. No verdict, no iteration tracking."
