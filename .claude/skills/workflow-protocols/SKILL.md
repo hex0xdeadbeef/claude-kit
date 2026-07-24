@@ -86,7 +86,7 @@ For all troubleshooting cases, see [Examples & Troubleshooting](examples-trouble
 - Multiple independent tasks identified (L/XL planner research, or independent failures) → read [Parallel Dispatch](parallel-dispatch.md)
 - Problem encountered → see [Examples & Troubleshooting](examples-troubleshooting.md)
 - Entering Phase 2 or Phase 4 delegation → read [Delegation Templates](delegation-templates.md) (IMP-01/03/04 protocol details)
-- INCOMPLETE verdict detected → read [Incomplete Output Recovery](incomplete-output-recovery.md) AND [Unknown Verdict Recovery](unknown-verdict-recovery.md) (IMP-06 UNKNOWN resolution rules + IMP-02 filter predicates)
+- INCOMPLETE verdict detected → read [Incomplete Output Recovery](incomplete-output-recovery.md) (output_validation fallback chain + IMP-06 UNKNOWN resolution rules + IMP-02 filter predicates)
 - Checkpoint missing (heuristic session recovery) OR loop limit reached (3/3) → read [Counter Recovery](counter-recovery.md) (counter_recovery heuristic + iteration_summary_on_stop format)
 
 ## Core Deps (workflow-only, loaded at startup)
@@ -100,7 +100,7 @@ For detailed protocol specifications, read the supporting files in this skill di
 - [Handoff Protocol](handoff-protocol.md) — full protocol: 5 contracts + IMP-02/03/04 implementation details (22 KB)
 - [Diff Manifest](diff-manifest.md) — diff-based re-plan algorithm (STEP 0.5) + planner re-invocation template; load on iter 2+ only
 - [Delegation Templates](delegation-templates.md) — full delegation prompts + pre/post_delegation for plan-review and code-review (IMP-01/03/04); load ONLY before Phase 2 or Phase 4 delegation
-- [Incomplete Output Recovery](incomplete-output-recovery.md) — output_validation checks + step_0..step_5 INCOMPLETE verdict fallback chain; load ONLY on INCOMPLETE verdict
+- [Incomplete Output Recovery](incomplete-output-recovery.md) — output_validation checks + step_0..step_5 INCOMPLETE verdict fallback chain + IMP-06 UNKNOWN verdict resolution rules (phase_2_recovery / phase_4_recovery) + IMP-02 filter predicates + anti-patterns; load ONLY on INCOMPLETE verdict
 - [Checkpoint Protocol](checkpoint-protocol.md) — format, recovery, example
 - [State Layer](state-layer.md) — file contracts, lifecycle categories, cleanup protocol for .claude/workflow-state/
 - [Re-routing](re-routing.md) — 3 triggers + tracking fields + learning
@@ -108,5 +108,4 @@ For detailed protocol specifications, read the supporting files in this skill di
 - [Examples & Troubleshooting](examples-troubleshooting.md) — execution examples, common mistakes, troubleshooting
 - [Agent Memory Protocol](agent-memory-protocol.md) — shared memory behavior for all `memory: project` agents
 - [Parallel Dispatch](parallel-dispatch.md) — decision flowchart, research multi-dispatch, failure isolation, conflict detection
-- [Unknown Verdict Recovery](unknown-verdict-recovery.md) — IMP-06 UNKNOWN verdict resolution rules + IMP-02 filter predicates + anti-patterns + cost comparison; load ONLY on INCOMPLETE verdict
 - [Counter Recovery](counter-recovery.md) — counter_recovery heuristic (missing checkpoint) + iteration_summary_on_stop format (3/3 limit hit); load ONLY when the trigger fires

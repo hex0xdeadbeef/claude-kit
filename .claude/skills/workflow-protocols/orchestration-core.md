@@ -67,7 +67,7 @@ flowchart LR
 
 **Phase 2/4 — Incomplete Output Recovery:** If a review agent (plan-reviewer or code-reviewer) returns without a clear verdict, the orchestrator runs an 8-step recovery procedure: filter review-completions.jsonl → direct transcript read (P3-1) → launch lightweight verdict-recovery agent if needed. This scenario is rare (after RULE_5 "Output First" was added to agents) but the recovery path is mandatory when triggered.
 
-→ 8-step procedure + IMP-06 UNKNOWN rules + IMP-02 filter predicates + anti-patterns → SEE [unknown-verdict-recovery.md](unknown-verdict-recovery.md).
+→ 8-step procedure + IMP-06 UNKNOWN rules + IMP-02 filter predicates + anti-patterns → SEE [incomplete-output-recovery.md](incomplete-output-recovery.md).
 
 **Phase 0 — Get Task (optional):** Parse task from user input. Skip if ad-hoc.
 
