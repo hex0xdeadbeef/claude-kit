@@ -30,6 +30,8 @@
         ">=3.10",
         "--python-preference",
         "only-system",
+        "--with",
+        "mcp<2",
         "mcp-server-tree-sitter"
       ]
     }

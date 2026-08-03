@@ -31,8 +31,11 @@
         ">=3.10",
         "--python-preference",
         "only-system",
+        "--with",
+        "mcp<2",
         "mcp-server-tree-sitter"
-      ]
+      ],
+      "_note_with_mcp_pin": "mcp-server-tree-sitter 0.7.0 imports mcp.server.fastmcp, which the mcp Python SDK removed in 2.0.0 (ModuleNotFoundError: No module named 'mcp.server.fastmcp'). The --with mcp<2 pin holds the SDK on the 1.x line where that module still exists. Drop it once upstream migrates off the mcp.server.fastmcp import path."
     }
   }
 }

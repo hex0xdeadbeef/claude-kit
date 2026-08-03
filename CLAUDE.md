@@ -27,7 +27,7 @@ Optional tools used by hooks. Missing tools → graceful degradation (warn, non-
 | `check-jsonschema` | `pipx install 'check-jsonschema==0.37.*'`     | `validate-handoff.sh` — JSON Schema validation of handoff payloads                            |
 | `jq`               | `brew install jq` / `apt-get install jq`      | `validate-handoff.sh` — discriminator read + schema branch logic                              |
 | `npx`              | Node.js — `brew install node` (macOS) / `apt install nodejs npm` (Debian/Ubuntu) / `dnf install nodejs` (Fedora) / `winget install OpenJS.NodeJS` (Windows) / <https://nodejs.org> | `.mcp.json` runtime for `sequential-thinking` + `context7` MCP servers (auto-loaded via `enableAllProjectMcpServers: true` in settings.json) |
-| `uvx`              | uv — `curl -LsSf https://astral.sh/uv/install.sh \| sh` (macOS/Linux) / `irm https://astral.sh/uv/install.ps1 \| iex` (Windows) | `.mcp.json` runtime for `tree_sitter` MCP server (`uvx --python ">=3.10" --python-preference only-system mcp-server-tree-sitter`) |
+| `uvx`              | uv — `curl -LsSf https://astral.sh/uv/install.sh \| sh` (macOS/Linux) / `irm https://astral.sh/uv/install.ps1 \| iex` (Windows) | `.mcp.json` runtime for `tree_sitter` MCP server (`uvx --python ">=3.10" --python-preference only-system --with "mcp<2" mcp-server-tree-sitter`) |
 
 > **MCP runtimes:** after installing a missing runtime, restart Claude Code — the `.mcp.json` servers auto-load on next session start (verify with `claude mcp list`). No re-install/re-provision step is needed.
 
