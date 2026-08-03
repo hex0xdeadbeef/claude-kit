@@ -808,7 +808,7 @@ cp .mcp.json.example .mcp.json   # fresh setup
 |--------|-----------|---------|
 | `sequential-thinking` | `npx @modelcontextprotocol/server-sequential-thinking` | `/planner`, `/designer` на задачах L/XL (обязательно) |
 | `context7` | `npx @upstash/context7-mcp` (proxy-bypass env preset) | Поиск документации по библиотекам в фазах coder/planner (обязательно) |
-| `tree_sitter` | `uvx --python ">=3.10" --python-preference only-system mcp-server-tree-sitter` | Структурный анализ `/project-researcher` (опционально — агенты откатываются к grep) |
+| `tree_sitter` | `uvx --python ">=3.10" --python-preference only-system --with "mcp<2" mcp-server-tree-sitter` | Структурный анализ `/project-researcher` (опционально — агенты откатываются к grep) |
 
 Установите `uv` один раз для `uvx`: `curl -LsSf https://astral.sh/uv/install.sh | sh`. `npx` поставляется с Node.js. См. [🔌 MCP-серверы](#-mcp-серверы) для матрицы обязательное-vs-опциональное.
 
